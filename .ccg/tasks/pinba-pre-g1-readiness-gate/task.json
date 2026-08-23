@@ -6,7 +6,7 @@
   "risk": "high",
   "domain": "fullstack",
   "currentPhase": "review",
-  "nextAction": "iOS 已授权复制路径已通过，但首次授权/拒绝分支仍待可用未授权账号补测；继续完成 Android 真机，并在恢复 Chrome 控制扩展后核验账号成员、服务类目及将旧隐私指引名称改为‘拼吧’",
+  "nextAction": "Android 当前无设备并延期补测；先在恢复 Chrome 控制扩展或用户手动协作后核验账号成员、服务类目，并将旧隐私指引名称改为‘拼吧’，随后补齐 iOS 首次授权/拒绝与 Android 真机证据",
   "createdAt": "2026-08-23T15:40:41+08:00",
   "branch": "main"
 }

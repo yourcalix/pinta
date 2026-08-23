@@ -23,6 +23,7 @@
 - iPhone 已完成“已授权账号”路径：安全提醒正常、联系方式解锁正常、复制后出现微信原生“内容已复制”，剪贴板内容为“微信号 pinba_xiaopin”。
 - 因该微信账号没有触发自定义隐私弹窗，已在开发者工具执行只读诊断；`wx.getPrivacySetting` 返回 `needAuthorization: false`，协议名为《任务小帮帮小程序隐私保护指引》。因此判定为账号已有授权，而非复制失败。
 - 当前没有第二个微信账号可补测首次授权、拒绝和 10 秒内重试分支；`ios_privacy_flow` 继续保持 `PENDING`，不把部分通过伪记为完整 PASS。
+- 用户当前没有可用 Android 真机；`android_privacy_flow` 延期补测并保持 `PENDING`，不判为产品失败。
 - Chrome 浏览器正在运行，但 `Default` 与 `Profile 1` 均未安装 ChatGPT 浏览器控制扩展，因此账号成员、服务类目和隐私指引的自动后台核验暂时受阻；未绕过安全机制。
 
 ## 当前真实阻断
