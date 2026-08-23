@@ -6,7 +6,7 @@
   "risk": "high",
   "domain": "fullstack",
   "currentPhase": "review",
-  "nextAction": "真实 AppID 与测试 CloudBase 已通过；等待用户扫码完成 iOS/Android 真机验收，并在恢复 Chrome 控制扩展后核验账号成员、服务类目和隐私指引",
+  "nextAction": "iOS 已授权复制路径已通过，但首次授权/拒绝分支仍待可用未授权账号补测；继续完成 Android 真机，并在恢复 Chrome 控制扩展后核验账号成员、服务类目及将旧隐私指引名称改为‘拼吧’",
   "createdAt": "2026-08-23T15:40:41+08:00",
   "branch": "main"
 }
