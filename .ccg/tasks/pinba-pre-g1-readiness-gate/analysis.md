@@ -3,9 +3,9 @@
 ## 当前事实
 
 - 公共 `project.config.json` 仍为 `touristappid`。
-- `project.private.config.json` 当前缺失，但已被 Git 忽略且未被跟踪。
+- `project.private.config.json` 已在本地配置真实 AppID，并保持被 Git 忽略且未被跟踪；报告不会回显完整值。
 - `useMock=true`、`cloudEnv=''`、`subscribeTemplateIds=[]`，尚未误入 G1。
-- G0 代码、自动化、Spark 和网页版 Gemini 复核已完成；真实 AppID 后台与 iOS/Android 证据尚未完成。
+- G0 代码、自动化、Spark 和网页版 Gemini 复核已完成；真实 AppID 自动检查已通过，微信后台与 iOS/Android 证据尚未完成。
 
 ## Spark 分析
 

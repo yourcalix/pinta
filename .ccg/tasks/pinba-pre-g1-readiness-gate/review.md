@@ -15,13 +15,12 @@
 - 项目静态检查：JSON 26、JS 40、WXML 13，状态正常。
 - `git diff --check`：通过。
 - 门禁脚本保持只读、无网络、无登录、无 CloudBase 探测，并且不输出 AppID、环境 ID、模板 ID 或人工证据正文。
-- 当前门禁结果：`BLOCKED`（退出码 1）。
+- 配置真实 AppID 后复跑门禁：`MANUAL`（退出码 3），自动检查 4/4 通过、自动阻断 0。
 
 ## 当前真实阻断
 
-1. 本地缺少被 Git 忽略的 `project.private.config.json`，因此 `private-real-appid` 为 `BLOCKED`。
-2. 六项阻断性人工证据仍为 `MANUAL`：账号成员、服务类目、隐私保护指引、iOS 真机、Android 真机、测试 CloudBase 环境。
-3. 三项建议证据仍未完成：内容安全负责人、订阅模板申请、生产 CloudBase 规划；这些不阻断 G1 门禁最终 PASS。
+1. 六项阻断性人工证据仍为 `MANUAL`：账号成员、服务类目、隐私保护指引、iOS 真机、Android 真机、测试 CloudBase 环境。
+2. 三项建议证据仍未完成：内容安全负责人、订阅模板申请、生产 CloudBase 规划；这些不阻断 G1 门禁最终 PASS。
 
 ## 交付判断
 

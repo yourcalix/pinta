@@ -6,7 +6,7 @@
   "risk": "high",
   "domain": "fullstack",
   "currentPhase": "review",
-  "nextAction": "等待用户在本地配置真实 AppID，并完成微信后台、测试 CloudBase 与 iOS/Android 真机证据后重跑门禁",
+  "nextAction": "真实 AppID 自动门禁已通过；等待完成账号成员、服务类目、隐私指引、测试 CloudBase 与 iOS/Android 真机证据",
   "createdAt": "2026-08-23T15:40:41+08:00",
   "branch": "main"
 }
