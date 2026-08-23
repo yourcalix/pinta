@@ -1,0 +1,66 @@
+<view class="page discover-page">
+  <view class="hero">
+    <view>
+      <view class="eyebrow">一起出发，一起凑成</view>
+      <view class="hero-title">今天想拼什么？</view>
+    </view>
+    <view class="city-pill">{{city}}</view>
+  </view>
+
+  <view class="search-row surface">
+    <text class="search-symbol">⌕</text>
+    <input
+      class="search-input"
+      value="{{keyword}}"
+      placeholder="搜索路线、商品或活动"
+      confirm-type="search"
+      bindinput="handleKeywordInput"
+      bindconfirm="handleSearch"
+    />
+    <button class="search-button" bindtap="handleSearch">搜索</button>
+  </view>
+
+  <scroll-view class="scene-tabs" scroll-x enable-flex>
+    <view class="scene-tabs-inner">
+      <button
+        wx:for="{{sceneTabs}}"
+        wx:key="value"
+        class="scene-tab {{currentType === item.value ? 'scene-tab--active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="handleTypeChange"
+      >{{item.label}}</button>
+    </view>
+  </scroll-view>
+
+  <view class="list-heading">
+    <text>{{currentType ? '筛选结果' : '附近正在拼'}}</text>
+    <text class="list-count" wx:if="{{!loading}}">{{activities.length}} 个活动</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="skeleton-list">
+    <view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card surface">
+      <view class="skeleton-line skeleton-line--short"></view>
+      <view class="skeleton-line skeleton-line--title"></view>
+      <view class="skeleton-line"></view>
+      <view class="skeleton-line skeleton-line--medium"></view>
+    </view>
+  </view>
+
+  <view wx:elif="{{activities.length}}">
+    <activity-card
+      wx:for="{{activities}}"
+      wx:key="id"
+      item="{{item}}"
+      bindselect="handleCardSelect"
+    />
+  </view>
+
+  <empty-state
+    wx:else
+    symbol="{{error ? '!' : '+'}}"
+    title="{{error || '暂时没有符合条件的活动'}}"
+    description="{{error ? '检查网络后重试，已填写的内容不会丢失。' : '换个分类看看，或发起第一个活动。'}}"
+    action-text="{{error ? '重新加载' : '去发布'}}"
+    bindaction="handleEmptyAction"
+  />
+</view>

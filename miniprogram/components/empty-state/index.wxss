@@ -1,0 +1,46 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 420rpx;
+  padding: 60rpx 36rpx;
+  text-align: center;
+}
+
+.empty-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100rpx;
+  height: 100rpx;
+  color: #75aa90;
+  background: #eaf5ef;
+  border-radius: 34rpx;
+  font-size: 52rpx;
+}
+
+.empty-title {
+  margin-top: 26rpx;
+  color: #26322c;
+  font-size: 30rpx;
+  font-weight: 650;
+}
+
+.empty-description {
+  max-width: 520rpx;
+  margin-top: 12rpx;
+  color: #758079;
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
+.empty-action {
+  min-height: 76rpx;
+  margin-top: 28rpx;
+  padding: 14rpx 28rpx;
+  color: #118557;
+  background: #eaf5ef;
+  border-radius: 16rpx;
+  font-size: 27rpx;
+}

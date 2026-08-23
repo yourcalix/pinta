@@ -1,0 +1,14 @@
+{
+  "name": "pinba-mini-program",
+  "version": "0.1.0",
+  "private": true,
+  "description": "拼吧微信小程序最小 MVP",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node scripts/check-project.js",
+    "verify": "npm run test && npm run check"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

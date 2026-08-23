@@ -1,0 +1,101 @@
+ROLE: 你是微信原生小程序前端复核者。请只复核“拼吧”MVP 根据上一轮意见完成的修复，不重新扩大范围。
+
+上一轮结论为“有条件可交付”，指出：输入绑定、活动卡读屏信息、键盘遮挡、模板内进度除法、非招募状态反馈。
+
+一、已核实的误报
+
+上一轮 Critical“表单没有收集输入”来自上下文中的简写摘录，不是实际源码。真实代码原本就是：
+
+```xml
+<!-- 发布联系方式 -->
+<input value="{{form.contactInfo}}" data-field="contactInfo" bindinput="handleInput" />
+
+<!-- JS -->
+handleInput(event) {
+  const field = event.currentTarget.dataset.field;
+  this.setData({ [`form.${field}`]: event.detail.value, errorMessage: '' });
+}
+
+<!-- 申请备注与同意 -->
+<textarea value="{{note}}" bindinput="handleNote" />
+<checkbox-group bindchange="handleConsent">
+  <checkbox value="consent" checked="{{consent}}" />
+</checkbox-group>
+```
+
+微信开发者工具自动化已验证：
+- 输入联系方式后 `form.contactInfo === "微信号 pinba_contact_qa"`；
+- 输入申请备注后 `note === "申请备注输入回归"`；
+- 点击勾选后 `consent === true`；
+- 无页面异常。
+
+因此请不要再次把该项认定为缺陷。
+
+二、已完成的实际修复
+
+1. 展示层预计算进度并做边界保护：
+
+```js
+const memberCount = Math.max(0, Number(activity.memberCount) || 0);
+const targetMembers = Math.max(1, Number(activity.targetMembers) || 1);
+const remaining = Math.max(0, targetMembers - memberCount);
+const progressPercent = Math.min(100, Math.round(memberCount / targetMembers * 100));
+```
+
+WXML 改为：
+
+```xml
+<view class="progress-fill" style="width: {{item.progressPercent}}%; background: {{item.typeColor}}"></view>
+```
+
+2. 活动卡读屏文本现在由 JS 预生成：
+
+```js
+const availability = activity.status === 'RECRUITING' ? `还差${remaining}人` : statusMeta.label;
+const accessibilityLabel = `${typeMeta.label}，${activity.title}，${statusMeta.label}，${displayTime}，${activity.district} ${activity.placeLabel}，${availability}`;
+```
+
+```xml
+<view role="button" aria-label="{{item.accessibilityLabel}}">...</view>
+```
+
+卡片头部、底部和详情状态栏增加 `flex-wrap: wrap` 与 gap，页面没有固定卡片高度。
+
+3. 输入键盘避让：
+
+发布、资料、举报、申请页面的底部输入组件都增加：
+
+```xml
+cursor-spacing="120" adjust-position="true"
+```
+
+页面原本已有：
+
+```css
+.page { min-height: 100vh; padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); }
+.safe-bottom { padding-bottom: calc(28rpx + env(safe-area-inset-bottom)); }
+```
+
+未额外增加永久 120rpx 底部留白，避免键盘关闭时页面出现过大空白。
+
+4. 非招募状态与重新申请：
+
+- 游客或历史申请人在活动不可申请时，会看到置灰按钮“{{statusLabel}}，暂不可申请”。
+- 历史申请状态为 `REJECTED / WITHDRAWN / LEFT / EXPIRED / CANCELLED_BY_ACTIVITY` 且活动仍 `RECRUITING` 时重新展示申请表，匹配后端允许重新申请的规则。
+- PENDING 仍只显示“申请已提交/撤回”；有效成员进入成团页；发起者进入管理页。
+
+5. 验证结果：
+
+- `npm run verify`：23/23 通过。
+- 微信开发者工具 Stable 2.01.2510250、基础库 3.15.2 自动化：发现页 3 条活动、3 张卡片；发布分包加载成功；输入数据同步成功；无 exception/error log。
+- 已保存发现页和发布 Step 2 的最终截图并人工确认无明显布局崩塌。
+
+三、复核要求
+
+请只回答：
+1. 上述修复是否覆盖上一轮真实 Critical/Warning；
+2. 修复本身是否引入新的 P0 前端问题；
+3. 无法由材料判断的真机大字号/键盘差异请放在“上线前实机矩阵”，不要列作代码缺陷；
+4. 不要建议增加 Q&A、支付、地图、评价、二维码或其他 P1/P2 功能。
+
+OUTPUT：中文，按 Critical / Warning / Info / 上线前实机矩阵 分段，最后只能选择“可交付 / 有条件可交付 / 不可交付”之一。若没有 Critical 或 Warning，请明确写“无”。不要输出重构代码。

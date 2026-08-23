@@ -1,0 +1,177 @@
+.form-page {
+  padding-top: 24rpx;
+}
+
+.form-header,
+.two-columns,
+.number-stepper,
+.button-row,
+.agreement,
+.picker-field {
+  display: flex;
+  align-items: center;
+}
+
+.form-header {
+  min-height: 90rpx;
+}
+
+.type-mark {
+  flex: 0 0 auto;
+  padding: 12rpx 16rpx;
+  border: 2rpx solid;
+  border-radius: 14rpx;
+  font-size: 24rpx;
+  font-weight: 650;
+}
+
+.step-copy {
+  flex: 1;
+  margin-left: 18rpx;
+}
+
+.step-title {
+  font-size: 32rpx;
+  font-weight: 680;
+}
+
+.step-description {
+  margin-top: 6rpx;
+  color: #758079;
+  font-size: 23rpx;
+}
+
+.step-count {
+  color: #65716a;
+  font-size: 25rpx;
+  font-weight: 650;
+}
+
+.progress-track {
+  height: 8rpx;
+  margin: 20rpx 0 24rpx;
+  overflow: hidden;
+  background: #e1e7e3;
+  border-radius: 999rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #16a36a;
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+.error-banner {
+  margin-bottom: 18rpx;
+  padding: 20rpx 22rpx;
+  color: #a72a30;
+  background: #fff0f0;
+  border: 1rpx solid #f6cfd1;
+  border-radius: 16rpx;
+  font-size: 25rpx;
+}
+
+.form-card {
+  padding: 30rpx 26rpx;
+}
+
+.field-hint {
+  margin-top: 10rpx;
+  color: #7c8780;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.picker-field {
+  justify-content: space-between;
+}
+
+.two-columns {
+  gap: 16rpx;
+}
+
+.column {
+  flex: 1;
+  min-width: 0;
+}
+
+.number-stepper {
+  justify-content: space-between;
+  width: 100%;
+  min-height: 88rpx;
+  padding: 8rpx;
+  background: #f8faf9;
+  border: 1rpx solid #e6ebe8;
+  border-radius: 16rpx;
+}
+
+.number-stepper button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  min-height: 68rpx;
+  margin: 0;
+  padding: 0;
+  color: #155f42;
+  background: #e7f4ed;
+  border-radius: 12rpx;
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+.number-stepper text {
+  font-weight: 650;
+}
+
+.textarea--small {
+  min-height: 140rpx;
+}
+
+.private-field {
+  padding: 22rpx;
+  background: #f2f7ff;
+  border: 1rpx solid #dce8fa;
+  border-radius: 18rpx;
+}
+
+.risk-note {
+  margin: 4rpx 0 24rpx;
+  padding: 22rpx;
+  color: #75571e;
+  background: #fff8e8;
+  border: 1rpx solid #f0ddb3;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  line-height: 1.55;
+}
+
+.risk-title {
+  margin-bottom: 6rpx;
+  color: #594116;
+  font-weight: 650;
+}
+
+.agreement {
+  align-items: flex-start;
+  gap: 12rpx;
+  color: #56635c;
+  font-size: 24rpx;
+  line-height: 1.55;
+}
+
+.agreement checkbox {
+  flex: 0 0 auto;
+  transform: scale(0.9);
+}
+
+.button-row {
+  gap: 16rpx;
+  margin-top: 32rpx;
+}
+
+.button-row button {
+  flex: 1;
+  margin: 0;
+}

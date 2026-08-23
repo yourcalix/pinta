@@ -1,0 +1,19 @@
+{
+  "description": "拼吧微信小程序最小 MVP",
+  "projectname": "pinba-mvp",
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "enhance": true,
+    "coverView": true,
+    "showShadowRootInWxmlPanel": true,
+    "minifyWXML": true
+  },
+  "condition": {}
+}

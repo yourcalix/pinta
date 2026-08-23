@@ -1,0 +1,105 @@
+<view class="page user-page">
+  <view wx:if="{{loading}}" class="loading-block surface">正在整理你的协同任务…</view>
+
+  <empty-state
+    wx:elif="{{error}}"
+    symbol="!"
+    title="{{error}}"
+    description="检查网络后重试。"
+    action-text="重新加载"
+    bindaction="loadDashboard"
+  />
+
+  <block wx:else>
+    <view class="profile-card surface" bindtap="handleProfile" role="button">
+      <view class="avatar">{{avatarLetter}}</view>
+      <view class="profile-main">
+        <view class="profile-name">{{user.profile.nickname}}</view>
+        <view class="profile-meta">{{user.profile.city}} · 已确认年满18岁</view>
+      </view>
+      <text class="profile-arrow">›</text>
+    </view>
+
+    <view wx:if="{{isMock}}" class="demo-panel surface">
+      <view class="demo-heading">
+        <view>
+          <view class="demo-title">演示身份</view>
+          <view class="demo-description">切换身份可体验申请、审批和成团闭环</view>
+        </view>
+        <button class="reset-button" bindtap="handleResetDemo">重置</button>
+      </view>
+      <view class="persona-row">
+        <button
+          wx:for="{{personas}}"
+          wx:key="id"
+          class="persona-button {{persona === item.id ? 'persona-button--active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="handlePersona"
+        >{{item.label}}</button>
+      </view>
+    </view>
+
+    <view class="section-heading">
+      <text>待处理</text>
+      <text class="count">{{tasks.length}}</text>
+    </view>
+    <view wx:if="{{tasks.length}}" class="task-list">
+      <view
+        wx:for="{{tasks}}"
+        wx:key="id"
+        class="task-card surface"
+        data-task="{{item}}"
+        bindtap="handleTaskTap"
+      >
+        <view class="task-dot"></view>
+        <view class="task-main">
+          <view class="task-title">{{item.title}}</view>
+          <view class="task-time">{{item.displayTime}}</view>
+        </view>
+        <text class="task-arrow">›</text>
+      </view>
+    </view>
+    <view wx:else class="zero-task surface">当前没有待处理事项，轻松一下。</view>
+
+    <view class="list-tabs">
+      <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange">我的发布 {{owned.length}}</button>
+      <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange">我的参与 {{joined.length}}</button>
+    </view>
+
+    <block wx:if="{{currentList === 'owned'}}">
+      <view
+        wx:for="{{owned}}"
+        wx:key="id"
+        class="mini-activity surface"
+        data-item="{{item}}"
+        bindtap="handleActivityTap"
+      >
+        <view class="mini-top">
+          <text class="mini-type" style="color: {{item.typeColor}}">{{item.typeLabel}}</text>
+          <status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" />
+        </view>
+        <view class="mini-title">{{item.title}}</view>
+        <view class="mini-meta">{{item.memberCount}}/{{item.targetMembers}} 人 · {{item.displayTime}}</view>
+      </view>
+      <empty-state wx:if="{{!owned.length}}" title="还没有发布活动" description="从发布页选择一个类型，两步即可创建。" />
+    </block>
+
+    <block wx:else>
+      <view
+        wx:for="{{joined}}"
+        wx:key="id"
+        class="mini-activity surface"
+        data-item="{{item}}"
+        bindtap="handleActivityTap"
+      >
+        <view class="mini-top">
+          <text class="mini-type" style="color: {{item.typeColor}}">{{item.typeLabel}}</text>
+          <status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" />
+        </view>
+        <view class="mini-title">{{item.title}}</view>
+        <view class="mini-meta">{{item.memberCount}}/{{item.targetMembers}} 人 · {{item.displayTime}}</view>
+      </view>
+      <empty-state wx:if="{{!joined.length}}" title="还没有参与活动" description="去发现页看看附近正在拼的活动。" />
+    </block>
+  </block>
+</view>

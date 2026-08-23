@@ -1,0 +1,94 @@
+.activity-card {
+  margin-bottom: 20rpx;
+  padding: 26rpx 26rpx 24rpx;
+  background: #fff;
+  border: 1rpx solid #e6ebe8;
+  border-left: 8rpx solid #16a36a;
+  border-radius: 22rpx;
+  box-shadow: 0 8rpx 26rpx rgba(25, 54, 40, 0.05);
+}
+
+.card-top,
+.card-bottom,
+.meta-line,
+.member-progress,
+.type-chip {
+  display: flex;
+  align-items: center;
+}
+
+.card-top,
+.card-bottom {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12rpx 20rpx;
+}
+
+.type-chip {
+  gap: 8rpx;
+  font-size: 24rpx;
+  font-weight: 650;
+}
+
+.type-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38rpx;
+  height: 38rpx;
+  border: 1rpx solid currentColor;
+  border-radius: 10rpx;
+}
+
+.card-title {
+  margin-top: 20rpx;
+  font-size: 32rpx;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.scene-line {
+  margin-top: 12rpx;
+  color: #29352f;
+  font-size: 28rpx;
+  font-weight: 560;
+}
+
+.meta-line {
+  margin-top: 14rpx;
+  flex-wrap: wrap;
+  gap: 12rpx 22rpx;
+  color: #69746e;
+  font-size: 24rpx;
+}
+
+.card-bottom {
+  margin-top: 22rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #eef1ef;
+}
+
+.member-progress {
+  gap: 14rpx;
+  color: #69746e;
+  font-size: 23rpx;
+}
+
+.progress-track {
+  width: 110rpx;
+  height: 10rpx;
+  overflow: hidden;
+  background: #edf0ee;
+  border-radius: 999rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.remaining {
+  color: #3d4943;
+  font-size: 24rpx;
+  font-weight: 600;
+}

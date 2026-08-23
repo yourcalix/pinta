@@ -1,0 +1,30 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 23rpx;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.badge--success {
+  color: #11784f;
+  background: #e5f6ed;
+}
+
+.badge--info {
+  color: #275fc3;
+  background: #eaf1ff;
+}
+
+.badge--danger {
+  color: #b4232a;
+  background: #ffe9ea;
+}
+
+.badge--muted {
+  color: #67716c;
+  background: #edf0ee;
+}

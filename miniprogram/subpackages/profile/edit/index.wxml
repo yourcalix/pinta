@@ -1,0 +1,30 @@
+<view class="page profile-page">
+  <view class="intro">
+    <view class="intro-title">完成最小资料</view>
+    <view class="intro-description">资料只用于活动匹配。无需授权精确位置或绑定手机号。</view>
+  </view>
+
+  <view wx:if="{{errorMessage}}" class="error-banner">{{errorMessage}}</view>
+
+  <view class="surface form-card">
+    <view class="field">
+      <text class="field-label required">昵称</text>
+      <input class="input" maxlength="20" cursor-spacing="120" adjust-position="true" placeholder="2—20个字" value="{{form.nickname}}" data-field="nickname" bindinput="handleInput" />
+    </view>
+    <view class="field">
+      <text class="field-label required">所在城市</text>
+      <input class="input" maxlength="20" cursor-spacing="120" adjust-position="true" value="{{form.city}}" data-field="city" bindinput="handleInput" />
+    </view>
+    <view class="field">
+      <text class="field-label">兴趣标签</text>
+      <input class="input" maxlength="80" cursor-spacing="120" adjust-position="true" placeholder="例如：羽毛球、咖啡、看展" value="{{form.interestsText}}" data-field="interestsText" bindinput="handleInput" />
+    </view>
+    <checkbox-group bindchange="handleAdult">
+      <label class="adult-check">
+        <checkbox value="adult" checked="{{form.adultConfirmed}}" color="#16A36A" />
+        <text>我确认已满18岁，并同意遵守平台安全规则。</text>
+      </label>
+    </checkbox-group>
+    <button class="primary-button save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="handleSave">保存资料</button>
+  </view>
+</view>

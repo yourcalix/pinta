@@ -1,0 +1,90 @@
+<view class="page detail-page safe-bottom">
+  <view wx:if="{{loading}}" class="detail-skeleton surface">
+    <view class="skeleton-line short"></view>
+    <view class="skeleton-line title"></view>
+    <view class="skeleton-line"></view>
+    <view class="skeleton-line medium"></view>
+  </view>
+
+  <empty-state
+    wx:elif="{{error}}"
+    symbol="!"
+    title="{{error}}"
+    description="活动可能已失效，也可能是网络暂时不可用。"
+    action-text="重新加载"
+    bindaction="loadDetail"
+  />
+
+  <block wx:elif="{{activity}}">
+    <view class="status-strip status-strip--{{activity.statusTone}}">
+      <status-badge label="{{activity.statusLabel}}" tone="{{activity.statusTone}}" />
+      <text wx:if="{{activity.status === 'RECRUITING'}}">还差 {{activity.remaining}} 人成团</text>
+      <text wx:elif="{{activity.status === 'FORMED'}}">成员可以查看会合信息</text>
+      <text wx:else>当前状态不可继续申请</text>
+    </view>
+
+    <view class="detail-card surface">
+      <view class="type-line" style="color: {{activity.typeColor}}">{{activity.typeIcon}} {{activity.typeLabel}}</view>
+      <view class="detail-title">{{activity.title}}</view>
+      <view class="owner-line">由 {{activity.owner.nickname}} 发起</view>
+
+      <view class="time-card">
+        <view class="time-main">{{activity.displayTime}}</view>
+        <view class="time-sub">{{activity.city}} · {{activity.district}} · {{activity.placeLabel}}</view>
+      </view>
+
+      <view class="detail-row" wx:for="{{detailRows}}" wx:key="label">
+        <text class="row-label">{{item.label}}</text>
+        <text class="row-value">{{item.value}}</text>
+      </view>
+
+      <view class="description-block" wx:if="{{activity.description}}">
+        <view class="block-title">活动说明</view>
+        <view class="block-text">{{activity.description}}</view>
+      </view>
+
+      <view class="description-block" wx:if="{{activity.rules}}">
+        <view class="block-title">参与规则</view>
+        <view class="block-text">{{activity.rules}}</view>
+      </view>
+
+      <view class="locked-card">
+        <view class="lock-title">成团后解锁</view>
+        <view class="lock-text">联系方式和具体会合说明不会出现在公开详情中，仅有效成员可以查看。</view>
+      </view>
+    </view>
+
+    <view class="risk-card">
+      <view class="risk-title">安全提示</view>
+      <view wx:if="{{activity.type === 'ride'}}">平台不提供车辆或司机，请只使用合规交通方式，不向陌生人预付费用。</view>
+      <view wx:elif="{{activity.type === 'product'}}">平台不提供收款与商品担保，建议到货后当面验货交付。</view>
+      <view wx:else>线下见面请选择公共场所，并将行程告知亲友。</view>
+    </view>
+
+    <view wx:if="{{activity.canApply}}" class="apply-card surface">
+      <view class="block-title">申请加入</view>
+      <textarea class="textarea apply-note" maxlength="120" cursor-spacing="120" adjust-position="true" placeholder="选填：说明行李、数量、经验或时间情况" value="{{note}}" bindinput="handleNote" />
+      <checkbox-group bindchange="handleConsent">
+        <label class="consent-row">
+          <checkbox value="consent" checked="{{consent}}" color="#16A36A" />
+          <text>我理解发起者批准后会自动加入并占用名额；如有变化会及时退出。</text>
+        </label>
+      </checkbox-group>
+      <button class="primary-button" loading="{{pending}}" disabled="{{pending || !consent}}" bindtap="handleApply">提交申请</button>
+    </view>
+
+    <view wx:if="{{activity.viewerRole === 'applicant' && activity.viewerApplication.status === 'PENDING'}}" class="state-card surface">
+      <view>
+        <view class="state-title">申请已提交</view>
+        <view class="state-description">等待发起者处理；获批后会自动占用名额。</view>
+      </view>
+      <button class="secondary-button compact-button" bindtap="handleWithdraw" disabled="{{pending}}">撤回申请</button>
+    </view>
+
+    <button wx:if="{{activity.viewerRole === 'owner' && activity.status === 'RECRUITING'}}" class="primary-button bottom-action" bindtap="handleManage">管理申请</button>
+    <button wx:if="{{(activity.viewerRole === 'owner' || activity.viewerRole === 'member') && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleGroup">进入成团页</button>
+    <button wx:if="{{(activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.statusLabel}}，暂不可申请</button>
+
+    <button class="report-link" bindtap="handleReport">举报此活动</button>
+  </block>
+</view>

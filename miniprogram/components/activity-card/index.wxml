@@ -1,0 +1,32 @@
+<view
+  wx:if="{{item}}"
+  class="activity-card"
+  style="border-left-color: {{item.typeColor}}"
+  bindtap="handleTap"
+  role="button"
+  aria-label="{{item.accessibilityLabel}}"
+>
+  <view class="card-top">
+    <view class="type-chip" style="color: {{item.typeColor}}">
+      <text class="type-icon">{{item.typeIcon}}</text>
+      <text>{{item.typeLabel}}</text>
+    </view>
+    <status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" />
+  </view>
+  <view class="card-title">{{item.title}}</view>
+  <view class="scene-line">{{item.sceneLine}}</view>
+  <view class="meta-line">
+    <text>{{item.displayTime}}</text>
+    <text>{{item.district}} · {{item.placeLabel}}</text>
+  </view>
+  <view class="card-bottom">
+    <view class="member-progress">
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{item.progressPercent}}%; background: {{item.typeColor}}"></view>
+      </view>
+      <text>{{item.memberCount}}/{{item.targetMembers}} 人</text>
+    </view>
+    <text class="remaining" wx:if="{{item.status === 'RECRUITING'}}">还差 {{item.remaining}} 人</text>
+    <text class="remaining" wx:else>查看详情</text>
+  </view>
+</view>

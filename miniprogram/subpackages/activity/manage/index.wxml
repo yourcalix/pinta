@@ -1,0 +1,43 @@
+<view class="page manage-page safe-bottom">
+  <view wx:if="{{loading}}" class="loading-block surface">正在加载申请…</view>
+  <empty-state wx:elif="{{error}}" symbol="!" title="{{error}}" action-text="重新加载" bindaction="loadData" />
+
+  <block wx:elif="{{activity}}">
+    <view class="activity-summary surface">
+      <view class="summary-top">
+        <view class="summary-type" style="color: {{activity.typeColor}}">{{activity.typeLabel}}</view>
+        <status-badge label="{{activity.statusLabel}}" tone="{{activity.statusTone}}" />
+      </view>
+      <view class="summary-title">{{activity.title}}</view>
+      <view class="summary-progress">已加入 {{activity.memberCount}}/{{activity.targetMembers}} 人</view>
+      <button wx:if="{{activity.status === 'FORMED'}}" class="primary-button group-button" bindtap="handleGroup">进入成团页</button>
+    </view>
+
+    <view class="section-heading">
+      <text>全部申请</text>
+      <text class="section-count">{{applications.length}}</text>
+    </view>
+
+    <view wx:if="{{applications.length}}">
+      <view wx:for="{{applications}}" wx:key="id" class="application-card surface">
+        <view class="application-top">
+          <view class="applicant-avatar">{{item.avatarLetter}}</view>
+          <view class="applicant-main">
+            <view class="applicant-name">{{item.applicant.nickname}}</view>
+            <view class="application-time">{{item.displayTime}}</view>
+          </view>
+          <status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" />
+        </view>
+        <view class="application-note">{{item.note || '申请人没有补充说明'}}</view>
+        <view wx:if="{{item.status === 'PENDING' && activity.status === 'RECRUITING'}}" class="application-actions">
+          <button class="secondary-button" data-id="{{item.id}}" bindtap="handleReject" disabled="{{pendingId}}">拒绝</button>
+          <button class="primary-button" data-id="{{item.id}}" bindtap="handleApprove" loading="{{pendingId === item.id}}" disabled="{{pendingId}}">同意加入</button>
+        </view>
+      </view>
+    </view>
+
+    <empty-state wx:else title="还没有加入申请" description="申请到来后会显示在这里，站内通知也会提醒你。" />
+
+    <button wx:if="{{activity.status === 'RECRUITING' || activity.status === 'FORMED'}}" class="cancel-link" bindtap="handleCancel">取消整个活动</button>
+  </block>
+</view>

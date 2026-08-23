@@ -1,0 +1,28 @@
+<view class="page report-page safe-bottom">
+  <view class="report-intro">
+    <view class="report-title">告诉我们发生了什么</view>
+    <view class="report-description">举报内容只用于安全处置。MVP 不上传图片证据，请避免填写无关的个人隐私。</view>
+  </view>
+
+  <view wx:if="{{errorMessage}}" class="error-banner">{{errorMessage}}</view>
+
+  <view class="surface reason-card">
+    <radio-group bindchange="handleReason">
+      <label wx:for="{{reasons}}" wx:key="value" class="reason-row">
+        <radio value="{{item.value}}" checked="{{reason === item.value}}" color="#16A36A" />
+        <view class="reason-copy">
+          <view class="reason-title">{{item.label}}</view>
+          <view class="reason-description">{{item.description}}</view>
+        </view>
+      </label>
+    </radio-group>
+  </view>
+
+  <view class="surface description-card">
+    <text class="field-label">补充说明</text>
+    <textarea class="textarea" maxlength="300" cursor-spacing="120" adjust-position="true" placeholder="选填，请描述可供核验的事实，不要填写无关隐私" value="{{description}}" bindinput="handleDescription" />
+    <view class="counter">{{description.length}}/300</view>
+  </view>
+
+  <button class="primary-button submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">提交举报</button>
+</view>

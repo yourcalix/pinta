@@ -1,0 +1,143 @@
+ROLE: 你是微信原生小程序的资深前端、交互与可访问性审查者。请审查“拼吧”最小 MVP 的已实现前端。你没有仓库访问权限，只能依据下方给出的实现事实、页面结构与关键代码模式判断；没有证据时请标为“需实机确认”，不要猜测。
+
+一、产品目标与已确定范围
+
+“拼吧”帮助用户进行拼车、拼商品、拼搭子。MVP 的 P0 闭环为：游客浏览 → 两步发布 / 申请 → 发起者批准 → 批准即占位 → 达到人数自动成团 → 有效成员经安全确认后查看联系方式 → 取消、退团、完成、举报。
+
+已采纳的产品决策：
+- 取消参与者二次确认；提交申请时预先同意“获批即占位”。
+- 拼车费用只能选择固定枚举，不允许输入具体收费金额。
+- 公开页只显示行政区、商圈或公共地标；不定位、不显示门牌地址。
+- 公开 API 不返回联系方式；成团后仅有效成员可按需获取。
+- 联系方式只允许文本，不允许二维码或图片。
+- 不接支付、不做资金担保、不提供司机或车辆。
+- Q&A、评价、地图、二维码、复杂信用体系属于 P1/P2，本轮不要建议把它们补回 P0。
+
+二、前端架构与页面
+
+- 微信原生小程序，主包仅含 `pages/discover`、`pages/publish`、`pages/user` 三个 Tab。
+- 分包包含：`subpackages/activity/detail`、`manage`、`group`，`subpackages/publish/form`，`subpackages/profile/edit`，`subpackages/safety/report`。
+- 页面只能通过 `services/` 调用统一 API，禁止直接读数据库。
+- 默认 `useMock: true`，可在游客模式演示；切换真实模式后统一调用 CloudBase 云函数。
+- 通用组件：`activity-card`、`status-badge`、`empty-state`。
+- 全局视觉：页面灰绿背景、白色卡片、品牌绿 `#16A36A`、危险红 `#D84A4A`；主要尺寸均为 rpx；底部操作区使用 `padding-bottom: env(safe-area-inset-bottom)`。
+
+三、关键页面结构（真实实现的等价摘录）
+
+1. 发现页
+
+```xml
+<view class="page discover-page">
+  <view class="hero"><view><view class="eyebrow">一起出发，一起凑成</view><view class="hero-title">今天想拼什么？</view></view><view class="city-pill">{{city}}</view></view>
+  <view class="search-row surface"><text class="search-symbol">⌕</text><input placeholder="搜索路线、商品或活动" bindinput="handleKeywordInput" bindconfirm="handleSearch"/><button bindtap="handleSearch">搜索</button></view>
+  <scroll-view class="scene-tabs" scroll-x enable-flex>
+    <button wx:for="{{sceneTabs}}" class="scene-tab {{currentType === item.value ? 'scene-tab--active' : ''}}" bindtap="handleTypeChange">{{item.label}}</button>
+  </scroll-view>
+  <view wx:if="{{loading}}">三张与卡片等高的骨架屏</view>
+  <activity-card wx:elif="{{activities.length}}" wx:for="{{activities}}" item="{{item}}" bindselect="handleCardSelect"/>
+  <empty-state wx:else title="{{error || '暂时没有符合条件的活动'}}" action-text="{{error ? '重新加载' : '去发布'}}"/>
+</view>
+```
+
+2. 通用活动卡片
+
+```xml
+<view class="activity-card" style="border-left-color: {{item.typeColor}}" bindtap="handleTap" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.statusLabel}}">
+  <view class="card-top"><view class="type-chip"><text>{{item.typeIcon}}</text><text>{{item.typeLabel}}</text></view><status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}"/></view>
+  <view class="card-title">{{item.title}}</view>
+  <view class="scene-line">{{item.sceneLine}}</view>
+  <view class="meta-line"><text>{{item.displayTime}}</text><text>{{item.district}} · {{item.placeLabel}}</text></view>
+  <view class="card-bottom"><view class="member-progress"><view class="progress-track"><view class="progress-fill" style="width: {{item.memberCount / item.targetMembers * 100}}%; background: {{item.typeColor}}"></view></view><text>{{item.memberCount}}/{{item.targetMembers}} 人</text></view><text wx:if="{{item.status === 'RECRUITING'}}">还差 {{item.remaining}} 人</text><text wx:else>查看详情</text></view>
+</view>
+```
+
+实际卡片使用白底、22rpx 圆角、左侧 8rpx 场景色边框、轻阴影；标题 32rpx，正文 28rpx，辅助信息 24rpx；拼车/拼商品/拼搭子由 `sceneLine` 和颜色区分，共用同一骨架。
+
+3. 两步发布
+
+```xml
+<view class="form-header"><view class="type-mark">{{typeLabel}}</view><view><view>{{step === 1 ? '核心信息' : '规则与安全'}}</view><view>{{step === 1 ? '填写别人决定是否加入所需的信息' : '这些信息会帮助成员安全履约'}}</view></view><text>{{step}}/2</text></view>
+<view class="progress-track"><view class="progress-fill" style="width: {{step * 50}}%"></view></view>
+
+<!-- Step 1：标题、场景专属核心字段、行政区 picker、商圈/公共地标、开始日期时间、截止日期时间、目标人数 -->
+<button bindtap="handleNext">下一步：设置规则</button>
+
+<!-- Step 2：说明、固定费用/交付/强度枚举、规则、成团后联系方式、安全提示与协议 -->
+<input placeholder="只填写微信号文本，不要上传二维码" value="{{form.contactInfo}}"/>
+<view class="risk-note">按场景展示拼车合规、商品不担保或公共场所提示</view>
+<checkbox-group bindchange="handleSafety"><label><checkbox value="agreed" checked="{{safetyAgreed}}"/><text>我已阅读并同意安全规则，保证信息真实，理解获批成员将自动占用名额。</text></label></checkbox-group>
+<button bindtap="handleBack">上一步</button><button bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}">同意规则并发布</button>
+```
+
+表单 JS 会逐步校验，失败不清空；草稿存在本地；开始时间必须晚于截止时间；人数 2—20；三类字段分别组装；发布按钮有 loading 防重复。
+
+4. 详情与申请状态
+
+```xml
+<view class="status-strip">状态徽标 + “还差 N 人成团 / 成员可以查看会合信息 / 当前不可申请”</view>
+<view class="detail-card">类型、标题、发起者昵称、时间、区/商圈、场景字段、说明、规则、成团后解锁说明</view>
+<view class="risk-card">按拼车/商品/搭子显示差异化安全提示</view>
+<view wx:if="{{viewerRole === 'guest' && status === 'RECRUITING'}}" class="apply-card">
+  <textarea placeholder="选填：说明行李、数量、经验或时间情况"/>
+  <checkbox>我理解发起者批准后会自动加入并占用名额；如有变化会及时退出。</checkbox>
+  <button disabled="{{pending || !consent}}">提交申请</button>
+</view>
+<view wx:if="{{viewerRole === 'applicant' && viewerApplication.status === 'PENDING'}}">申请已提交 + 撤回申请</view>
+<button wx:if="{{viewerRole === 'owner' && status === 'RECRUITING'}}">管理申请</button>
+<button wx:if="{{成员且已成团}}">进入成团页</button>
+<button class="report-link">举报此活动</button>
+```
+
+5. 申请管理
+
+- 顶部显示活动名、当前人数/目标人数、待处理数量。
+- 每张申请卡显示申请人昵称、备注、申请时间、状态。
+- PENDING 才显示“拒绝 / 同意加入”；同意前再次弹窗说明“批准后立即占用名额，满员自动成团”。
+- 每次处理后重新拉取列表与详情，满员后按钮自然消失。
+
+6. 成团页
+
+```xml
+<view class="formed-hero">✓ + 组团成功/活动已完成 + 时间和人数</view>
+<view class="contact-card">
+  <view wx:if="{{!contact}}">查看前会显示一次安全提醒，并记录访问审计。<button bindtap="handleReveal">查看联系信息</button></view>
+  <view wx:else><view>{{contact.contactInfo}}</view><button bindtap="handleCopy">复制联系信息</button><view>会合说明</view></view>
+</view>
+<view class="safety-card">选择公共场所；不提前转账；发现收费载客、诈骗或骚扰时立即退出并举报。</view>
+<button wx:if="{{owner}}">标记活动已完成</button><button wx:if="{{member}}">退出活动</button><button>举报活动</button>
+```
+
+点击“查看联系信息”时使用原生 `wx.showModal` 做一次安全确认，不设置强制 3 秒等待；确认后才请求鉴权接口。复制使用 `wx.setClipboardData`。
+
+7. 我的
+
+- 顶部个人卡；Mock 下有发起者/参与者身份切换与重置。
+- “待处理”任务区从未读通知生成，可跳转申请管理、详情或成团页。
+- “我的发布 / 我的参与”双 Tab，活动用紧凑卡片显示状态、人数和时间。
+- 完整覆盖 loading、error、零待办、空列表。
+
+四、已完成验证
+
+- 微信开发者工具 Stable 2.01.2510250、基础库 3.15.2、游客模式编译成功。
+- 已实机走通：发现页三类卡片 → 拼车详情 → 发起者申请管理 → 批准 → 人数 1/2 变 2/2 → 自动成团 → 成团页安全确认 → 联系信息显示 → 我的页重置。
+- 21 项自动化测试通过；项目检查覆盖 JSON 解析、JS 语法、WXML 禁止模板函数调用、页面不绕过 Service 层。
+- 游客模式控制台的微信账号能力报错属于 touristappid 限制，Mock 页面与业务不受影响。
+
+五、审查要求
+
+请重点审查：
+1. 信息层级、三场景识别、主操作是否清楚；
+2. 申请→批准→成团→解锁的状态文案是否存在误导或断点；
+3. 两步表单在小屏、长文本、键盘弹出时的可用性；
+4. WXML 表达式、事件、scroll-view、动态 style 等是否有明显兼容性风险；
+5. 触控热区、系统字号、颜色对比、屏幕阅读器属性和安全区；
+6. loading / empty / error / disabled / 重复点击等状态是否完整；
+7. 仅指出会影响 P0 的问题，不要要求增加 Q&A、评价、地图、二维码、支付或复杂信用系统。
+
+OUTPUT：
+- 先给 3—6 条执行结论。
+- 再按 Critical / Warning / Info 分级列出问题。
+- 每个问题必须包含：涉及页面或代码模式、用户影响、最小修复方案。
+- 将无法从材料确认的内容单列为“需实机确认”，不要写成确定缺陷。
+- 最后明确给出“可交付 / 有条件可交付 / 不可交付”的前端结论。
+- 请用中文回答，不要输出完整重构代码。

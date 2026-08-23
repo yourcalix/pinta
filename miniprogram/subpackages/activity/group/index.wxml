@@ -1,0 +1,49 @@
+<view class="page group-page safe-bottom">
+  <view wx:if="{{loading}}" class="loading-block surface">正在核验成员权限…</view>
+  <empty-state wx:elif="{{error}}" symbol="!" title="{{error}}" description="返回详情页刷新状态后再试。" />
+
+  <block wx:elif="{{activity}}">
+    <view class="formed-hero surface">
+      <view class="celebrate">✓</view>
+      <view class="formed-title">{{activity.status === 'COMPLETED' ? '活动已完成' : '组团成功'}}</view>
+      <view class="formed-description">{{activity.title}}</view>
+      <view class="formed-meta">{{activity.displayTime}} · {{activity.memberCount}}/{{activity.targetMembers}} 人</view>
+    </view>
+
+    <view class="contact-card surface">
+      <view class="card-heading">
+        <view>
+          <view class="card-title">成员联系信息</view>
+          <view class="card-description">仅有效成员可以按需获取</view>
+        </view>
+        <status-badge label="成员可见" tone="info" />
+      </view>
+
+      <view wx:if="{{!contact}}" class="contact-locked">
+        <view class="lock-symbol">⌁</view>
+        <view class="lock-copy">查看前会显示一次安全提醒，并记录访问审计。</view>
+        <button class="primary-button" loading="{{revealing}}" disabled="{{revealing}}" bindtap="handleReveal">查看联系信息</button>
+      </view>
+
+      <view wx:else class="contact-open">
+        <view class="contact-label">发起者联系方式</view>
+        <view class="contact-value">{{contact.contactInfo}}</view>
+        <button class="secondary-button copy-button" bindtap="handleCopy">复制联系信息</button>
+        <view class="meeting-block">
+          <view class="meeting-title">会合说明</view>
+          <view>{{contact.meeting.city}} · {{contact.meeting.district}} · {{contact.meeting.placeLabel}}</view>
+          <view wx:if="{{contact.meeting.note}}" class="meeting-note">{{contact.meeting.note}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="safety-card">
+      <view class="safety-title">线下安全提醒</view>
+      <view>选择公共场所；不提前转账；发现收费载客、诈骗或骚扰时立即退出并举报。</view>
+    </view>
+
+    <button wx:if="{{activity.viewerRole === 'owner' && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleComplete" disabled="{{pending}}">标记活动已完成</button>
+    <button wx:if="{{activity.viewerRole === 'member' && (activity.status === 'FORMED' || activity.status === 'RECRUITING')}}" class="danger-button bottom-action" bindtap="handleLeave" disabled="{{pending}}">退出活动</button>
+    <button class="report-link" bindtap="handleReport">举报活动</button>
+  </block>
+</view>

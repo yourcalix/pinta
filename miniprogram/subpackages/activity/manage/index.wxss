@@ -1,0 +1,123 @@
+.manage-page {
+  padding-top: 20rpx;
+}
+
+.loading-block {
+  margin-top: 60rpx;
+  padding: 50rpx;
+  color: #718078;
+  text-align: center;
+}
+
+.activity-summary {
+  padding: 26rpx;
+}
+
+.summary-top,
+.section-heading,
+.application-top,
+.application-actions {
+  display: flex;
+  align-items: center;
+}
+
+.summary-top,
+.section-heading {
+  justify-content: space-between;
+}
+
+.summary-type {
+  font-size: 24rpx;
+  font-weight: 650;
+}
+
+.summary-title {
+  margin-top: 18rpx;
+  font-size: 32rpx;
+  font-weight: 680;
+}
+
+.summary-progress {
+  margin-top: 10rpx;
+  color: #68756e;
+  font-size: 25rpx;
+}
+
+.group-button {
+  margin-top: 22rpx;
+}
+
+.section-heading {
+  margin: 32rpx 2rpx 16rpx;
+  font-size: 31rpx;
+  font-weight: 650;
+}
+
+.section-count {
+  color: #718078;
+  font-size: 24rpx;
+}
+
+.application-card {
+  margin-bottom: 16rpx;
+  padding: 24rpx;
+}
+
+.applicant-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66rpx;
+  height: 66rpx;
+  color: #fff;
+  background: #315f9d;
+  border-radius: 20rpx;
+  font-size: 28rpx;
+  font-weight: 650;
+}
+
+.applicant-main {
+  flex: 1;
+  margin-left: 18rpx;
+}
+
+.applicant-name {
+  font-weight: 650;
+}
+
+.application-time {
+  margin-top: 4rpx;
+  color: #7a867f;
+  font-size: 23rpx;
+}
+
+.application-note {
+  margin-top: 20rpx;
+  padding: 18rpx;
+  color: #4f5c55;
+  background: #f6f8f7;
+  border-radius: 14rpx;
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
+.application-actions {
+  gap: 14rpx;
+  margin-top: 20rpx;
+}
+
+.application-actions button {
+  flex: 1;
+  min-height: 76rpx;
+  margin: 0;
+  font-size: 26rpx;
+}
+
+.cancel-link {
+  min-height: 76rpx;
+  margin-top: 26rpx;
+  color: #a33f44;
+  background: transparent;
+  font-size: 25rpx;
+  line-height: 1.4;
+}
