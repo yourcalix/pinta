@@ -1,0 +1,91 @@
+请把下面这段粘贴到网页版 Gemini 3.6；拿到结果后直接贴回 Codex：
+
+<GEMINI_WEB_PROMPT>
+ROLE: frontend UI/UX analyzer and reviewer
+
+PROJECT:
+“拼吧”微信原生小程序，帮助用户发布和参与拼车、拼商品、拼搭子。核心规则是游客零登录浏览，发布/申请按动作登录，只有成团后的有效成员才能通过独立服务端鉴权获取发起者联系方式。当前处于 G0“真实账号与隐私基线”，仍保持 touristappid + Mock，不在本轮接生产 CloudBase。
+
+REVIEW TARGET:
+成团页“查看联系信息 → 复制联系信息”的隐私交互，以及可复用但只在实际需要页面挂载的最小隐私授权组件/服务。本轮是实施前分析，没有新的页面截图。
+
+KNOWN CONSTRAINTS:
+1. 当前实际使用的微信隐私接口只有 `wx.setClipboardData`；微信官方隐私清单将 `wx.setClipboardData / wx.getClipboardData` 归入“读取你的剪切板”。
+2. 当前不使用手机号、精确位置、头像、通讯录、二维码或 UGC 图片，本轮禁止新增这些授权。
+3. 微信官方文档说明：
+   - 隐私功能已全量启用；基础库 2.32.3+ 支持 `wx.getPrivacySetting`、`wx.onNeedPrivacyAuthorization` 等新能力。
+   - 可以使用 `button open-type="agreePrivacyAuthorization"`、`wx.openPrivacyContract`。
+   - 若调用隐私接口触发事件而开发者未响应监听，平台可展示官方隐私弹窗。
+   - 用户拒绝后 10 秒内再次调用隐私接口，可能直接报拒绝而不重复弹窗。
+4. 查看联系信息与复制是两个动作：
+   - “查看联系信息”先显示一次线下安全确认，确认后调用 `group.contact` 服务端接口；接口再次校验活动已成团且调用者为有效成员，并记录审计。
+   - “复制联系信息”只有在联系信息已成功返回后才调用 `wx.setClipboardData`。
+   - 隐私授权不得替代服务端成员鉴权，也不得在游客浏览或查看详情时提前弹出。
+5. 前端使用原生 JavaScript/WXML/WXSS，不引入 UI 框架或状态库。主色 `#16A36A`，正文不小于 28rpx，交互热区约 44px，需适配 Safe Area 和大字号。
+6. 拒绝隐私授权时只中止本次复制，不隐藏已经通过服务端鉴权显示的联系方式，不阻断返回、举报或其他非敏感操作。
+7. 旧基础库不支持新隐私 API 时需要可理解的降级，不能无限弹窗。
+8. 当前代码（完整相关逻辑，无省略事件绑定）：
+
+```js
+handleReveal() {
+  if (this.data.revealing || this.data.contact) return;
+  wx.showModal({
+    title: '查看联系信息前请确认',
+    content: '拼吧不提供资金担保。不要向陌生人提前转账；线下见面请选择公共场所并告知亲友。',
+    confirmText: '我已了解',
+    success: async (result) => {
+      if (!result.confirm) return;
+      this.setData({ revealing: true });
+      try {
+        const contact = await activityService.contact(this.data.id);
+        this.setData({ contact });
+      } catch (error) {
+        wx.showToast({ title: error.message || '暂时无法查看', icon: 'none' });
+      } finally {
+        this.setData({ revealing: false });
+      }
+    }
+  });
+},
+
+handleCopy() {
+  if (!this.data.contact) return;
+  wx.setClipboardData({
+    data: this.data.contact.contactInfo,
+    success: () => wx.showToast({ title: '已复制', icon: 'success' })
+  });
+}
+```
+
+```xml
+<view wx:if="{{!contact}}" class="contact-locked">
+  <view class="lock-copy">查看前会显示一次安全提醒，并记录访问审计。</view>
+  <button class="primary-button" loading="{{revealing}}" disabled="{{revealing}}" bindtap="handleReveal">查看联系信息</button>
+</view>
+
+<view wx:else class="contact-open">
+  <view class="contact-label">发起者联系方式</view>
+  <view class="contact-value">{{contact.contactInfo}}</view>
+  <button class="secondary-button copy-button" bindtap="handleCopy">复制联系信息</button>
+</view>
+```
+
+REVIEW QUESTIONS:
+1. 在“完全依赖微信官方隐私弹窗”“自定义隐私组件 + `onNeedPrivacyAuthorization`”“薄服务先调用 `requirePrivacyAuthorize` 再复制”三种方案中，哪一种最适合本项目 G0？请给出唯一推荐，不要把三种都列为最终方案。
+2. 推荐方案如何覆盖首次同意、首次拒绝、10 秒内重复点击、已经同意、旧基础库不支持、隐私指引未配置、打开隐私协议失败？
+3. 隐私弹窗应只挂在成团页，还是做成可复用组件但按需挂载？如何避免游客首屏弹窗和多页面监听冲突？
+4. “线下安全确认”和“剪贴板隐私同意”是否应保持两层独立交互？怎样避免连续弹窗造成疲劳？
+5. `wx.setClipboardData` 成功时系统是否已有反馈，是否应删除当前自定义“已复制” Toast，避免 iOS/Android 重复提示？
+6. 给出最小组件状态机、用户文案、可访问性要求、受影响文件和真机验收清单；不要扩大到 G1、分享或订阅消息。
+
+OUTPUT:
+1. 总体判断与唯一推荐方案
+2. Critical / Warning / Info 分级问题清单
+3. 最小交互状态机（事件 → 状态 → 用户反馈 → 后续动作）
+4. 页面/组件/服务级改动清单
+5. 建议文案（标题、说明、查看协议、同意、暂不、拒绝后提示）
+6. 自动化可覆盖项与必须真机验证项
+7. 需要产品负责人决定的问题（最多 3 个）
+
+Do not assume missing business facts. Separate objective usability issues from subjective visual preferences. Do not output full implementation code.
+</GEMINI_WEB_PROMPT>

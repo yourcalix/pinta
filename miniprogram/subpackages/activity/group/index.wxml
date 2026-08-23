@@ -27,8 +27,9 @@
 
       <view wx:else class="contact-open">
         <view class="contact-label">发起者联系方式</view>
-        <view class="contact-value">{{contact.contactInfo}}</view>
-        <button class="secondary-button copy-button" bindtap="handleCopy">复制联系信息</button>
+        <text user-select="true" class="contact-value">{{contact.contactInfo}}</text>
+        <view class="contact-help">长按上方文本也可手动复制</view>
+        <button class="secondary-button copy-button" loading="{{copying}}" disabled="{{copying}}" bindtap="handleCopy">复制联系信息</button>
         <view class="meeting-block">
           <view class="meeting-title">会合说明</view>
           <view>{{contact.meeting.city}} · {{contact.meeting.district}} · {{contact.meeting.placeLabel}}</view>
@@ -46,4 +47,5 @@
     <button wx:if="{{activity.viewerRole === 'member' && (activity.status === 'FORMED' || activity.status === 'RECRUITING')}}" class="danger-button bottom-action" bindtap="handleLeave" disabled="{{pending}}">退出活动</button>
     <button class="report-link" bindtap="handleReport">举报活动</button>
   </block>
+  <privacy-popup id="privacy-popup" />
 </view>

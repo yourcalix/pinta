@@ -1,6 +1,7 @@
 'use strict';
 
 const activityService = require('../../../services/activity');
+const { clipboardFailureMessage } = require('../../../services/privacy');
 const { decorateActivity } = require('../../../utils/display');
 
 Page({
@@ -11,6 +12,7 @@ Page({
     activity: null,
     contact: null,
     revealing: false,
+    copying: false,
     pending: false
   },
 
@@ -59,11 +61,22 @@ Page({
   },
 
   handleCopy() {
-    if (!this.data.contact) return;
-    wx.setClipboardData({
-      data: this.data.contact.contactInfo,
-      success: () => wx.showToast({ title: '已复制', icon: 'success' })
-    });
+    if (!this.data.contact || this.data.copying) return;
+    if (typeof wx.setClipboardData !== 'function') {
+      wx.showToast({ title: '当前微信版本不支持一键复制，可长按文本手动复制', icon: 'none' });
+      return;
+    }
+    this.setData({ copying: true });
+    try {
+      wx.setClipboardData({
+        data: this.data.contact.contactInfo,
+        fail: (error) => wx.showToast({ title: clipboardFailureMessage(error), icon: 'none' }),
+        complete: () => this.setData({ copying: false })
+      });
+    } catch (error) {
+      this.setData({ copying: false });
+      wx.showToast({ title: clipboardFailureMessage(error), icon: 'none' });
+    }
   },
 
   handleComplete() {

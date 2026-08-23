@@ -2,6 +2,7 @@
   "navigationBarTitleText": "成团与履约",
   "usingComponents": {
     "status-badge": "/components/status-badge/index",
-    "empty-state": "/components/empty-state/index"
+    "empty-state": "/components/empty-state/index",
+    "privacy-popup": "/components/privacy-popup/index"
   }
 }

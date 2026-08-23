@@ -1,0 +1,292 @@
+请把下面这段粘贴到网页版 Gemini 3.6，拿到结果后直接贴回这里：
+
+<GEMINI_WEB_PROMPT>
+ROLE: 微信原生小程序前端 reviewer / 隐私交互与无障碍审查员
+
+TASK:
+请对“拼吧”小程序 G0 阶段已经落地的剪贴板隐私授权实现做实现后复核。不要重新扩张需求，不要审查 G1 CloudBase、G2 分享、G3 通知或 V1.1 功能。请只依据下面给出的真实代码与验证事实判断；缺少真机证据的项目必须明确写“需真机验证”，不要假定已经通过。
+
+固定产品决策：
+1. “查看联系信息”与“复制联系信息”是两步独立动作。
+2. 服务端 group.contact 负责成团状态、有效成员鉴权和访问审计；微信隐私授权只控制本地 wx.setClipboardData，不能影响服务端权限契约。
+3. 游客发现页、公开详情页不提前弹隐私授权。
+4. G0 仅在成团页挂载 privacy-popup；拒绝后保留明文联系方式和长按选择，不跳系统设置强引导。
+5. 复制成功只使用微信原生反馈，不再显示自定义“已复制” Toast。
+6. 公共 project.config.json 继续使用 touristappid；真实 AppID 只写入被 Git 忽略的 project.private.config.json。
+
+实现代码如下。
+
+【miniprogram/services/privacy.js】
+```js
+'use strict';
+
+function createPrivacyBridge(platform) {
+  let activePrompt = null;
+  let listenerRegistered = false;
+
+  function settleAsDisagree(resolve) {
+    if (typeof resolve !== 'function') return;
+    try {
+      resolve({ event: 'disagree' });
+    } catch (error) {
+      if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+        console.warn('[pinba-privacy] failed to settle privacy request', error && error.message);
+      }
+    }
+  }
+
+  function ensureListener() {
+    if (listenerRegistered) return true;
+    if (!platform || typeof platform.onNeedPrivacyAuthorization !== 'function') return false;
+    platform.onNeedPrivacyAuthorization((resolve, eventInfo) => {
+      if (activePrompt && typeof activePrompt.handler === 'function') {
+        try {
+          activePrompt.handler({ resolve, eventInfo: eventInfo || {} });
+          return;
+        } catch (error) {
+          if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+            console.warn('[pinba-privacy] privacy prompt handler failed', error && error.message);
+          }
+        }
+      }
+      settleAsDisagree(resolve);
+    });
+    listenerRegistered = true;
+    return true;
+  }
+
+  function attachPrompt(handler) {
+    if (typeof handler !== 'function') return () => {};
+    const prompt = { handler };
+    activePrompt = prompt;
+    ensureListener();
+    return () => {
+      if (activePrompt === prompt) activePrompt = null;
+    };
+  }
+
+  return {
+    attachPrompt,
+    clearPrompt() {
+      activePrompt = null;
+    },
+    isSupported: ensureListener
+  };
+}
+
+function clipboardFailureMessage(error) {
+  const message = String(error && (error.errMsg || error.message) || '').toLowerCase();
+  if (/privacy|not authorized|permission.*denied|errno[^0-9]*103/.test(message)) {
+    return '未同意剪贴板权限，可长按上方联系信息手动复制';
+  }
+  return '复制失败，可长按上方联系信息手动复制';
+}
+
+let defaultBridge;
+
+function getDefaultBridge() {
+  if (!defaultBridge) {
+    defaultBridge = createPrivacyBridge(typeof wx === 'undefined' ? null : wx);
+  }
+  return defaultBridge;
+}
+
+module.exports = {
+  attachPrompt: (handler) => getDefaultBridge().attachPrompt(handler),
+  clipboardFailureMessage,
+  createPrivacyBridge,
+  isSupported: () => getDefaultBridge().isSupported()
+};
+```
+
+【miniprogram/components/privacy-popup/index.js】
+```js
+'use strict';
+
+const privacyService = require('../../services/privacy');
+
+Component({
+  data: { visible: false },
+
+  lifetimes: {
+    attached() {
+      this.detachPrivacyPrompt = privacyService.attachPrompt((request) => {
+        this.handlePrivacyRequest(request);
+      });
+    },
+
+    detached() {
+      this.settlePrivacy({ event: 'disagree' }, false);
+      if (this.detachPrivacyPrompt) this.detachPrivacyPrompt();
+      this.detachPrivacyPrompt = null;
+    }
+  },
+
+  methods: {
+    handlePrivacyRequest(request) {
+      if (!request || typeof request.resolve !== 'function') return;
+      this.settlePrivacy({ event: 'disagree' }, false);
+      this.resolvePrivacyAuthorization = request.resolve;
+      this.setData({ visible: true });
+      request.resolve({ event: 'exposureAuthorization' });
+    },
+
+    settlePrivacy(result, updateView = true) {
+      const resolve = this.resolvePrivacyAuthorization;
+      this.resolvePrivacyAuthorization = null;
+      if (updateView) this.setData({ visible: false });
+      if (typeof resolve === 'function') resolve(result);
+    },
+
+    handleAgreePrivacyAuthorization() {
+      this.settlePrivacy({ buttonId: 'agree-btn', event: 'agree' });
+    },
+
+    handleRejectPrivacyAuthorization() {
+      this.settlePrivacy({ event: 'disagree' });
+    },
+
+    handleOpenPrivacyContract() {
+      if (typeof wx.openPrivacyContract !== 'function') {
+        wx.showToast({ title: '当前微信版本暂不支持查看', icon: 'none' });
+        return;
+      }
+      wx.openPrivacyContract({
+        fail: () => wx.showToast({ title: '隐私指引暂时无法打开', icon: 'none' })
+      });
+    },
+
+    preventTouchMove() {}
+  }
+});
+```
+
+【miniprogram/components/privacy-popup/index.wxml】
+```xml
+<view wx:if="{{visible}}" class="privacy-mask" catchtouchmove="preventTouchMove">
+  <view class="privacy-dialog" aria-role="dialog" aria-label="剪贴板隐私说明">
+    <view class="privacy-title">剪贴板隐私说明</view>
+    <view class="privacy-description">为方便你一键复制发起者的联系方式，拼吧需要使用你的剪贴板。拒绝不会影响查看联系信息或使用其他功能。</view>
+    <button class="privacy-contract" bindtap="handleOpenPrivacyContract">查看《拼吧小程序隐私保护指引》</button>
+    <view class="privacy-actions">
+      <button class="privacy-button privacy-button-secondary" bindtap="handleRejectPrivacyAuthorization">暂不同意</button>
+      <button id="agree-btn" class="privacy-button privacy-button-primary" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="handleAgreePrivacyAuthorization">同意并继续</button>
+    </view>
+  </view>
+</view>
+```
+
+【miniprogram/components/privacy-popup/index.wxss】
+```css
+.privacy-mask {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(20, 31, 26, 0.5);
+}
+
+.privacy-dialog {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 34rpx 30rpx calc(28rpx + env(safe-area-inset-bottom));
+  color: #1f2c25;
+  background: #fff;
+  border-radius: 28rpx 28rpx 0 0;
+}
+
+.privacy-title { font-size: 34rpx; font-weight: 700; line-height: 1.4; }
+.privacy-description { margin-top: 16rpx; color: #59665f; font-size: 28rpx; line-height: 1.65; }
+.privacy-contract {
+  min-height: 88rpx;
+  margin: 12rpx 0 0;
+  padding: 0;
+  color: #167a54;
+  background: transparent;
+  font-size: 26rpx;
+  line-height: 88rpx;
+  text-align: left;
+}
+.privacy-contract::after, .privacy-button::after { border: 0; }
+.privacy-actions { display: flex; gap: 18rpx; margin-top: 20rpx; }
+.privacy-button {
+  flex: 1;
+  min-height: 88rpx;
+  margin: 0;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 650;
+  line-height: 88rpx;
+}
+.privacy-button-secondary { color: #46534c; background: #eef2f0; }
+.privacy-button-primary { color: #fff; background: #16a36a; }
+```
+
+【成团页关键代码】
+```js
+handleCopy() {
+  if (!this.data.contact || this.data.copying) return;
+  if (typeof wx.setClipboardData !== 'function') {
+    wx.showToast({ title: '当前微信版本不支持一键复制，可长按文本手动复制', icon: 'none' });
+    return;
+  }
+  this.setData({ copying: true });
+  try {
+    wx.setClipboardData({
+      data: this.data.contact.contactInfo,
+      fail: (error) => wx.showToast({ title: clipboardFailureMessage(error), icon: 'none' }),
+      complete: () => this.setData({ copying: false })
+    });
+  } catch (error) {
+    this.setData({ copying: false });
+    wx.showToast({ title: clipboardFailureMessage(error), icon: 'none' });
+  }
+}
+```
+
+```xml
+<text user-select="true" class="contact-value">{{contact.contactInfo}}</text>
+<view class="contact-help">长按上方文本也可手动复制</view>
+<button class="secondary-button copy-button" loading="{{copying}}" disabled="{{copying}}" bindtap="handleCopy">复制联系信息</button>
+...
+<privacy-popup id="privacy-popup" />
+```
+
+页面 JSON 只在成团页注册：
+```json
+{
+  "usingComponents": {
+    "status-badge": "/components/status-badge/index",
+    "empty-state": "/components/empty-state/index",
+    "privacy-popup": "/components/privacy-popup/index"
+  }
+}
+```
+
+已完成验证事实：
+- `npm run verify`：31/31 Node 测试通过；JSON 24、JS 38、WXML 13，项目检查通过。
+- 自动化覆盖：监听只注册一次、当前组件覆盖旧处理器、无活动组件时 disagree、处理器抛错时 disagree、非法 resolve 防御、曝光/同意/拒绝/销毁结算、同步剪贴板异常恢复 copying、公共配置不泄密。
+- GPT 5.3 Codex Spark 安全/契约复审：Critical 0、Warning 0；确认 group.contact 服务端鉴权/审计未被客户端隐私授权耦合或削弱。
+- 微信开发者工具 Stable 2.01.2510290、基础库 3.15.2：发现页→详情→成团页→安全确认→联系方式展示→原生复制模拟可运行。
+- 视觉检查：通过调试数据强制显示弹窗，在 iPhone 12/13 模拟尺寸下遮罩、底部安全区、标题、说明、协议入口和双按钮均显示正常。
+- 限制：当前是 touristappid，无法证明真实 `wx.onNeedPrivacyAuthorization` 的同意、拒绝、10 秒重试和 `wx.openPrivacyContract`；这些项目尚未真机验收。
+- 开发者工具现存 `webapi_getwxaasyncsecinfo:fail`、`wx.operateWXData` 游客模式警告和 timeout，为 touristappid 平台限制；没有观察到本轮页面业务 JS exception。
+
+请重点审查：
+1. `wx.onNeedPrivacyAuthorization` 覆盖式监听由单例桥管理是否正确；组件附着、覆盖、销毁和异常时是否可能悬挂请求。
+2. 同一个微信 `resolve` 先发送 `exposureAuthorization`，之后发送 `{buttonId:'agree-btn', event:'agree'}` 或 `{event:'disagree'}` 是否与原生按钮事件时序一致。
+3. `open-type="agreePrivacyAuthorization"`、`bindagreeprivacyauthorization`、按钮 `id` 的组合是否正确。
+4. `wx.setClipboardData` 成功时是否确实没有重复自定义 Toast；拒绝、异步 fail、同步 throw、低版本 API 缺失时是否都能恢复按钮并提供真实可用降级。
+5. 底部弹窗在小屏、Home Bar、Android 手势区、大字号/关怀模式下的布局、文字换行、双按钮宽度和协议入口可点击性。
+6. A11y：`aria-role/aria-label` 是否足够；蒙层出现后的焦点、读屏顺序、背景可访问性或键盘/触控拦截是否存在可修复问题。
+7. 是否存在任何会阻断 G0 的真实前端 Critical/Warning；不要把 touristappid 无法验证的项目误判为代码已经失败。
+
+OUTPUT（中文，严格按此结构）：
+一、执行结论：5—10 条最重要判断。
+二、上一轮三项产品决定复核：不强引导系统设置、移除自定义成功 Toast、仅成团页挂载，逐项给出“已落实/未落实”。
+三、问题分级：Critical / Warning / Info；每条必须包含涉及文件或代码模式、用户影响、最小修复。没有问题时明确写“无”。
+四、自动化可覆盖项与必须真实 AppID 真机验证项；iOS/Android 分开列出必要检查。
+五、前端最终结论：只能从【可交付】【有条件可交付】【不可交付】三选一，并列明条件。
+</GEMINI_WEB_PROMPT>

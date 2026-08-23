@@ -100,11 +100,19 @@
 }
 
 .contact-value {
+  display: block;
   margin-top: 10rpx;
   color: #1d3556;
   font-size: 34rpx;
   font-weight: 700;
   word-break: break-all;
+}
+
+.contact-help {
+  margin-top: 8rpx;
+  color: #6b786f;
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 
 .copy-button {

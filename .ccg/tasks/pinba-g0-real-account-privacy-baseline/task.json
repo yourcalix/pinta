@@ -1,0 +1,12 @@
+{
+  "id": "pinba-g0-real-account-privacy-baseline",
+  "title": "实施拼吧 G0 真实账号与隐私基线",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "使用真实 AppID 完成 G0 后台与 iOS/Android 真机硬门槛后进入 G1",
+  "createdAt": "2026-08-23T13:28:47+08:00",
+  "branch": "main"
+}

@@ -13,6 +13,18 @@
 
 默认配置位于 `miniprogram/config/index.js`，其中 `useMock: true` 表示本地演示模式。
 
+## G0：真实 AppID 与隐私基线
+
+仓库中的 `project.config.json` 始终保留 `touristappid`。接入真实账号时，不要修改并提交这个公共配置；微信开发者工具支持用优先级更高的 `project.private.config.json` 保存个人 AppID，且本仓库已经忽略该文件。
+
+1. 复制 `project.private.config.example.json` 为 `project.private.config.json`，把占位值替换为真实 AppID；也可以在开发者工具“详情 → 基本信息”中修改，工具会优先写入私有配置。
+2. 在小程序管理后台如实配置《小程序用户隐私保护指引》。当前代码实际调用的隐私接口只有 `wx.setClipboardData`，后台需声明剪贴板用途；不要勾选未使用的手机号、精确位置、头像、通讯录或相册能力。
+3. 成团页只有在有效成员主动点击“复制联系信息”时才触发剪贴板隐私授权。拒绝只会中止复制，已通过服务端鉴权显示的联系方式仍可长按选择，其他功能不受影响。
+4. 隐私弹窗提供“查看隐私保护指引”“暂不同意”和“同意并继续”；微信基础库低于 2.32.3 时不会使用新监听机制，复制 API 保持平台原生行为。
+5. 真实 AppID 下必须用 iOS、Android 各至少一台设备验证同意、拒绝、10 秒内重试、协议打开和大字号布局。
+
+完整后台与真机清单见 `outputs/拼吧-G0-账号合规与隐私验收清单.md`。
+
 ## 推荐验收路径
 
 - 发起者闭环：我的 → 待处理申请 → 同意加入 → 自动成团 → 进入成团页 → 安全确认 → 查看联系方式。
@@ -40,8 +52,8 @@ npm run verify
 
 在正式联调前完成以下步骤：
 
-1. 将 `project.config.json` 的 `appid` 替换为真实小程序 AppID。
-2. 在微信开发者工具中开通云开发环境，将环境 ID 写入 `miniprogram/config/index.js` 的 `cloudEnv`。
+1. 使用被 Git 忽略的 `project.private.config.json` 配置真实小程序 AppID，公共 `project.config.json` 继续保留 `touristappid`。
+2. 在微信开发者工具中开通云开发环境。G1 联调时再通过不进入版本控制的本地配置或已选默认环境指定环境 ID；当前仓库中的 `cloudEnv` 保持空值。
 3. 创建集合：`users`、`activities`、`applications`、`members`、`notifications`、`reports`、`auditLogs`、`idempotency`。
    当前 MVP 使用确定性文档 ID 保障并发和幂等，正式环境应使用新建空库初始化，不要与采用随机成员/申请 ID 的旧版数据混用。
 4. 将数据库集合权限设为“所有用户不可直接读写”，业务数据只允许通过 `cloudfunctions/api` 云函数访问。
@@ -56,7 +68,7 @@ npm run verify
    - `PINBA_ENV=production`
    - `ENABLE_WECHAT_CONTENT_CHECK=true`
 
-7. 将 `miniprogram/config/index.js` 中 `useMock` 改为 `false`。
+7. G1 建立本地环境配置后将 `useMock` 切换为 `false`；不要把真实环境 ID 或订阅模板 ID 提交到仓库。
 
 生产环境如果没有启用微信内容安全检查，云函数会拒绝发布和用户生成内容提交，避免静默绕过审核。
 
