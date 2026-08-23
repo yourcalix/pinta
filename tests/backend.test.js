@@ -34,7 +34,8 @@ function setup() {
       user('member-openid', '参与者'),
       user('other-openid', '路人'),
       user('second-openid', '候补'),
-      user('admin-openid', '运营', 'admin')
+      user('admin-openid', '运营', 'admin'),
+      { ...user('disabled-openid', '受限账号'), status: 'DISABLED' }
     ]
   });
   let sequence = 0;
@@ -113,6 +114,37 @@ test('登录只返回不可逆会话作用域而不返回 openid', async () => {
   assert.equal(JSON.stringify(loggedIn.data).includes('owner-openid'), false);
 });
 
+test('受限账号登录和受保护动作统一返回 ACCOUNT_DISABLED', async () => {
+  const { call } = setup();
+  const loggedIn = await call('auth.login', {}, 'disabled-openid');
+  assert.equal(loggedIn.ok, false);
+  assert.deepEqual(loggedIn.error, {
+    code: 'ACCOUNT_DISABLED',
+    message: '账号已被限制，请联系平台处理'
+  });
+
+  const mine = await call('activity.mine', {}, 'disabled-openid');
+  assert.equal(mine.ok, false);
+  assert.equal(mine.error.code, 'ACCOUNT_DISABLED');
+
+  const created = await call('activity.create', rideInput(), 'disabled-openid', 'disabled-create-001');
+  assert.equal(created.ok, false);
+  assert.equal(created.error.code, 'ACCOUNT_DISABLED');
+});
+
+test('账号停用后不能通过旧幂等键重放成功结果', async () => {
+  const { call, store } = setup();
+  const key = 'disabled-replay-001';
+  const created = await call('activity.create', rideInput(), 'owner-openid', key);
+  assert.equal(created.ok, true);
+
+  store.users.get('owner-openid').status = 'DISABLED';
+  const replay = await call('activity.create', rideInput(), 'owner-openid', key);
+  assert.equal(replay.ok, false);
+  assert.equal(replay.error.code, 'ACCOUNT_DISABLED');
+  assert.equal(store.activities.size, 1);
+});
+
 test('公开列表忽略调用方伪造的非公开状态过滤', async () => {
   const { call } = setup();
   const created = await call('activity.create', rideInput(), 'owner-openid', 'create-hidden-status-001');
@@ -123,6 +155,30 @@ test('公开列表忽略调用方伪造的非公开状态过滤', async () => {
   const page = await call('activity.list', { status: 'CANCELLED' });
   assert.equal(page.ok, true);
   assert.equal(page.data.items.some((item) => item.id === created.data.activity.id), false);
+});
+
+test('运营下架活动从公开列表消失且直达详情返回 TAKEDOWN', async () => {
+  const { call } = setup();
+  const created = await call('activity.create', rideInput(), 'owner-openid', 'create-takedown-001');
+  const activityId = created.data.activity.id;
+  const suspended = await call('admin.activity.suspend', {
+    activityId,
+    reason: '测试运营处置原因'
+  }, 'admin-openid', 'suspend-takedown-001');
+  assert.equal(suspended.ok, true);
+  assert.equal(suspended.data.activity.status, 'SUSPENDED');
+  assert.equal(JSON.stringify(suspended.data).includes('admin-openid'), false);
+  assert.equal(JSON.stringify(suspended.data).includes('测试运营处置原因'), false);
+
+  const page = await call('activity.list');
+  assert.equal(page.data.items.some((item) => item.id === activityId), false);
+
+  const detail = await call('activity.detail', { activityId });
+  assert.equal(detail.ok, false);
+  assert.deepEqual(detail.error, {
+    code: 'TAKEDOWN',
+    message: '该活动已被平台处理，暂不可查看'
+  });
 });
 
 test('申请时必须同意获批后自动占位', async () => {

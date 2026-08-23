@@ -142,10 +142,15 @@ function createPinbaService(options) {
     return actorId;
   }
 
+  function assertActiveAccount(user) {
+    invariant(user, 'UNAUTHENTICATED');
+    invariant(user.status === 'ACTIVE', 'ACCOUNT_DISABLED');
+    return user;
+  }
+
   async function requireActiveUser(context, requireProfile = true) {
     const actorId = requireActor(context);
-    const user = await store.getUser(actorId);
-    invariant(user && user.status === 'ACTIVE', 'UNAUTHENTICATED');
+    const user = assertActiveAccount(await store.getUser(actorId));
     if (requireProfile) invariant(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE');
     return user;
   }
@@ -155,18 +160,17 @@ function createPinbaService(options) {
 
     if (action === 'auth.login') {
       const actorId = requireActor(context);
-      const user = await store.ensureUser(actorId, at);
+      const user = assertActiveAccount(await store.ensureUser(actorId, at));
       return { user: publicUser(user), sessionScope: stableEntityId('session', actorId) };
     }
 
     if (action === 'profile.get') {
-      const actorId = requireActor(context);
-      return { user: publicUser(await store.getUser(actorId)) };
+      return { user: publicUser(await requireActiveUser(context, false)) };
     }
 
     if (action === 'profile.update') {
       const actorId = requireActor(context);
-      await store.ensureUser(actorId, at);
+      assertActiveAccount(await store.ensureUser(actorId, at));
       const profile = validateProfileInput(input);
       const user = await store.updateProfile(actorId, profile, at);
       await store.addAudit({ id: operationId(context, 'audit'), actorId, action, targetType: 'user', targetId: actorId, at });
@@ -192,7 +196,8 @@ function createPinbaService(options) {
     if (action === 'activity.detail') {
       const activityId = validateId(input && input.activityId, '活动ID');
       const activity = await store.getActivity(activityId);
-      invariant(activity && activity.status !== ACTIVITY_STATUS.SUSPENDED, 'NOT_FOUND');
+      invariant(activity, 'NOT_FOUND');
+      invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
       const actorId = context && context.actorId;
       const viewer = actorId ? await store.getViewerContext(activityId, actorId) : {};
       return { activity: publicActivity(activity, viewer) };
@@ -442,6 +447,9 @@ function createPinbaService(options) {
       const input = event.data || {};
       let data;
       if (MUTATING_ACTIONS.has(action)) {
+        // Account status is checked before idempotency replay so a user disabled
+        // after an earlier success cannot keep replaying privileged results.
+        await requireActiveUser(context, false);
         const actorId = requireActor(context);
         const key = requireIdempotencyKey(event.idempotencyKey);
         const cached = await store.getIdempotency(actorId, action, key);

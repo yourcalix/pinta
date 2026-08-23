@@ -1,0 +1,12 @@
+{
+  "id": "pinba-local-safety-contracts",
+  "title": "在 Mock 模式下完善账号受限与活动下架安全契约",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档本任务；下一任务为前端受控兜底状态，需走网页版 Gemini 3.7 Flash",
+  "createdAt": "2026-08-23T23:14:27+08:00",
+  "branch": "main"
+}

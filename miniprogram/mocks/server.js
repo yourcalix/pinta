@@ -16,6 +16,7 @@ const MUTATING_ACTIONS = new Set([
   'report.create',
   'admin.activity.suspend'
 ]);
+const PUBLIC_ACTIONS = new Set(['activity.list', 'activity.detail']);
 
 function isoAfter(hours) {
   return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
@@ -32,7 +33,9 @@ function seedState() {
     users: [
       { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', city: '上海', interests: ['羽毛球', '咖啡'], adultConfirmed: true } },
       { id: 'u_member', role: 'user', status: 'ACTIVE', profile: { nickname: '阿同', city: '上海', interests: ['徒步', '摄影'], adultConfirmed: true } },
-      { id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', city: '上海', interests: ['凑单'], adultConfirmed: true } }
+      { id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', city: '上海', interests: ['凑单'], adultConfirmed: true } },
+      { id: 'u_admin', role: 'admin', status: 'ACTIVE', profile: { nickname: '运营', city: '上海', interests: [], adultConfirmed: true } },
+      { id: 'u_disabled', role: 'user', status: 'DISABLED', profile: { nickname: '受限账号', city: '上海', interests: [], adultConfirmed: true } }
     ],
     activities: [
       {
@@ -61,6 +64,17 @@ function seedState() {
         contactInfo: '微信号 pinba_xiaopin', rules: '体育馆一楼前台旁会合，请自带球拍。',
         typeData: { category: '运动', costMode: 'AA', level: 'BEGINNER', equipment: '自带球拍' },
         status: 'FORMED', version: 2, formedAt: now, createdAt: now, updatedAt: now
+      },
+      {
+        id: 'a_suspended', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'buddy',
+        title: '已下架活动测试数据', description: '仅用于验证下架状态，不应出现在公开列表或详情中。',
+        city: '上海', district: '静安区', placeLabel: '测试地点',
+        startsAt: isoAfter(12), deadlineAt: isoAfter(6), targetMembers: 2, memberCount: 1,
+        contactInfo: '微信号 pinba_suspended', rules: '内部测试规则',
+        typeData: { category: '测试', costMode: 'AA', level: 'BEGINNER', equipment: '' },
+        status: 'SUSPENDED', version: 2,
+        suspension: { adminId: 'admin_mock', reason: '测试运营处置原因', at: now },
+        createdAt: now, updatedAt: now
       }
     ],
     applications: [
@@ -160,7 +174,7 @@ function publicActivity(activity) {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
   const viewerMember = activeMember(activity.id, currentUserId);
   const viewerRole = activity.ownerId === currentUserId ? 'owner' : viewerMember ? 'member' : viewerApplication ? 'applicant' : 'guest';
-  const { contactInfo, ownerId, version, ...safe } = activity;
+  const { contactInfo, ownerId, version, suspension, operationKeyHash, ...safe } = activity;
   return {
     ...clone(safe),
     viewerRole,
@@ -181,6 +195,7 @@ function ok(data) {
 function requireUser() {
   const user = userById(currentUserId);
   if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
+  if (user.status !== 'ACTIVE') throw fail('ACCOUNT_DISABLED', '账号已被限制，请联系平台处理');
   return user;
 }
 
@@ -266,6 +281,7 @@ function approveApplication(input) {
 }
 
 function handle(action, input) {
+  if (!PUBLIC_ACTIONS.has(action)) requireUser();
   if (action === 'auth.login') return { user: publicUser(requireUser()), sessionScope: `mock-session-${currentUserId}` };
   if (action === 'profile.get') return { user: publicUser(requireUser()) };
   if (action === 'profile.update') {
@@ -276,7 +292,8 @@ function handle(action, input) {
   if (action === 'activity.list') return listActivities(input);
   if (action === 'activity.detail') {
     const activity = activityById(input.activityId);
-    assert(activity && activity.status !== 'SUSPENDED', 'NOT_FOUND', '活动不存在或已失效');
+    assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+    assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
     return { activity: publicActivity(activity) };
   }
   if (action === 'activity.mine') {
@@ -382,6 +399,23 @@ function handle(action, input) {
     const { reporterId, ...safeReport } = report;
     return { report: clone(safeReport), hiddenForReporter: true };
   }
+  if (action === 'admin.activity.suspend') {
+    const admin = requireUser();
+    assert(admin.role === 'admin', 'FORBIDDEN', '你没有权限执行此操作');
+    const activity = activityById(input.activityId);
+    assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+    if (activity.status !== 'SUSPENDED') {
+      activity.status = 'SUSPENDED';
+      activity.suspension = {
+        adminId: admin.id,
+        reason: input.reason || '',
+        at: new Date().toISOString()
+      };
+      activity.version += 1;
+      activity.updatedAt = activity.suspension.at;
+    }
+    return { activity: publicActivity(activity) };
+  }
   throw fail('NOT_FOUND', '接口动作不存在');
 }
 
@@ -393,6 +427,7 @@ async function call(event) {
       ? `${currentUserId}:${action}:${event.idempotencyKey}`
       : '';
     if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');
+    if (isMutation) requireUser();
     if (idempotencyId && state.idempotency[idempotencyId]) {
       const replay = ok(clone(state.idempotency[idempotencyId]));
       replay.idempotentReplay = true;
