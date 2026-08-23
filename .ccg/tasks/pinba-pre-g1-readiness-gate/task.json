@@ -1,0 +1,12 @@
+{
+  "id": "pinba-pre-g1-readiness-gate",
+  "title": "完善拼吧进入 G1 前的真实账号与验收门槛",
+  "status": "in_progress",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "review",
+  "nextAction": "等待用户在本地配置真实 AppID，并完成微信后台、测试 CloudBase 与 iOS/Android 真机证据后重跑门禁",
+  "createdAt": "2026-08-23T15:40:41+08:00",
+  "branch": "main"
+}

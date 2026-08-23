@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "check": "node scripts/check-project.js",
-    "verify": "npm run test && npm run check"
+    "verify": "npm run test && npm run check",
+    "g1:readiness": "npm run verify && node scripts/g1-readiness-gate.js"
   },
   "engines": {
     "node": ">=18"

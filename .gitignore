@@ -3,6 +3,8 @@ node_modules/
 
 # WeChat DevTools local files
 project.private.config.json
+g1-readiness.manual.json
+g1-readiness-evidence/
 *.wxapkg
 
 # Environment and secrets

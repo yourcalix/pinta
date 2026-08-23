@@ -1,0 +1,28 @@
+# 拼吧 G1 前置门禁复审记录
+
+## CCG 复审结论
+
+- GPT 5.3 Codex Spark 定向复审：可提交“门禁工具与文档”。
+- Session：`01a02d9b-e755-77e3-b345-7edc73e2b113`
+- Critical：0
+- Warning：0
+- 上一轮四项 Warning 均已关闭：运行配置改为静态解析、关键边界测试补齐、AppID 通用泄露断言、人工模板与脚本检查项漂移保护。
+- 本任务没有修改 WXML、WXSS 或页面交互，沿用上一轮用户贴回的网页版 Gemini 真机验收矩阵；没有伪造新的 Gemini 结论。
+
+## 主会话验证
+
+- `npm run verify`：通过，42/42 测试成功。
+- 项目静态检查：JSON 26、JS 40、WXML 13，状态正常。
+- `git diff --check`：通过。
+- 门禁脚本保持只读、无网络、无登录、无 CloudBase 探测，并且不输出 AppID、环境 ID、模板 ID 或人工证据正文。
+- 当前门禁结果：`BLOCKED`（退出码 1）。
+
+## 当前真实阻断
+
+1. 本地缺少被 Git 忽略的 `project.private.config.json`，因此 `private-real-appid` 为 `BLOCKED`。
+2. 六项阻断性人工证据仍为 `MANUAL`：账号成员、服务类目、隐私保护指引、iOS 真机、Android 真机、测试 CloudBase 环境。
+3. 三项建议证据仍未完成：内容安全负责人、订阅模板申请、生产 CloudBase 规划；这些不阻断 G1 门禁最终 PASS。
+
+## 交付判断
+
+门禁工具、测试和操作文档可以提交；项目尚不能宣布进入 G1。CCG 任务保持 `in_progress`，待真实账号、微信后台和真机证据齐全并取得 `PASS` 后再完成归档。

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "checks": {
+    "account_members": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "确认管理员、开发者、体验成员和最小权限；证据中不要记录登录凭据。"
+    },
+    "service_category": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "确认服务类目与拼车、商品凑单、活动搭子真实能力一致。"
+    },
+    "privacy_guide": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "确认后台只声明真实使用的信息与剪贴板写入用途。"
+    },
+    "ios_privacy_flow": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "填写 iOS 真实 AppID 验收记录的本地引用。"
+    },
+    "android_privacy_flow": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "填写 Android 真实 AppID 验收记录的本地引用。"
+    },
+    "test_cloudbase_environment": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "只证明测试环境已创建并有负责人；不要记录环境 ID。"
+    },
+    "content_security_owner": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "建议项：记录内容安全接口申请入口与负责人。"
+    },
+    "subscription_template_submission": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "建议项：记录订阅消息模板申请提交状态，模板 ID 不进入仓库。"
+    },
+    "production_cloudbase_environment": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "建议项：生产环境可延后到上线准备阶段。"
+    }
+  }
+}

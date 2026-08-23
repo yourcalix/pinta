@@ -25,6 +25,14 @@
 
 完整后台与真机清单见 `outputs/拼吧-G0-账号合规与隐私验收清单.md`。
 
+进入 G1 前运行只读门禁：
+
+```bash
+npm run g1:readiness
+```
+
+门禁返回 `0=PASS`、`3=MANUAL`、`1=BLOCKED`。它不会写入配置、登录微信账号或探测生产资源。先复制 `g1-readiness.manual.example.json` 为被 Git 忽略的 `g1-readiness.manual.json`，再根据后台与真机证据填写；完整操作见 `outputs/拼吧-G1-进入门禁与操作手册.md`。
+
 ## 推荐验收路径
 
 - 发起者闭环：我的 → 待处理申请 → 同意加入 → 自动成团 → 进入成团页 → 安全确认 → 查看联系方式。
