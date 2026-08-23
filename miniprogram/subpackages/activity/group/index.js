@@ -35,7 +35,12 @@ Page({
       }
       this.setData({ activity, loading: false });
     } catch (error) {
-      this.setData({ loading: false, error: error.message || '成团信息加载失败' });
+      this.setData({
+        loading: false,
+        error: error.handled ? '账号暂时无法使用' : error.message || '成团信息加载失败',
+        activity: null,
+        contact: null
+      });
     }
   },
 
@@ -52,7 +57,7 @@ Page({
           const contact = await activityService.contact(this.data.id);
           this.setData({ contact });
         } catch (error) {
-          wx.showToast({ title: error.message || '暂时无法查看', icon: 'none' });
+          if (!error.handled) wx.showToast({ title: error.message || '暂时无法查看', icon: 'none' });
         } finally {
           this.setData({ revealing: false });
         }
@@ -92,7 +97,7 @@ Page({
           wx.showToast({ title: '活动已完成', icon: 'success' });
           await this.loadDetail();
         } catch (error) {
-          wx.showToast({ title: error.message || '操作失败', icon: 'none' });
+          if (!error.handled) wx.showToast({ title: error.message || '操作失败', icon: 'none' });
         } finally {
           this.setData({ pending: false });
         }
@@ -114,7 +119,7 @@ Page({
           wx.showToast({ title: '已退出活动', icon: 'success' });
           setTimeout(() => wx.navigateBack(), 400);
         } catch (error) {
-          wx.showToast({ title: error.message || '退出失败', icon: 'none' });
+          if (!error.handled) wx.showToast({ title: error.message || '退出失败', icon: 'none' });
         } finally {
           this.setData({ pending: false });
         }

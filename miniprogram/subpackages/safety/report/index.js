@@ -56,7 +56,11 @@ Page({
         success: () => wx.switchTab({ url: '/pages/discover/index' })
       });
     } catch (error) {
-      this.setData({ submitting: false, errorMessage: error.message || '提交失败，请重试' });
+      this.setData({
+        errorMessage: error.handled ? '账号暂时无法使用' : error.message || '提交失败，请重试'
+      });
+    } finally {
+      this.setData({ submitting: false });
     }
   }
 });

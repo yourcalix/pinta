@@ -2,6 +2,7 @@
 
 const config = require('../config/index');
 const mockServer = require('../mocks/server');
+const accountDisabledFeedback = require('./account-disabled-feedback');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -85,6 +86,17 @@ function setActorScope(scope) {
   if (sweepPendingMutations()) persistPendingMutations();
 }
 
+function clearAuthenticatedSession() {
+  setActorScope('');
+  try {
+    if (typeof getApp !== 'function') return;
+    const app = getApp();
+    if (app && app.globalData) app.globalData.user = null;
+  } catch (error) {
+    // Session scope is already cleared; app state may be unavailable during teardown.
+  }
+}
+
 function stableSerialize(value) {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
@@ -152,6 +164,11 @@ async function invoke(action, data = {}, options = {}) {
     // A received business response is definitive; transport failures keep the key
     // so the user's retry replays the same server-side operation.
     if (mutationFingerprint && response !== undefined) forgetMutation(mutationFingerprint);
+    if (error && error.code === 'ACCOUNT_DISABLED') {
+      clearAuthenticatedSession();
+      error.handled = true;
+      accountDisabledFeedback.present();
+    }
     throw error;
   }
 }

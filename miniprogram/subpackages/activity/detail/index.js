@@ -108,7 +108,7 @@ Page({
       wx.showToast({ title: '申请已提交', icon: 'success' });
       await this.loadDetail();
     } catch (error) {
-      wx.showToast({ title: error.message || '申请失败', icon: 'none' });
+      if (!error.handled) wx.showToast({ title: error.message || '申请失败', icon: 'none' });
     } finally {
       this.setData({ pending: false });
     }
@@ -129,7 +129,7 @@ Page({
           wx.showToast({ title: '申请已撤回', icon: 'success' });
           await this.loadDetail();
         } catch (error) {
-          wx.showToast({ title: error.message || '撤回失败', icon: 'none' });
+          if (!error.handled) wx.showToast({ title: error.message || '撤回失败', icon: 'none' });
         } finally {
           this.setData({ pending: false });
         }

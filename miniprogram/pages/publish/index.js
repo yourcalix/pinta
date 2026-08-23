@@ -24,7 +24,7 @@ Page({
       }
       wx.navigateTo({ url: `/subpackages/publish/form/index?type=${type}` });
     } catch (error) {
-      wx.showToast({ title: error.message || '暂时无法登录', icon: 'none' });
+      if (!error.handled) wx.showToast({ title: error.message || '暂时无法登录', icon: 'none' });
     } finally {
       this.setData({ pending: false });
     }

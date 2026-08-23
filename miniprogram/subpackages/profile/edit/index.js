@@ -35,7 +35,7 @@ Page({
         });
       }
     } catch (error) {
-      this.setData({ errorMessage: error.message || '资料加载失败' });
+      this.setData({ errorMessage: error.handled ? '账号暂时无法使用' : error.message || '资料加载失败' });
     }
   },
 
@@ -67,7 +67,10 @@ Page({
         else wx.navigateBack();
       }, 350);
     } catch (error) {
-      this.setData({ saving: false, errorMessage: error.message || '保存失败，请重试' });
+      this.setData({
+        saving: false,
+        errorMessage: error.handled ? '账号暂时无法使用' : error.message || '保存失败，请重试'
+      });
     }
   }
 });

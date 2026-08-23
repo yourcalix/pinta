@@ -49,7 +49,14 @@ Page({
         loading: false
       });
     } catch (error) {
-      this.setData({ loading: false, error: error.message || '加载失败，请重试' });
+      this.setData({
+        loading: false,
+        error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试',
+        user: null,
+        tasks: [],
+        owned: [],
+        joined: []
+      });
     }
   },
 
@@ -75,6 +82,7 @@ Page({
     try {
       await userService.readNotification(task.id);
     } catch (error) {
+      if (error.handled) return;
       // Navigation is still useful if marking read fails.
     }
     wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${task.activityId}` });

@@ -55,7 +55,12 @@ Page({
         loading: false
       });
     } catch (error) {
-      this.setData({ loading: false, error: error.message || '申请列表加载失败' });
+      this.setData({
+        loading: false,
+        error: error.handled ? '账号暂时无法使用' : error.message || '申请列表加载失败',
+        activity: null,
+        applications: []
+      });
     }
   },
 
@@ -73,7 +78,7 @@ Page({
           wx.showToast({ title: response.activity.status === 'FORMED' ? '已成团' : '已批准', icon: 'success' });
           await this.loadData();
         } catch (error) {
-          wx.showToast({ title: error.message || '处理失败', icon: 'none' });
+          if (!error.handled) wx.showToast({ title: error.message || '处理失败', icon: 'none' });
         } finally {
           this.setData({ pendingId: '' });
         }
@@ -90,7 +95,7 @@ Page({
       wx.showToast({ title: '已拒绝', icon: 'success' });
       await this.loadData();
     } catch (error) {
-      wx.showToast({ title: error.message || '处理失败', icon: 'none' });
+      if (!error.handled) wx.showToast({ title: error.message || '处理失败', icon: 'none' });
     } finally {
       this.setData({ pendingId: '' });
     }
@@ -113,7 +118,7 @@ Page({
           wx.showToast({ title: '活动已取消', icon: 'success' });
           setTimeout(() => wx.navigateBack(), 400);
         } catch (error) {
-          wx.showToast({ title: error.message || '取消失败', icon: 'none' });
+          if (!error.handled) wx.showToast({ title: error.message || '取消失败', icon: 'none' });
         }
       }
     });

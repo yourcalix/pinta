@@ -257,7 +257,10 @@ Page({
         wx.redirectTo({ url: `/subpackages/activity/detail/index?id=${result.activity.id}` });
       }, 500);
     } catch (error) {
-      this.setData({ errorMessage: error.message || '发布失败，请检查后重试', submitting: false });
+      this.setData({
+        errorMessage: error.handled ? '账号暂时无法使用' : error.message || '发布失败，请检查后重试',
+        submitting: false
+      });
       wx.pageScrollTo({ scrollTop: 0, duration: 200 });
       this.saveDraft();
     }

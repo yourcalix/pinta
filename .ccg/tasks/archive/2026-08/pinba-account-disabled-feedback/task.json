@@ -1,0 +1,12 @@
+{
+  "id": "pinba-account-disabled-feedback",
+  "title": "为受限账号建立全局单例反馈与页面降级",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交本轮实现",
+  "createdAt": "2026-08-24T00:23:24+08:00",
+  "branch": "main"
+}
