@@ -1,0 +1,8 @@
+{"type":"skill","path":"/Users/cx/.codex/skills/ccg/SKILL.md","purpose":"CCG model routing and execution rules"}
+{"type":"user_requirement","summary":"Design an initial project specification for WeChat Mini Program 'Pinba', covering ride, product, friend/activity grouping scenarios"}
+{"type":"routing_override","date":"2026-08-23","frontend_model":"Web Gemini 3.6","browser_profile":"Chrome Default","scope":"current and subsequent CCG frontend analysis/review","source":"explicit user instruction"}
+{"type":"official_reference","title":"wx.login 官方文档","url":"https://developers.weixin.qq.com/miniprogram/dev/api/open-api/login/wx.login.html","usedFor":["登录流程","用户标识"]}
+{"type":"official_reference","title":"小程序用户隐私保护指引适配说明","url":"https://developers.weixin.qq.com/miniprogram/dev/framework/user-privacy/PrivacyAuthorize.html","usedFor":["隐私授权","上线验收"]}
+{"type":"official_reference","title":"内容安全服务端接口","url":"https://developers.weixin.qq.com/miniprogram/dev/server/API/sec-center/","usedFor":["UGC 审核","治理流程"]}
+{"type":"official_reference","title":"wx.getLocation 官方文档","url":"https://developers.weixin.qq.com/miniprogram/dev/api/location/wx.getLocation.html","usedFor":["位置授权","隐私降级"]}
+{"type":"external_model_result","model":"Web Gemini 3.6","path":"/Users/cx/.codex/attachments/d96cc4d9-21d1-4813-a935-ce38b1976422/pasted-text.txt","purpose":"frontend product, UX and implementation analysis","receivedAt":"2026-08-23"}

@@ -1,0 +1,3 @@
+{"type":"dependency","task":"pinba-initial-project-design","status":"in_progress"}
+{"type":"routing_override","frontend_model":"Web Gemini 3.6","browser_profile":"Chrome Default","source":"explicit user instruction"}
+{"type":"execution_contract","summary":"Continue until a runnable minimum MVP is delivered; report blocking errors and ask user for advice"}

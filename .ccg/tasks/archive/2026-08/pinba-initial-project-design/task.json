@@ -1,0 +1,12 @@
+{
+  "id": "pinba-initial-project-design",
+  "title": "设计微信小程序“拼吧”的初步项目设计书",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档设计任务；MVP 实现转入 pinba-minimum-mvp 任务",
+  "createdAt": "2026-08-23T01:44:16+08:00",
+  "branch": "none"
+}

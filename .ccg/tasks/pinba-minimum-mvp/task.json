@@ -1,0 +1,12 @@
+{
+  "id": "pinba-minimum-mvp",
+  "title": "持续设计并实现微信小程序“拼吧”最小 MVP",
+  "status": "in_progress",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "planning",
+  "nextAction": "按 v1.0 设计基线建立原生小程序、CloudBase 云函数、Mock Service 与测试骨架",
+  "createdAt": "2026-08-23T02:21:29+08:00",
+  "branch": "none"
+}

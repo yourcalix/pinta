@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# WeChat DevTools local files
+project.private.config.json
+*.wxapkg
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+miniprogram/config/local.js
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
+
+# Test artifacts
+coverage/
+tmp/
