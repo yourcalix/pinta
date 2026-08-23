@@ -1,0 +1,12 @@
+{
+  "id": "pinba-post-mvp-development-roadmap",
+  "title": "制定拼吧 MVP 后续开发计划",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "按用户确认的产品默认值启动 G0/G1 真实环境接入",
+  "createdAt": "2026-08-23T13:13:09+08:00",
+  "branch": "main"
+}
