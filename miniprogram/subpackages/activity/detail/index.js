@@ -4,6 +4,7 @@ const activityService = require('../../../services/activity');
 const userService = require('../../../services/user');
 const subscriptionService = require('../../../services/subscription');
 const { decorateActivity } = require('../../../utils/display');
+const { resolveDetailError } = require('../../../utils/detail-error');
 
 const FEE_LABELS = { FREE: '免费互助', SHARED_COST: '合理成本均摊', NO_COST: '不涉及费用' };
 const LUGGAGE_LABELS = { NO_LARGE: '无大件行李', ONE_SMALL: '每人一件小行李', TRUNK_OK: '可放后备箱' };
@@ -41,6 +42,7 @@ Page({
     id: '',
     loading: true,
     error: '',
+    errorCode: '',
     activity: null,
     detailRows: [],
     note: '',
@@ -56,15 +58,32 @@ Page({
     if (this.data.id) this.loadDetail();
   },
 
+  onUnload() {
+    this._loadSeq = (this._loadSeq || 0) + 1;
+  },
+
   async loadDetail() {
-    this.setData({ loading: true, error: '' });
+    const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
+    this.setData({
+      loading: true,
+      error: '',
+      errorCode: '',
+      activity: null,
+      detailRows: []
+    });
     try {
       const result = await activityService.detail(this.data.id);
+      if (loadSeq !== this._loadSeq) return;
       const activity = decorateActivity(result.activity);
       this.setData({ activity, detailRows: rowsFor(activity), loading: false });
     } catch (error) {
-      this.setData({ loading: false, error: error.message || '活动加载失败' });
+      if (loadSeq !== this._loadSeq) return;
+      this.setData({ loading: false, ...resolveDetailError(error) });
     }
+  },
+
+  handleGoDiscover() {
+    wx.switchTab({ url: '/pages/discover/index' });
   },
 
   handleNote(event) {

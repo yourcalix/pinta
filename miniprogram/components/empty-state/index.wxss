@@ -36,7 +36,7 @@
 }
 
 .empty-action {
-  min-height: 76rpx;
+  min-height: 88rpx;
   margin-top: 28rpx;
   padding: 14rpx 28rpx;
   color: #118557;

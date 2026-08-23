@@ -1,0 +1,12 @@
+{
+  "id": "pinba-takedown-detail-ui",
+  "title": "为已下架活动补充详情页受控兜底状态",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档本任务；下一开发切片处理 ACCOUNT_DISABLED 的前端受控反馈",
+  "createdAt": "2026-08-23T23:31:00+08:00",
+  "branch": "main"
+}

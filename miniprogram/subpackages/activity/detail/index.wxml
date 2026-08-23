@@ -7,10 +7,19 @@
   </view>
 
   <empty-state
-    wx:elif="{{error}}"
+    wx:elif="{{errorCode === 'TAKEDOWN'}}"
+    symbol="!"
+    title="活动已被处理"
+    description="该活动已被平台处理，暂不可查看。你可以返回发现页查看其他活动。"
+    action-text="返回发现页"
+    bindaction="handleGoDiscover"
+  />
+
+  <empty-state
+    wx:elif="{{errorCode}}"
     symbol="!"
     title="{{error}}"
-    description="活动可能已失效，也可能是网络暂时不可用。"
+    description="页面暂时无法获取最新活动信息，请稍后重试。"
     action-text="重新加载"
     bindaction="loadDetail"
   />
