@@ -16,10 +16,28 @@ const manualDefinitions = [
     remedy: '在微信后台复核管理员、开发者和体验成员，并在私有证据文件中登记证据。'
   },
   {
+    id: 'account_profile',
+    name: '账号名称、简称与介绍均已对齐拼吧',
+    blocking: true,
+    remedy: '把小程序名称、简称、介绍和头像统一为拼吧产品资料，并保留后台核验记录。'
+  },
+  {
+    id: 'account_health',
+    name: '微信账号无违规或能力限制',
+    blocking: true,
+    remedy: '先查明并解除涉嫌违规、搜索受限或其他账号能力限制，再重新执行门禁。'
+  },
+  {
     id: 'service_category',
     name: '服务类目与真实功能边界一致',
     blocking: true,
     remedy: '确认拼车、商品凑单和活动搭子使用的服务类目；受限场景应先关闭入口。'
+  },
+  {
+    id: 'ugc_declaration',
+    name: '用户生成内容场景已如实声明',
+    blocking: true,
+    remedy: '在微信后台声明用户发布活动、申请备注、联系方式与举报等 UGC 场景，并核对治理入口。'
   },
   {
     id: 'privacy_guide',
@@ -62,6 +80,12 @@ const manualDefinitions = [
     name: '生产 CloudBase 环境已规划或创建',
     blocking: false,
     remedy: '生产环境可延后到上线准备阶段，禁止与测试数据混用。'
+  },
+  {
+    id: 'filing_and_certification_plan',
+    name: '备案、认证与主体适用性路径已确认',
+    blocking: false,
+    remedy: '进入 G1 前记录个人主体的类目适用性结论；备案、认证和必要的主体调整须在提审上线前闭环。'
   }
 ];
 

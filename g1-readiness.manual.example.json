@@ -8,12 +8,33 @@
       "evidence": [],
       "notes": "确认管理员、开发者、体验成员和最小权限；证据中不要记录登录凭据。"
     },
+    "account_profile": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "确认名称、简称、介绍和头像均与拼吧一致。"
+    },
+    "account_health": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "确认后台不存在涉嫌违规、搜索受限或其他账号能力限制。"
+    },
     "service_category": {
       "status": "PENDING",
       "checkedAt": null,
       "checkedBy": "",
       "evidence": [],
       "notes": "确认服务类目与拼车、商品凑单、活动搭子真实能力一致。"
+    },
+    "ugc_declaration": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "如实声明用户发布活动、申请备注、联系方式、取消/退出理由和举报等 UGC 场景。"
     },
     "privacy_guide": {
       "status": "PENDING",
@@ -63,6 +84,13 @@
       "checkedBy": "",
       "evidence": [],
       "notes": "建议项：生产环境可延后到上线准备阶段。"
+    },
+    "filing_and_certification_plan": {
+      "status": "PENDING",
+      "checkedAt": null,
+      "checkedBy": "",
+      "evidence": [],
+      "notes": "建议项：记录个人主体的类目适用性、备案、认证及必要主体调整计划。"
     }
   }
 }

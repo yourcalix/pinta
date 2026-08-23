@@ -10,7 +10,10 @@ const VALID_APP_ID = 'wx1234567890abcdef';
 
 const blockingManualIds = [
   'account_members',
+  'account_profile',
+  'account_health',
   'service_category',
+  'ugc_declaration',
   'privacy_guide',
   'ios_privacy_flow',
   'android_privacy_flow',
@@ -30,7 +33,8 @@ function completedEvidence() {
       }]),
       ['content_security_owner', { status: 'PENDING', checkedAt: null, checkedBy: '', evidence: [], notes: '' }],
       ['subscription_template_submission', { status: 'PENDING', checkedAt: null, checkedBy: '', evidence: [], notes: '' }],
-      ['production_cloudbase_environment', { status: 'PENDING', checkedAt: null, checkedBy: '', evidence: [], notes: '' }]
+      ['production_cloudbase_environment', { status: 'PENDING', checkedAt: null, checkedBy: '', evidence: [], notes: '' }],
+      ['filing_and_certification_plan', { status: 'PENDING', checkedAt: null, checkedBy: '', evidence: [], notes: '' }]
     ])
   };
 }
@@ -91,7 +95,7 @@ test('全部阻断项具备证据时门禁 PASS 且报告不泄露 AppID', () =>
   assert.equal(report.checks.find((check) => check.id === 'private-real-appid').status, 'PASS');
   assert.equal(report.checks.find((check) => check.id === 'subscription_template_submission').status, 'MANUAL');
   assert.equal(report.summary.blockingManualRemaining, 0);
-  assert.equal(report.summary.advisoryRemaining, 3);
+  assert.equal(report.summary.advisoryRemaining, 4);
 });
 
 test('缺少人工证据文件时返回 MANUAL 而不是伪造通过', () => {
@@ -134,6 +138,31 @@ test('阻断人工项明确 FAIL 时返回 BLOCKED', () => {
 
   assert.equal(report.result, 'BLOCKED');
   assert.equal(report.checks.find((check) => check.id === 'android_privacy_flow').status, 'BLOCKED');
+});
+
+test('账号资料、账号健康或 UGC 声明逐项失败时均阻断进入 G1', () => {
+  const { evaluateReadiness } = require('../scripts/g1-readiness-gate');
+  for (const id of ['account_profile', 'account_health', 'ugc_declaration']) {
+    const manual = completedEvidence();
+    manual.checks[id].status = 'FAIL';
+    const rootDir = makeFixture({ manual });
+    const report = evaluateReadiness({ rootDir, git: fakeGit() });
+
+    assert.equal(report.result, 'BLOCKED', `${id} should block G1`);
+    assert.equal(report.checks.find((check) => check.id === id).status, 'BLOCKED');
+  }
+});
+
+test('备案与认证规划明确失败仍作为建议项而不阻断 G1', () => {
+  const { evaluateReadiness } = require('../scripts/g1-readiness-gate');
+  const manual = completedEvidence();
+  manual.checks.filing_and_certification_plan.status = 'FAIL';
+  const rootDir = makeFixture({ manual });
+  const report = evaluateReadiness({ rootDir, git: fakeGit() });
+
+  assert.equal(report.result, 'PASS');
+  assert.equal(report.checks.find((check) => check.id === 'filing_and_certification_plan').status, 'MANUAL');
+  assert.equal(report.summary.advisoryRemaining, 4);
 });
 
 test('配置文件为合法 JSON 但不是对象时安全返回 BLOCKED', () => {

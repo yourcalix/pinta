@@ -1,0 +1,12 @@
+{
+  "id": "pinba-pre-g1-readiness-gate",
+  "title": "完善拼吧进入 G1 前的真实账号与验收门槛",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "门禁工具与记录已完成；外部平台状态保持 BLOCKED 并按用户决定延期，后续本地功能开发继续使用 Mock，不切换真实环境",
+  "createdAt": "2026-08-23T15:40:41+08:00",
+  "branch": "main"
+}
