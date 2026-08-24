@@ -3,6 +3,8 @@
 const activityService = require('../../../services/activity');
 const { decorateActivity } = require('../../../utils/display');
 const { formatDateTime } = require('../../../utils/date');
+const { buildActivityPath, decodeActivityId } = require('../../../utils/activity-route');
+const { resolveProtectedPageError } = require('../../../utils/protected-page-error');
 
 const APPLICATION_META = {
   PENDING: { label: '待处理', tone: 'success' },
@@ -29,39 +31,78 @@ Page({
     id: '',
     loading: true,
     error: '',
+    errorCode: '',
+    errorAction: '',
+    errorActionText: '',
     activity: null,
     applications: [],
     pendingId: ''
   },
 
-  onLoad(options) {
-    this.setData({ id: options.id || '' });
+  onLoad(options = {}) {
+    this.setData({ id: decodeActivityId(options.id) });
   },
 
   onShow() {
-    if (this.data.id) this.loadData();
+    return this.loadData();
+  },
+
+  onUnload() {
+    this._loadSeq = (this._loadSeq || 0) + 1;
   },
 
   async loadData() {
-    this.setData({ loading: true, error: '' });
+    const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
+    if (!this.data.id) {
+      this.setData({
+        loading: false,
+        activity: null,
+        applications: [],
+        ...resolveProtectedPageError({ code: 'NOT_FOUND' }, 'manage')
+      });
+      return;
+    }
+    this.setData({
+      loading: true,
+      error: '',
+      errorCode: '',
+      errorAction: '',
+      errorActionText: '',
+      activity: null,
+      applications: []
+    });
     try {
       const [detail, result] = await Promise.all([
         activityService.detail(this.data.id),
         activityService.applications(this.data.id)
       ]);
+      if (loadSeq !== this._loadSeq) return;
       this.setData({
         activity: decorateActivity(detail.activity),
         applications: result.items.map(decorateApplication),
         loading: false
       });
     } catch (error) {
+      if (loadSeq !== this._loadSeq) return;
       this.setData({
         loading: false,
-        error: error.handled ? '账号暂时无法使用' : error.message || '申请列表加载失败',
         activity: null,
-        applications: []
+        applications: [],
+        ...resolveProtectedPageError(error, 'manage')
       });
     }
+  },
+
+  handleErrorAction() {
+    if (this.data.errorAction === 'RETRY') {
+      this.loadData();
+      return;
+    }
+    if (this.data.errorAction === 'DETAIL') {
+      wx.redirectTo({ url: buildActivityPath('DETAIL', this.data.id) });
+      return;
+    }
+    wx.switchTab({ url: '/pages/discover/index' });
   },
 
   handleApprove(event) {

@@ -5,6 +5,7 @@ const userService = require('../../../services/user');
 const subscriptionService = require('../../../services/subscription');
 const { decorateActivity } = require('../../../utils/display');
 const { resolveDetailError } = require('../../../utils/detail-error');
+const { decodeActivityId } = require('../../../utils/activity-route');
 
 const FEE_LABELS = { FREE: '免费互助', SHARED_COST: '合理成本均摊', NO_COST: '不涉及费用' };
 const LUGGAGE_LABELS = { NO_LARGE: '无大件行李', ONE_SMALL: '每人一件小行李', TRUNK_OK: '可放后备箱' };
@@ -15,15 +16,6 @@ const DISCOVER_SHARE = Object.freeze({
   title: '拼吧｜发现附近的组团活动',
   path: '/pages/discover/index'
 });
-
-function decodeActivityId(value) {
-  if (typeof value !== 'string' || !value) return '';
-  try {
-    return decodeURIComponent(value);
-  } catch (error) {
-    return '';
-  }
-}
 
 function rowsFor(activity) {
   if (activity.type === 'ride') {

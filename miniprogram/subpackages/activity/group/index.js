@@ -3,12 +3,17 @@
 const activityService = require('../../../services/activity');
 const { clipboardFailureMessage } = require('../../../services/privacy');
 const { decorateActivity } = require('../../../utils/display');
+const { buildActivityPath, decodeActivityId } = require('../../../utils/activity-route');
+const { resolveProtectedPageError } = require('../../../utils/protected-page-error');
 
 Page({
   data: {
     id: '',
     loading: true,
     error: '',
+    errorCode: '',
+    errorAction: '',
+    errorActionText: '',
     activity: null,
     contact: null,
     revealing: false,
@@ -16,32 +21,81 @@ Page({
     pending: false
   },
 
-  onLoad(options) {
-    this.setData({ id: options.id || '' });
+  onLoad(options = {}) {
+    this.setData({ id: decodeActivityId(options.id) });
   },
 
   onShow() {
-    if (this.data.id) this.loadDetail();
+    return this.loadDetail();
+  },
+
+  onUnload() {
+    this._loadSeq = (this._loadSeq || 0) + 1;
   },
 
   async loadDetail() {
-    this.setData({ loading: true, error: '' });
+    const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
+    if (!this.data.id) {
+      this.setData({
+        loading: false,
+        activity: null,
+        contact: null,
+        ...resolveProtectedPageError({ code: 'NOT_FOUND' }, 'group')
+      });
+      return;
+    }
+    this.setData({
+      loading: true,
+      error: '',
+      errorCode: '',
+      errorAction: '',
+      errorActionText: '',
+      activity: null
+    });
     try {
       const result = await activityService.detail(this.data.id);
+      if (loadSeq !== this._loadSeq) return;
       const activity = decorateActivity(result.activity);
       if (!['owner', 'member'].includes(activity.viewerRole)) {
-        this.setData({ loading: false, error: '仅活动成员可以进入成团页' });
+        this.setData({
+          loading: false,
+          activity: null,
+          contact: null,
+          ...resolveProtectedPageError({ code: 'FORBIDDEN' }, 'group')
+        });
+        return;
+      }
+      if (!['FORMED', 'IN_PROGRESS', 'COMPLETED'].includes(activity.status)) {
+        this.setData({
+          loading: false,
+          activity: null,
+          contact: null,
+          ...resolveProtectedPageError({ code: 'CONFLICT' }, 'group')
+        });
         return;
       }
       this.setData({ activity, loading: false });
     } catch (error) {
+      if (loadSeq !== this._loadSeq) return;
       this.setData({
         loading: false,
-        error: error.handled ? '账号暂时无法使用' : error.message || '成团信息加载失败',
         activity: null,
-        contact: null
+        contact: null,
+        ...resolveProtectedPageError(error, 'group')
       });
     }
+  },
+
+  handleErrorAction() {
+    if (this.data.errorAction === 'RETRY') {
+      this.loadDetail();
+      return;
+    }
+    if (this.data.errorAction === 'DETAIL') {
+      wx.redirectTo({ url: buildActivityPath('DETAIL', this.data.id) });
+      return;
+    }
+    wx.switchTab({ url: '/pages/discover/index' });
   },
 
   handleReveal() {

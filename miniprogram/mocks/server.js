@@ -18,6 +18,12 @@ const MUTATING_ACTIONS = new Set([
 ]);
 const PUBLIC_ACTIONS = new Set(['activity.list', 'activity.detail']);
 
+function resolveNotificationTarget(type) {
+  if (type === 'NEW_APPLICATION') return 'MANAGE';
+  if (type === 'GROUP_FORMED') return 'GROUP';
+  return 'DETAIL';
+}
+
 function isoAfter(hours) {
   return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 }
@@ -94,7 +100,11 @@ function seedState() {
       { id: 'm_buddy_member', activityId: 'a_buddy', userId: 'u_member', role: 'MEMBER', status: 'ACTIVE', joinedAt: now }
     ],
     notifications: [
-      { id: 'n_owner_apply', userId: 'u_owner', type: 'NEW_APPLICATION', activityId: 'a_ride', title: '“张江到浦东机场同行”有新的加入申请', read: false, createdAt: now },
+      {
+        id: 'n_owner_apply', userId: 'u_owner', type: 'NEW_APPLICATION', activityId: 'a_ride',
+        title: '“张江到浦东机场同行”有新的加入申请', read: false, createdAt: now,
+        url: 'https://untrusted.example/should-not-leak', page: 'untrusted/free-form/path'
+      },
       { id: 'n_member_formed', userId: 'u_member', type: 'GROUP_FORMED', activityId: 'a_buddy', title: '“周末新手羽毛球双打”已成团', read: false, createdAt: now }
     ],
     reports: [],
@@ -164,8 +174,16 @@ function publicApplication(application) {
 }
 
 function publicNotification(notification) {
-  const { userId, ...safe } = notification;
-  return clone(safe);
+  return clone({
+    id: notification.id,
+    type: notification.type,
+    target: resolveNotificationTarget(notification.type),
+    activityId: notification.activityId,
+    title: notification.title,
+    read: notification.read === true,
+    createdAt: notification.createdAt,
+    readAt: notification.readAt
+  });
 }
 
 function publicActivity(activity) {

@@ -2,6 +2,7 @@
 
 const api = require('../../services/api');
 const userService = require('../../services/user');
+const notificationRouter = require('../../services/notification-router');
 const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
 
@@ -38,7 +39,10 @@ Page({
       const tasks = notifications.items
         .filter((item) => !item.read)
         .slice(0, 5)
-        .map((item) => ({ ...item, displayTime: formatDateTime(item.createdAt) }));
+        .map((item) => notificationRouter.decorateNotification({
+          ...item,
+          displayTime: formatDateTime(item.createdAt)
+        }));
       this.setData({
         user,
         avatarLetter: user.profile && user.profile.nickname ? user.profile.nickname.slice(0, 1) : '拼',
@@ -85,7 +89,12 @@ Page({
       if (error.handled) return;
       // Navigation is still useful if marking read fails.
     }
-    wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${task.activityId}` });
+    const url = notificationRouter.resolveNotificationPath(task);
+    if (url === '/pages/discover/index') {
+      wx.switchTab({ url });
+      return;
+    }
+    wx.navigateTo({ url });
   },
 
   handleProfile() {

@@ -1,6 +1,12 @@
 <view class="page group-page safe-bottom">
   <view wx:if="{{loading}}" class="loading-block surface">正在核验成员权限…</view>
-  <empty-state wx:elif="{{error}}" symbol="!" title="{{error}}" description="返回详情页刷新状态后再试。" />
+  <empty-state
+    wx:elif="{{error}}"
+    symbol="!"
+    title="{{error}}"
+    action-text="{{errorActionText}}"
+    bindaction="handleErrorAction"
+  />
 
   <block wx:elif="{{activity}}">
     <view class="formed-hero surface">

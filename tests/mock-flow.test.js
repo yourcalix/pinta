@@ -14,6 +14,11 @@ test('Mock 模式可以完成审批、自动成团和成员联系信息解锁', 
   const applications = await call('application.listForOwner', { activityId: 'a_ride' });
   assert.equal(applications.ok, true);
   assert.equal(applications.data.items[0].status, 'PENDING');
+  const ownerNotifications = await call('notification.list');
+  assert.equal(ownerNotifications.data.items[0].target, 'MANAGE');
+  assert.equal(ownerNotifications.data.items[0].userId, undefined);
+  assert.equal(ownerNotifications.data.items[0].url, undefined);
+  assert.equal(ownerNotifications.data.items[0].page, undefined);
 
   const approved = await call('application.approve', {
     activityId: 'a_ride',
@@ -23,6 +28,8 @@ test('Mock 模式可以完成审批、自动成团和成员联系信息解锁', 
   assert.equal(approved.data.activity.status, 'FORMED');
 
   mockServer.setPersona('u_member');
+  const memberNotifications = await call('notification.list');
+  assert.equal(memberNotifications.data.items[0].target, 'GROUP');
   const contact = await call('group.contact', { activityId: 'a_ride' });
   assert.equal(contact.ok, true);
   assert.match(contact.data.contactInfo, /pinba_xiaopin/);

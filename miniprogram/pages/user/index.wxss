@@ -14,6 +14,7 @@
 .persona-row,
 .section-heading,
 .task-card,
+.task-action,
 .list-tabs,
 .mini-top {
   display: flex;
@@ -41,6 +42,11 @@
 .task-main {
   flex: 1;
   margin-left: 22rpx;
+}
+
+.task-main {
+  min-width: 0;
+  word-break: break-all;
 }
 
 .profile-name {
@@ -136,6 +142,7 @@
 }
 
 .task-card {
+  min-height: 88rpx;
   margin-bottom: 14rpx;
   padding: 22rpx 24rpx;
 }
@@ -150,6 +157,18 @@
 .task-title {
   font-size: 27rpx;
   font-weight: 600;
+}
+
+.task-action {
+  flex: 0 0 auto;
+  gap: 6rpx;
+  margin-left: 16rpx;
+  color: #11784f;
+  font-size: 24rpx;
+}
+
+.task-action .task-arrow {
+  font-size: 38rpx;
 }
 
 .zero-task {

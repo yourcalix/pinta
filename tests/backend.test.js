@@ -343,6 +343,10 @@ test('申请、审批和通知 DTO 不暴露内部用户标识或联系方式', 
   }, 'member-openid', 'apply-dto-safety-001');
   assert.equal(JSON.stringify(applied.data).includes('member-openid'), false);
 
+  const ownerNotifications = await call('notification.list', {}, 'owner-openid');
+  assert.equal(ownerNotifications.ok, true);
+  assert.equal(ownerNotifications.data.items[0].target, 'MANAGE');
+
   const ownerList = await call('application.listForOwner', { activityId }, 'owner-openid');
   assert.equal(ownerList.ok, true);
   assert.deepEqual(ownerList.data.items[0].applicant, { nickname: '参与者' });
@@ -360,6 +364,9 @@ test('申请、审批和通知 DTO 不暴露内部用户标识或联系方式', 
   const notifications = await call('notification.list', {}, 'member-openid');
   assert.equal(notifications.ok, true);
   assert.equal(notifications.data.items[0].userId, undefined);
+  assert.equal(notifications.data.items[0].target, 'GROUP');
+  assert.equal(notifications.data.items[0].url, undefined);
+  assert.equal(notifications.data.items[0].page, undefined);
 });
 
 test('非发起者不能审批申请', async () => {

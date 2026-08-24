@@ -14,6 +14,7 @@ const {
   stringValue
 } = require('./validation');
 const { createLocalModeration } = require('./moderation');
+const { resolveNotificationTarget } = require('./notification-target');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -106,6 +107,7 @@ function publicNotification(notification) {
   return {
     id: notification.id,
     type: notification.type,
+    target: resolveNotificationTarget(notification.type),
     activityId: notification.activityId,
     title: notification.title,
     read: notification.read === true,

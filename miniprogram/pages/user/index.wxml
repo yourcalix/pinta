@@ -50,13 +50,18 @@
         class="task-card surface"
         data-task="{{item}}"
         bindtap="handleTaskTap"
+        role="button"
+        aria-label="{{item.title}}，{{item.actionLabel}}"
       >
         <view class="task-dot"></view>
         <view class="task-main">
           <view class="task-title">{{item.title}}</view>
           <view class="task-time">{{item.displayTime}}</view>
         </view>
-        <text class="task-arrow">›</text>
+        <view class="task-action">
+          <text>{{item.actionLabel}}</text>
+          <text class="task-arrow">›</text>
+        </view>
       </view>
     </view>
     <view wx:else class="zero-task surface">当前没有待处理事项，轻松一下。</view>

@@ -1,6 +1,12 @@
 <view class="page manage-page safe-bottom">
   <view wx:if="{{loading}}" class="loading-block surface">正在加载申请…</view>
-  <empty-state wx:elif="{{error}}" symbol="!" title="{{error}}" action-text="重新加载" bindaction="loadData" />
+  <empty-state
+    wx:elif="{{error}}"
+    symbol="!"
+    title="{{error}}"
+    action-text="{{errorActionText}}"
+    bindaction="handleErrorAction"
+  />
 
   <block wx:elif="{{activity}}">
     <view class="activity-summary surface">

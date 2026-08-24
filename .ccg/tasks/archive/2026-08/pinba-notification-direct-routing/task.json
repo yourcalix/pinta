@@ -1,0 +1,12 @@
+{
+  "id": "pinba-notification-direct-routing",
+  "title": "实现站内与服务通知的受控页面直达",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务、提交并推送 G3 到 origin/main",
+  "createdAt": "2026-08-24T02:10:00+08:00",
+  "branch": "main"
+}
