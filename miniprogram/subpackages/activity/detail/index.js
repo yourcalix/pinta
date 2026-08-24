@@ -11,6 +11,19 @@ const LUGGAGE_LABELS = { NO_LARGE: '无大件行李', ONE_SMALL: '每人一件�
 const DELIVERY_LABELS = { FACE_TO_FACE: '当面验货交付', PICKUP: '指定商圈自提', ARRANGE_AFTER_FORMED: '成团后协商' };
 const COST_LABELS = { AA: 'AA制', SELF_PAY: '费用自理', HOST_TREATS: '发起者请客' };
 const LEVEL_LABELS = { BEGINNER: '新手友好', INTERMEDIATE: '需一定基础', ADVANCED: '进阶专业' };
+const DISCOVER_SHARE = Object.freeze({
+  title: '拼吧｜发现附近的组团活动',
+  path: '/pages/discover/index'
+});
+
+function decodeActivityId(value) {
+  if (typeof value !== 'string' || !value) return '';
+  try {
+    return decodeURIComponent(value);
+  } catch (error) {
+    return '';
+  }
+}
 
 function rowsFor(activity) {
   if (activity.type === 'ride') {
@@ -50,12 +63,19 @@ Page({
     pending: false
   },
 
-  onLoad(options) {
-    this.setData({ id: options.id || '' });
+  onLoad(options = {}) {
+    this.setData({ id: decodeActivityId(options.id) });
+    if (typeof wx.showShareMenu === 'function') {
+      try {
+        wx.showShareMenu({ menus: ['shareAppMessage'] });
+      } catch (error) {
+        // The page-level share button remains available on supported clients.
+      }
+    }
   },
 
   onShow() {
-    if (this.data.id) this.loadDetail();
+    return this.loadDetail();
   },
 
   onUnload() {
@@ -64,6 +84,15 @@ Page({
 
   async loadDetail() {
     const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
+    if (!this.data.id) {
+      this.setData({
+        loading: false,
+        activity: null,
+        detailRows: [],
+        ...resolveDetailError({ code: 'NOT_FOUND' })
+      });
+      return;
+    }
     this.setData({
       loading: true,
       error: '',
@@ -84,6 +113,18 @@ Page({
 
   handleGoDiscover() {
     wx.switchTab({ url: '/pages/discover/index' });
+  },
+
+  onShareAppMessage() {
+    const { activity, errorCode, id, loading } = this.data;
+    if (loading || errorCode || !activity || !id) return { ...DISCOVER_SHARE };
+    const title = typeof activity.title === 'string' && activity.title.trim()
+      ? activity.title.trim()
+      : '精彩组团活动';
+    return {
+      title: `拼吧｜${title}`,
+      path: `/subpackages/activity/detail/index?id=${encodeURIComponent(id)}`
+    };
   },
 
   handleNote(event) {

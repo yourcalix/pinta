@@ -45,12 +45,14 @@ test('详情页把下架、可恢复错误和正常内容保持为互斥分支',
     'utf8'
   );
 
-  const takedownBranch = template.indexOf(`wx:elif="{{errorCode === 'TAKEDOWN'}}"`);
+  const permanentBranch = template.indexOf(
+    `wx:elif="{{errorCode === 'TAKEDOWN' || errorCode === 'NOT_FOUND'}}"`
+  );
   const retryBranch = template.indexOf('wx:elif="{{errorCode}}"');
   const activityBranch = template.indexOf('wx:elif="{{activity}}"');
-  assert.ok(takedownBranch > -1 && retryBranch > takedownBranch && activityBranch > retryBranch);
-  assert.match(template.slice(takedownBranch, retryBranch), /bindaction="handleGoDiscover"/);
-  assert.doesNotMatch(template.slice(takedownBranch, retryBranch), /bindaction="loadDetail"/);
+  assert.ok(permanentBranch > -1 && retryBranch > permanentBranch && activityBranch > retryBranch);
+  assert.match(template.slice(permanentBranch, retryBranch), /bindaction="handleGoDiscover"/);
+  assert.doesNotMatch(template.slice(permanentBranch, retryBranch), /bindaction="loadDetail"/);
   assert.match(script, /activity:\s*null,[\s\S]*detailRows:\s*\[\]/);
   assert.match(script, /loadSeq\s*!==\s*this\._loadSeq/);
   assert.match(script, /wx\.switchTab\(\{\s*url:\s*'\/pages\/discover\/index'/);

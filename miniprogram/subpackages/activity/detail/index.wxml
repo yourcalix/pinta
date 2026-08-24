@@ -7,10 +7,10 @@
   </view>
 
   <empty-state
-    wx:elif="{{errorCode === 'TAKEDOWN'}}"
+    wx:elif="{{errorCode === 'TAKEDOWN' || errorCode === 'NOT_FOUND'}}"
     symbol="!"
-    title="活动已被处理"
-    description="该活动已被平台处理，暂不可查看。你可以返回发现页查看其他活动。"
+    title="{{errorCode === 'TAKEDOWN' ? '活动已被处理' : '活动不存在'}}"
+    description="{{errorCode === 'TAKEDOWN' ? '该活动已被平台处理，暂不可查看。你可以返回发现页查看其他活动。' : '该活动可能已失效或分享链接不完整。你可以返回发现页查看其他活动。'}}"
     action-text="返回发现页"
     bindaction="handleGoDiscover"
   />
@@ -34,7 +34,10 @@
 
     <view class="detail-card surface">
       <view class="type-line" style="color: {{activity.typeColor}}">{{activity.typeIcon}} {{activity.typeLabel}}</view>
-      <view class="detail-title">{{activity.title}}</view>
+      <view class="detail-heading">
+        <view class="detail-title">{{activity.title}}</view>
+        <button class="share-chip-button" open-type="share" aria-label="分享活动">分享</button>
+      </view>
       <view class="owner-line">由 {{activity.owner.nickname}} 发起</view>
 
       <view class="time-card">

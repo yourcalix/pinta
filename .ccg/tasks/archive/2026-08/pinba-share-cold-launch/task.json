@@ -1,0 +1,12 @@
+{
+  "id": "pinba-share-cold-launch",
+  "title": "实现活动分享卡片与冷启动直达",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "完成最终验证、归档提交并推送 G2 代码阶段",
+  "createdAt": "2026-08-24T01:10:00+08:00",
+  "branch": "main"
+}
