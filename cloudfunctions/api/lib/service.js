@@ -9,6 +9,8 @@ const {
   validateApplicationInput,
   validateProfileInput,
   validateReportInput,
+  validateActivityQuestionInput,
+  validateActivityQuestionAnswerInput,
   validateId,
   requireIdempotencyKey,
   stringValue
@@ -22,6 +24,8 @@ const MUTATING_ACTIONS = new Set([
   'activity.create',
   'activity.cancel',
   'activity.complete',
+  'activity.question.ask',
+  'activity.question.answer',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -117,6 +121,28 @@ function publicNotification(notification) {
   };
 }
 
+function publicActivityQuestion(question) {
+  return {
+    id: question.id,
+    activityId: question.activityId,
+    content: question.content,
+    asker: question.asker && question.asker.nickname
+      ? { nickname: question.asker.nickname }
+      : null,
+    answer: question.answer
+      ? {
+          content: question.answer.content,
+          responder: question.answer.responder && question.answer.responder.nickname
+            ? { nickname: question.answer.responder.nickname }
+            : null,
+          answeredAt: question.answer.answeredAt
+        }
+      : null,
+    createdAt: question.createdAt,
+    updatedAt: question.updatedAt
+  };
+}
+
 function createPinbaService(options) {
   const store = options && options.store;
   invariant(store, 'INTERNAL', 'Store 未配置');
@@ -205,6 +231,94 @@ function createPinbaService(options) {
       const actorId = context && context.actorId;
       const viewer = actorId ? await store.getViewerContext(activityId, actorId) : {};
       return { activity: publicActivity(activity, viewer) };
+    }
+
+    if (action === 'activity.question.list') {
+      const activityId = validateId(input && input.activityId, '活动ID');
+      const activity = normalizeActivityForRead(await store.getActivity(activityId), at);
+      invariant(activity, 'NOT_FOUND');
+      invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
+      invariant(activity.status !== ACTIVITY_STATUS.DRAFT, 'NOT_FOUND');
+      const cursor = parsePublicCursor(input && input.cursor);
+      const limit = Math.min(Math.max(Number(input && input.limit) || 10, 1), 10);
+      const page = await store.listActivityQuestions(activityId, { cursor, limit });
+      return {
+        items: page.items.map(publicActivityQuestion),
+        nextCursor: page.nextCursor || null
+      };
+    }
+
+    if (action === 'activity.question.ask') {
+      const user = await requireActiveUser(context, false);
+      const payload = validateActivityQuestionInput(input);
+      const activity = normalizeActivityForRead(await store.getActivity(payload.activityId), at);
+      invariant(activity, 'NOT_FOUND');
+      invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
+      invariant(
+        [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED].includes(activity.status),
+        'CONFLICT',
+        '该活动当前不能提问'
+      );
+      await moderation.check([payload.content], { actorId: user.id, scene: 2 });
+      const question = {
+        id: operationId(context, `activityQuestion:${payload.activityId}`),
+        activityId: payload.activityId,
+        askerId: user.id,
+        asker: user.profile && user.profile.nickname ? { nickname: user.profile.nickname } : null,
+        content: payload.content,
+        answer: null,
+        submissionKeyHash: operationId(context, 'submission'),
+        createdAt: at,
+        updatedAt: at
+      };
+      const audit = {
+        id: operationId(context, 'audit'),
+        actorId: user.id,
+        action,
+        targetType: 'activityQuestion',
+        targetId: question.id,
+        at
+      };
+      const storedQuestion = await store.createActivityQuestion(question, audit);
+      return { question: publicActivityQuestion(storedQuestion) };
+    }
+
+    if (action === 'activity.question.answer') {
+      const owner = await requireActiveUser(context, false);
+      const payload = validateActivityQuestionAnswerInput(input);
+      const activity = normalizeActivityForRead(await store.getActivity(payload.activityId), at);
+      invariant(activity, 'NOT_FOUND');
+      invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
+      invariant(activity.ownerId === owner.id, 'FORBIDDEN');
+      invariant(
+        [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status),
+        'CONFLICT',
+        '该活动当前不能回答问题'
+      );
+      await moderation.check([payload.content], { actorId: owner.id, scene: 2 });
+      const audit = {
+        id: operationId(context, 'audit'),
+        actorId: owner.id,
+        action,
+        targetType: 'activityQuestion',
+        targetId: payload.questionId,
+        at
+      };
+      const storedQuestion = await store.answerActivityQuestionAtomic({
+        activityId: payload.activityId,
+        questionId: payload.questionId,
+        ownerId: owner.id,
+        answer: {
+          responderId: owner.id,
+          responder: owner.profile && owner.profile.nickname ? { nickname: owner.profile.nickname } : null,
+          content: payload.content,
+          answeredAt: at,
+          operationKeyHash: operationId(context, `answer:${payload.questionId}`)
+        },
+        audit,
+        at
+      });
+      return { question: publicActivityQuestion(storedQuestion) };
     }
 
     if (action === 'activity.mine') {
@@ -480,6 +594,7 @@ module.exports = {
   createPinbaService,
   publicActivity,
   publicApplication,
+  publicActivityQuestion,
   publicNotification,
   publicUser
 };

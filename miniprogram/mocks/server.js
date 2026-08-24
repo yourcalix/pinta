@@ -7,6 +7,8 @@ const MUTATING_ACTIONS = new Set([
   'activity.create',
   'activity.cancel',
   'activity.complete',
+  'activity.question.ask',
+  'activity.question.answer',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -16,7 +18,7 @@ const MUTATING_ACTIONS = new Set([
   'report.create',
   'admin.activity.suspend'
 ]);
-const PUBLIC_ACTIONS = new Set(['activity.list', 'activity.detail']);
+const PUBLIC_ACTIONS = new Set(['activity.list', 'activity.detail', 'activity.question.list']);
 const MAX_PUBLIC_SCAN = 500;
 
 function resolveNotificationTarget(type) {
@@ -124,6 +126,17 @@ function seedState() {
       },
       { id: 'n_member_formed', userId: 'u_member', type: 'GROUP_FORMED', activityId: 'a_buddy', title: '“周末新手羽毛球双打”已成团', read: false, createdAt: now }
     ],
+    activityQuestions: [
+      {
+        id: 'q_ride_luggage', activityId: 'a_ride', askerId: 'u_member', asker: { nickname: '阿同' },
+        content: '可以带一个20寸行李箱吗？',
+        answer: {
+          responderId: 'u_owner', responder: { nickname: '小拼' }, content: '可以，请提前说明行李数量。',
+          answeredAt: now, operationKeyHash: 'mock-seed-answer'
+        },
+        submissionKeyHash: 'mock-seed-question', createdAt: now, updatedAt: now
+      }
+    ],
     reports: [],
     idempotency: {}
   };
@@ -148,6 +161,7 @@ function writeStorage(key, value) {
 let state = readStorage(STATE_KEY) || seedState();
 let currentUserId = readStorage(PERSONA_KEY) || 'u_owner';
 if (!state.idempotency) state.idempotency = {};
+if (!state.activityQuestions) state.activityQuestions = [];
 
 function persist() {
   writeStorage(STATE_KEY, state);
@@ -203,6 +217,26 @@ function publicNotification(notification) {
   });
 }
 
+function publicActivityQuestion(question) {
+  return clone({
+    id: question.id,
+    activityId: question.activityId,
+    content: question.content,
+    asker: question.asker && question.asker.nickname ? { nickname: question.asker.nickname } : null,
+    answer: question.answer
+      ? {
+          content: question.answer.content,
+          responder: question.answer.responder && question.answer.responder.nickname
+            ? { nickname: question.answer.responder.nickname }
+            : null,
+          answeredAt: question.answer.answeredAt
+        }
+      : null,
+    createdAt: question.createdAt,
+    updatedAt: question.updatedAt
+  });
+}
+
 function publicActivity(activity) {
   const viewerApplication = state.applications
     .filter((item) => item.activityId === activity.id && item.applicantId === currentUserId)
@@ -236,6 +270,92 @@ function requireUser() {
 
 function assert(condition, code, message) {
   if (!condition) throw fail(code, message);
+}
+
+function normalizedContent(value, field, min, max) {
+  const content = typeof value === 'string' ? value.trim() : '';
+  assert(content.length >= min && content.length <= max, 'VALIDATION_ERROR', `${field}长度不符合要求`);
+  return content;
+}
+
+function validatedId(value, field) {
+  const id = typeof value === 'string' ? value.trim() : '';
+  assert(id.length >= 1 && id.length <= 80, 'VALIDATION_ERROR', `${field}格式无效`);
+  return id;
+}
+
+function moderateContent(content) {
+  assert(!/先付定金|司机接单|包赚|稳赚|返利|陪玩交易|援交/i.test(content), 'CONTENT_REJECTED', '内容未通过安全检查，请修改后重试');
+}
+
+function questionActivity(activityId) {
+  const activity = normalizeActivityForRead(activityById(activityId), new Date().toISOString());
+  assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+  assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
+  return activity;
+}
+
+function listActivityQuestions(input) {
+  const activityId = validatedId(input && input.activityId, '活动ID');
+  const activity = questionActivity(activityId);
+  assert(activity.status !== 'DRAFT', 'NOT_FOUND', '活动不存在或已失效');
+  const cursor = parsePublicCursor(input.cursor);
+  const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 10);
+  const items = state.activityQuestions
+    .filter((item) => item.activityId === activity.id)
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  const page = items.slice(cursor, cursor + limit + 1);
+  return {
+    items: page.slice(0, limit).map(publicActivityQuestion),
+    nextCursor: page.length > limit ? String(cursor + limit) : null
+  };
+}
+
+function askActivityQuestion(input) {
+  const user = requireUser();
+  const activityId = validatedId(input && input.activityId, '活动ID');
+  const content = normalizedContent(input && input.content, '问题内容', 2, 200);
+  const activity = questionActivity(activityId);
+  assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '该活动当前不能提问');
+  moderateContent(content);
+  const now = new Date().toISOString();
+  const question = {
+    id: nextId('question'),
+    activityId: activity.id,
+    askerId: user.id,
+    asker: user.profile && user.profile.nickname ? { nickname: user.profile.nickname } : null,
+    content,
+    answer: null,
+    submissionKeyHash: 'mock-operation',
+    createdAt: now,
+    updatedAt: now
+  };
+  state.activityQuestions.push(question);
+  return { question: publicActivityQuestion(question) };
+}
+
+function answerActivityQuestion(input) {
+  const user = requireUser();
+  const activityId = validatedId(input && input.activityId, '活动ID');
+  const questionId = validatedId(input && input.questionId, '问题ID');
+  const content = normalizedContent(input && input.content, '回答内容', 1, 300);
+  const activity = questionActivity(activityId);
+  assert(activity.ownerId === user.id, 'FORBIDDEN', '仅活动发起者可以回答');
+  assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '该活动当前不能回答问题');
+  moderateContent(content);
+  const question = state.activityQuestions.find((item) => item.id === questionId && item.activityId === activity.id);
+  assert(question, 'NOT_FOUND', '问题不存在或已失效');
+  assert(!question.answer, 'CONFLICT', '该问题已经回答');
+  const now = new Date().toISOString();
+  question.answer = {
+    responderId: user.id,
+    responder: user.profile && user.profile.nickname ? { nickname: user.profile.nickname } : null,
+    content,
+    answeredAt: now,
+    operationKeyHash: 'mock-operation'
+  };
+  question.updatedAt = now;
+  return { question: publicActivityQuestion(question) };
 }
 
 function listActivities(input) {
@@ -354,6 +474,9 @@ function handle(action, input) {
     assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
     return { activity: publicActivity(activity) };
   }
+  if (action === 'activity.question.list') return listActivityQuestions(input);
+  if (action === 'activity.question.ask') return askActivityQuestion(input);
+  if (action === 'activity.question.answer') return answerActivityQuestion(input);
   if (action === 'activity.mine') {
     const user = requireUser();
     const joinedIds = state.members.filter((item) => item.userId === user.id && item.role === 'MEMBER' && item.status === 'ACTIVE').map((item) => item.activityId);

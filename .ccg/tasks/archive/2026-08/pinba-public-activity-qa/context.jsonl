@@ -1,0 +1,8 @@
+{"file":"cloudfunctions/api/lib/service.js","reason":"动作编排、公开 DTO、鉴权、Moderation 与幂等入口"}
+{"file":"cloudfunctions/api/lib/memory-store.js","reason":"测试数据端口与问答持久化实现"}
+{"file":"cloudfunctions/api/lib/cloud-store.js","reason":"CloudBase 查询、事务和权限边界"}
+{"file":"cloudfunctions/api/lib/validation.js","reason":"问题与回答文本输入校验"}
+{"file":"miniprogram/mocks/server.js","reason":"Mock 契约和演示状态"}
+{"file":"miniprogram/subpackages/activity/detail/index.js","reason":"详情生命周期、申请交互和页面错误状态"}
+{"file":"miniprogram/subpackages/activity/detail/index.wxml","reason":"公开问答区信息架构与事件绑定"}
+{"file":"miniprogram/subpackages/activity/detail/index.wxss","reason":"小屏、大字号、键盘与无障碍布局"}

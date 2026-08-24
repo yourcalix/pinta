@@ -17,6 +17,7 @@ class MemoryStore {
     this.applications = new Map((seed.applications || []).map((item) => [item.id, clone(item)]));
     this.members = new Map((seed.members || []).map((item) => [item.id, clone(item)]));
     this.notifications = new Map((seed.notifications || []).map((item) => [item.id, clone(item)]));
+    this.activityQuestions = new Map((seed.activityQuestions || []).map((item) => [item.id, clone(item)]));
     this.reports = new Map((seed.reports || []).map((item) => [item.id, clone(item)]));
     this.auditLogs = new Map((seed.auditLogs || []).map((item) => [item.id, clone(item)]));
     this.idempotency = new Map();
@@ -107,6 +108,69 @@ class MemoryStore {
     );
     const joined = [...joinedIds].map((id) => this.activities.get(id)).filter(Boolean);
     return clone({ owned, joined });
+  }
+
+  async listActivityQuestions(activityId, options = {}) {
+    const cursor = Number(options.cursor) || 0;
+    const limit = Math.min(Math.max(Number(options.limit) || 10, 1), 10);
+    const items = [...this.activityQuestions.values()]
+      .filter((item) => item.activityId === activityId)
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+    const page = items.slice(cursor, cursor + limit + 1);
+    return clone({
+      items: page.slice(0, limit),
+      nextCursor: page.length > limit ? String(cursor + limit) : null
+    });
+  }
+
+  async createActivityQuestion(question, audit) {
+    const activity = this.activities.get(question.activityId);
+    invariant(activity, 'NOT_FOUND');
+    invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
+    invariant(
+      [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED].includes(activity.status),
+      'CONFLICT',
+      '该活动当前不能提问'
+    );
+    invariant(
+      activity.status !== ACTIVITY_STATUS.RECRUITING
+        || Date.parse(activity.deadlineAt) > Date.parse(question.createdAt),
+      'CONFLICT',
+      '该活动当前不能提问'
+    );
+    const existing = this.activityQuestions.get(question.id);
+    if (existing) {
+      invariant(existing.submissionKeyHash === question.submissionKeyHash, 'CONFLICT', '幂等键已用于其他问题');
+      if (audit) this.auditLogs.set(audit.id, clone(audit));
+      return clone(existing);
+    }
+    this.activityQuestions.set(question.id, clone(question));
+    if (audit) this.auditLogs.set(audit.id, clone(audit));
+    return clone(question);
+  }
+
+  async answerActivityQuestionAtomic({ activityId, questionId, ownerId, answer, audit, at }) {
+    const activity = this.activities.get(activityId);
+    const question = this.activityQuestions.get(questionId);
+    invariant(activity && question && question.activityId === activityId, 'NOT_FOUND');
+    invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
+    invariant(activity.ownerId === ownerId, 'FORBIDDEN');
+    invariant(
+      [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status),
+      'CONFLICT',
+      '该活动当前不能回答问题'
+    );
+    if (question.answer) {
+      if (question.answer.operationKeyHash === answer.operationKeyHash) {
+        if (audit) this.auditLogs.set(audit.id, clone(audit));
+        return clone(question);
+      }
+      throw new AppError('CONFLICT', '该问题已经回答');
+    }
+    question.answer = clone(answer);
+    question.updatedAt = at;
+    if (audit) this.auditLogs.set(audit.id, clone(audit));
+    return clone(question);
   }
 
   async createApplication(application) {

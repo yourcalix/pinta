@@ -229,3 +229,57 @@ test('Mock 在稀疏关键词与过期候选交错时仍按 raw cursor 找全结
     mockServer.reset();
   }
 });
+
+test('Mock 公开问答支持游客读取、用户提问与发起者唯一回答', async () => {
+  mockServer.reset();
+  const initial = await call('activity.question.list', { activityId: 'a_ride', limit: 10 });
+  assert.equal(initial.ok, true);
+  assert.ok(initial.data.items.length >= 1);
+  assert.equal(JSON.stringify(initial.data).includes('u_member'), false);
+
+  mockServer.setPersona('u_member');
+  const asked = await call('activity.question.ask', {
+    activityId: 'a_ride',
+    content: '可以再带一个随身背包吗？'
+  });
+  assert.equal(asked.ok, true);
+  assert.equal(asked.data.question.answer, null);
+
+  mockServer.setPersona('u_owner');
+  const answered = await call('activity.question.answer', {
+    activityId: 'a_ride',
+    questionId: asked.data.question.id,
+    content: '可以，请保持行李轻便。'
+  });
+  assert.equal(answered.ok, true);
+  assert.equal(answered.data.question.answer.content, '可以，请保持行李轻便。');
+
+  const duplicate = await mockServer.call({
+    action: 'activity.question.answer',
+    data: {
+      activityId: 'a_ride',
+      questionId: asked.data.question.id,
+      content: '第二个回答不应覆盖'
+    },
+    requestId: 'test:question:duplicate',
+    idempotencyKey: 'test:question:duplicate-key'
+  });
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.error.code, 'CONFLICT');
+});
+
+test('Mock 问答同步执行内容安全且下架活动不泄露问答', async () => {
+  mockServer.reset();
+  mockServer.setPersona('u_member');
+  const rejected = await call('activity.question.ask', {
+    activityId: 'a_ride',
+    content: '先付定金再告诉你'
+  });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.error.code, 'CONTENT_REJECTED');
+
+  const suspended = await call('activity.question.list', { activityId: 'a_suspended' });
+  assert.equal(suspended.ok, false);
+  assert.equal(suspended.error.code, 'TAKEDOWN');
+  assert.equal(JSON.stringify(suspended).includes('测试问答'), false);
+});

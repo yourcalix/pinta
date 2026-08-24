@@ -9,6 +9,8 @@ const MUTATING_ACTIONS = new Set([
   'activity.create',
   'activity.cancel',
   'activity.complete',
+  'activity.question.ask',
+  'activity.question.answer',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -163,7 +165,9 @@ async function invoke(action, data = {}, options = {}) {
   } catch (error) {
     // A received business response is definitive; transport failures keep the key
     // so the user's retry replays the same server-side operation.
-    if (mutationFingerprint && response !== undefined) forgetMutation(mutationFingerprint);
+    if (mutationFingerprint && response !== undefined && (!error || error.code !== 'INTERNAL')) {
+      forgetMutation(mutationFingerprint);
+    }
     if (error && error.code === 'ACCOUNT_DISABLED') {
       clearAuthenticatedSession();
       error.handled = true;

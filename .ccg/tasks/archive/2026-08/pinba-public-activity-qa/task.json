@@ -1,0 +1,12 @@
+{
+  "id": "pinba-public-activity-qa",
+  "title": "实现活动详情公开问答区",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-08-24T09:02:59Z",
+  "branch": "main"
+}

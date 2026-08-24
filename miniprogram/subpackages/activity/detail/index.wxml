@@ -97,6 +97,78 @@
     <button wx:if="{{(activity.viewerRole === 'owner' || activity.viewerRole === 'member') && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleGroup">进入成团页</button>
     <button wx:if="{{(activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.statusLabel}}，暂不可申请</button>
 
+    <view class="qa-card surface" aria-role="region" aria-label="公开问答">
+      <view class="qa-heading">
+        <view>
+          <view class="block-title">公开问答</view>
+          <view class="qa-subtitle">围绕时间、地点和参与细节公开沟通</view>
+        </view>
+        <button wx:if="{{qa.canAsk}}" class="qa-action qa-ask-action" bindtap="handleOpenAsk" aria-label="向发起者提问">我要提问</button>
+      </view>
+
+      <view wx:if="{{qa.loading}}" class="qa-local-state" aria-role="status" aria-label="正在加载公开问答">正在加载问答…</view>
+      <view wx:elif="{{qa.error}}" class="qa-local-state qa-error" aria-role="status">
+        <text>{{qa.error}}</text>
+        <button class="qa-action qa-retry-action" bindtap="handleRetryQuestions">重新加载</button>
+      </view>
+      <view wx:elif="{{!qa.items.length}}" class="qa-local-state">
+        <text>还没有公开问题</text>
+        <text class="qa-empty-hint">有需要确认的细节，可以先问问发起者。</text>
+      </view>
+      <block wx:else>
+        <view class="qa-item" wx:for="{{qa.previewItems}}" wx:key="id">
+          <view class="qa-meta">{{item.askerName}} · {{item.createdLabel}}</view>
+          <view class="qa-question"><text class="qa-mark">问</text><text class="qa-content">{{item.content}}</text></view>
+          <view wx:if="{{item.answer}}" class="qa-answer">
+            <text class="qa-mark qa-mark--answer">答</text>
+            <view class="qa-answer-main">
+              <text class="qa-content">{{item.answer.content}}</text>
+              <text class="qa-responder">{{item.answer.responderName}}</text>
+            </view>
+          </view>
+          <view wx:else class="qa-unanswered">
+            <text>等待发起者回答</text>
+            <button
+              wx:if="{{item.canAnswer}}"
+              class="qa-action qa-answer-action"
+              data-id="{{item.id}}"
+              data-content="{{item.content}}"
+              bindtap="handleOpenAnswer"
+              aria-label="回答问题：{{item.content}}"
+            >回答</button>
+          </view>
+        </view>
+        <button wx:if="{{qa.items.length > 3}}" class="qa-toggle" bindtap="handleToggleQuestions">{{qa.expanded ? '收起问答' : '查看全部 ' + qa.items.length + ' 条问答'}}</button>
+        <view wx:if="{{qa.expanded && qa.nextCursor}}" class="qa-limit-hint">仅展示最新 10 条问答</view>
+      </block>
+    </view>
+
     <button class="report-link" bindtap="handleReport">举报此活动</button>
   </block>
+
+  <view wx:if="{{qaModal.visible}}" class="qa-modal" catchtouchmove="preventTouchMove" aria-role="dialog" aria-label="{{qaModal.type === 'answer' ? '回答公开问题' : '发布公开问题'}}">
+    <view class="qa-backdrop" bindtap="handleCloseQuestion" catchtouchmove="preventTouchMove"></view>
+    <view class="qa-sheet" catchtap="preventTouchMove" catchtouchmove="preventTouchMove">
+      <view class="qa-sheet-handle" aria-hidden="true"></view>
+      <view class="qa-sheet-heading">
+        <view class="qa-sheet-title">{{qaModal.type === 'answer' ? '回答问题' : '向发起者提问'}}</view>
+        <button class="qa-close" bindtap="handleCloseQuestion" disabled="{{qaModal.submitting}}" aria-label="关闭">关闭</button>
+      </view>
+      <view wx:if="{{qaModal.type === 'answer'}}" class="qa-target-question">{{qaModal.targetContent}}</view>
+      <textarea
+        class="textarea qa-input"
+        maxlength="{{qaModal.type === 'answer' ? 300 : 200}}"
+        cursor-spacing="140"
+        adjust-position="true"
+        auto-focus="true"
+        placeholder="{{qaModal.type === 'answer' ? '公开回答参与者的问题' : '请描述需要确认的时间、地点或参与细节'}}"
+        value="{{qaModal.content}}"
+        bindinput="handleQuestionInput"
+      />
+      <view class="qa-input-footer">
+        <text>{{qaModal.content.length}} / {{qaModal.type === 'answer' ? 300 : 200}}</text>
+        <button class="primary-button qa-submit" loading="{{qaModal.submitting}}" disabled="{{qaModal.submitting}}" bindtap="handleSubmitQuestion">{{qaModal.type === 'answer' ? '发布回答' : '发布问题'}}</button>
+      </view>
+    </view>
+  </view>
 </view>

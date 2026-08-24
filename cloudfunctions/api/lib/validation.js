@@ -135,6 +135,23 @@ function validateReportInput(input) {
   };
 }
 
+function validateActivityQuestionInput(input) {
+  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
+  return {
+    activityId: stringValue(input.activityId, '活动ID', { required: true, max: 80 }),
+    content: stringValue(input.content, '问题内容', { required: true, min: 2, max: 200 })
+  };
+}
+
+function validateActivityQuestionAnswerInput(input) {
+  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
+  return {
+    activityId: stringValue(input.activityId, '活动ID', { required: true, max: 80 }),
+    questionId: stringValue(input.questionId, '问题ID', { required: true, max: 80 }),
+    content: stringValue(input.content, '回答内容', { required: true, min: 1, max: 300 })
+  };
+}
+
 function validateId(value, field = 'ID') {
   return stringValue(value, field, { required: true, max: 80 });
 }
@@ -153,6 +170,8 @@ module.exports = {
   validateApplicationInput,
   validateProfileInput,
   validateReportInput,
+  validateActivityQuestionInput,
+  validateActivityQuestionAnswerInput,
   validateId,
   requireIdempotencyKey,
   stringValue

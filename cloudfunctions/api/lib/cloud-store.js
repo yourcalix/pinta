@@ -140,6 +140,77 @@ class CloudStore {
     return { owned: (ownedResult.data || []).map(entity), joined };
   }
 
+  async listActivityQuestions(activityId, options = {}) {
+    const cursor = Number(options.cursor) || 0;
+    const limit = Math.min(Math.max(Number(options.limit) || 10, 1), 10);
+    const result = await this.db.collection('activityQuestions')
+      .where({ activityId })
+      .orderBy('createdAt', 'desc')
+      .skip(cursor)
+      .limit(limit + 1)
+      .get();
+    const items = (result.data || []).map(entity);
+    return {
+      items: items.slice(0, limit),
+      nextCursor: items.length > limit ? String(cursor + limit) : null
+    };
+  }
+
+  async createActivityQuestion(question, audit) {
+    return this.db.runTransaction(async (transaction) => {
+      const activity = first(await transaction.collection('activities').doc(question.activityId).get());
+      invariant(activity, 'NOT_FOUND');
+      invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
+      invariant(
+        [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED].includes(activity.status),
+        'CONFLICT',
+        '该活动当前不能提问'
+      );
+      invariant(
+        activity.status !== ACTIVITY_STATUS.RECRUITING
+          || Date.parse(activity.deadlineAt) > Date.parse(question.createdAt),
+        'CONFLICT',
+        '该活动当前不能提问'
+      );
+      const existing = first(await transaction.collection('activityQuestions').doc(question.id).get());
+      if (existing) {
+        invariant(existing.submissionKeyHash === question.submissionKeyHash, 'CONFLICT', '幂等键已用于其他问题');
+        if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+        return existing;
+      }
+      await transaction.collection('activityQuestions').doc(question.id).set({ data: document(question) });
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return question;
+    });
+  }
+
+  async answerActivityQuestionAtomic({ activityId, questionId, ownerId, answer, audit, at }) {
+    return this.db.runTransaction(async (transaction) => {
+      const activity = first(await transaction.collection('activities').doc(activityId).get());
+      const question = first(await transaction.collection('activityQuestions').doc(questionId).get());
+      invariant(activity && question && question.activityId === activityId, 'NOT_FOUND');
+      invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
+      invariant(activity.ownerId === ownerId, 'FORBIDDEN');
+      invariant(
+        [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status),
+        'CONFLICT',
+        '该活动当前不能回答问题'
+      );
+      if (question.answer) {
+        if (question.answer.operationKeyHash === answer.operationKeyHash) {
+          if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+          return question;
+        }
+        throw new AppError('CONFLICT', '该问题已经回答');
+      }
+      await transaction.collection('activityQuestions').doc(questionId).update({
+        data: { answer: document(answer), updatedAt: at }
+      });
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return { ...question, answer, updatedAt: at };
+    });
+  }
+
   async createApplication(application) {
     return this.db.runTransaction(async (transaction) => {
       const activity = first(await transaction.collection('activities').doc(application.activityId).get());
