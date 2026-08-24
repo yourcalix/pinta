@@ -137,3 +137,95 @@ test('Mock 管理员可以下架活动且响应不泄露处置详情', async () 
   assert.equal(detail.ok, false);
   assert.equal(detail.error.code, 'TAKEDOWN');
 });
+
+test('Mock 公开列表执行游标分页且拒绝畸形游标', async () => {
+  mockServer.reset();
+  mockServer.setPersona('u_owner');
+  const first = await call('activity.list', { limit: 2 });
+  assert.equal(first.ok, true);
+  assert.equal(first.data.items.length, 2);
+  assert.equal(typeof first.data.nextCursor, 'string');
+
+  const second = await call('activity.list', { limit: 2, cursor: first.data.nextCursor });
+  assert.equal(second.ok, true);
+  assert.equal(second.data.items.length, 1);
+  assert.equal(second.data.nextCursor, null);
+  assert.equal(new Set([...first.data.items, ...second.data.items].map((item) => item.id)).size, 3);
+
+  const invalid = await call('activity.list', { limit: 2, cursor: '1.5' });
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.error.code, 'VALIDATION_ERROR');
+});
+
+test('Mock 公开列表与详情对截止活动使用一致的读时状态且不污染存储', async () => {
+  const storage = {};
+  global.wx = {
+    getStorageSync: (key) => storage[key],
+    setStorageSync: (key, value) => { storage[key] = value; }
+  };
+
+  try {
+    mockServer.reset();
+    const stored = storage.pinba_mock_state_v2.activities.find((item) => item.id === 'a_product');
+    stored.deadlineAt = new Date(Date.now() - 60 * 1000).toISOString();
+
+    const page = await call('activity.list', { limit: 10 });
+    assert.equal(page.ok, true);
+    assert.equal(page.data.items.some((item) => item.id === stored.id), false);
+
+    const detail = await call('activity.detail', { activityId: stored.id });
+    assert.equal(detail.ok, true);
+    assert.equal(detail.data.activity.status, 'EXPIRED');
+    assert.equal(stored.status, 'RECRUITING');
+
+    mockServer.setPersona('u_member');
+    const application = await call('application.submit', {
+      activityId: stored.id,
+      note: '截止后不应允许申请',
+      autoJoinConsent: true
+    });
+    assert.equal(application.ok, false);
+    assert.equal(application.error.code, 'CONFLICT');
+  } finally {
+    delete global.wx;
+    mockServer.reset();
+  }
+});
+
+test('Mock 在稀疏关键词与过期候选交错时仍按 raw cursor 找全结果', async () => {
+  const storage = {};
+  global.wx = {
+    getStorageSync: (key) => storage[key],
+    setStorageSync: (key, value) => { storage[key] = value; }
+  };
+
+  try {
+    mockServer.reset();
+    const source = storage.pinba_mock_state_v2.activities.find((item) => item.id === 'a_ride');
+    storage.pinba_mock_state_v2.activities = Array.from({ length: 7 }, (_, index) => ({
+      ...source,
+      id: `a_sparse_${index}`,
+      title: index % 2 === 0 ? `稀疏命中 ${index}` : `普通候选 ${index}`,
+      startsAt: new Date(Date.now() + (index + 2) * 60 * 60 * 1000).toISOString(),
+      deadlineAt: index === 2
+        ? new Date(Date.now() - 60 * 1000).toISOString()
+        : new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      status: 'RECRUITING'
+    }));
+
+    const first = await call('activity.list', { limit: 2, keyword: '稀疏命中' });
+    assert.deepEqual(first.data.items.map((item) => item.id), ['a_sparse_0', 'a_sparse_4']);
+    assert.equal(first.data.nextCursor, '6');
+
+    const second = await call('activity.list', {
+      limit: 2,
+      keyword: '稀疏命中',
+      cursor: first.data.nextCursor
+    });
+    assert.deepEqual(second.data.items.map((item) => item.id), ['a_sparse_6']);
+    assert.equal(second.data.nextCursor, null);
+  } finally {
+    delete global.wx;
+    mockServer.reset();
+  }
+});

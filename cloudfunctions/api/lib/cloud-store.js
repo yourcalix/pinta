@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { AppError, invariant } = require('./errors');
 const { ACTIVITY_STATUS, APPLICATION_STATUS, MEMBER_STATUS } = require('./constants');
 const { stableEntityId } = require('./ids');
+const { collectPublicActivityPage } = require('./public-activity-page');
 
 function entity(data) {
   if (!data) return null;
@@ -86,23 +87,21 @@ class CloudStore {
     if (filters.type) where.type = filters.type;
     if (filters.city) where.city = filters.city;
     if (filters.district) where.district = filters.district;
-    const offset = Math.max(Number(filters.cursor) || 0, 0);
-    const result = await this.db.collection('activities')
-      .where(where)
-      .orderBy('startsAt', 'asc')
-      .skip(offset)
-      .limit(filters.limit)
-      .get();
-    let items = (result.data || []).map(entity);
-    if (filters.keyword) {
-      const keyword = filters.keyword.toLowerCase();
-      items = items.filter((item) => `${item.title} ${item.description}`.toLowerCase().includes(keyword));
-    }
-    if (at) items = items.filter((item) => item.status !== ACTIVITY_STATUS.RECRUITING || Date.parse(item.deadlineAt) > Date.parse(at));
-    return {
-      items,
-      nextCursor: result.data && result.data.length === filters.limit ? String(offset + result.data.length) : null
-    };
+    return collectPublicActivityPage({
+      offset: filters.cursor || 0,
+      limit: filters.limit,
+      keyword: filters.keyword,
+      at,
+      fetchBatch: async (offset, size) => {
+        const result = await this.db.collection('activities')
+          .where(where)
+          .orderBy('startsAt', 'asc')
+          .skip(offset)
+          .limit(size)
+          .get();
+        return (result.data || []).map(entity);
+      }
+    });
   }
 
   async findOne(collection, where) {

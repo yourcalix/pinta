@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "拼吧",
   "enablePullDownRefresh": true,
+  "onReachBottomDistance": 160,
   "usingComponents": {
     "activity-card": "/components/activity-card/index",
     "empty-state": "/components/empty-state/index"

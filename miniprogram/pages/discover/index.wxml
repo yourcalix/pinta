@@ -53,14 +53,33 @@
       item="{{item}}"
       bindselect="handleCardSelect"
     />
+
+    <view
+      wx:if="{{loadingMore || loadMoreError || !hasMore}}"
+      class="list-footer"
+      aria-role="status"
+      aria-label="{{loadingMore ? '正在加载更多活动' : (loadMoreError || '已经加载全部活动')}}"
+    >
+      <view wx:if="{{loadingMore}}" class="footer-state">
+        <view class="footer-spinner" aria-hidden="true"></view>
+        <text>正在加载更多…</text>
+      </view>
+      <button
+        wx:elif="{{loadMoreError}}"
+        class="footer-retry-button"
+        bindtap="handleRetryLoadMore"
+        aria-label="加载更多失败，点击重试"
+      >加载更多失败，点击重试</button>
+      <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底了 —</view>
+    </view>
   </view>
 
   <empty-state
     wx:else
     symbol="{{error ? '!' : '+'}}"
-    title="{{error || '暂时没有符合条件的活动'}}"
-    description="{{error ? '检查网络后重试，已填写的内容不会丢失。' : '换个分类看看，或发起第一个活动。'}}"
-    action-text="{{error ? '重新加载' : '去发布'}}"
+    title="{{error || (hasMore ? '暂时没有可展示的活动' : '暂时没有符合条件的活动')}}"
+    description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasMore ? '部分活动已被你隐藏，可以继续查看下一页。' : '换个分类看看，或发起第一个活动。')}}"
+    action-text="{{error ? '重新加载' : (hasMore ? '继续加载' : '去发布')}}"
     bindaction="handleEmptyAction"
   />
 </view>

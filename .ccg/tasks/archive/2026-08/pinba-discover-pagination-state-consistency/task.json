@@ -1,0 +1,12 @@
+{
+  "id": "pinba-discover-pagination-state-consistency",
+  "title": "实现发现页分页与活动过期状态一致性",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-08-24T07:28:00Z",
+  "branch": "main"
+}

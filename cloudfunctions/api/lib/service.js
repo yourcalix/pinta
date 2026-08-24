@@ -15,6 +15,7 @@ const {
 } = require('./validation');
 const { createLocalModeration } = require('./moderation');
 const { resolveNotificationTarget } = require('./notification-target');
+const { parsePublicCursor, normalizeActivityForRead } = require('./public-activity-page');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -185,7 +186,7 @@ function createPinbaService(options) {
         city: input && input.city,
         district: input && input.district,
         keyword: input && stringValue(input.keyword, '搜索词', { max: 30 }),
-        cursor: input && input.cursor,
+        cursor: parsePublicCursor(input && input.cursor),
         limit: Math.min(Math.max(Number(input && input.limit) || 20, 1), 50)
       };
       const page = await store.listActivities(filters, at);
@@ -197,7 +198,8 @@ function createPinbaService(options) {
 
     if (action === 'activity.detail') {
       const activityId = validateId(input && input.activityId, '活动ID');
-      const activity = await store.getActivity(activityId);
+      const storedActivity = await store.getActivity(activityId);
+      const activity = normalizeActivityForRead(storedActivity, at);
       invariant(activity, 'NOT_FOUND');
       invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
       const actorId = context && context.actorId;

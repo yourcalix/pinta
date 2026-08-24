@@ -17,11 +17,28 @@ const MUTATING_ACTIONS = new Set([
   'admin.activity.suspend'
 ]);
 const PUBLIC_ACTIONS = new Set(['activity.list', 'activity.detail']);
+const MAX_PUBLIC_SCAN = 500;
 
 function resolveNotificationTarget(type) {
   if (type === 'NEW_APPLICATION') return 'MANAGE';
   if (type === 'GROUP_FORMED') return 'GROUP';
   return 'DETAIL';
+}
+
+function parsePublicCursor(value) {
+  if (value === undefined || value === null || value === '') return 0;
+  const validNumber = typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+  const validString = typeof value === 'string' && /^(0|[1-9]\d*)$/.test(value) && Number.isSafeInteger(Number(value));
+  assert(validNumber || validString, 'VALIDATION_ERROR', '分页游标无效');
+  return Number(value);
+}
+
+function normalizeActivityForRead(activity, now) {
+  if (!activity || activity.status !== 'RECRUITING') return activity;
+  const deadline = Date.parse(activity.deadlineAt);
+  const at = Date.parse(now);
+  if (!Number.isFinite(deadline) || !Number.isFinite(at) || deadline > at) return activity;
+  return { ...activity, status: 'EXPIRED' };
 }
 
 function isoAfter(hours) {
@@ -222,16 +239,38 @@ function assert(condition, code, message) {
 }
 
 function listActivities(input) {
-  let items = state.activities.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status));
-  if (input.type) items = items.filter((item) => item.type === input.type);
-  if (input.city) items = items.filter((item) => item.city === input.city);
-  if (input.district) items = items.filter((item) => item.district === input.district);
-  if (input.keyword) {
-    const keyword = input.keyword.toLowerCase();
-    items = items.filter((item) => `${item.title} ${item.description}`.toLowerCase().includes(keyword));
+  let candidates = state.activities.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status));
+  if (input.type) candidates = candidates.filter((item) => item.type === input.type);
+  if (input.city) candidates = candidates.filter((item) => item.city === input.city);
+  if (input.district) candidates = candidates.filter((item) => item.district === input.district);
+  candidates.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+
+  const offset = parsePublicCursor(input.cursor);
+  const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 50);
+  const keyword = typeof input.keyword === 'string' ? input.keyword.toLowerCase() : '';
+  const now = new Date().toISOString();
+  const items = [];
+  let rawOffset = offset;
+  let scanned = 0;
+
+  while (rawOffset < candidates.length && scanned < MAX_PUBLIC_SCAN) {
+    const candidateOffset = rawOffset;
+    const activity = normalizeActivityForRead(candidates[rawOffset], now);
+    rawOffset += 1;
+    scanned += 1;
+    const keywordMatch = !keyword || `${activity.title} ${activity.description}`.toLowerCase().includes(keyword);
+    if (['RECRUITING', 'FORMED'].includes(activity.status) && keywordMatch) {
+      if (items.length === limit) {
+        return { items: items.map(publicActivity), nextCursor: String(candidateOffset) };
+      }
+      items.push(activity);
+    }
   }
-  items.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
-  return { items: items.map(publicActivity), nextCursor: null };
+
+  return {
+    items: items.map(publicActivity),
+    nextCursor: rawOffset < candidates.length ? String(rawOffset) : null
+  };
 }
 
 function createActivity(input) {
@@ -253,6 +292,7 @@ function submitApplication(input) {
   assert(activity, 'NOT_FOUND', '活动不存在或已失效');
   assert(activity.status === 'RECRUITING', 'CONFLICT', '该活动当前不可申请');
   assert(activity.ownerId !== user.id, 'CONFLICT', '不能申请自己发布的活动');
+  assert(Date.parse(activity.deadlineAt) > Date.now(), 'CONFLICT', '该活动报名已截止');
   assert(input.autoJoinConsent === true, 'VALIDATION_ERROR', '请确认获批后自动加入并占用名额');
   const duplicate = state.applications.find((item) => item.activityId === input.activityId && item.applicantId === user.id && ['PENDING', 'APPROVED'].includes(item.status));
   assert(!duplicate, 'CONFLICT', '你已经申请或加入该活动');
@@ -309,7 +349,7 @@ function handle(action, input) {
   }
   if (action === 'activity.list') return listActivities(input);
   if (action === 'activity.detail') {
-    const activity = activityById(input.activityId);
+    const activity = normalizeActivityForRead(activityById(input.activityId), new Date().toISOString());
     assert(activity, 'NOT_FOUND', '活动不存在或已失效');
     assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
     return { activity: publicActivity(activity) };

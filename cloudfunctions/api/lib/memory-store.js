@@ -3,6 +3,7 @@
 const { AppError, invariant } = require('./errors');
 const { ACTIVITY_STATUS, APPLICATION_STATUS, MEMBER_STATUS } = require('./constants');
 const { stableEntityId } = require('./ids');
+const { collectPublicActivityPage } = require('./public-activity-page');
 
 function clone(value) {
   if (value === undefined) return undefined;
@@ -66,31 +67,19 @@ class MemoryStore {
     const allowedPublicStatuses = filters.status
       ? [filters.status]
       : [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED];
-    let items = [...this.activities.values()].filter((activity) => allowedPublicStatuses.includes(activity.status));
-    if (filters.type) items = items.filter((activity) => activity.type === filters.type);
-    if (filters.city) items = items.filter((activity) => activity.city === filters.city);
-    if (filters.district) items = items.filter((activity) => activity.district === filters.district);
-    if (filters.keyword) {
-      const keyword = filters.keyword.toLowerCase();
-      items = items.filter((activity) => `${activity.title} ${activity.description}`.toLowerCase().includes(keyword));
-    }
-    if (at) {
-      items.forEach((activity) => {
-        if (activity.status === ACTIVITY_STATUS.RECRUITING && Date.parse(activity.deadlineAt) <= Date.parse(at)) {
-          activity.status = ACTIVITY_STATUS.EXPIRED;
-          activity.updatedAt = at;
-        }
-      });
-      items = items.filter((activity) => allowedPublicStatuses.includes(activity.status));
-    }
-    items.sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt));
-    const offset = Math.max(Number(filters.cursor) || 0, 0);
-    const pageItems = items.slice(offset, offset + filters.limit);
-    const nextOffset = offset + pageItems.length;
-    return {
-      items: clone(pageItems),
-      nextCursor: nextOffset < items.length ? String(nextOffset) : null
-    };
+    let candidates = [...this.activities.values()].filter((activity) => allowedPublicStatuses.includes(activity.status));
+    if (filters.type) candidates = candidates.filter((activity) => activity.type === filters.type);
+    if (filters.city) candidates = candidates.filter((activity) => activity.city === filters.city);
+    if (filters.district) candidates = candidates.filter((activity) => activity.district === filters.district);
+    candidates.sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt));
+    const page = await collectPublicActivityPage({
+      offset: filters.cursor || 0,
+      limit: filters.limit,
+      keyword: filters.keyword,
+      at,
+      fetchBatch: async (offset, size) => candidates.slice(offset, offset + size)
+    });
+    return { items: clone(page.items), nextCursor: page.nextCursor };
   }
 
   async getViewerContext(activityId, actorId) {
