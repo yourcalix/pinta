@@ -1,0 +1,12 @@
+{
+  "id": "resolve-github-appid-secret-alert",
+  "title": "修复 GitHub 对测试 AppID 字面量的 Secret Scanning 告警",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "high",
+  "domain": "security",
+  "currentPhase": "completed",
+  "nextAction": "归档、提交推送并关闭 GitHub Secret Scanning 告警",
+  "createdAt": "2026-08-24T05:28:00Z",
+  "branch": "main"
+}
