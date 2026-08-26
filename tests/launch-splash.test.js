@@ -160,19 +160,42 @@ test('页面卸载会清理启动计时器并恢复 TabBar，当前会话不重�
   }
 });
 
+test('任一启动图片加载失败会立即退出蒙层、清理计时器并恢复 TabBar', async () => {
+  const originalList = activityService.list;
+  let resolveList;
+  activityService.list = () => new Promise((resolve) => { resolveList = resolve; });
+  const context = loadDiscoverPage();
+  try {
+    const loading = context.page.onLoad();
+    context.page.handleLaunchAssetError();
+    assert.equal(context.page.data.launchSplashVisible, false);
+    assert.equal(context.timers.every((timer) => timer.cleared), true);
+    assert.equal(context.tabBar.shown, 1);
+    resolveList({ items: [], nextCursor: null });
+    await loading;
+    assert.equal(context.page.data.launchSplashVisible, false);
+  } finally {
+    activityService.list = originalList;
+    unloadDiscoverPage(context);
+  }
+});
+
 test('启动组件使用透明三维凹槽和立方体落块，封面与轨道保持静止', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/components/launch-splash/index.wxml'), 'utf8');
+  const pageTemplate = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'miniprogram/components/launch-splash/index.wxss'), 'utf8');
   const component = require('../miniprogram/components/launch-splash/index');
   const coverRule = style.match(/\.launch-cover\s*\{([^}]*)\}/);
-  assert.match(template, /launch-cover\.webp/);
+  assert.match(template, /\.\.\/\.\.\/assets\/images\/launch-cover\.jpg/);
   assert.match(template, /mode="aspectFill"/);
   assert.match(template, /aria-role="progressbar"/);
   assert.match(template, /aria-label="拼吧正在加载，请稍候"/);
   assert.match(template, /aria-hidden="true"/);
   assert.match(template, /正在拼合活动…/);
-  assert.match(template, /launch-groove\.webp/);
-  assert.match(template, /launch-cube\.webp/);
+  assert.match(template, /\.\.\/\.\.\/assets\/images\/launch-groove\.png/);
+  assert.match(template, /\.\.\/\.\.\/assets\/images\/launch-cube\.png/);
+  assert.equal((template.match(/binderror="handleAssetError"/g) || []).length, 3);
+  assert.match(pageTemplate, /bindasseterror="handleLaunchAssetError"/);
   assert.match(template, /launch-cube-slot/);
   assert.equal(component.data.blocks.length, 12);
   assert.ok(coverRule);
@@ -186,16 +209,32 @@ test('启动组件使用透明三维凹槽和立方体落块，封面与轨道�
   assert.doesNotMatch(grooveRule[1], /animation|transition|transform/);
 });
 
-test('启动页三张 WebP 素材总量不超过 150KB，透明素材保留 alpha 通道', () => {
-  const names = ['launch-cover.webp', 'launch-groove.webp', 'launch-cube.webp'];
+test('启动页使用 iPhone 兼容 JPEG/PNG 且本地资源总量不超过 220KB', () => {
+  const names = ['launch-cover.jpg', 'launch-groove.png', 'launch-cube.png'];
   const assets = names.map((name) => path.join(root, 'miniprogram/assets/images', name));
   let totalBytes = 0;
-  assets.forEach((asset) => {
+  assets.forEach((asset, index) => {
     const bytes = fs.readFileSync(asset);
     totalBytes += bytes.length;
-    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF');
-    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP');
+    if (index === 0) assert.deepEqual([...bytes.subarray(0, 2)], [0xff, 0xd8]);
+    else assert.deepEqual([...bytes.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   });
-  assert.ok(totalBytes <= 150 * 1024, `启动素材总量为 ${totalBytes} bytes`);
-  assert.equal(fs.existsSync(path.join(root, 'miniprogram/assets/images/launch-progress.png')), false);
+  assert.ok(totalBytes <= 220 * 1024, `启动素材总量为 ${totalBytes} bytes`);
+  ['launch-cover.webp', 'launch-groove.webp', 'launch-cube.webp'].forEach((name) => {
+    assert.equal(fs.existsSync(path.join(root, 'miniprogram/assets/images', name)), false);
+  });
+});
+
+test('启动组件对重复图片错误只向页面上报一次', () => {
+  const component = require('../miniprogram/components/launch-splash/index');
+  let emitted = 0;
+  const instance = {
+    triggerEvent(name) {
+      assert.equal(name, 'asseterror');
+      emitted += 1;
+    }
+  };
+  component.methods.handleAssetError.call(instance, { detail: { errMsg: 'image load failed' } });
+  component.methods.handleAssetError.call(instance, { detail: { errMsg: 'image load failed again' } });
+  assert.equal(emitted, 1);
 });

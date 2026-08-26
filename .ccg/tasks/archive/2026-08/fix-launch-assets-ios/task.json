@@ -1,0 +1,12 @@
+{
+  "id": "fix-launch-assets-ios",
+  "title": "修复 iPhone 真机启动页图片与动画资源无法加载",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交推送；后续在 Android 弱网下观察透明 PNG 边缘与本地加载表现",
+  "createdAt": "2026-08-26T15:40:00+08:00",
+  "branch": "main"
+}

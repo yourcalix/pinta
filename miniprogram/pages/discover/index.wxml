@@ -3,6 +3,7 @@
     wx:if="{{launchSplashVisible}}"
     progress="{{launchProgress}}"
     exiting="{{launchSplashExiting}}"
+    bindasseterror="handleLaunchAssetError"
   />
 
   <view class="hero">

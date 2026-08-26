@@ -6,9 +6,11 @@
 >
   <image
     class="launch-cover"
-    src="/assets/images/launch-cover.webp"
+    src="../../assets/images/launch-cover.jpg"
     mode="aspectFill"
+    data-asset="cover"
     aria-hidden="true"
+    binderror="handleAssetError"
   />
 
   <view class="launch-progress-card" aria-hidden="true">
@@ -16,9 +18,11 @@
     <view class="launch-track-container">
       <image
         class="launch-groove"
-        src="/assets/images/launch-groove.webp"
+        src="../../assets/images/launch-groove.png"
         mode="scaleToFill"
+        data-asset="groove"
         aria-hidden="true"
+        binderror="handleAssetError"
       />
       <view
         wx:for="{{blocks}}"
@@ -28,9 +32,11 @@
       >
         <image
           class="launch-cube {{item.id <= progress ? 'launch-cube--active' : ''}}"
-          src="/assets/images/launch-cube.webp"
+          src="../../assets/images/launch-cube.png"
           mode="scaleToFill"
+          data-asset="cube"
           aria-hidden="true"
+          binderror="handleAssetError"
         />
       </view>
     </view>

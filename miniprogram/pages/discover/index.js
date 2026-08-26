@@ -282,6 +282,10 @@ Page({
     this._launchTimers.clear();
   },
 
+  handleLaunchAssetError() {
+    this.teardownLaunchSplash(true);
+  },
+
   hideLaunchTabBar() {
     if (typeof wx === 'undefined' || typeof wx.hideTabBar !== 'function') return;
     try {
