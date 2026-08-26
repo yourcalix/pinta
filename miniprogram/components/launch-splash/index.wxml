@@ -1,0 +1,38 @@
+<view
+  class="launch-splash {{exiting ? 'launch-splash--exiting' : ''}}"
+  aria-role="progressbar"
+  aria-label="拼吧正在加载，请稍候"
+  catchtouchmove="preventTouchMove"
+>
+  <image
+    class="launch-cover"
+    src="/assets/images/launch-cover.webp"
+    mode="aspectFill"
+    aria-hidden="true"
+  />
+
+  <view class="launch-progress-card" aria-hidden="true">
+    <text class="launch-progress-copy">正在拼合活动…</text>
+    <view class="launch-track-container">
+      <image
+        class="launch-groove"
+        src="/assets/images/launch-groove.webp"
+        mode="scaleToFill"
+        aria-hidden="true"
+      />
+      <view
+        wx:for="{{blocks}}"
+        wx:key="id"
+        class="launch-cube-slot"
+        style="left: {{item.x}}rpx; top: {{item.y}}rpx; transform: scale({{item.scale}}); z-index: {{item.zIndex}};"
+      >
+        <image
+          class="launch-cube {{item.id <= progress ? 'launch-cube--active' : ''}}"
+          src="/assets/images/launch-cube.webp"
+          mode="scaleToFill"
+          aria-hidden="true"
+        />
+      </view>
+    </view>
+  </view>
+</view>

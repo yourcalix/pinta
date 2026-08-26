@@ -5,7 +5,8 @@ const config = require('./config/index');
 App({
   globalData: {
     config,
-    user: null
+    user: null,
+    launchSplashShown: false
   },
 
   onLaunch() {

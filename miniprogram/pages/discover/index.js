@@ -9,6 +9,16 @@ const {
   expirationSchedule,
   removeLocallyExpiredRecruiting
 } = require('../../utils/discover-list');
+const {
+  TOTAL_BLOCKS,
+  PRELOAD_BLOCKS,
+  STEP_INTERVAL_MS,
+  FINISH_GATE_MS,
+  FINISH_INTERVAL_MS,
+  DROP_DURATION_MS,
+  HOLD_MS,
+  FADE_MS
+} = require('../../utils/launch-progress');
 
 const PAGE_SIZE = 10;
 
@@ -31,12 +41,17 @@ Page({
     refreshing: false,
     loadingMore: false,
     loadMoreError: '',
-    error: ''
+    error: '',
+    launchSplashVisible: false,
+    launchSplashExiting: false,
+    launchProgress: 0
   },
 
   onLoad() {
     this._skipFirstShow = true;
-    return this.fetchActivities({ mode: 'replace' });
+    this.startLaunchSplash();
+    return Promise.resolve(this.fetchActivities({ mode: 'replace' }))
+      .finally(() => this.markLaunchSplashReady());
   },
 
   onShow() {
@@ -50,11 +65,13 @@ Page({
   onHide() {
     this._loadSeq = (this._loadSeq || 0) + 1;
     this.clearExpirationTimer();
+    this.teardownLaunchSplash(true);
   },
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
     this.clearExpirationTimer();
+    this.teardownLaunchSplash(false);
   },
 
   async onPullDownRefresh() {
@@ -188,6 +205,126 @@ Page({
   clearExpirationTimer() {
     if (this._expirationTimer) clearTimeout(this._expirationTimer);
     this._expirationTimer = null;
+  },
+
+  startLaunchSplash() {
+    const app = typeof getApp === 'function' ? getApp() : null;
+    const globalData = app && app.globalData;
+    if (!globalData || globalData.launchSplashShown) return false;
+
+    globalData.launchSplashShown = true;
+    this._launchSplashActive = true;
+    this._launchSplashReady = false;
+    this._launchSplashMinimumReached = false;
+    this._launchSplashCompleting = false;
+    this._launchTimers = new Set();
+    this.setData({
+      launchSplashVisible: true,
+      launchSplashExiting: false,
+      launchProgress: 0
+    });
+    this.hideLaunchTabBar();
+
+    for (let progress = 1; progress <= PRELOAD_BLOCKS; progress += 1) {
+      this.queueLaunchTimer(() => {
+        if (!this._launchSplashActive) return;
+        this.setData({ launchProgress: progress });
+      }, (progress - 1) * STEP_INTERVAL_MS);
+    }
+    this.queueLaunchTimer(() => {
+      if (!this._launchSplashActive) return;
+      this._launchSplashMinimumReached = true;
+      this.completeLaunchSplashWhenReady();
+    }, FINISH_GATE_MS);
+    return true;
+  },
+
+  markLaunchSplashReady() {
+    if (!this._launchSplashActive) return;
+    this._launchSplashReady = true;
+    this.completeLaunchSplashWhenReady();
+  },
+
+  completeLaunchSplashWhenReady() {
+    if (
+      !this._launchSplashActive
+      || !this._launchSplashReady
+      || !this._launchSplashMinimumReached
+      || this._launchSplashCompleting
+    ) return;
+
+    this._launchSplashCompleting = true;
+    for (let progress = PRELOAD_BLOCKS + 1; progress <= TOTAL_BLOCKS; progress += 1) {
+      this.queueLaunchTimer(() => {
+        if (this._launchSplashActive) this.setData({ launchProgress: progress });
+      }, (progress - PRELOAD_BLOCKS - 1) * FINISH_INTERVAL_MS);
+    }
+    const fullAt = (TOTAL_BLOCKS - PRELOAD_BLOCKS - 1) * FINISH_INTERVAL_MS + DROP_DURATION_MS;
+    this.queueLaunchTimer(() => {
+      if (this._launchSplashActive) this.setData({ launchSplashExiting: true });
+    }, fullAt + HOLD_MS);
+    this.queueLaunchTimer(() => this.finishLaunchSplash(), fullAt + HOLD_MS + FADE_MS);
+  },
+
+  queueLaunchTimer(callback, delay) {
+    if (!this._launchTimers) this._launchTimers = new Set();
+    const timer = setTimeout(() => {
+      this._launchTimers.delete(timer);
+      callback();
+    }, delay);
+    this._launchTimers.add(timer);
+    return timer;
+  },
+
+  clearLaunchTimers() {
+    if (!this._launchTimers) return;
+    this._launchTimers.forEach((timer) => clearTimeout(timer));
+    this._launchTimers.clear();
+  },
+
+  hideLaunchTabBar() {
+    if (typeof wx === 'undefined' || typeof wx.hideTabBar !== 'function') return;
+    try {
+      wx.hideTabBar({ animation: false });
+      this._launchTabBarHidden = true;
+    } catch (error) {
+      this._launchTabBarHidden = false;
+    }
+  },
+
+  restoreLaunchTabBar() {
+    if (!this._launchTabBarHidden) return;
+    this._launchTabBarHidden = false;
+    if (typeof wx === 'undefined' || typeof wx.showTabBar !== 'function') return;
+    try {
+      wx.showTabBar({ animation: false });
+    } catch (error) {
+      // The page may already be leaving; the next Tab page restores native UI.
+    }
+  },
+
+  finishLaunchSplash() {
+    if (!this._launchSplashActive) return;
+    this._launchSplashActive = false;
+    this.clearLaunchTimers();
+    this.setData({
+      launchSplashVisible: false,
+      launchSplashExiting: false
+    });
+    this.restoreLaunchTabBar();
+  },
+
+  teardownLaunchSplash(updateView) {
+    const wasActive = this._launchSplashActive === true;
+    this._launchSplashActive = false;
+    this.clearLaunchTimers();
+    if (wasActive && updateView) {
+      this.setData({
+        launchSplashVisible: false,
+        launchSplashExiting: false
+      });
+    }
+    this.restoreLaunchTabBar();
   },
 
   handleTypeChange(event) {

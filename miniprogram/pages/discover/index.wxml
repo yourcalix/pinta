@@ -1,4 +1,10 @@
 <view class="page discover-page">
+  <launch-splash
+    wx:if="{{launchSplashVisible}}"
+    progress="{{launchProgress}}"
+    exiting="{{launchSplashExiting}}"
+  />
+
   <view class="hero">
     <view>
       <view class="eyebrow">一起出发，一起凑成</view>

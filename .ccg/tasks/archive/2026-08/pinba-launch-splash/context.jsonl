@@ -1,0 +1,7 @@
+{"file":"/Users/cx/Desktop/pinba/封面图.png","purpose":"用户选择的启动封面源图"}
+{"file":"/Users/cx/Desktop/pinba/进度条.png","purpose":"用户选择的进度条视觉参考图"}
+{"file":"miniprogram/app.js","purpose":"会话级只展示一次的状态"}
+{"file":"miniprogram/pages/discover/index.js","purpose":"首次公开列表加载与启动动画完成时序"}
+{"file":"miniprogram/pages/discover/index.wxml","purpose":"启动遮罩挂载"}
+{"file":"miniprogram/pages/discover/index.wxss","purpose":"启动遮罩页面层样式"}
+{"file":".ccg/spec/frontend/index.md","purpose":"主包、生命周期、性能与可访问性约束"}

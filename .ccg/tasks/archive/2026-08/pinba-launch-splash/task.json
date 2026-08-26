@@ -1,0 +1,12 @@
+{
+  "id": "pinba-launch-splash",
+  "title": "重做拼吧启动页三维落块进度动画",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送；iOS/Android 真机观察首尾落槽、Safe Area 与低端 Android 阴影性能",
+  "createdAt": "2026-08-26T00:20:00+08:00",
+  "branch": "main"
+}

@@ -4,6 +4,7 @@
   "onReachBottomDistance": 160,
   "usingComponents": {
     "activity-card": "/components/activity-card/index",
-    "empty-state": "/components/empty-state/index"
+    "empty-state": "/components/empty-state/index",
+    "launch-splash": "/components/launch-splash/index"
   }
 }
