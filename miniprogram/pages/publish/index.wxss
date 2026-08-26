@@ -1,5 +1,6 @@
 .publish-page {
-  padding-top: 42rpx;
+  box-sizing: border-box;
+  min-height: 100vh;
 }
 
 .publish-heading {

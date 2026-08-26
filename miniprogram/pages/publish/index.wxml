@@ -1,4 +1,4 @@
-<view class="page publish-page">
+<view class="page publish-page" style="padding-top: {{contentTopInset}}px;">
   <view class="publish-heading">
     <view class="eyebrow">两步即可发布</view>
     <view class="title">选择你想发起的类型</view>

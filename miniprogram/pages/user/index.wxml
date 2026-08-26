@@ -1,4 +1,4 @@
-<view class="page user-page">
+<view class="page user-page" style="padding-top: {{contentTopInset}}px;">
   <view wx:if="{{loading}}" class="loading-block surface">正在整理你的协同任务…</view>
 
   <empty-state

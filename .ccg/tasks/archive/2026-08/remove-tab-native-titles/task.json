@@ -1,0 +1,12 @@
+{
+  "id": "remove-tab-native-titles",
+  "title": "移除发布与我的页面原生标题栏",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已通过 iPhone 真机验证，归档并推送 GitHub",
+  "createdAt": "2026-08-26T00:00:00+08:00",
+  "branch": "main"
+}

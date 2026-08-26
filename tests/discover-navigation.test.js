@@ -9,16 +9,16 @@ const { calculateContentTopInset } = require('../miniprogram/utils/navigation-la
 
 const root = path.join(__dirname, '..');
 
-test('发现页独立使用 custom navigation，其他 Tab 页面仍保留原生导航', () => {
+test('三个 Tab 页面统一使用 custom navigation 且不保留原生标题', () => {
   const discover = require('../miniprogram/pages/discover/index.json');
   const publish = require('../miniprogram/pages/publish/index.json');
   const user = require('../miniprogram/pages/user/index.json');
-  assert.equal(discover.navigationStyle, 'custom');
-  assert.equal(discover.navigationBarTitleText, undefined);
-  assert.equal(discover.navigationBarTextStyle, 'black');
-  assert.equal(discover.backgroundColorTop, '#F5F7F6');
-  assert.notEqual(publish.navigationStyle, 'custom');
-  assert.notEqual(user.navigationStyle, 'custom');
+  for (const page of [discover, publish, user]) {
+    assert.equal(page.navigationStyle, 'custom');
+    assert.equal(page.navigationBarTitleText, undefined);
+    assert.equal(page.navigationBarTextStyle, 'black');
+    assert.equal(page.backgroundColorTop, '#F5F7F6');
+  }
 });
 
 test('顶部安全区使用胶囊底边、对称间距和 8px 呼吸区', () => {
@@ -54,4 +54,19 @@ test('发现页正文动态避让顶部，但固定启动层继续覆盖完整�
   assert.ok(splashRule);
   assert.match(splashRule[1], /position:\s*fixed/);
   assert.match(splashRule[1], /inset:\s*0/);
+});
+
+test('发布与我的页面正文动态避让顶部并使用完整视口盒模型', () => {
+  for (const pageName of ['publish', 'user']) {
+    const pageDirectory = path.join(root, `miniprogram/pages/${pageName}`);
+    const template = fs.readFileSync(path.join(pageDirectory, 'index.wxml'), 'utf8');
+    const pageStyle = fs.readFileSync(path.join(pageDirectory, 'index.wxss'), 'utf8');
+    const rootRule = pageStyle.match(new RegExp(`\\.${pageName}-page\\s*\\{([^}]*)\\}`));
+
+    assert.match(template, /style="padding-top: \{\{contentTopInset\}\}px;"/);
+    assert.ok(rootRule);
+    assert.match(rootRule[1], /box-sizing:\s*border-box/);
+    assert.match(rootRule[1], /min-height:\s*100vh/);
+    assert.doesNotMatch(rootRule[1], /padding-top:\s*(?:42|28)rpx/);
+  }
 });

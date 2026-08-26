@@ -1,5 +1,6 @@
 .user-page {
-  padding-top: 28rpx;
+  box-sizing: border-box;
+  min-height: 100vh;
 }
 
 .loading-block {

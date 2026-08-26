@@ -1,5 +1,7 @@
 {
-  "navigationBarTitleText": "我的",
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
+  "backgroundColorTop": "#F5F7F6",
   "usingComponents": {
     "status-badge": "/components/status-badge/index",
     "empty-state": "/components/empty-state/index"

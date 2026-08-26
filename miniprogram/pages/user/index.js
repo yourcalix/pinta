@@ -5,9 +5,11 @@ const userService = require('../../services/user');
 const notificationRouter = require('../../services/notification-router');
 const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
+const { calculateContentTopInset } = require('../../utils/navigation-layout');
 
 Page({
   data: {
+    contentTopInset: 88,
     loading: true,
     error: '',
     user: null,
@@ -22,6 +24,12 @@ Page({
     owned: [],
     joined: [],
     currentList: 'owned'
+  },
+
+  onLoad() {
+    this.setData({
+      contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx)
+    });
   },
 
   onShow() {
