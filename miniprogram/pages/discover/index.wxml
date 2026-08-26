@@ -1,4 +1,4 @@
-<view class="page discover-page">
+<view class="page discover-page" style="padding-top: {{contentTopInset}}px;">
   <launch-splash
     wx:if="{{launchSplashVisible}}"
     progress="{{launchProgress}}"

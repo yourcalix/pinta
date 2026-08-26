@@ -4,6 +4,7 @@ const activityService = require('../../services/activity');
 const safetyService = require('../../services/safety');
 const config = require('../../config/index');
 const { decorateActivity } = require('../../utils/display');
+const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {
   mergeActivitiesById,
   expirationSchedule,
@@ -42,12 +43,16 @@ Page({
     loadingMore: false,
     loadMoreError: '',
     error: '',
+    contentTopInset: 88,
     launchSplashVisible: false,
     launchSplashExiting: false,
     launchProgress: 0
   },
 
   onLoad() {
+    this.setData({
+      contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx)
+    });
     this._skipFirstShow = true;
     this.startLaunchSplash();
     return Promise.resolve(this.fetchActivities({ mode: 'replace' }))

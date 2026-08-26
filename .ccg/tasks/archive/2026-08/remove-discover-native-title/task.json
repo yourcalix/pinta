@@ -1,0 +1,12 @@
+{
+  "id": "remove-discover-native-title",
+  "title": "移除发现页顶部拼吧原生导航标题区域",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交推送；后续在 Android 异形屏验证胶囊坐标与下拉刷新顶部背景",
+  "createdAt": "2026-08-26T16:05:00+08:00",
+  "branch": "main"
+}

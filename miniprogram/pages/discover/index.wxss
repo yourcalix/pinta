@@ -1,5 +1,6 @@
 .discover-page {
-  padding-top: 30rpx;
+  box-sizing: border-box;
+  min-height: 100vh;
 }
 
 .hero,
