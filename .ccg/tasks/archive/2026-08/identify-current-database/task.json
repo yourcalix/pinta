@@ -1,0 +1,12 @@
+{
+  "id": "identify-current-database",
+  "title": "确认当前小程序使用的数据库",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已核对当前运行配置，归档任务",
+  "createdAt": "2026-08-27T14:40:00Z",
+  "branch": "main"
+}
