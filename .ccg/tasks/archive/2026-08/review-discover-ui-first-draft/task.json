@@ -1,0 +1,12 @@
+{
+  "id": "review-discover-ui-first-draft",
+  "title": "审查发现页首版 UI 并拆分真实文字层",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "按首版视觉基准拆分无文字素材并形成实现规格",
+  "createdAt": "2026-08-28T00:00:00Z",
+  "branch": "main"
+}
