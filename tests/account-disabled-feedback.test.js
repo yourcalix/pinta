@@ -15,7 +15,8 @@ function clearClientModules() {
   [
     '../miniprogram/services/account-disabled-feedback',
     '../miniprogram/services/api',
-    '../miniprogram/mocks/server'
+    '../miniprogram/mocks/server',
+    '../miniprogram/config/runtime'
   ].forEach((request) => {
     try {
       delete require.cache[require.resolve(request)];
@@ -156,13 +157,12 @@ test('普通业务错误不触发受限账号反馈或清理全局用户', async
 });
 
 test('受限响应会清空真实模式 actor scope，后续未知结果写请求使用未登录作用域', async () => {
-  const config = require('../miniprogram/config/index');
-  const originalUseMock = config.useMock;
+  const defaults = require('../miniprogram/config/index');
+  const runtimePath = require.resolve('../miniprogram/config/runtime');
   const storage = {};
   const modals = [];
   let callCount = 0;
 
-  config.useMock = false;
   global.wx = {
     getStorageSync: (key) => storage[key],
     setStorageSync: (key, value) => { storage[key] = value; },
@@ -185,6 +185,12 @@ test('受限响应会清空真实模式 actor scope，后续未知结果写请�
   };
   global.getApp = () => ({ globalData: { user: { profile: { nickname: '旧用户' } } } });
   clearClientModules();
+  require.cache[runtimePath] = {
+    id: runtimePath,
+    filename: runtimePath,
+    loaded: true,
+    exports: { ...defaults, useMock: false }
+  };
 
   try {
     const api = require('../miniprogram/services/api');
@@ -205,7 +211,6 @@ test('受限响应会清空真实模式 actor scope，后续未知结果写请�
     );
     assert.equal(pendingFingerprints.some((fingerprint) => fingerprint.startsWith('session-user-a:')), false);
   } finally {
-    config.useMock = originalUseMock;
     clearClientModules();
     delete global.wx;
     delete global.getApp;

@@ -1,6 +1,6 @@
 'use strict';
 
-const config = require('./config/index');
+const config = require('./config/runtime');
 
 App({
   globalData: {

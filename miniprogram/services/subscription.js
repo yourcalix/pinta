@@ -1,6 +1,6 @@
 'use strict';
 
-const config = require('../config/index');
+const config = require('../config/runtime');
 
 async function requestStatusUpdates() {
   if (config.useMock || !config.subscribeTemplateIds.length || !wx.requestSubscribeMessage) {

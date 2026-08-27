@@ -2,7 +2,7 @@
 
 const activityService = require('../../services/activity');
 const safetyService = require('../../services/safety');
-const config = require('../../config/index');
+const config = require('../../config/runtime');
 const { decorateActivity } = require('../../utils/display');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {

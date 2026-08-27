@@ -1,6 +1,6 @@
 'use strict';
 
-const config = require('../config/index');
+const config = require('../config/runtime');
 const mockServer = require('../mocks/server');
 const accountDisabledFeedback = require('./account-disabled-feedback');
 

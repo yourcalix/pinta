@@ -1,0 +1,12 @@
+{
+  "id": "use-cloudbase-dev-environment",
+  "title": "切换到指定免费 CloudBase 开发环境",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交本地 Git 记录",
+  "createdAt": "2026-08-27T14:45:00Z",
+  "branch": "main"
+}
