@@ -1,0 +1,12 @@
+{
+  "id": "design-discover-image2-prompt",
+  "title": "生成与启动封面统一的发现页 Image 2 设计提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "用户在 Image 2 生成首版界面后回传图片进行设计复核",
+  "createdAt": "2026-08-27T15:55:27Z",
+  "branch": "main"
+}
