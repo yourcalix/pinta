@@ -1,0 +1,12 @@
+{
+  "id": "review-generated-discover-assets",
+  "title": "审查发现页独立体素素材并提交 Gemini 复核",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并在发现页 UI 实施阶段引用已交付素材",
+  "createdAt": "2026-08-28T00:00:00Z",
+  "branch": "main"
+}
