@@ -1,0 +1,12 @@
+{
+  "id": "discover-campus-categories",
+  "title": "主页分类收敛为全部与校区",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已完成，归档任务",
+  "createdAt": "2026-08-27T13:29:38Z",
+  "branch": "main"
+}
