@@ -1,0 +1,12 @@
+{
+  "id": "prepare-discover-asset-prompts",
+  "title": "准备发现页独立体素素材 Image 2 提示词",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "等待用户生成素材并回传后进入 Gemini 视觉审查",
+  "createdAt": "2026-08-28T00:00:00Z",
+  "branch": "main"
+}
