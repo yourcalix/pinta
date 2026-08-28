@@ -1,0 +1,12 @@
+{
+  "id": "review-user-page-first-draft",
+  "title": "审查拼吧我的页面首版视觉稿与资产复用方案",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "按综合决策进入我的页面 WXML/WXSS 实装",
+  "createdAt": "2026-08-28T00:00:00+08:00",
+  "branch": "main"
+}
