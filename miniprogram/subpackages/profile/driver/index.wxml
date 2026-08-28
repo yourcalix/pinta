@@ -1,0 +1,48 @@
+<view class="page driver-page safe-bottom">
+  <view wx:if="{{loading}}" class="surface status-card">正在读取认证状态…</view>
+  <view wx:elif="{{application && (application.status === 'SUBMITTED' || application.status === 'APPROVED')}}" class="surface status-card">
+    <view class="status-mark">{{application.status === 'APPROVED' ? '✓' : '…'}}</view>
+    <view class="status-title">{{application.status === 'APPROVED' ? '司机认证已通过' : '司机认证审核中'}}</view>
+    <view class="status-copy">{{application.status === 'APPROVED' ? '你可以在发现页切换到“我是司机”确认承接。' : '审核完成前仍可正常发布和参加拼车。'}}</view>
+    <view class="summary" wx:if="{{application.summary}}">
+      <view>身份：{{application.summary.identityType}} · ****{{application.summary.identityLast4}}</view>
+      <view>驾驶证：****{{application.summary.driverLicenseLast4}}</view>
+      <view>车辆：{{application.summary.vehicleType}} · {{application.summary.plateMasked}}</view>
+    </view>
+  </view>
+
+  <block wx:else>
+    <view class="intro">
+      <view class="intro-title">澳门校园公益合乘司机认证</view>
+      <view class="intro-copy">提交仅表示申请认证。平台审核身份、驾驶资格和车辆资料通过后，才会开放确认承接能力。</view>
+    </view>
+    <view class="steps"><text class="step {{step >= 1 ? 'step--active' : ''}}">1 身份</text><text class="step {{step >= 2 ? 'step--active' : ''}}">2 驾驶与车辆</text><text class="step {{step >= 3 ? 'step--active' : ''}}">3 资料与同意</text></view>
+    <view wx:if="{{errorMessage}}" class="error-banner">{{errorMessage}}</view>
+
+    <view wx:if="{{step === 1}}" class="surface form-card">
+      <view class="field"><text class="field-label required">真实姓名</text><input class="input" maxlength="40" cursor-spacing="120" adjust-position="true" value="{{form.legalName}}" data-field="legalName" bindinput="handleInput" /></view>
+      <view class="field"><text class="field-label required">身份证件类型</text><picker mode="selector" range="{{identityTypes}}" range-key="label" value="{{identityTypeIndex}}" bindchange="handleIdentityType"><view class="picker-field">{{identityTypes[identityTypeIndex].label}} <text>›</text></view></picker></view>
+      <view class="field"><text class="field-label required">证件号码</text><input class="input" maxlength="32" cursor-spacing="120" adjust-position="true" value="{{form.identityNumber}}" data-field="identityNumber" bindinput="handleInput" /><view class="field-hint">提交后仅显示后四位，不会在页面再次回显完整号码。</view></view>
+      <view class="field"><text class="field-label required">证件有效期</text><picker mode="date" value="{{form.identityExpiresAt}}" data-field="identityExpiresAt" bindchange="handleDate"><view class="picker-field">{{form.identityExpiresAt}}</view></picker></view>
+      <button class="primary-button" bindtap="handleNext">下一步</button>
+    </view>
+
+    <view wx:elif="{{step === 2}}" class="surface form-card">
+      <view class="field"><text class="field-label required">驾驶证号码</text><input class="input" maxlength="32" cursor-spacing="120" adjust-position="true" value="{{form.driverLicenseNumber}}" data-field="driverLicenseNumber" bindinput="handleInput" /></view>
+      <view class="field"><text class="field-label required">驾驶证有效期</text><picker mode="date" value="{{form.driverLicenseExpiresAt}}" data-field="driverLicenseExpiresAt" bindchange="handleDate"><view class="picker-field">{{form.driverLicenseExpiresAt}}</view></picker></view>
+      <view class="field"><text class="field-label required">车辆类型</text><input class="input" maxlength="30" cursor-spacing="120" adjust-position="true" placeholder="例如：七座轿车" value="{{form.vehicleType}}" data-field="vehicleType" bindinput="handleInput" /></view>
+      <view class="field"><text class="field-label required">车牌号码</text><input class="input" maxlength="32" cursor-spacing="120" adjust-position="true" value="{{form.plateNumber}}" data-field="plateNumber" bindinput="handleInput" /></view>
+      <view class="field"><text class="field-label required">核定乘客数</text><view class="number-stepper"><button data-delta="-1" bindtap="handleCapacity">−</button><text>{{form.passengerCapacity}} 人</text><button data-delta="1" bindtap="handleCapacity">＋</button></view></view>
+      <view class="button-row"><button class="secondary-button" bindtap="handleBack">上一步</button><button class="primary-button" bindtap="handleNext">下一步</button></view>
+    </view>
+
+    <view wx:else class="surface form-card">
+      <view class="privacy-note"><view class="privacy-title">敏感个人资料使用说明</view><view>资料仅用于司机身份、驾驶资格和车辆审核。页面提交后不再回显原图或完整号码；未经审核权限不得查看。具体保存期限与删除方式以上线前正式隐私说明为准。</view></view>
+      <button class="upload-button {{form.documents.identityFront ? 'upload-button--done' : ''}}" data-kind="identityFront" bindtap="handleUpload" loading="{{uploadingKind === 'identityFront'}}">{{form.documents.identityFront ? '身份证件已上传 ✓' : '上传身份证件照片'}}</button>
+      <button class="upload-button {{form.documents.driverLicense ? 'upload-button--done' : ''}}" data-kind="driverLicense" bindtap="handleUpload" loading="{{uploadingKind === 'driverLicense'}}">{{form.documents.driverLicense ? '驾驶证已上传 ✓' : '上传驾驶证照片'}}</button>
+      <button class="upload-button {{form.documents.vehicleExterior ? 'upload-button--done' : ''}}" data-kind="vehicleExterior" bindtap="handleUpload" loading="{{uploadingKind === 'vehicleExterior'}}">{{form.documents.vehicleExterior ? '车辆照片已上传 ✓' : '上传含车牌的车辆外观照'}}</button>
+      <checkbox-group bindchange="handleConsent"><label class="agreement"><checkbox value="privacy" checked="{{form.privacyAgreed}}" color="#3478F6" /><text>我已阅读司机认证资料使用说明，并同意为资格审核处理上述资料。</text></label><label class="agreement"><checkbox value="documents" checked="{{form.sensitiveDocumentsAgreed}}" color="#3478F6" /><text>我单独同意提交身份证件、驾驶证等敏感个人资料。</text></label></checkbox-group>
+      <view class="button-row"><button class="secondary-button" bindtap="handleBack" disabled="{{submitting}}">上一步</button><button class="primary-button" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting || uploadingKind}}">提交认证申请</button></view>
+    </view>
+  </block>
+</view>

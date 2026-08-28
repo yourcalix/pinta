@@ -8,6 +8,20 @@
 
   <view class="surface form-card">
     <view class="field">
+      <text class="field-label required">你想如何使用拼吧？</text>
+      <view class="role-options">
+        <button class="role-option {{form.roleIntent === 'PASSENGER' ? 'role-option--active' : ''}}" data-role="PASSENGER" bindtap="handleRole">
+          <text class="role-title">我要拼车</text>
+          <text class="role-copy">发布行程或申请参团</text>
+        </button>
+        <button class="role-option role-option--driver {{form.roleIntent === 'DRIVER' ? 'role-option--active-driver' : ''}}" data-role="DRIVER" bindtap="handleRole">
+          <text class="role-title">我是司机</text>
+          <text class="role-copy">提交认证，审核后可确认承接</text>
+        </button>
+      </view>
+      <view class="field-hint">司机认证审核期间仍可正常使用乘客功能。</view>
+    </view>
+    <view class="field">
       <text class="field-label required">昵称</text>
       <input class="input" maxlength="20" cursor-spacing="120" adjust-position="true" placeholder="2—20个字" value="{{form.nickname}}" data-field="nickname" bindinput="handleInput" />
     </view>

@@ -6,9 +6,10 @@ Page({
   data: {
     form: {
       nickname: '',
-      city: '上海',
+      city: '澳门',
       interestsText: '',
-      adultConfirmed: false
+      adultConfirmed: false,
+      roleIntent: 'PASSENGER'
     },
     saving: false,
     errorMessage: ''
@@ -22,15 +23,17 @@ Page({
   async loadProfile() {
     try {
       await userService.login();
+      const loginUser = await userService.login();
       const result = await userService.getProfile();
       const profile = result.user && result.user.profile;
       if (profile) {
         this.setData({
           form: {
             nickname: profile.nickname || '',
-            city: profile.city || '上海',
+            city: profile.city || '澳门',
             interestsText: (profile.interests || []).join('、'),
-            adultConfirmed: profile.adultConfirmed === true
+            adultConfirmed: profile.adultConfirmed === true,
+            roleIntent: loginUser.onboarding && loginUser.onboarding.roleIntent || 'PASSENGER'
           }
         });
       }
@@ -47,6 +50,10 @@ Page({
     this.setData({ 'form.adultConfirmed': event.detail.value.includes('adult') });
   },
 
+  handleRole(event) {
+    this.setData({ 'form.roleIntent': event.currentTarget.dataset.role, errorMessage: '' });
+  },
+
   async handleSave() {
     if (this.data.saving) return;
     const form = this.data.form;
@@ -56,14 +63,16 @@ Page({
     try {
       const result = await userService.updateProfile({
         nickname: form.nickname.trim(),
-        city: form.city.trim() || '上海',
+        city: form.city.trim() || '澳门',
         interests: form.interestsText.split(/[、,，\s]+/).map((item) => item.trim()).filter(Boolean).slice(0, 8),
         adultConfirmed: true
       });
+      await userService.selectRole(form.roleIntent);
       getApp().globalData.user = result.user;
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => {
-        if (this.nextUrl) wx.redirectTo({ url: this.nextUrl });
+        if (form.roleIntent === 'DRIVER') wx.redirectTo({ url: '/subpackages/profile/driver/index' });
+        else if (this.nextUrl) wx.redirectTo({ url: this.nextUrl });
         else wx.navigateBack();
       }, 350);
     } catch (error) {

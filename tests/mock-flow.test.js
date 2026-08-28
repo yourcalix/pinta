@@ -8,7 +8,7 @@ async function call(action, data = {}) {
   return mockServer.call({ action, data, requestId: `test:${action}`, idempotencyKey: `test:${action}:12345678` });
 }
 
-test('Mock 模式可以完成审批、自动成团和成员联系信息解锁', async () => {
+test('Mock 模式可以审批乘客且七人满员前保持招募', async () => {
   mockServer.reset();
   mockServer.setPersona('u_owner');
   const applications = await call('application.listForOwner', { activityId: 'a_ride' });
@@ -25,14 +25,14 @@ test('Mock 模式可以完成审批、自动成团和成员联系信息解锁', 
     applicationId: applications.data.items[0].id
   });
   assert.equal(approved.ok, true);
-  assert.equal(approved.data.activity.status, 'FORMED');
+  assert.equal(approved.data.activity.status, 'RECRUITING');
 
   mockServer.setPersona('u_member');
   const memberNotifications = await call('notification.list');
-  assert.equal(memberNotifications.data.items[0].target, 'GROUP');
+  assert.equal(memberNotifications.data.items[0].target, 'DETAIL');
   const contact = await call('group.contact', { activityId: 'a_ride' });
-  assert.equal(contact.ok, true);
-  assert.match(contact.data.contactInfo, /pinba_xiaopin/);
+  assert.equal(contact.ok, false);
+  assert.equal(contact.error.code, 'CONFLICT');
 });
 
 test('Mock 模式下举报后记录即时隐藏信号', async () => {
@@ -157,6 +157,74 @@ test('Mock 公开列表执行游标分页且拒绝畸形游标', async () => {
   assert.equal(invalid.error.code, 'VALIDATION_ERROR');
 });
 
+test('Mock 公开列表按校区在分页前筛选并拒绝未知校区', async () => {
+  const storage = {};
+  global.wx = {
+    getStorageSync: (key) => storage[key],
+    setStorageSync: (key, value) => { storage[key] = value; }
+  };
+
+  try {
+    mockServer.reset();
+    const source = storage.pinba_mock_state_v2.activities.find((item) => item.id === 'a_ride');
+    const reverse = {
+      ...source,
+      id: 'a_taipa_reverse',
+      title: '凼仔校区返程',
+      placeLabel: '凼仔校区 → 横琴口岸',
+      startsAt: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+      deadlineAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      typeData: {
+        ...source.typeData,
+        routeId: 'TAIPA_TO_HENGQIN',
+        routeCode: '城琴',
+        origin: { id: 'TAIPA_CAMPUS', label: '凼仔校区' },
+        destination: { id: 'HENGQIN', label: '横琴口岸' },
+        pickupWindowEnd: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString()
+      }
+    };
+    const dragon = {
+      ...reverse,
+      id: 'a_dragon',
+      title: '金龙校区行程',
+      placeLabel: '青茂口岸 → 金龙校区',
+      typeData: {
+        ...reverse.typeData,
+        routeId: 'QINGMAO_TO_GOLDEN_DRAGON',
+        routeCode: '青龍',
+        origin: { id: 'QINGMAO', label: '青茂口岸' },
+        destination: { id: 'GOLDEN_DRAGON_CAMPUS', label: '金龙校区' }
+      }
+    };
+    storage.pinba_mock_state_v2.activities.push(reverse, dragon);
+    storage.pinba_mock_state_v2.rideFulfillments.push(
+      { activityId: reverse.id, status: 'UNASSIGNED', pickupAt: null, driverId: null, vehicleId: null },
+      { activityId: dragon.id, status: 'UNASSIGNED', pickupAt: null, driverId: null, vehicleId: null }
+    );
+
+    const taipa = await call('activity.list', {
+      type: 'ride', campusId: 'TAIPA_CAMPUS', limit: 10
+    });
+    assert.equal(taipa.ok, true);
+    assert.deepEqual(new Set(taipa.data.items.map((item) => item.id)), new Set(['a_ride', reverse.id]));
+
+    const goldenDragon = await call('activity.list', {
+      type: 'ride', campusId: 'GOLDEN_DRAGON_CAMPUS', limit: 10
+    });
+    assert.equal(goldenDragon.ok, true);
+    assert.deepEqual(goldenDragon.data.items.map((item) => item.id), [dragon.id]);
+
+    const invalid = await call('activity.list', {
+      type: 'ride', campusId: 'UNKNOWN_CAMPUS', limit: 10
+    });
+    assert.equal(invalid.ok, false);
+    assert.equal(invalid.error.code, 'VALIDATION_ERROR');
+  } finally {
+    delete global.wx;
+    mockServer.reset();
+  }
+});
+
 test('Mock 公开列表与详情对截止活动使用一致的读时状态且不污染存储', async () => {
   const storage = {};
   global.wx = {
@@ -212,6 +280,13 @@ test('Mock 在稀疏关键词与过期候选交错时仍按 raw cursor 找全结
         : new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       status: 'RECRUITING'
     }));
+    storage.pinba_mock_state_v2.rideFulfillments = Array.from({ length: 7 }, (_, index) => ({
+      activityId: `a_sparse_${index}`,
+      status: 'UNASSIGNED',
+      pickupAt: null,
+      driverId: null,
+      vehicleId: null
+    }));
 
     const first = await call('activity.list', { limit: 2, keyword: '稀疏命中' });
     assert.deepEqual(first.data.items.map((item) => item.id), ['a_sparse_0', 'a_sparse_4']);
@@ -224,6 +299,30 @@ test('Mock 在稀疏关键词与过期候选交错时仍按 raw cursor 找全结
     });
     assert.deepEqual(second.data.items.map((item) => item.id), ['a_sparse_6']);
     assert.equal(second.data.nextCursor, null);
+  } finally {
+    delete global.wx;
+    mockServer.reset();
+  }
+});
+
+test('Mock 满员但未承接的成团行程仍对司机可见', async () => {
+  const storage = {};
+  global.wx = {
+    getStorageSync: (key) => storage[key],
+    setStorageSync: (key, value) => { storage[key] = value; }
+  };
+
+  try {
+    mockServer.reset();
+    const ride = storage.pinba_mock_state_v2.activities.find((item) => item.id === 'a_ride');
+    const fulfillment = storage.pinba_mock_state_v2.rideFulfillments.find((item) => item.activityId === 'a_ride');
+    ride.status = 'FORMED';
+    ride.memberCount = ride.maxPassengers;
+    fulfillment.status = 'UNASSIGNED';
+
+    const result = await call('activity.list', { type: 'ride', viewMode: 'driver', limit: 10 });
+    assert.equal(result.ok, true);
+    assert.equal(result.data.items.some((item) => item.id === 'a_ride'), true);
   } finally {
     delete global.wx;
     mockServer.reset();

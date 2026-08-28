@@ -2,6 +2,7 @@
 
 const { AppError } = require('./errors');
 const { ACTIVITY_STATUS } = require('./constants');
+const { normalizeRideCapacity, isRidePassengerJoinable } = require('./ride-policy');
 
 const MAX_BATCH_SIZE = 50;
 const MAX_SCAN_SIZE = 500;
@@ -23,11 +24,28 @@ function parsePublicCursor(value) {
 }
 
 function normalizeActivityForRead(activity, at) {
-  if (!activity || activity.status !== ACTIVITY_STATUS.RECRUITING) return activity;
+  if (!activity) return activity;
+  activity = normalizeRideCapacity(activity);
   const now = Date.parse(at);
+  if (!Number.isFinite(now)) return activity;
   const deadline = Date.parse(activity.deadlineAt);
-  if (!Number.isFinite(now) || !Number.isFinite(deadline) || deadline > now) return activity;
-  return { ...activity, status: ACTIVITY_STATUS.EXPIRED };
+  if (activity.type !== 'ride'
+    && activity.status === ACTIVITY_STATUS.RECRUITING
+    && Number.isFinite(deadline)
+    && deadline <= now) {
+    return { ...activity, status: ACTIVITY_STATUS.EXPIRED };
+  }
+  const pickupWindowEnd = Date.parse(activity.typeData && activity.typeData.pickupWindowEnd);
+  if (activity.type === 'ride'
+    && [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED].includes(activity.status)
+    && (!activity.rideFulfillment || activity.rideFulfillment.status === 'UNASSIGNED')
+    && Number.isFinite(pickupWindowEnd)
+    && pickupWindowEnd <= now) {
+    return { ...activity, status: ACTIVITY_STATUS.EXPIRED, rideJoinable: false };
+  }
+  return activity.type === 'ride'
+    ? { ...activity, rideJoinable: isRidePassengerJoinable(activity, at) }
+    : activity;
 }
 
 function isPublicListActivity(activity) {
@@ -47,6 +65,7 @@ async function collectPublicActivityPage(options) {
     keyword = '',
     at,
     fetchBatch,
+    filterActivity = () => true,
     maxScan = MAX_SCAN_SIZE
   } = options || {};
   if (typeof fetchBatch !== 'function') throw new AppError('INTERNAL', '公开列表数据源未配置');
@@ -72,7 +91,7 @@ async function collectPublicActivityPage(options) {
       scanned += 1;
       processed += 1;
       const activity = normalizeActivityForRead(storedActivity, at);
-      if (isPublicListActivity(activity) && matchesKeyword(activity, keyword)) {
+      if (isPublicListActivity(activity) && filterActivity(activity) && matchesKeyword(activity, keyword)) {
         if (items.length === limit) {
           return { items, nextCursor: String(candidateOffset) };
         }

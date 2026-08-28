@@ -3,6 +3,7 @@
 const activityService = require('../../services/activity');
 const safetyService = require('../../services/safety');
 const config = require('../../config/runtime');
+const { RIDE_CAMPUS_OPTIONS } = require('../../config/locations');
 const { decorateActivity } = require('../../utils/display');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {
@@ -23,18 +24,23 @@ const {
 
 const PAGE_SIZE = 10;
 
+function hasActiveFilters(filters) {
+  return Boolean(filters.campusId || filters.appliedKeyword);
+}
+
 Page({
   data: {
     city: config.demoCity,
-    sceneTabs: [
-      { value: '', label: '全部' },
-      { value: 'ride', label: '拼车' },
-      { value: 'product', label: '拼商品' },
-      { value: 'buddy', label: '拼搭子' }
+    viewModes: [
+      { value: 'passenger', label: '我要拼车' },
+      { value: 'driver', label: '我是司机' }
     ],
-    currentType: '',
+    viewMode: 'passenger',
+    campusOptions: RIDE_CAMPUS_OPTIONS,
+    campusId: '',
     keyword: '',
     appliedKeyword: '',
+    hasActiveFilters: false,
     activities: [],
     nextCursor: '',
     hasMore: true,
@@ -133,7 +139,9 @@ Page({
     try {
       const result = await activityService.list({
         city: this.data.city,
-        type: this.data.currentType || undefined,
+        type: 'ride',
+        campusId: this.data.campusId || undefined,
+        viewMode: this.data.viewMode,
         keyword: this.data.appliedKeyword || undefined,
         limit: PAGE_SIZE,
         cursor: isAppend ? cursor : undefined
@@ -336,11 +344,24 @@ Page({
     this.restoreLaunchTabBar();
   },
 
-  handleTypeChange(event) {
-    const currentType = event.currentTarget.dataset.value || '';
-    if (currentType === this.data.currentType) return;
-    this.setData({ currentType });
-    this.fetchActivities({ mode: 'replace' });
+  handleViewModeChange(event) {
+    const viewMode = event.currentTarget.dataset.value === 'driver' ? 'driver' : 'passenger';
+    if (viewMode === this.data.viewMode) return false;
+    this.setData({
+      viewMode,
+      hasActiveFilters: hasActiveFilters(this.data)
+    });
+    return this.fetchActivities({ mode: 'replace' });
+  },
+
+  handleCampusChange(event) {
+    const campusId = event.currentTarget.dataset.value || '';
+    if (campusId === this.data.campusId) return false;
+    this.setData({
+      campusId,
+      hasActiveFilters: hasActiveFilters({ ...this.data, campusId })
+    });
+    return this.fetchActivities({ mode: 'replace' });
   },
 
   handleKeywordInput(event) {
@@ -348,16 +369,33 @@ Page({
   },
 
   handleSearch() {
-    this.setData({ appliedKeyword: this.data.keyword.trim() });
-    this.fetchActivities({ mode: 'replace' });
+    const appliedKeyword = this.data.keyword.trim();
+    this.setData({
+      appliedKeyword,
+      hasActiveFilters: hasActiveFilters({ ...this.data, appliedKeyword })
+    });
+    return this.fetchActivities({ mode: 'replace' });
+  },
+
+  handleClearFilters() {
+    this.setData({
+      campusId: '',
+      keyword: '',
+      appliedKeyword: '',
+      hasActiveFilters: false
+    });
+    return this.fetchActivities({ mode: 'replace' });
   },
 
   handleCardSelect(event) {
-    wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${event.detail.id}` });
+    wx.navigateTo({
+      url: `/subpackages/activity/detail/index?id=${encodeURIComponent(event.detail.id)}&mode=${this.data.viewMode}`
+    });
   },
 
   handleEmptyAction() {
     if (this.data.error) return this.fetchActivities({ mode: 'replace' });
+    if (this.data.hasActiveFilters) return this.handleClearFilters();
     if (this.data.hasMore) return this.fetchActivities({ mode: 'append', allowAutoFill: false });
     wx.switchTab({ url: '/pages/publish/index' });
   },

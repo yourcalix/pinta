@@ -14,69 +14,31 @@
 
   <view wx:if="{{step === 1}}" class="form-card surface">
     <view class="field">
-      <text class="field-label required">活动标题</text>
-      <input class="input" maxlength="30" cursor-spacing="120" adjust-position="true" placeholder="一句话说明你想拼什么" value="{{form.title}}" data-field="title" bindinput="handleInput" />
+      <text class="field-label required">行程标题</text>
+      <input class="input" maxlength="30" cursor-spacing="120" adjust-position="true" placeholder="例如：周五晚青茂回凼仔" value="{{form.title}}" data-field="title" bindinput="handleInput" />
       <view class="field-hint">2—30 个字，不要填写联系方式</view>
     </view>
 
-    <block wx:if="{{type === 'ride'}}">
-      <view class="field">
-        <text class="field-label required">出发区域</text>
-        <input class="input" maxlength="40" cursor-spacing="120" adjust-position="true" placeholder="例如：张江地铁站" value="{{form.origin}}" data-field="origin" bindinput="handleInput" />
-      </view>
-      <view class="field">
-        <text class="field-label required">到达区域</text>
-        <input class="input" maxlength="40" cursor-spacing="120" adjust-position="true" placeholder="例如：浦东机场" value="{{form.destination}}" data-field="destination" bindinput="handleInput" />
-      </view>
-    </block>
-
-    <block wx:if="{{type === 'product'}}">
-      <view class="field">
-        <text class="field-label required">商品名称</text>
-        <input class="input" maxlength="40" cursor-spacing="120" adjust-position="true" placeholder="例如：中度烘焙咖啡豆" value="{{form.productName}}" data-field="productName" bindinput="handleInput" />
-      </view>
-      <view class="field">
-        <text class="field-label required">预估单价区间</text>
-        <input class="input" maxlength="30" cursor-spacing="120" adjust-position="true" placeholder="例如：58—68元/袋" value="{{form.unitPriceRange}}" data-field="unitPriceRange" bindinput="handleInput" />
-      </view>
-      <view class="field">
-        <text class="field-label">目标商品数量</text>
-        <view class="number-stepper">
-          <button data-field="targetQuantity" data-delta="-1" bindtap="handleNumber">−</button>
-          <text>{{form.targetQuantity}} 件</text>
-          <button data-field="targetQuantity" data-delta="1" bindtap="handleNumber">＋</button>
+    <view class="field">
+      <text class="field-label required">起点与终点</text>
+      <picker mode="multiSelector" range="{{routeColumns}}" value="{{routeIndexes}}" bindcolumnchange="handleRouteColumnChange" bindchange="handleRoute">
+        <view class="picker-field" role="button" aria-label="选择合乘起点和终点，当前为{{routeLabel}}">
+          <text>{{routeLabel}}</text>
+          <text aria-hidden="true">›</text>
         </view>
-      </view>
-    </block>
-
-    <block wx:if="{{type === 'buddy'}}">
-      <view class="field">
-        <text class="field-label required">活动类别</text>
-        <input class="input" maxlength="20" cursor-spacing="120" adjust-position="true" placeholder="例如：羽毛球、看展、桌游" value="{{form.category}}" data-field="category" bindinput="handleInput" />
-      </view>
-    </block>
-
-    <view class="field">
-      <text class="field-label required">行政区</text>
-      <picker mode="selector" range="{{districtOptions}}" value="{{districtIndex}}" bindchange="handleDistrict">
-        <view class="picker-field">{{districtOptions[districtIndex]}} <text>›</text></view>
       </picker>
-    </view>
-
-    <view class="field">
-      <text class="field-label required">商圈或公共地标</text>
-      <input class="input" maxlength="40" cursor-spacing="120" adjust-position="true" placeholder="不要填写门牌号或住宅地址" value="{{form.placeLabel}}" data-field="placeLabel" bindinput="handleInput" />
+      <view class="field-hint">仅支持澳门试点的 8 条校园往返路线</view>
     </view>
 
     <view class="two-columns">
       <view class="field column">
-        <text class="field-label required">开始日期</text>
+        <text class="field-label required">期望日期</text>
         <picker mode="date" value="{{form.startDate}}" data-field="startDate" bindchange="handleDate">
           <view class="picker-field">{{form.startDate}}</view>
         </picker>
       </view>
       <view class="field column">
-        <text class="field-label required">开始时间</text>
+        <text class="field-label required">时间窗起点</text>
         <picker mode="time" value="{{form.startTime}}" data-field="startTime" bindchange="handleDate">
           <view class="picker-field">{{form.startTime}}</view>
         </picker>
@@ -98,14 +60,12 @@
       </view>
     </view>
 
-    <view class="field">
-      <text class="field-label required">目标人数</text>
-      <view class="number-stepper">
-        <button data-field="targetMembers" data-delta="-1" bindtap="handleNumber">−</button>
-        <text>{{form.targetMembers}} 人</text>
-        <button data-field="targetMembers" data-delta="1" bindtap="handleNumber">＋</button>
+    <view class="capacity-info-card" role="region" aria-label="成团与人数规则，固定七名乘客成团，司机不计入乘客人数">
+      <view class="capacity-info-main">
+        <text class="capacity-label">行程容量</text>
+        <text class="capacity-value">固定 7 名乘客成团</text>
       </view>
-      <view class="field-hint">包含发起者，达到人数后自动成团并停止招募</view>
+      <view class="capacity-info-sub">司机不计入乘客人数；接车时间前司机可随时确认承接</view>
     </view>
 
     <button class="primary-button" bindtap="handleNext">下一步：设置规则</button>
@@ -133,39 +93,6 @@
       </view>
     </block>
 
-    <block wx:if="{{type === 'product'}}">
-      <view class="field">
-        <text class="field-label required">购买渠道</text>
-        <input class="input" maxlength="50" cursor-spacing="120" adjust-position="true" placeholder="例如：品牌官方旗舰店" value="{{form.shoppingChannel}}" data-field="shoppingChannel" bindinput="handleInput" />
-      </view>
-      <view class="field">
-        <text class="field-label required">交付方式</text>
-        <picker mode="selector" range="{{deliveryOptions}}" range-key="label" value="{{deliveryIndex}}" data-field="deliveryMode" data-source="deliveryOptions" data-index-field="deliveryIndex" bindchange="handleOption">
-          <view class="picker-field">{{deliveryOptions[deliveryIndex].label}} <text>›</text></view>
-        </picker>
-        <view class="field-hint">建议到货后当面验货，不要提前向陌生人转账</view>
-      </view>
-    </block>
-
-    <block wx:if="{{type === 'buddy'}}">
-      <view class="field">
-        <text class="field-label required">费用方式</text>
-        <picker mode="selector" range="{{buddyCostOptions}}" range-key="label" value="{{buddyCostIndex}}" data-field="costMode" data-source="buddyCostOptions" data-index-field="buddyCostIndex" bindchange="handleOption">
-          <view class="picker-field">{{buddyCostOptions[buddyCostIndex].label}} <text>›</text></view>
-        </picker>
-      </view>
-      <view class="field">
-        <text class="field-label required">活动强度</text>
-        <picker mode="selector" range="{{buddyLevelOptions}}" range-key="label" value="{{buddyLevelIndex}}" data-field="level" data-source="buddyLevelOptions" data-index-field="buddyLevelIndex" bindchange="handleOption">
-          <view class="picker-field">{{buddyLevelOptions[buddyLevelIndex].label}} <text>›</text></view>
-        </picker>
-      </view>
-      <view class="field">
-        <text class="field-label">装备要求</text>
-        <input class="input" maxlength="100" cursor-spacing="120" adjust-position="true" placeholder="例如：自带球拍" value="{{form.equipment}}" data-field="equipment" bindinput="handleInput" />
-      </view>
-    </block>
-
     <view class="field">
       <text class="field-label">参与规则</text>
       <textarea class="textarea textarea--small" maxlength="200" cursor-spacing="120" adjust-position="true" placeholder="例如：请提前10分钟到达公共会合点" value="{{form.rules}}" data-field="rules" bindinput="handleInput" />
@@ -179,9 +106,7 @@
 
     <view class="risk-note">
       <view class="risk-title">发布前请确认</view>
-      <view wx:if="{{type === 'ride'}}">仅限同行者共同预约合规交通工具，不得以司机身份招揽载客。</view>
-      <view wx:elif="{{type === 'product'}}">平台不收款、不担保商品，请优先当面验货交付。</view>
-      <view wx:else>活动必须在公共场所进行，不得发布婚恋、陪玩交易或骚扰内容。</view>
+      <view>本功能仅用于澳门校园出行信息撮合。请不要提前向陌生人转账；司机承接仅向已审核的司机与车辆开放。</view>
     </view>
 
     <checkbox-group bindchange="handleSafety">

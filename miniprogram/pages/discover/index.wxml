@@ -6,42 +6,82 @@
     bindasseterror="handleLaunchAssetError"
   />
 
-  <view class="hero">
-    <view>
-      <view class="eyebrow">一起出发，一起凑成</view>
-      <view class="hero-title">今天想拼什么？</view>
+  <view class="hero surface">
+    <view class="hero-copy">
+      <view class="hero-brand">
+        <image
+          class="hero-brand-mark"
+          src="../../assets/images/discover/brand-puzzle.png"
+          mode="aspectFit"
+          aria-hidden="true"
+        />
+        <text class="hero-brand-name">拼吧</text>
+        <text class="hero-brand-latin">PINBA</text>
+      </view>
+      <view class="hero-title">澳门校园公益合乘</view>
+      <view class="hero-subtitle">一起出发，让每段路都有人同行</view>
     </view>
-    <view class="city-pill">{{city}}</view>
+    <view class="city-pill">澳门试点</view>
+    <image
+      class="hero-campus-art"
+      src="../../assets/images/discover/hero-campus.png"
+      mode="aspectFit"
+      aria-hidden="true"
+    />
+  </view>
+
+  <view class="view-mode-switch" aria-label="选择查看视角">
+      <button
+        wx:for="{{viewModes}}"
+        wx:key="value"
+        class="view-mode-option {{viewMode === item.value ? 'view-mode-option--active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="handleViewModeChange"
+      >{{item.label}}</button>
   </view>
 
   <view class="search-row surface">
-    <text class="search-symbol">⌕</text>
+    <view class="search-symbol" aria-hidden="true">
+      <view class="search-glyph"><view class="search-glyph-handle"></view></view>
+    </view>
     <input
       class="search-input"
       value="{{keyword}}"
-      placeholder="搜索路线、商品或活动"
+      placeholder="搜索路线、口岸或校区"
       confirm-type="search"
+      aria-label="搜索路线、口岸或校区"
       bindinput="handleKeywordInput"
       bindconfirm="handleSearch"
     />
-    <button class="search-button" bindtap="handleSearch">搜索</button>
+    <button class="search-inline-action" bindtap="handleSearch" aria-label="执行搜索">
+      <view class="search-glyph"><view class="search-glyph-handle"></view></view>
+    </button>
   </view>
 
-  <scroll-view class="scene-tabs" scroll-x enable-flex>
-    <view class="scene-tabs-inner">
-      <button
-        wx:for="{{sceneTabs}}"
-        wx:key="value"
-        class="scene-tab {{currentType === item.value ? 'scene-tab--active' : ''}}"
-        data-value="{{item.value}}"
-        bindtap="handleTypeChange"
-      >{{item.label}}</button>
-    </view>
-  </scroll-view>
+  <view class="campus-chip-bar" role="tablist" aria-label="选择校区分类">
+    <button
+      wx:for="{{campusOptions}}"
+      wx:key="id"
+      class="campus-chip {{campusId === item.id ? 'campus-chip--active' : ''}}"
+      data-value="{{item.id}}"
+      bindtap="handleCampusChange"
+      role="tab"
+      aria-selected="{{campusId === item.id}}"
+      aria-label="{{item.label}}，{{campusId === item.id ? '当前已选中' : '未选中'}}"
+    >{{item.label}}</button>
+  </view>
 
   <view class="list-heading">
-    <text>{{currentType ? '筛选结果' : '附近正在拼'}}</text>
-    <text class="list-count" wx:if="{{!loading}}">{{activities.length}} 个活动</text>
+    <text>{{viewMode === 'driver' ? '待承接行程' : (hasActiveFilters ? '筛选结果' : '正在拼车')}}</text>
+    <view class="list-heading-meta">
+      <text class="list-count" wx:if="{{!loading}}">{{activities.length}} 个行程</text>
+      <button
+        wx:if="{{hasActiveFilters}}"
+        class="clear-filter-button"
+        bindtap="handleClearFilters"
+        aria-label="清除全部筛选条件"
+      >清除筛选</button>
+    </view>
   </view>
 
   <view wx:if="{{loading}}" class="skeleton-list">
@@ -84,9 +124,9 @@
   <empty-state
     wx:else
     symbol="{{error ? '!' : '+'}}"
-    title="{{error || (hasMore ? '暂时没有可展示的活动' : '暂时没有符合条件的活动')}}"
-    description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasMore ? '部分活动已被你隐藏，可以继续查看下一页。' : '换个分类看看，或发起第一个活动。')}}"
-    action-text="{{error ? '重新加载' : (hasMore ? '继续加载' : '去发布')}}"
+    title="{{error || (viewMode === 'driver' ? (hasActiveFilters ? (appliedKeyword ? '未找到待承接的相关行程' : '该校区暂无待承接的行程') : '暂无待承接行程') : (hasActiveFilters ? (appliedKeyword ? '未找到符合条件的拼车行程' : '该校区暂无可加入的拼车行程') : (hasMore ? '暂时没有可展示的行程' : '暂时没有拼车行程')))}}"
+    description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '可以清除筛选，查看澳门其他校区行程。' : (viewMode === 'driver' ? '稍后再来查看新的校园互助行程。' : (hasMore ? '部分行程已被你隐藏，可以继续查看下一页。' : '发起一个行程，邀请同路同学加入。')))}}"
+    action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : (hasMore ? '继续加载' : (viewMode === 'driver' ? '' : '去发起行程')))}}"
     bindaction="handleEmptyAction"
   />
 </view>

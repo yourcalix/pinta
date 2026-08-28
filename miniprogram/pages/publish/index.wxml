@@ -1,8 +1,8 @@
 <view class="page publish-page" style="padding-top: {{contentTopInset}}px;">
   <view class="publish-heading">
-    <view class="eyebrow">两步即可发布</view>
-    <view class="title">选择你想发起的类型</view>
-    <view class="description">公开页面只展示商圈和必要条件，联系方式会在成团后解锁。</view>
+    <view class="eyebrow">两步即可发起</view>
+    <view class="title">发起澳门校园拼车</view>
+    <view class="description">乘客选择 60 分钟期望时间窗，成团后由已审核司机选择具体接送时间。</view>
   </view>
 
   <button
@@ -23,6 +23,6 @@
 
   <view class="safety-note">
     <view class="safety-title">安全边界</view>
-    <view>拼吧只提供信息撮合，不提供车辆、在线收款、商品担保或婚恋服务。</view>
+    <view>拼吧只提供校园行程信息撮合，不提供车辆、在线收款或交通服务。司机承接功能仅向已完成合规审核的账号开放。</view>
   </view>
 </view>

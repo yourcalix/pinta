@@ -18,7 +18,7 @@ function user(id, nickname, role = 'user') {
     status: 'ACTIVE',
     profile: {
       nickname,
-      city: '上海',
+      city: '澳门',
       interests: ['咖啡'],
       adultConfirmed: true
     },
@@ -60,19 +60,20 @@ function setup() {
 function rideInput(overrides = {}) {
   return {
     type: 'ride',
-    title: '浦东机场同行约车',
+    title: '青茂口岸到凼仔校区拼车',
     description: '寻找同路线伙伴，共同预约合规交通工具',
-    city: '上海',
-    district: '浦东新区',
-    placeLabel: '张江地铁站',
+    city: '澳门',
+    district: '澳门校园',
+    placeLabel: '青茂口岸 → 凼仔校区',
     startsAt: '2026-08-24T02:00:00.000Z',
     deadlineAt: '2026-08-23T14:00:00.000Z',
-    targetMembers: 2,
+    minPassengers: 7,
+    maxPassengers: 7,
     contactInfo: '微信号 pinba_demo',
     rules: '成团后在公共地点会合',
     typeData: {
-      origin: '张江',
-      destination: '浦东机场',
+      routeId: 'QINGMAO_TO_TAIPA',
+      pickupWindowEnd: '2026-08-24T03:00:00.000Z',
       feeType: 'SHARED_COST',
       luggageRule: 'ONE_SMALL'
     },
@@ -193,7 +194,7 @@ test('申请时必须同意获批后自动占位', async () => {
   assert.equal(denied.error.code, 'VALIDATION_ERROR');
 });
 
-test('发起者批准即原子占位并自动成团', async () => {
+test('发起者批准即原子占位且七人前保持招募', async () => {
   const { call, store } = setup();
   const created = await call('activity.create', rideInput(), 'owner-openid', 'create-form-001');
   const activityId = created.data.activity.id;
@@ -208,7 +209,7 @@ test('发起者批准即原子占位并自动成团', async () => {
     applicationId: applied.data.application.id
   }, 'owner-openid', 'approve-form-001');
   assert.equal(approved.ok, true);
-  assert.equal(approved.data.activity.status, 'FORMED');
+  assert.equal(approved.data.activity.status, 'RECRUITING');
   assert.equal(approved.data.activity.memberCount, 2);
   assert.equal(approved.data.application.status, 'APPROVED');
   assert.equal(store.members.size, 2);
@@ -218,6 +219,7 @@ test('最后名额不会被重复批准或超员', async () => {
   const { call, store } = setup();
   const created = await call('activity.create', rideInput(), 'owner-openid', 'create-capacity-001');
   const activityId = created.data.activity.id;
+  store.activities.get(activityId).memberCount = 6;
   const first = await call('application.submit', { activityId, note: '', autoJoinConsent: true }, 'member-openid', 'apply-capacity-001');
   const second = await call('application.submit', { activityId, note: '', autoJoinConsent: true }, 'second-openid', 'apply-capacity-002');
   const approved = await call('application.approve', { activityId, applicationId: first.data.application.id }, 'owner-openid', 'approve-capacity-001');
@@ -225,11 +227,11 @@ test('最后名额不会被重复批准或超员', async () => {
   const rejectedByState = await call('application.approve', { activityId, applicationId: second.data.application.id }, 'owner-openid', 'approve-capacity-002');
   assert.equal(rejectedByState.ok, false);
   assert.equal(rejectedByState.error.code, 'CONFLICT');
-  assert.equal((await store.getActivity(activityId)).memberCount, 2);
+  assert.equal((await store.getActivity(activityId)).memberCount, 7);
 });
 
-test('只有成团后的有效成员可以读取联系方式', async () => {
-  const { call } = setup();
+test('只有七人满员后的有效成员可以读取联系方式', async () => {
+  const { call, store } = setup();
   const created = await call('activity.create', rideInput(), 'owner-openid', 'create-contact-001');
   const activityId = created.data.activity.id;
   const beforeFormed = await call('group.contact', { activityId }, 'owner-openid');
@@ -238,6 +240,18 @@ test('只有成团后的有效成员可以读取联系方式', async () => {
 
   const applied = await call('application.submit', { activityId, note: '', autoJoinConsent: true }, 'member-openid', 'apply-contact-001');
   await call('application.approve', { activityId, applicationId: applied.data.application.id }, 'owner-openid', 'approve-contact-001');
+  store.activities.get(activityId).memberCount = 7;
+  store.activities.get(activityId).status = 'FORMED';
+  for (let index = 0; index < 5; index += 1) {
+    store.members.set(`contact-member-${index}`, {
+      id: `contact-member-${index}`,
+      activityId,
+      userId: `contact-user-${index}`,
+      role: 'MEMBER',
+      status: 'ACTIVE',
+      joinedAt: NOW.toISOString()
+    });
+  }
 
   const outsider = await call('group.contact', { activityId }, 'other-openid');
   assert.equal(outsider.ok, false);
@@ -364,7 +378,7 @@ test('申请、审批和通知 DTO 不暴露内部用户标识或联系方式', 
   const notifications = await call('notification.list', {}, 'member-openid');
   assert.equal(notifications.ok, true);
   assert.equal(notifications.data.items[0].userId, undefined);
-  assert.equal(notifications.data.items[0].target, 'GROUP');
+  assert.equal(notifications.data.items[0].target, 'DETAIL');
   assert.equal(notifications.data.items[0].url, undefined);
   assert.equal(notifications.data.items[0].page, undefined);
 });
@@ -402,4 +416,41 @@ test('生产环境未启用微信内容安全时拒绝用户生成内容', async
     () => moderation.check(['普通活动内容'], { actorId: 'member-openid' }),
     (error) => error.code === 'INTERNAL' && /未配置/.test(error.message)
   );
+});
+
+test('Cloud 满员审批的已批准重放仍会触发待申请补偿收尾', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/cloud-store.js'), 'utf8');
+  const approvedReplay = source.match(/if \(application\.status === APPLICATION_STATUS\.APPROVED\)[\s\S]*?reachedCapacity:[\s\S]*?\n\s*};/);
+  assert.ok(approvedReplay);
+  assert.match(approvedReplay[0], /reachedCapacity:\s*effectiveActivity\.memberCount >= capacity/);
+  assert.match(source, /if \(result\.reachedCapacity\)[\s\S]*?closePendingApplications\(activityId, at\)/);
+});
+
+test('Cloud 拼车列表与退团始终读取接车事实源并对 in 查询分片', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/cloud-store.js'), 'utf8');
+  assert.match(source, /CLOUD_IN_QUERY_CHUNK_SIZE\s*=\s*10/);
+  assert.match(source, /rideIds\.slice\(index, index \+ CLOUD_IN_QUERY_CHUNK_SIZE\)/);
+  const leaveBlock = source.match(/async leaveActivity\([\s\S]*?\n  async cancelActivity/);
+  assert.ok(leaveBlock);
+  assert.match(leaveBlock[0], /collection\('rideFulfillments'\)/);
+  assert.match(leaveBlock[0], /stableEntityId\('rideFulfillment', activityId\)/);
+  assert.match(leaveBlock[0], /isRideJoinable\(nextActivity, at\)/);
+  assert.doesNotMatch(source, /command\.in\(ids\)/);
+  assert.doesNotMatch(source, /command\.in\(activityIds\)/);
+  assert.match(source, /fetchActivitiesByIdsChunked\(ids\)/);
+  assert.match(source, /fetchActivitiesByIdsChunked\(activityIds\)/);
+  assert.match(source, /filters\.viewMode === 'driver'[\s\S]*?pickupWindowEnd\) > Date\.parse\(at\)/);
+});
+
+test('Mock 拼车申请与审批允许司机确认后继续补足七名乘客', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../miniprogram/mocks/server.js'), 'utf8');
+  const helper = source.match(/function isMockRideJoinable\([\s\S]*?\n}/);
+  assert.ok(helper);
+  assert.doesNotMatch(helper[0], /fulfillment\.status !== 'UNASSIGNED'/);
+  const submit = source.match(/function submitApplication\([\s\S]*?\n}/);
+  const approve = source.match(/function approveApplication\([\s\S]*?\n}/);
+  assert.ok(submit && approve);
+  assert.match(submit[0], /isMockRideJoinable\(activity, now\)/);
+  assert.match(approve[0], /isMockRideJoinable\(activity, now\)/);
+  assert.doesNotMatch(source, /\|\| \{ status: 'UNASSIGNED', pickupAt: null \}/);
 });

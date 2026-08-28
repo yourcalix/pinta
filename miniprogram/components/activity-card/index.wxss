@@ -1,94 +1,185 @@
 .activity-card {
-  margin-bottom: 20rpx;
-  padding: 26rpx 26rpx 24rpx;
+  margin-bottom: 22rpx;
+  padding: 26rpx 26rpx 22rpx;
+  overflow: hidden;
   background: #fff;
   border: 1rpx solid #e6ebe8;
-  border-left: 8rpx solid #16a36a;
-  border-radius: 22rpx;
-  box-shadow: 0 8rpx 26rpx rgba(25, 54, 40, 0.05);
+  border-radius: 26rpx;
+  box-shadow: 0 10rpx 30rpx rgba(25, 54, 40, 0.07);
 }
 
-.card-top,
-.card-bottom,
-.meta-line,
-.member-progress,
-.type-chip {
+.route-heading,
+.route-line,
+.trip-meta,
+.meta-item,
+.card-badges,
+.card-visual-band,
+.passenger-avatars,
+.route-voxel-scene {
   display: flex;
   align-items: center;
 }
 
-.card-top,
-.card-bottom {
-  justify-content: space-between;
+.route-heading {
   flex-wrap: wrap;
-  gap: 12rpx 20rpx;
+  gap: 12rpx;
+  min-width: 0;
 }
 
-.type-chip {
-  gap: 8rpx;
+.route-code {
+  flex: 0 0 auto;
+  padding: 7rpx 13rpx;
+  color: #118557;
+  background: #edf8f2;
+  border: 1rpx solid #d8ede2;
+  border-radius: 12rpx;
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.route-line {
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 2rpx 10rpx;
+  color: #18201c;
+  font-size: 31rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+.route-arrow {
+  flex: 0 0 auto;
+  color: #16a36a;
+  font-size: 34rpx;
+}
+
+.card-chevron {
+  flex: 0 0 auto;
+  color: #96a19b;
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.trip-meta {
+  margin-top: 16rpx;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 9rpx;
+}
+
+.meta-item {
+  gap: 10rpx;
+  color: #66736c;
   font-size: 24rpx;
-  font-weight: 650;
-}
-
-.type-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38rpx;
-  height: 38rpx;
-  border: 1rpx solid currentColor;
-  border-radius: 10rpx;
-}
-
-.card-title {
-  margin-top: 20rpx;
-  font-size: 32rpx;
-  font-weight: 650;
   line-height: 1.4;
 }
 
-.scene-line {
-  margin-top: 12rpx;
-  color: #29352f;
-  font-size: 28rpx;
-  font-weight: 560;
+.meta-icon {
+  width: 30rpx;
+  color: #7b8781;
+  text-align: center;
 }
 
-.meta-line {
-  margin-top: 14rpx;
+.card-badges {
+  margin-top: 16rpx;
   flex-wrap: wrap;
-  gap: 12rpx 22rpx;
-  color: #69746e;
-  font-size: 24rpx;
+  gap: 8rpx;
 }
 
-.card-bottom {
-  margin-top: 22rpx;
-  padding-top: 20rpx;
+.card-badges status-badge {
+  flex-shrink: 0;
+}
+
+.card-visual-band {
+  min-height: 92rpx;
+  margin-top: 18rpx;
+  padding-top: 16rpx;
+  justify-content: space-between;
+  gap: 16rpx;
   border-top: 1rpx solid #eef1ef;
 }
 
-.member-progress {
-  gap: 14rpx;
-  color: #69746e;
-  font-size: 23rpx;
+.passenger-avatars {
+  flex: 0 0 auto;
+  padding-left: 4rpx;
 }
 
-.progress-track {
-  width: 110rpx;
-  height: 10rpx;
-  overflow: hidden;
-  background: #edf0ee;
-  border-radius: 999rpx;
+.passenger-avatar {
+  position: relative;
+  width: 58rpx;
+  height: 58rpx;
+  margin-left: -10rpx;
+  background: #fff;
+  border: 2rpx solid #fff;
+  border-radius: 15rpx;
 }
 
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
+.passenger-avatar:first-child {
+  margin-left: 0;
 }
 
-.remaining {
-  color: #3d4943;
-  font-size: 24rpx;
-  font-weight: 600;
+.passenger-avatar--empty {
+  opacity: 0.72;
+}
+
+.route-voxel-scene {
+  position: relative;
+  flex: 0 0 238rpx;
+  width: 238rpx;
+  height: 86rpx;
+  justify-content: space-between;
+}
+
+.route-node {
+  position: relative;
+  z-index: 2;
+  width: 66rpx;
+  height: 66rpx;
+}
+
+.route-node--end {
+  width: 74rpx;
+  height: 74rpx;
+}
+
+.route-dotted-line {
+  position: absolute;
+  z-index: 0;
+  left: 52rpx;
+  right: 58rpx;
+  top: 54rpx;
+  height: 0;
+  border-top: 4rpx dotted #7e9187;
+}
+
+.route-car {
+  position: absolute;
+  z-index: 3;
+  top: -14rpx;
+  right: 60rpx;
+  width: 78rpx;
+  height: 78rpx;
+}
+
+@media (max-width: 340px) {
+  .activity-card {
+    padding: 24rpx 22rpx 20rpx;
+  }
+
+  .route-line {
+    font-size: 29rpx;
+  }
+
+  .passenger-avatar {
+    width: 54rpx;
+    height: 54rpx;
+  }
+
+  .route-voxel-scene {
+    flex-basis: 220rpx;
+    width: 220rpx;
+  }
 }

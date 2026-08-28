@@ -7,9 +7,7 @@ Page({
   data: {
     contentTopInset: 88,
     types: [
-      { value: 'ride', icon: '↗', title: '拼车', description: '找同路线伙伴，共同预约合规交通方式', color: '#3478F6' },
-      { value: 'product', icon: '□', title: '拼商品', description: '找邻里凑数量，到货后当面验货交付', color: '#F59E0B' },
-      { value: 'buddy', icon: '○', title: '拼搭子', description: '围绕具体活动组队，不做婚恋社交', color: '#7C5CFC' }
+      { value: 'ride', icon: '↗', title: '发起校园拼车', description: '在 8 条澳门固定路线中发起行程，邀请同路同学加入', color: '#3478F6' }
     ],
     pending: false
   },

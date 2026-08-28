@@ -21,9 +21,9 @@ function activity(index, overrides = {}) {
     type: 'buddy',
     title: index % 2 === 0 ? `命中活动 ${index}` : `普通活动 ${index}`,
     description: '分页测试',
-    city: '上海',
-    district: '杨浦区',
-    placeLabel: '五角场',
+    city: '澳门',
+    district: '澳门校园',
+    placeLabel: '青茂口岸 → 凼仔校区',
     startsAt: `2026-08-25T${String(index).padStart(2, '0')}:00:00.000Z`,
     deadlineAt: '2026-08-24T20:00:00.000Z',
     targetMembers: 3,
@@ -108,22 +108,41 @@ test('Memory 列表隐藏截止活动但不修改存储实体，详情统一返�
   assert.equal(invalid.error.code, 'VALIDATION_ERROR');
 });
 
+function matchesConditions(row, conditions) {
+  return Object.entries(conditions || {}).every(([key, expected]) => {
+    const actual = key.split('.').reduce((value, part) => value && value[part], row);
+    return expected && Array.isArray(expected.$in)
+      ? expected.$in.includes(actual)
+      : actual === expected;
+  });
+}
+
 function fakeCloud(rows, reads = []) {
   return {
     database() {
       return {
         command: { in: (values) => ({ $in: values }) },
-        collection() {
+        collection(name) {
+          const collectionRows = name === 'rideFulfillments'
+            ? rows.filter((row) => row.type === 'ride').map((row) => ({
+                _id: `fulfillment-${row._id}`,
+                activityId: row._id,
+                status: 'UNASSIGNED',
+                pickupAt: null
+              }))
+            : rows;
           const query = {
             offset: 0,
             size: 20,
-            where() { return this; },
+            conditions: null,
+            where(value) { this.conditions = value; return this; },
             orderBy() { return this; },
             skip(value) { this.offset = value; return this; },
             limit(value) { this.size = value; return this; },
             async get() {
-              reads.push({ offset: this.offset, size: this.size });
-              return { data: rows.slice(this.offset, this.offset + this.size) };
+              const filteredRows = collectionRows.filter((row) => matchesConditions(row, this.conditions));
+              reads.push({ name, offset: this.offset, size: this.size, conditions: this.conditions });
+              return { data: filteredRows.slice(this.offset, this.offset + this.size) };
             }
           };
           return query;
@@ -132,6 +151,79 @@ function fakeCloud(rows, reads = []) {
     }
   };
 }
+
+test('校区筛选在 Memory 与 Cloud 的分页候选层执行', async () => {
+  const ride = (id, routeId, startsAt) => activity(0, {
+    id,
+    type: 'ride',
+    title: `${routeId} 行程`,
+    startsAt,
+    targetMembers: 2,
+    memberCount: 1,
+    typeData: {
+      routeId,
+      pickupWindowEnd: '2026-08-25T12:00:00.000Z'
+    }
+  });
+  const rows = [
+    ride('taipa-in', 'QINGMAO_TO_TAIPA', '2026-08-25T09:00:00.000Z'),
+    ride('taipa-out', 'TAIPA_TO_HENGQIN', '2026-08-25T10:00:00.000Z'),
+    ride('dragon-in', 'QINGMAO_TO_GOLDEN_DRAGON', '2026-08-25T11:00:00.000Z')
+  ];
+  const memory = new MemoryStore({
+    activities: rows,
+    rideFulfillments: rows.map((item) => ({
+      activityId: item.id,
+      status: 'UNASSIGNED',
+      pickupAt: null,
+      driverId: null,
+      vehicleId: null
+    }))
+  });
+  const memoryPage = await memory.listActivities({ campusId: 'TAIPA_CAMPUS', limit: 10 }, NOW);
+  assert.deepEqual(memoryPage.items.map((item) => item.id), ['taipa-in', 'taipa-out']);
+
+  const reads = [];
+  const cloudRows = rows.map(({ id, ...data }) => ({ _id: id, ...data }));
+  const cloud = new CloudStore(fakeCloud(cloudRows, reads));
+  const cloudPage = await cloud.listActivities({ campusId: 'TAIPA_CAMPUS', limit: 10 }, NOW);
+  assert.deepEqual(cloudPage.items.map((item) => item.id), ['taipa-in', 'taipa-out']);
+  assert.equal(reads[0].conditions.type, 'ride');
+  assert.deepEqual([...reads[0].conditions['typeData.routeId'].$in].sort(), [
+    'HENGQIN_TO_TAIPA',
+    'QINGMAO_TO_TAIPA',
+    'TAIPA_TO_HENGQIN',
+    'TAIPA_TO_QINGMAO'
+  ].sort());
+
+  const incompatible = await cloud.listActivities({
+    campusId: 'TAIPA_CAMPUS',
+    routeId: 'QINGMAO_TO_GOLDEN_DRAGON',
+    limit: 10
+  }, NOW);
+  assert.deepEqual(incompatible, { items: [], nextCursor: null });
+
+  const nonRide = await cloud.listActivities({
+    type: 'product',
+    campusId: 'TAIPA_CAMPUS',
+    limit: 10
+  }, NOW);
+  assert.deepEqual(nonRide, { items: [], nextCursor: null });
+});
+
+test('活动列表拒绝未知校区枚举', async () => {
+  const service = createPinbaService({
+    store: new MemoryStore({ activities: [] }),
+    clock: () => new Date(NOW)
+  });
+  const result = await service.execute({
+    action: 'activity.list',
+    data: { campusId: 'UNKNOWN_CAMPUS', limit: 10 },
+    requestId: 'invalid-campus'
+  }, {});
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'VALIDATION_ERROR');
+});
 
 test('Cloud Store 对 keyword 后过滤执行分批填页而不是先截断一页', async () => {
   const rows = Array.from({ length: 12 }, (_, index) => {
@@ -180,5 +272,54 @@ test('Cloud Store 最多扫描 500 个原始候选并返回可继续游标', asy
   assert.deepEqual(page.items, []);
   assert.equal(page.nextCursor, '500');
   assert.equal(reads.length, 10);
-  assert.deepEqual(reads.at(-1), { offset: 450, size: 50 });
+  assert.equal(reads.at(-1).offset, 450);
+  assert.equal(reads.at(-1).size, 50);
+});
+
+test('Cloud 拼车列表以实时 fulfillment 集合覆盖陈旧活动镜像', async () => {
+  const ride = (id, embeddedStatus) => {
+    const source = activity(0, {
+      id,
+      type: 'ride',
+      status: 'FORMED',
+      memberCount: 2,
+      targetMembers: 2,
+      minPassengers: 2,
+      maxPassengers: 4,
+      startsAt: '2026-08-24T10:00:00.000Z',
+      deadlineAt: '2026-08-24T09:00:00.000Z',
+      rideJoinable: embeddedStatus === 'UNASSIGNED',
+      rideFulfillment: { status: embeddedStatus },
+      typeData: { routeId: 'QINGMAO_TO_TAIPA', pickupWindowEnd: '2026-08-24T11:00:00.000Z' }
+    });
+    const { id: activityId, ...data } = source;
+    return { _id: activityId, ...data };
+  };
+  const activityRows = [ride('live-unassigned', 'ASSIGNED'), ride('live-assigned', 'UNASSIGNED')];
+  const fulfillmentRows = [
+    { _id: 'fulfillment-1', activityId: 'live-unassigned', status: 'UNASSIGNED' },
+    { _id: 'fulfillment-2', activityId: 'live-assigned', status: 'ASSIGNED' }
+  ];
+  const cloud = {
+    database() {
+      return {
+        command: { in: (values) => ({ $in: values }) },
+        collection(name) {
+          const rows = name === 'rideFulfillments' ? fulfillmentRows : activityRows;
+          return {
+            offset: 0,
+            size: 20,
+            where() { return this; },
+            orderBy() { return this; },
+            skip(value) { this.offset = value; return this; },
+            limit(value) { this.size = value; return this; },
+            async get() { return { data: rows.slice(this.offset, this.offset + this.size) }; }
+          };
+        }
+      };
+    }
+  };
+  const store = new CloudStore(cloud);
+  const page = await store.listActivities({ type: 'ride', viewMode: 'driver', limit: 10 }, NOW);
+  assert.deepEqual(page.items.map((item) => item.id), ['live-unassigned']);
 });

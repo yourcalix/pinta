@@ -6,6 +6,11 @@ const accountDisabledFeedback = require('./account-disabled-feedback');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
+  'onboarding.selectRole',
+  'driver.application.submit',
+  'driver.document.prepare',
+  'driver.document.confirm',
+  'driver.application.withdraw',
   'activity.create',
   'activity.cancel',
   'activity.complete',
@@ -16,13 +21,18 @@ const MUTATING_ACTIONS = new Set([
   'application.reject',
   'application.withdraw',
   'member.leave',
+  'ride.driver.accept',
+  'ride.driver.cancel',
   'notification.read',
   'report.create',
-  'admin.activity.suspend'
+  'admin.activity.suspend',
+  'admin.driverApplication.review'
 ]);
 const PENDING_MUTATIONS_STORAGE_KEY = 'pinba_pending_mutations_v1';
 const PENDING_MUTATION_TTL_MS = 15 * 60 * 1000;
 const MAX_PENDING_MUTATIONS = 100;
+const SENSITIVE_MUTATING_ACTIONS = new Set(['driver.application.submit']);
+const sensitiveFingerprintSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 let authenticatedActorScope = '';
 
 function readPendingMutations() {
@@ -105,6 +115,25 @@ function stableSerialize(value) {
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(',')}}`;
 }
 
+function opaqueFingerprint(value) {
+  let hashA = 0x811c9dc5;
+  let hashB = 0x9e3779b9;
+  const input = `${sensitiveFingerprintSalt}:${value}`;
+  for (let index = 0; index < input.length; index += 1) {
+    const code = input.charCodeAt(index);
+    hashA = Math.imul(hashA ^ code, 0x01000193) >>> 0;
+    hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
+  }
+  return `${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+}
+
+function makeMutationFingerprint(actorScope, action, data) {
+  const serializedData = stableSerialize(data);
+  return SENSITIVE_MUTATING_ACTIONS.has(action)
+    ? `${actorScope}:${action}:opaque:${opaqueFingerprint(serializedData)}`
+    : `${actorScope}:${action}:${serializedData}`;
+}
+
 function makeIdempotencyKey(action) {
   return `${action.replace(/[^A-Za-z0-9]/g, '_')}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -143,7 +172,7 @@ async function invoke(action, data = {}, options = {}) {
   let mutationFingerprint = '';
   if (MUTATING_ACTIONS.has(action)) {
     const actorScope = config.useMock ? mockServer.getPersona() : authenticatedActorScope || 'unauthenticated-session';
-    mutationFingerprint = `${actorScope}:${action}:${stableSerialize(data)}`;
+    mutationFingerprint = makeMutationFingerprint(actorScope, action, data);
     const pending = pendingMutationKeys.get(mutationFingerprint);
     const reusable = pending && Date.now() - pending.createdAt < PENDING_MUTATION_TTL_MS ? pending.key : null;
     const key = options.idempotencyKey || reusable || makeIdempotencyKey(action);
@@ -181,6 +210,7 @@ module.exports = {
   invoke,
   isMutatingAction: (action) => MUTATING_ACTIONS.has(action),
   stableSerialize,
+  makeMutationFingerprint,
   setActorScope,
   isMock: () => config.useMock,
   setMockPersona: mockServer.setPersona,

@@ -21,6 +21,31 @@ const QA_PAGE_LIMIT = 10;
 const QA_ASK_STATUSES = Object.freeze(['RECRUITING', 'FORMED']);
 const QA_ANSWER_STATUSES = Object.freeze(['RECRUITING', 'FORMED', 'IN_PROGRESS']);
 
+function locationLabel(value) {
+  return value && typeof value === 'object' ? value.label || '' : value || '';
+}
+
+function pickupSlotLabel(value, windowStart) {
+  const date = new Date(value);
+  const start = new Date(windowStart);
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  const nextDay = date.getFullYear() !== start.getFullYear()
+    || date.getMonth() !== start.getMonth()
+    || date.getDate() !== start.getDate();
+  return nextDay ? `次日 ${time}` : time;
+}
+
+function buildPickupSlots(activity) {
+  if (!activity || activity.type !== 'ride') return [];
+  const startAt = Date.parse(activity.startsAt);
+  const endAt = Date.parse(activity.typeData && activity.typeData.pickupWindowEnd);
+  if (!Number.isFinite(startAt) || !Number.isFinite(endAt) || endAt - startAt !== 60 * 60 * 1000) return [];
+  return Array.from({ length: 4 }, (_, index) => {
+    const value = new Date(startAt + index * 15 * 60 * 1000).toISOString();
+    return { value, label: pickupSlotLabel(value, activity.startsAt) };
+  }).filter((slot) => Date.parse(slot.value) > Date.now());
+}
+
 function questionTimeLabel(value) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return '';
@@ -70,8 +95,13 @@ function initialQaModal() {
 
 function rowsFor(activity) {
   if (activity.type === 'ride') {
+    const startLabel = pickupSlotLabel(activity.startsAt, activity.startsAt);
+    const endLabel = pickupSlotLabel(activity.typeData.pickupWindowEnd, activity.startsAt);
     return [
-      { label: '路线', value: `${activity.typeData.origin} → ${activity.typeData.destination}` },
+      { label: '路线', value: `${locationLabel(activity.typeData.origin)} → ${locationLabel(activity.typeData.destination)}` },
+      { label: '路线代号', value: activity.typeData.routeCode || '' },
+      { label: '期望时间窗', value: `${startLabel} — ${endLabel}` },
+      { label: '乘客容量', value: '固定 7 人' },
       { label: '费用', value: FEE_LABELS[activity.typeData.feeType] || '不涉及费用' },
       { label: '行李', value: LUGGAGE_LABELS[activity.typeData.luggageRule] || '请与发起者确认' }
     ];
@@ -105,11 +135,23 @@ Page({
     consent: true,
     pending: false,
     qa: initialQaState(),
-    qaModal: initialQaModal()
+    qaModal: initialQaModal(),
+    viewMode: 'passenger',
+    driverLoading: false,
+    driverProfile: null,
+    driverVehicles: [],
+    vehicleIndex: 0,
+    pickupSlots: [],
+    selectedPickupAt: '',
+    driverSheetVisible: false,
+    driverPending: false
   },
 
   onLoad(options = {}) {
-    this.setData({ id: decodeActivityId(options.id) });
+    this.setData({
+      id: decodeActivityId(options.id),
+      viewMode: options.mode === 'driver' ? 'driver' : 'passenger'
+    });
     if (typeof wx.showShareMenu === 'function') {
       try {
         wx.showShareMenu({ menus: ['shareAppMessage'] });
@@ -148,17 +190,111 @@ Page({
       activity: null,
       detailRows: [],
       qa: initialQaState(),
-      qaModal: initialQaModal()
+      qaModal: initialQaModal(),
+      driverProfile: null,
+      driverVehicles: [],
+      pickupSlots: [],
+      selectedPickupAt: '',
+      driverSheetVisible: false
     });
     try {
       const result = await activityService.detail(this.data.id);
       if (loadSeq !== this._loadSeq) return;
       const activity = decorateActivity(result.activity);
-      this.setData({ activity, detailRows: rowsFor(activity), loading: false });
+      const pickupSlots = buildPickupSlots(activity);
+      this.setData({
+        activity,
+        detailRows: rowsFor(activity),
+        pickupSlots,
+        selectedPickupAt: pickupSlots[0] ? pickupSlots[0].value : '',
+        loading: false
+      });
       this.loadQuestions(activity);
+      if (this.data.viewMode === 'driver' && activity.type === 'ride') this.loadDriverProfile(loadSeq);
     } catch (error) {
       if (loadSeq !== this._loadSeq) return;
       this.setData({ loading: false, ...resolveDetailError(error) });
+    }
+  },
+
+  async loadDriverProfile(loadSeq = this._loadSeq) {
+    this.setData({ driverLoading: true });
+    try {
+      const result = await activityService.driverProfile();
+      if (loadSeq !== this._loadSeq) return;
+      const driver = result.driver || { canAcceptRide: false, vehicles: [] };
+      const vehicles = (driver.vehicles || []).filter((item) => item.canUseForRide === true);
+      this.setData({
+        driverProfile: driver,
+        driverVehicles: vehicles,
+        vehicleIndex: 0,
+        driverLoading: false
+      });
+    } catch (error) {
+      if (loadSeq !== this._loadSeq) return;
+      this.setData({
+        driverLoading: false,
+        driverProfile: { canAcceptRide: false, vehicles: [] }
+      });
+      if (!error.handled) wx.showToast({ title: error.message || '司机资格加载失败', icon: 'none' });
+    }
+  },
+
+  handleViewModeChange(event) {
+    const viewMode = event.currentTarget.dataset.value === 'driver' ? 'driver' : 'passenger';
+    if (viewMode === this.data.viewMode) return;
+    this.setData({ viewMode, driverSheetVisible: false });
+    if (viewMode === 'driver' && this.data.activity && this.data.activity.type === 'ride') this.loadDriverProfile();
+  },
+
+  handleVehicleChange(event) {
+    const index = Number(event.detail.value);
+    this.setData({ vehicleIndex: Number.isInteger(index) ? index : 0 });
+  },
+
+  handlePickupSlot(event) {
+    this.setData({ selectedPickupAt: event.currentTarget.dataset.value || '' });
+  },
+
+  handleOpenDriverSheet() {
+    if (this.data.driverPending || !this.data.driverVehicles.length || !this.data.pickupSlots.length) return;
+    this.setData({ driverSheetVisible: true });
+  },
+
+  handleCloseDriverSheet() {
+    if (!this.data.driverPending) this.setData({ driverSheetVisible: false });
+  },
+
+  async handleAcceptRide() {
+    if (this.data.driverPending) return;
+    const vehicle = this.data.driverVehicles[this.data.vehicleIndex];
+    if (!vehicle || !this.data.selectedPickupAt) return;
+    this.setData({ driverPending: true });
+    try {
+      await activityService.acceptRide(this.data.id, vehicle.id, this.data.selectedPickupAt);
+      this.setData({ driverSheetVisible: false });
+      wx.showToast({ title: '已确认承接', icon: 'success' });
+      await this.loadDetail();
+    } catch (error) {
+      if (error.code === 'RIDE_ALREADY_ASSIGNED') {
+        wx.showModal({
+          title: '行程已被承接',
+          content: '该行程刚刚已被其他司机承接，页面将刷新为最新状态。',
+          showCancel: false,
+          success: () => this.loadDetail()
+        });
+      } else if (error.code === 'PICKUP_TIME_EXPIRED') {
+        wx.showModal({
+          title: '接车时间已过',
+          content: '接车时间已过，无法承接。页面将刷新为最新状态。',
+          showCancel: false,
+          success: () => this.loadDetail()
+        });
+      } else if (!error.handled) {
+        wx.showToast({ title: error.message || '承接失败，请重试', icon: 'none' });
+      }
+    } finally {
+      this.setData({ driverPending: false });
     }
   },
 
@@ -296,7 +432,7 @@ Page({
       : '精彩组团活动';
     return {
       title: `拼吧｜${title}`,
-      path: `/subpackages/activity/detail/index?id=${encodeURIComponent(id)}`
+      path: `/subpackages/activity/detail/index?id=${encodeURIComponent(id)}&mode=passenger`
     };
   },
 

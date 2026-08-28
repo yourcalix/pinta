@@ -219,3 +219,126 @@
   font-size: 29rpx;
   font-weight: 650;
 }
+
+.dashboard-tabs {
+  display: flex;
+  gap: 8rpx;
+  margin-top: 28rpx;
+  padding: 8rpx;
+  background: #e8edeb;
+  border-radius: 20rpx;
+}
+
+.dashboard-tab {
+  flex: 1;
+  min-height: 80rpx;
+  margin: 0;
+  color: #5d6962;
+  background: transparent;
+  border-radius: 16rpx;
+  font-size: 27rpx;
+}
+
+.dashboard-tab--active {
+  color: #126a48;
+  background: #fff;
+  box-shadow: 0 4rpx 16rpx rgba(24, 60, 44, 0.08);
+  font-weight: 650;
+}
+
+.dashboard-tab--active-driver {
+  color: #245b98;
+  background: #fff;
+  box-shadow: 0 4rpx 16rpx rgba(36, 91, 152, 0.1);
+  font-weight: 650;
+}
+
+.driver-onboarding,
+.driver-profile-card,
+.driver-task-card {
+  margin-top: 22rpx;
+  padding: 26rpx;
+}
+
+.driver-onboarding {
+  text-align: center;
+}
+
+.driver-onboarding-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80rpx;
+  height: 80rpx;
+  margin: 0 auto;
+  color: #fff;
+  background: #3478f6;
+  border-radius: 24rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.driver-onboarding-title,
+.driver-profile-title,
+.driver-task-title {
+  margin-top: 18rpx;
+  color: #26384a;
+  font-size: 29rpx;
+  font-weight: 650;
+}
+
+.driver-onboarding-copy,
+.driver-profile-copy {
+  margin-top: 10rpx;
+  color: #667a90;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.driver-info-button {
+  min-height: 88rpx;
+  margin-top: 24rpx;
+  color: #fff;
+  background: #3478f6;
+  border-radius: 18rpx;
+  font-size: 27rpx;
+}
+
+.driver-profile-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  background: #f5f9ff;
+  border-color: #dbe8fa;
+}
+
+.driver-profile-title {
+  margin-top: 0;
+}
+
+.driver-task-card {
+  margin-top: 0;
+  margin-bottom: 16rpx;
+}
+
+.driver-task-route {
+  color: #245b98;
+  font-size: 25rpx;
+  font-weight: 650;
+}
+
+.driver-task-title {
+  margin-top: 12rpx;
+  color: #26322c;
+}
+
+.driver-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10rpx 18rpx;
+  margin-top: 12rpx;
+  color: #718078;
+  font-size: 24rpx;
+}

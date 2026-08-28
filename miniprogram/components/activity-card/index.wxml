@@ -1,32 +1,76 @@
 <view
   wx:if="{{item}}"
   class="activity-card"
-  style="border-left-color: {{item.typeColor}}"
   bindtap="handleTap"
   role="button"
   aria-label="{{item.accessibilityLabel}}"
 >
-  <view class="card-top">
-    <view class="type-chip" style="color: {{item.typeColor}}">
-      <text class="type-icon">{{item.typeIcon}}</text>
-      <text>{{item.typeLabel}}</text>
+  <view class="route-heading">
+    <text class="route-code">{{item.routeCode}}</text>
+    <view class="route-line">
+      <text>{{item.originLabel}}</text>
+      <text class="route-arrow">→</text>
+      <text>{{item.destinationLabel}}</text>
     </view>
+    <text class="card-chevron" aria-hidden="true">›</text>
+  </view>
+
+  <view class="trip-meta">
+    <view class="meta-item">
+      <text class="meta-icon" aria-hidden="true">◷</text>
+      <text>{{item.timeWindowLabel}}</text>
+    </view>
+    <view class="meta-item">
+      <text class="meta-icon" aria-hidden="true">♙</text>
+      <text>{{item.capacityLabel}}</text>
+    </view>
+  </view>
+
+  <view class="card-badges">
     <status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" />
+    <status-badge wx:if="{{item.driverStatusLabel}}" label="{{item.driverStatusLabel}}" tone="{{item.driverStatusTone}}" />
   </view>
-  <view class="card-title">{{item.title}}</view>
-  <view class="scene-line">{{item.sceneLine}}</view>
-  <view class="meta-line">
-    <text>{{item.displayTime}}</text>
-    <text>{{item.district}} · {{item.placeLabel}}</text>
-  </view>
-  <view class="card-bottom">
-    <view class="member-progress">
-      <view class="progress-track">
-        <view class="progress-fill" style="width: {{item.progressPercent}}%; background: {{item.typeColor}}"></view>
-      </view>
-      <text>{{item.memberCount}}/{{item.targetMembers}} 人</text>
+
+  <view class="card-visual-band" aria-hidden="true">
+    <view class="passenger-avatars">
+      <block wx:for="{{item.avatarSlots}}" wx:key="id" wx:for-item="slot">
+        <image
+          wx:if="{{slot.kind === 'a'}}"
+          class="passenger-avatar"
+          src="../../assets/images/discover/avatar-passenger-a.png"
+          mode="aspectFit"
+          aria-hidden="true"
+        />
+        <image
+          wx:elif="{{slot.kind === 'b'}}"
+          class="passenger-avatar"
+          src="../../assets/images/discover/avatar-passenger-b.png"
+          mode="aspectFit"
+          aria-hidden="true"
+        />
+        <image
+          wx:else
+          class="passenger-avatar passenger-avatar--empty"
+          src="../../assets/images/discover/avatar-passenger-empty.png"
+          mode="aspectFit"
+          aria-hidden="true"
+        />
+      </block>
     </view>
-    <text class="remaining" wx:if="{{item.status === 'RECRUITING'}}">还差 {{item.remaining}} 人</text>
-    <text class="remaining" wx:else>查看详情</text>
+
+    <view class="route-voxel-scene">
+      <image wx:if="{{item.originLocationId === 'QINGMAO'}}" class="route-node route-node--start" src="../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{item.originLocationId === 'HENGQIN'}}" class="route-node route-node--start" src="../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{item.originLocationId === 'TAIPA_CAMPUS'}}" class="route-node route-node--start" src="../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:else class="route-node route-node--start" src="../../assets/images/discover/node-end-golden-dragon.png" mode="aspectFit" aria-hidden="true" />
+
+      <view class="route-dotted-line"></view>
+      <image class="route-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
+
+      <image wx:if="{{item.destinationLocationId === 'QINGMAO'}}" class="route-node route-node--end" src="../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{item.destinationLocationId === 'HENGQIN'}}" class="route-node route-node--end" src="../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{item.destinationLocationId === 'TAIPA_CAMPUS'}}" class="route-node route-node--end" src="../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:else class="route-node route-node--end" src="../../assets/images/discover/node-end-golden-dragon.png" mode="aspectFit" aria-hidden="true" />
+    </view>
   </view>
 </view>

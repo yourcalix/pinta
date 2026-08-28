@@ -39,8 +39,9 @@
   min-height: 88rpx;
   margin-top: 28rpx;
   padding: 14rpx 28rpx;
-  color: #118557;
-  background: #eaf5ef;
+  color: #11784f;
+  background: #e8f5ee;
   border-radius: 16rpx;
   font-size: 27rpx;
+  font-weight: 600;
 }

@@ -1,4 +1,5 @@
 <view class="page detail-page safe-bottom">
+  <view class="detail-content" aria-hidden="{{driverSheetVisible || qaModal.visible}}">
   <view wx:if="{{loading}}" class="detail-skeleton surface">
     <view class="skeleton-line short"></view>
     <view class="skeleton-line title"></view>
@@ -27,9 +28,14 @@
   <block wx:elif="{{activity}}">
     <view class="status-strip status-strip--{{activity.statusTone}}">
       <status-badge label="{{activity.statusLabel}}" tone="{{activity.statusTone}}" />
-      <text wx:if="{{activity.status === 'RECRUITING'}}">还差 {{activity.remaining}} 人成团</text>
-      <text wx:elif="{{activity.status === 'FORMED'}}">成员可以查看会合信息</text>
+      <text wx:if="{{activity.remaining > 0}}">还差 {{activity.remainingToForm}} 人满 7 人</text>
+      <text wx:elif="{{activity.status === 'FORMED'}}">7 名乘客已满员</text>
       <text wx:else>当前状态不可继续申请</text>
+    </view>
+
+    <view wx:if="{{activity.type === 'ride'}}" class="detail-mode-switch" aria-label="选择详情页视角">
+      <button class="detail-mode-option {{viewMode === 'passenger' ? 'detail-mode-option--active' : ''}}" data-value="passenger" bindtap="handleViewModeChange">乘客加入</button>
+      <button class="detail-mode-option detail-mode-option--driver {{viewMode === 'driver' ? 'detail-mode-option--active-driver' : ''}}" data-value="driver" bindtap="handleViewModeChange">司机承接</button>
     </view>
 
     <view class="detail-card surface">
@@ -68,12 +74,34 @@
 
     <view class="risk-card">
       <view class="risk-title">安全提示</view>
-      <view wx:if="{{activity.type === 'ride'}}">平台不提供车辆或司机，请只使用合规交通方式，不向陌生人预付费用。</view>
+      <view wx:if="{{activity.type === 'ride'}}">平台不提供车辆或在线收款。请勿提前向陌生人转账；司机承接仅向已通过合规审核的账号开放。</view>
       <view wx:elif="{{activity.type === 'product'}}">平台不提供收款与商品担保，建议到货后当面验货交付。</view>
       <view wx:else>线下见面请选择公共场所，并将行程告知亲友。</view>
     </view>
 
-    <view wx:if="{{activity.canApply}}" class="apply-card surface">
+    <view wx:if="{{viewMode === 'driver' && activity.type === 'ride'}}" class="driver-card surface">
+      <view class="driver-card-heading">
+        <view>
+          <view class="block-title">司机承接</view>
+          <view class="driver-card-subtitle">接车时间前可确认承接，无需等待满员</view>
+        </view>
+        <status-badge wx:if="{{activity.driverStatusLabel}}" label="{{activity.driverStatusLabel}}" tone="{{activity.driverStatusTone}}" />
+      </view>
+      <view wx:if="{{driverLoading}}" class="driver-local-state">正在核验司机资格…</view>
+      <view wx:elif="{{activity.rideFulfillment && activity.rideFulfillment.status === 'ASSIGNED'}}" class="driver-local-state driver-local-state--assigned">
+        <view>该行程已有司机承接</view>
+        <view wx:if="{{activity.rideFulfillment.pickupAt}}">已确认接送时间：{{activity.driverStatusLabel}}</view>
+      </view>
+      <view wx:elif="{{!activity.driverAcceptable}}" class="driver-local-state">{{activity.driverUnacceptableReason || '暂不可承接'}}</view>
+      <view wx:elif="{{!driverProfile || !driverProfile.canAcceptRide}}" class="driver-local-state">
+        <view>司机资格审核中或尚未申请，暂不可承接</view>
+        <view class="driver-local-hint">试点阶段仅向已核验澳门驾驶资格的司机开放</view>
+      </view>
+      <view wx:elif="{{!driverVehicles.length}}" class="driver-local-state">暂无审核通过的车辆，不可承接</view>
+      <button wx:else class="driver-primary-button" bindtap="handleOpenDriverSheet">选择接送时间</button>
+    </view>
+
+    <view wx:if="{{viewMode === 'passenger' && activity.canApply}}" class="apply-card surface">
       <view class="block-title">申请加入</view>
       <textarea class="textarea apply-note" maxlength="120" cursor-spacing="120" adjust-position="true" placeholder="选填：说明行李、数量、经验或时间情况" value="{{note}}" bindinput="handleNote" />
       <checkbox-group bindchange="handleConsent">
@@ -85,7 +113,7 @@
       <button class="primary-button" loading="{{pending}}" disabled="{{pending || !consent}}" bindtap="handleApply">提交申请</button>
     </view>
 
-    <view wx:if="{{activity.viewerRole === 'applicant' && activity.viewerApplication.status === 'PENDING'}}" class="state-card surface">
+    <view wx:if="{{viewMode === 'passenger' && activity.viewerRole === 'applicant' && activity.viewerApplication.status === 'PENDING'}}" class="state-card surface">
       <view>
         <view class="state-title">申请已提交</view>
         <view class="state-description">等待发起者处理；获批后会自动占用名额。</view>
@@ -93,9 +121,9 @@
       <button class="secondary-button compact-button" bindtap="handleWithdraw" disabled="{{pending}}">撤回申请</button>
     </view>
 
-    <button wx:if="{{activity.viewerRole === 'owner' && activity.status === 'RECRUITING'}}" class="primary-button bottom-action" bindtap="handleManage">管理申请</button>
-    <button wx:if="{{(activity.viewerRole === 'owner' || activity.viewerRole === 'member') && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleGroup">进入成团页</button>
-    <button wx:if="{{(activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.statusLabel}}，暂不可申请</button>
+    <button wx:if="{{viewMode === 'passenger' && activity.viewerRole === 'owner' && activity.status === 'RECRUITING'}}" class="primary-button bottom-action" bindtap="handleManage">管理申请</button>
+    <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'owner' || activity.viewerRole === 'member') && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleGroup">进入成团页</button>
+    <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.statusLabel}}，暂不可申请</button>
 
     <view class="qa-card surface" aria-role="region" aria-label="公开问答">
       <view class="qa-heading">
@@ -145,6 +173,47 @@
 
     <button class="report-link" bindtap="handleReport">举报此活动</button>
   </block>
+  </view>
+
+  <view wx:if="{{driverSheetVisible}}" class="driver-modal" catchtouchmove="preventTouchMove" aria-role="dialog" aria-label="选择接送时间">
+    <view class="driver-backdrop" bindtap="handleCloseDriverSheet"></view>
+    <view class="driver-sheet" catchtap="preventTouchMove">
+      <view class="driver-sheet-handle" aria-hidden="true"></view>
+      <view class="driver-sheet-heading">
+        <view>
+          <view class="driver-sheet-title">确认承接行程</view>
+          <view class="driver-sheet-subtitle">请谨慎承接，确认后请按时接送</view>
+        </view>
+        <button class="driver-sheet-close" bindtap="handleCloseDriverSheet" disabled="{{driverPending}}">关闭</button>
+      </view>
+
+      <view class="driver-sheet-field">
+        <view class="field-label">承接车辆</view>
+        <picker mode="selector" range="{{driverVehicles}}" range-key="plateMasked" value="{{vehicleIndex}}" bindchange="handleVehicleChange">
+          <view class="driver-vehicle-picker">
+            <text>{{driverVehicles[vehicleIndex].type}} · {{driverVehicles[vehicleIndex].plateMasked}}</text>
+            <text>›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="driver-sheet-field">
+        <view class="field-label">接送时间（15 分钟档）</view>
+        <view class="pickup-slot-grid">
+          <button
+            wx:for="{{pickupSlots}}"
+            wx:key="value"
+            class="pickup-slot {{selectedPickupAt === item.value ? 'pickup-slot--active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="handlePickupSlot"
+          >{{item.label}}</button>
+        </view>
+      </view>
+
+      <view class="driver-sheet-notice">本试点不在线收款。承接前请确认车辆与驾驶资格状态有效。</view>
+      <button class="driver-primary-button" loading="{{driverPending}}" disabled="{{driverPending || !selectedPickupAt}}" bindtap="handleAcceptRide">{{driverPending ? '正在确认' : '确认承接'}}</button>
+    </view>
+  </view>
 
   <view wx:if="{{qaModal.visible}}" class="qa-modal" catchtouchmove="preventTouchMove" aria-role="dialog" aria-label="{{qaModal.type === 'answer' ? '回答公开问题' : '发布公开问题'}}">
     <view class="qa-backdrop" bindtap="handleCloseQuestion" catchtouchmove="preventTouchMove"></view>

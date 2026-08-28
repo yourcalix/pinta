@@ -2,6 +2,14 @@
   padding-top: 42rpx;
 }
 
+.role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx; }
+.role-option { min-height: 132rpx; padding: 20rpx; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; border: 2rpx solid #dfe5e1; border-radius: 20rpx; background: #fff; text-align: left; }
+.role-option--active { border-color: #16a36a; background: #eef9f3; }
+.role-option--active-driver { border-color: #3478f6; background: #eef4ff; }
+.role-title { font-size: 30rpx; font-weight: 700; }
+.role-copy { margin-top: 8rpx; font-size: 24rpx; color: #6b756f; line-height: 1.45; }
+@media (max-width: 340px) { .role-options { grid-template-columns: 1fr; } }
+
 .intro-title {
   font-size: 40rpx;
   font-weight: 720;

@@ -4,7 +4,6 @@
 
 .form-header,
 .two-columns,
-.number-stepper,
 .button-row,
 .agreement,
 .picker-field {
@@ -96,33 +95,38 @@
   min-width: 0;
 }
 
-.number-stepper {
-  justify-content: space-between;
-  width: 100%;
-  min-height: 88rpx;
-  padding: 8rpx;
-  background: #f8faf9;
-  border: 1rpx solid #e6ebe8;
-  border-radius: 16rpx;
+.capacity-info-card {
+  margin: 24rpx 0;
+  padding: 24rpx;
+  background: #eef8f3;
+  border: 1rpx solid #cfe8dc;
+  border-radius: 18rpx;
 }
 
-.number-stepper button {
+.capacity-info-main {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 72rpx;
-  min-height: 68rpx;
-  margin: 0;
-  padding: 0;
-  color: #155f42;
-  background: #e7f4ed;
-  border-radius: 12rpx;
-  font-size: 34rpx;
-  line-height: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12rpx 20rpx;
 }
 
-.number-stepper text {
+.capacity-label {
+  color: #536159;
+  font-size: 26rpx;
+}
+
+.capacity-value {
+  color: #11784f;
+  font-size: 30rpx;
   font-weight: 650;
+}
+
+.capacity-info-sub {
+  margin-top: 12rpx;
+  color: #66736c;
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 
 .textarea--small {

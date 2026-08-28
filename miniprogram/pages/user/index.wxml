@@ -39,6 +39,13 @@
       </view>
     </view>
 
+    <view class="dashboard-tabs">
+      <button class="dashboard-tab {{dashboardMode === 'rides' ? 'dashboard-tab--active' : ''}}" data-value="rides" bindtap="handleDashboardMode">我的拼车</button>
+      <button class="dashboard-tab dashboard-tab--driver {{dashboardMode === 'driver' ? 'dashboard-tab--active-driver' : ''}}" data-value="driver" bindtap="handleDashboardMode">司机任务</button>
+    </view>
+
+    <block wx:if="{{dashboardMode === 'rides'}}">
+
     <view class="section-heading">
       <text>待处理</text>
       <text class="count">{{tasks.length}}</text>
@@ -105,6 +112,48 @@
         <view class="mini-meta">{{item.memberCount}}/{{item.targetMembers}} 人 · {{item.displayTime}}</view>
       </view>
       <empty-state wx:if="{{!joined.length}}" title="还没有参与活动" description="去发现页看看附近正在拼的活动。" />
+    </block>
+    </block>
+
+    <block wx:else>
+      <view wx:if="{{!driverProfile || !driverProfile.canAcceptRide}}" class="driver-onboarding surface">
+        <view class="driver-onboarding-mark">车</view>
+        <view class="driver-onboarding-title">{{driverApplication && driverApplication.status === 'SUBMITTED' ? '司机认证审核中' : driverApplication && driverApplication.status === 'NEEDS_MORE_INFO' ? '司机认证需要补充资料' : '成为澳门校园认证合乘司机'}}</view>
+        <view class="driver-onboarding-copy">{{driverApplication && driverApplication.status === 'SUBMITTED' ? '审核通过前仍可正常使用乘客功能，暂不能确认承接。' : '仅向已核验身份、驾驶资格及车辆的司机开放确认承接。'}}</view>
+        <button class="driver-info-button" bindtap="handleDriverApplicationInfo">{{driverApplication ? '查看认证状态' : '开始司机认证'}}</button>
+      </view>
+
+      <block wx:else>
+        <view class="driver-profile-card surface">
+          <view>
+            <view class="driver-profile-title">司机资格已通过</view>
+            <view class="driver-profile-copy">已审核车辆 {{driverProfile.vehicles.length}} 辆，接车时间前可确认承接校园合乘行程。</view>
+          </view>
+          <status-badge label="已认证" tone="info" />
+        </view>
+
+        <view class="section-heading">
+          <text>已承接任务</text>
+          <text class="count">{{driverRides.length}}</text>
+        </view>
+        <view
+          wx:for="{{driverRides}}"
+          wx:key="id"
+          class="driver-task-card surface"
+          data-item="{{item}}"
+          bindtap="handleDriverTask"
+          role="button"
+          aria-label="{{item.activity.title}}，接送时间{{item.pickupLabel}}"
+        >
+          <view class="driver-task-route">{{item.activity.originLabel}} → {{item.activity.destinationLabel}}</view>
+          <view class="driver-task-title">{{item.activity.title}}</view>
+          <view class="driver-task-meta">
+            <text>{{item.pickupLabel}}</text>
+            <text>{{item.rideFulfillment.vehicle.type}} · {{item.rideFulfillment.vehicle.plateMasked}}</text>
+          </view>
+        </view>
+        <empty-state wx:if="{{!driverRides.length}}" title="暂无已承接任务" description="去发现页切换到“我是司机”，查看接车时间前可承接的行程。" />
+      </block>
     </block>
   </block>
 </view>

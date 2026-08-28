@@ -18,5 +18,16 @@ module.exports = {
   applications: (activityId) => api.invoke('application.listForOwner', { activityId }),
   approve: (activityId, applicationId) => api.invoke('application.approve', { activityId, applicationId }, { mutating: true }),
   reject: (applicationId) => api.invoke('application.reject', { applicationId }, { mutating: true }),
-  contact: (activityId) => api.invoke('group.contact', { activityId })
+  contact: (activityId) => api.invoke('group.contact', { activityId }),
+  driverProfile: () => api.invoke('ride.driver.profile'),
+  driverMine: () => api.invoke('ride.driver.mine'),
+  acceptRide: (activityId, vehicleId, pickupAt) => api.invoke('ride.driver.accept', {
+    activityId,
+    vehicleId,
+    pickupAt
+  }, { mutating: true }),
+  cancelRideAssignment: (activityId, reason) => api.invoke('ride.driver.cancel', {
+    activityId,
+    reason
+  }, { mutating: true })
 };

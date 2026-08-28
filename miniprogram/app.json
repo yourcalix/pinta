@@ -28,7 +28,8 @@
     {
       "root": "subpackages/profile",
       "pages": [
-        "edit/index"
+        "edit/index",
+        "driver/index"
       ]
     }
   ],
@@ -47,15 +48,21 @@
     "list": [
       {
         "pagePath": "pages/discover/index",
-        "text": "发现"
+        "text": "发现",
+        "iconPath": "assets/images/discover/tab-discover-inactive.png",
+        "selectedIconPath": "assets/images/discover/tab-discover-active.png"
       },
       {
         "pagePath": "pages/publish/index",
-        "text": "发布"
+        "text": "发布",
+        "iconPath": "assets/images/discover/tab-publish-inactive.png",
+        "selectedIconPath": "assets/images/discover/tab-publish-active.png"
       },
       {
         "pagePath": "pages/user/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "assets/images/discover/tab-user-inactive.png",
+        "selectedIconPath": "assets/images/discover/tab-user-active.png"
       }
     ]
   },

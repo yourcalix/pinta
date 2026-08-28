@@ -6,5 +6,5 @@ module.exports = {
   apiFunction: 'api',
   requestTimeoutMs: 8000,
   subscribeTemplateIds: [],
-  demoCity: '上海'
+  demoCity: '澳门'
 };

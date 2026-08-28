@@ -4,8 +4,17 @@ const activityService = require('../../../services/activity');
 const subscriptionService = require('../../../services/subscription');
 const { futureLocal, combineLocal } = require('../../../utils/date');
 const { TYPE_META } = require('../../../utils/display');
+const {
+  PILOT_CITY,
+  PILOT_DISTRICTS,
+  RIDE_ROUTES,
+  getRideRoute,
+  rideRoutePickerState,
+  rideRouteFromIndexes,
+  routesFromOrigin,
+  RIDE_ROUTE_ORIGINS
+} = require('../../../config/locations');
 
-const DISTRICTS = ['浦东新区', '徐汇区', '杨浦区', '静安区', '黄浦区', '长宁区'];
 const RIDE_FEES = [
   { value: 'FREE', label: '免费互助' },
   { value: 'SHARED_COST', label: '合理成本均摊' },
@@ -35,22 +44,32 @@ const BUDDY_LEVELS = [
 function initialForm(type) {
   const starts = futureLocal(30);
   const deadline = futureLocal(20);
+  const startMinute = Number(starts.time.split(':')[1]);
+  const alignedMinute = Math.ceil(startMinute / 15) * 15;
+  const alignedStarts = new Date(combineLocal(starts.date, starts.time));
+  alignedStarts.setMinutes(alignedStarts.getMinutes() + alignedMinute - startMinute, 0, 0);
+  starts.date = `${alignedStarts.getFullYear()}-${String(alignedStarts.getMonth() + 1).padStart(2, '0')}-${String(alignedStarts.getDate()).padStart(2, '0')}`;
+  starts.time = `${String(alignedStarts.getHours()).padStart(2, '0')}:${String(alignedStarts.getMinutes()).padStart(2, '0')}`;
+  const defaultRoute = RIDE_ROUTES[0];
   return {
     type,
     title: '',
     description: '',
-    city: '上海',
-    district: DISTRICTS[0],
-    placeLabel: '',
+    city: PILOT_CITY,
+    district: PILOT_DISTRICTS[0],
+    placeLabel: `${defaultRoute.origin} → ${defaultRoute.destination}`,
     startDate: starts.date,
     startTime: starts.time,
     deadlineDate: deadline.date,
     deadlineTime: deadline.time,
-    targetMembers: 2,
+    targetMembers: 7,
+    minPassengers: 7,
+    maxPassengers: 7,
     contactInfo: '',
     rules: '',
-    origin: '',
-    destination: '',
+    routeId: defaultRoute.id,
+    origin: defaultRoute.origin,
+    destination: defaultRoute.destination,
     feeType: RIDE_FEES[1].value,
     luggageRule: LUGGAGE_RULES[1].value,
     productName: '',
@@ -67,12 +86,17 @@ function initialForm(type) {
 
 Page({
   data: {
-    type: 'buddy',
-    typeLabel: '拼搭子',
-    typeColor: '#7C5CFC',
+    type: 'ride',
+    typeLabel: '拼车',
+    typeColor: '#3478F6',
     step: 1,
-    form: initialForm('buddy'),
-    districtOptions: DISTRICTS,
+    form: initialForm('ride'),
+    routeOptions: RIDE_ROUTES,
+    routeIndex: 0,
+    routeColumns: rideRoutePickerState(RIDE_ROUTES[0].id).columns,
+    routeIndexes: rideRoutePickerState(RIDE_ROUTES[0].id).indexes,
+    routeLabel: `${RIDE_ROUTES[0].origin} → ${RIDE_ROUTES[0].destination}（${RIDE_ROUTES[0].code}）`,
+    districtOptions: PILOT_DISTRICTS,
     districtIndex: 0,
     feeOptions: RIDE_FEES,
     feeIndex: 1,
@@ -91,15 +115,19 @@ Page({
   },
 
   onLoad(options) {
-    const type = ['ride', 'product', 'buddy'].includes(options.type) ? options.type : 'buddy';
+    const type = 'ride';
     const meta = TYPE_META[type];
     const form = initialForm(type);
+    const routeState = rideRoutePickerState(form.routeId);
     this.draftKey = `pinba_publish_draft_${type}`;
     this.setData({
       type,
       typeLabel: meta.label,
       typeColor: meta.color,
       form,
+      routeColumns: routeState.columns,
+      routeIndexes: routeState.indexes,
+      routeLabel: `${routeState.route.origin} → ${routeState.route.destination}（${routeState.route.code}）`,
       submissionKey: `publish_${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     });
     const draft = wx.getStorageSync(this.draftKey);
@@ -123,11 +151,16 @@ Page({
 
   restoreDraft(draft) {
     const form = { ...initialForm(this.data.type), ...draft.form, type: this.data.type };
+    const routeState = rideRoutePickerState(form.routeId);
     this.setData({
       form,
       step: draft.step || 1,
       safetyAgreed: draft.safetyAgreed === true,
-      districtIndex: Math.max(DISTRICTS.indexOf(form.district), 0),
+      routeIndex: Math.max(RIDE_ROUTES.findIndex((item) => item.id === form.routeId), 0),
+      routeColumns: routeState.columns,
+      routeIndexes: routeState.indexes,
+      routeLabel: `${routeState.route.origin} → ${routeState.route.destination}（${routeState.route.code}）`,
+      districtIndex: Math.max(PILOT_DISTRICTS.indexOf(form.district), 0),
       feeIndex: Math.max(RIDE_FEES.findIndex((item) => item.value === form.feeType), 0),
       luggageIndex: Math.max(LUGGAGE_RULES.findIndex((item) => item.value === form.luggageRule), 0),
       deliveryIndex: Math.max(DELIVERY_MODES.findIndex((item) => item.value === form.deliveryMode), 0),
@@ -153,7 +186,33 @@ Page({
 
   handleDistrict(event) {
     const index = Number(event.detail.value);
-    this.setData({ districtIndex: index, 'form.district': DISTRICTS[index] });
+    this.setData({ districtIndex: index, 'form.district': PILOT_DISTRICTS[index] });
+  },
+
+  handleRouteColumnChange(event) {
+    if (Number(event.detail.column) !== 0) return;
+    const originIndex = Math.min(Math.max(Number(event.detail.value) || 0, 0), RIDE_ROUTE_ORIGINS.length - 1);
+    const destinations = routesFromOrigin(RIDE_ROUTE_ORIGINS[originIndex]).map((route) => route.destination);
+    this.setData({
+      routeColumns: [RIDE_ROUTE_ORIGINS, destinations],
+      routeIndexes: [originIndex, 0]
+    });
+  },
+
+  handleRoute(event) {
+    const route = rideRouteFromIndexes(event.detail.value || this.data.routeIndexes);
+    const routeState = rideRoutePickerState(route.id);
+    this.setData({
+      routeIndex: Math.max(RIDE_ROUTES.findIndex((item) => item.id === route.id), 0),
+      routeColumns: routeState.columns,
+      routeIndexes: routeState.indexes,
+      routeLabel: `${route.origin} → ${route.destination}（${route.code}）`,
+      'form.routeId': route.id,
+      'form.origin': route.origin,
+      'form.destination': route.destination,
+      'form.placeLabel': `${route.origin} → ${route.destination}`,
+      errorMessage: ''
+    });
   },
 
   handleOption(event) {
@@ -169,14 +228,6 @@ Page({
     this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value });
   },
 
-  handleNumber(event) {
-    const field = event.currentTarget.dataset.field;
-    const delta = Number(event.currentTarget.dataset.delta);
-    const max = field === 'targetMembers' ? 20 : 999;
-    const next = Math.min(max, Math.max(2, Number(this.data.form[field]) + delta));
-    this.setData({ [`form.${field}`]: next });
-  },
-
   handleSafety(event) {
     this.setData({ safetyAgreed: event.detail.value.includes('agreed') });
   },
@@ -184,8 +235,7 @@ Page({
   validateStepOne() {
     const form = this.data.form;
     if (!form.title.trim()) return '请填写活动标题';
-    if (!form.placeLabel.trim()) return '请填写商圈或公共地标';
-    if (this.data.type === 'ride' && (!form.origin.trim() || !form.destination.trim())) return '请填写出发区域和到达区域';
+    if (this.data.type === 'ride' && !getRideRoute(form.routeId)) return '请选择固定路线';
     if (this.data.type === 'product' && (!form.productName.trim() || !form.unitPriceRange.trim())) return '请填写商品名称和预估价格区间';
     if (this.data.type === 'buddy' && !form.category.trim()) return '请填写活动类别';
     const startsAt = combineLocal(form.startDate, form.startTime);
@@ -193,6 +243,7 @@ Page({
     if (Date.parse(deadlineAt) <= Date.now()) return '报名截止时间必须晚于当前时间';
     if (Date.parse(startsAt) <= Date.parse(deadlineAt)) return '活动开始时间必须晚于报名截止时间';
     if (Date.parse(startsAt) - Date.now() > 7 * 24 * 60 * 60 * 1000) return '活动开始时间不能超过7天';
+    if (this.data.type === 'ride' && new Date(startsAt).getMinutes() % 15 !== 0) return '期望时间请按 15 分钟选择';
     return '';
   },
 
@@ -224,12 +275,20 @@ Page({
       placeLabel: form.placeLabel.trim(),
       startsAt: combineLocal(form.startDate, form.startTime),
       deadlineAt: combineLocal(form.deadlineDate, form.deadlineTime),
-      targetMembers: Number(form.targetMembers),
+      targetMembers: this.data.type === 'ride' ? 7 : Number(form.targetMembers),
       contactInfo: form.contactInfo.trim(),
       rules: form.rules.trim()
     };
     if (this.data.type === 'ride') {
-      common.typeData = { origin: form.origin.trim(), destination: form.destination.trim(), feeType: form.feeType, luggageRule: form.luggageRule };
+      const startsAt = Date.parse(common.startsAt);
+      common.minPassengers = 7;
+      common.maxPassengers = 7;
+      common.typeData = {
+        routeId: form.routeId,
+        pickupWindowEnd: new Date(startsAt + 60 * 60 * 1000).toISOString(),
+        feeType: form.feeType,
+        luggageRule: form.luggageRule
+      };
     }
     if (this.data.type === 'product') {
       common.typeData = {

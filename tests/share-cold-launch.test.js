@@ -124,7 +124,7 @@ test('成功分享只包含公开标题和编码后的当前活动 ID', () => {
     const payload = page.onShareAppMessage();
     assert.deepEqual(payload, {
       title: '拼吧｜周末羽毛球',
-      path: '/subpackages/activity/detail/index?id=activity%2Fa%3Fx%3D1'
+      path: '/subpackages/activity/detail/index?id=activity%2Fa%3Fx%3D1&mode=passenger'
     });
     assert.equal(JSON.stringify(payload).includes('contactInfo'), false);
     assert.equal(JSON.stringify(payload).includes('viewerRole'), false);
