@@ -464,6 +464,62 @@ Page({
     }
   },
 
+  async handleJoinRide() {
+    if (this.data.pending) return;
+    this.setData({ pending: true });
+    try {
+      const user = await userService.login();
+      if (!user.profile || !user.profile.adultConfirmed) {
+        wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent(`/subpackages/activity/detail/index?id=${this.data.id}`)}` });
+        return;
+      }
+      await subscriptionService.requestStatusUpdates();
+      await activityService.joinRide(this.data.id);
+      wx.showToast({ title: '已加入拼车', icon: 'success' });
+      await this.loadDetail();
+    } catch (error) {
+      if (error.code === 'CAPACITY_FULL') {
+        wx.showModal({
+          title: '慢了一步',
+          content: '该行程刚刚已满员，页面将刷新为最新状态。',
+          showCancel: false,
+          complete: () => this.loadDetail()
+        });
+      } else if (!error.handled) {
+        wx.showToast({ title: error.message || '加入失败', icon: 'none' });
+      }
+    } finally {
+      this.setData({ pending: false });
+    }
+  },
+
+  handleLeaveRide() {
+    if (this.data.pending) return;
+    wx.showModal({
+      title: '确认退出拼车？',
+      content: '司机确认承接前可以退出，退出后将释放当前名额。',
+      confirmText: '确认退出',
+      confirmColor: '#C43C3C',
+      success: async (result) => {
+        if (!result.confirm) return;
+        this.setData({ pending: true });
+        try {
+          await activityService.leave(this.data.id, '乘客主动退出');
+          wx.showToast({ title: '已退出拼车', icon: 'success' });
+          await this.loadDetail();
+        } catch (error) {
+          if (error.code === 'RIDE_MEMBER_LOCKED') {
+            wx.showModal({ title: '暂不可退出', content: error.message, showCancel: false, complete: () => this.loadDetail() });
+          } else if (!error.handled) {
+            wx.showToast({ title: error.message || '退出失败', icon: 'none' });
+          }
+        } finally {
+          this.setData({ pending: false });
+        }
+      }
+    });
+  },
+
   handleWithdraw() {
     const application = this.data.activity && this.data.activity.viewerApplication;
     if (!application || this.data.pending) return;

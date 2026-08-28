@@ -37,6 +37,7 @@ const { parsePublicCursor, normalizeActivityForRead } = require('./public-activi
 const {
   rideCapacity,
   isRidePassengerJoinable,
+  isRidePassengerLeaveable,
   rideDriverAvailability,
   normalizeRideCapacity
 } = require('./ride-policy');
@@ -58,6 +59,7 @@ const MUTATING_ACTIONS = new Set([
   'application.approve',
   'application.reject',
   'application.withdraw',
+  'ride.join',
   'member.leave',
   'ride.driver.accept',
   'ride.driver.cancel',
@@ -169,6 +171,14 @@ function publicActivity(activity, viewer = {}, at) {
     };
   }
   result.viewerRole = viewer.role || 'guest';
+  if (activity.type === 'ride') {
+    result.canJoinRide = result.rideJoinable === true
+      && (result.viewerRole === 'guest' || result.viewerRole === 'applicant');
+    result.canLeaveRide = result.viewerRole === 'member' && isRidePassengerLeaveable(activity);
+    result.rideExitLocked = result.viewerRole === 'member'
+      && activity.rideFulfillment
+      && activity.rideFulfillment.status !== RIDE_FULFILLMENT_STATUS.UNASSIGNED;
+  }
   return result;
 }
 
@@ -657,6 +667,27 @@ function createPinbaService(options) {
       const storedActivity = await store.createActivityWithOwner(activity, ownerMember, rideFulfillment);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
       return { activity: publicActivity(storedActivity, { role: 'owner' }, at) };
+    }
+
+    if (action === 'ride.join') {
+      const user = await requireActiveUser(context);
+      const activityId = validateId(input && input.activityId, '活动ID');
+      const result = await store.joinRideAtomic({ activityId, actorId: user.id, at });
+      if (result.joined) {
+        await store.addNotification({
+          id: operationId(context, 'notification'),
+          userId: result.activity.ownerId,
+          type: 'RIDE_MEMBER_JOINED',
+          activityId,
+          title: `有新乘客加入“${result.activity.title}”`,
+          read: false,
+          createdAt: at
+        });
+      }
+      if (result.joined) {
+        await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
+      }
+      return { activity: publicActivity(result.activity, { role: 'member', member: result.member }, at) };
     }
 
     if (action === 'application.submit') {

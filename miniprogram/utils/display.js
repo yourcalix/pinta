@@ -67,11 +67,10 @@ function decorateActivity(activity) {
   const progressPercent = Math.min(100, Math.round(memberCount / maxPassengers * 100));
   const applicationStatus = activity.viewerApplication && activity.viewerApplication.status;
   const canReapply = ['REJECTED', 'WITHDRAWN', 'LEFT', 'EXPIRED', 'CANCELLED_BY_ACTIVITY'].includes(applicationStatus);
-  const canApplyStatus = activity.type === 'ride'
-    ? activity.rideJoinable === true
-    : activity.status === 'RECRUITING';
-  const canApply = canApplyStatus
-    && (activity.viewerRole === 'guest' || (activity.viewerRole === 'applicant' && canReapply));
+  const canApplyStatus = activity.type === 'ride' ? activity.rideJoinable === true : activity.status === 'RECRUITING';
+  const canApply = activity.type === 'ride'
+    ? activity.canJoinRide === true
+    : canApplyStatus && (activity.viewerRole === 'guest' || (activity.viewerRole === 'applicant' && canReapply));
   let sceneLine = activity.placeLabel;
   const typeData = activity.typeData || {};
   const route = activity.type === 'ride' ? getRideRoute(typeData.routeId) : null;

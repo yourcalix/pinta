@@ -18,6 +18,7 @@ function activity(overrides = {}) {
     memberCount: 2,
     status: 'RECRUITING',
     rideJoinable: true,
+    canJoinRide: true,
     driverAcceptable: true,
     rideFulfillment: { status: 'UNASSIGNED' },
     viewerRole: 'guest',

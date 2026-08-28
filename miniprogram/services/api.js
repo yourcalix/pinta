@@ -20,6 +20,7 @@ const MUTATING_ACTIONS = new Set([
   'application.approve',
   'application.reject',
   'application.withdraw',
+  'ride.join',
   'member.leave',
   'ride.driver.accept',
   'ride.driver.cancel',

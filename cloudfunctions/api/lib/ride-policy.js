@@ -37,6 +37,16 @@ function isRideContactUnlocked(activity, activeMemberCount) {
   return Number(activeMemberCount || 0) >= rideCapacity(activity);
 }
 
+function isRidePassengerLeaveable(activity) {
+  return Boolean(
+    activity
+      && activity.type === 'ride'
+      && ACTIVE_RIDE_STATUSES.has(activity.status)
+      && activity.rideFulfillment
+      && activity.rideFulfillment.status === RIDE_FULFILLMENT_STATUS.UNASSIGNED
+  );
+}
+
 function rideDriverAvailability(activity, at) {
   if (!activity || activity.type !== 'ride') return { acceptable: false, reason: '该活动不是拼车行程' };
   if (!ACTIVE_RIDE_STATUSES.has(activity.status)) return { acceptable: false, reason: '当前行程暂不可承接' };
@@ -72,6 +82,7 @@ module.exports = {
   rideCapacity,
   rideThreshold,
   isRidePassengerJoinable,
+  isRidePassengerLeaveable,
   isRideContactUnlocked,
   rideDriverAvailability,
   normalizeRideCapacity

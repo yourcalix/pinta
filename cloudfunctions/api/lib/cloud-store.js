@@ -457,10 +457,17 @@ class CloudStore {
       .get();
     const application = first(applicationResult);
     const member = await this.findOne('members', { activityId, userId: actorId, status: MEMBER_STATUS.ACTIVE });
+    const fulfillment = activity.type === 'ride' ? await this.getRideFulfillment(activityId) : null;
     return {
       application,
       member,
-      role: activity.ownerId === actorId ? 'owner' : member ? 'member' : application ? 'applicant' : 'guest'
+      role: activity.ownerId === actorId
+        ? 'owner'
+        : member
+          ? 'member'
+          : fulfillment && fulfillment.status === RIDE_FULFILLMENT_STATUS.ASSIGNED && fulfillment.driverId === actorId
+            ? 'driver'
+            : application ? 'applicant' : 'guest'
     };
   }
 
@@ -751,8 +758,7 @@ class CloudStore {
         activity.type !== 'ride'
           || !effectiveActivity.rideFulfillment
           || effectiveActivity.rideFulfillment.status === RIDE_FULFILLMENT_STATUS.UNASSIGNED,
-        'CONFLICT',
-        '司机已确认后暂不可退团，请联系发起者处理'
+        'RIDE_MEMBER_LOCKED'
       );
       invariant(activity.ownerId !== actorId, 'FORBIDDEN', '发起者不能退团，请取消活动');
       const memberId = stableEntityId('member', activityId, actorId);
@@ -798,6 +804,57 @@ class CloudStore {
         activity: { ...nextActivity, rideJoinable, updatedAt: at },
         member: { ...member, status: MEMBER_STATUS.LEFT, leftAt: at, leaveReason: reason }
       };
+    });
+  }
+
+  async joinRideAtomic({ activityId, actorId, at }) {
+    return this.db.runTransaction(async (transaction) => {
+      const activityRef = transaction.collection('activities').doc(activityId);
+      const fulfillmentId = stableEntityId('rideFulfillment', activityId);
+      const activity = await getTransactionDocument(activityRef);
+      const fulfillment = await getTransactionDocument(transaction.collection('rideFulfillments').doc(fulfillmentId));
+      invariant(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND');
+      invariant(activity.ownerId !== actorId, 'CONFLICT', '发起者已经在行程中');
+      invariant(fulfillment.driverId !== actorId, 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
+      const memberId = stableEntityId('member', activityId, actorId);
+      const memberRef = transaction.collection('members').doc(memberId);
+      const existing = await getTransactionDocument(memberRef);
+      const applicationRef = transaction.collection('applications').doc(stableEntityId('application', activityId, actorId));
+      const application = await getTransactionDocument(applicationRef);
+      const rideFulfillment = rideFulfillmentSummary(fulfillment);
+      if (existing && existing.status === MEMBER_STATUS.ACTIVE) {
+        return { activity: { ...activity, rideFulfillment }, member: existing, joined: false };
+      }
+      const effectiveActivity = normalizeRideCapacity({ ...activity, rideFulfillment });
+      invariant(isRideJoinable(effectiveActivity, at), activity.memberCount >= rideCapacity(activity) ? 'CAPACITY_FULL' : 'CONFLICT', '该行程当前不可加入');
+      const member = {
+        ...(existing || { id: memberId, activityId, userId: actorId, role: 'MEMBER' }),
+        status: MEMBER_STATUS.ACTIVE,
+        joinedAt: at
+      };
+      delete member.leftAt;
+      delete member.leaveReason;
+      const nextCount = Number(activity.memberCount || 0) + 1;
+      const nextActivity = normalizeRideCapacity({ ...effectiveActivity, memberCount: nextCount });
+      nextActivity.formedAt = nextActivity.status === ACTIVITY_STATUS.FORMED ? (activity.formedAt || at) : null;
+      nextActivity.rideJoinable = isRideJoinable(nextActivity, at);
+      nextActivity.updatedAt = at;
+      nextActivity.version = Number(activity.version || 1) + 1;
+      await memberRef.set({ data: document(member) });
+      await activityRef.update({ data: {
+        memberCount: nextCount,
+        status: nextActivity.status,
+        formedAt: nextActivity.formedAt || this.command.remove(),
+        rideFulfillment,
+        rideJoinable: nextActivity.rideJoinable,
+        targetMembers: nextActivity.targetMembers,
+        minPassengers: nextActivity.minPassengers,
+        maxPassengers: nextActivity.maxPassengers,
+        version: nextActivity.version,
+        updatedAt: at
+      } });
+      if (application) await applicationRef.update({ data: { status: APPLICATION_STATUS.APPROVED, approvedAt: at, updatedAt: at } });
+      return { activity: nextActivity, member, joined: true };
     });
   }
 
@@ -912,6 +969,10 @@ class CloudStore {
       invariant(driver && driver.status === DRIVER_STATUS.ACTIVE && driver.reviewStatus === DRIVER_REVIEW_STATUS.APPROVED, 'DRIVER_NOT_APPROVED');
       invariant(vehicle && vehicle.driverId === driverId && vehicle.status === VEHICLE_STATUS.ACTIVE && vehicle.reviewStatus === VEHICLE_REVIEW_STATUS.APPROVED, 'VEHICLE_NOT_APPROVED');
       invariant(Number(vehicle.passengerCapacity) >= rideCapacity(activity), 'VEHICLE_NOT_APPROVED', '车辆核定乘客容量不足');
+      const passengerMember = await getTransactionDocument(
+        transaction.collection('members').doc(stableEntityId('member', activityId, driverId))
+      );
+      invariant(!passengerMember || passengerMember.status !== MEMBER_STATUS.ACTIVE, 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
       if (fulfillment.status !== RIDE_FULFILLMENT_STATUS.UNASSIGNED) {
         if (fulfillment.operationKeyHash === operationKeyHash) return { activity, fulfillment };
         throw new AppError('RIDE_ALREADY_ASSIGNED');

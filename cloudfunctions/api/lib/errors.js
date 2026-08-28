@@ -20,6 +20,7 @@ const ERROR_MESSAGES = Object.freeze({
   DRIVER_APPLICATION_LOCKED: '当前认证状态不能修改',
   DRIVER_REVIEW_FORBIDDEN: '你没有司机认证审核权限',
   RIDE_ALREADY_ASSIGNED: '该行程刚刚已由其他司机确认',
+  RIDE_MEMBER_LOCKED: '司机已确认承接，当前不可退出拼车',
   INVALID_PICKUP_SLOT: '接车时间不在可选范围内',
   PICKUP_TIME_EXPIRED: '接车时间已过，无法承接',
   CONTENT_REJECTED: '内容未通过安全检查，请修改后重试',

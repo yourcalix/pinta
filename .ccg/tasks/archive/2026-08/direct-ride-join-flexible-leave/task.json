@@ -1,0 +1,12 @@
+{
+  "id": "direct-ride-join-flexible-leave",
+  "title": "拼车乘客直接入团与司机承接前灵活退出",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已完成，归档任务",
+  "createdAt": "2026-08-28T00:00:00+08:00",
+  "branch": "main"
+}

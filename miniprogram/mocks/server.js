@@ -28,6 +28,7 @@ const MUTATING_ACTIONS = new Set([
   'application.approve',
   'application.reject',
   'application.withdraw',
+  'ride.join',
   'member.leave',
   'notification.read',
   'report.create',
@@ -377,9 +378,18 @@ function publicActivity(activity, options = {}) {
       .filter((item) => item.activityId === activity.id && item.applicantId === currentUserId)
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
   const viewerMember = anonymous ? null : activeMember(activity.id, currentUserId);
+  const viewerFulfillment = activity.type === 'ride'
+    ? (state.rideFulfillments || []).find((item) => item.activityId === activity.id)
+    : null;
   const viewerRole = anonymous
     ? 'guest'
-    : activity.ownerId === currentUserId ? 'owner' : viewerMember ? 'member' : viewerApplication ? 'applicant' : 'guest';
+    : activity.ownerId === currentUserId
+      ? 'owner'
+      : viewerMember
+        ? 'member'
+        : viewerFulfillment && viewerFulfillment.status === 'ASSIGNED' && viewerFulfillment.driverId === currentUserId
+          ? 'driver'
+          : viewerApplication ? 'applicant' : 'guest';
   const { contactInfo, ownerId, version, suspension, operationKeyHash, ...safe } = activity;
   const rideCapacity = activity.type === 'ride' ? 7 : (activity.maxPassengers || activity.targetMembers);
   const result = {
@@ -407,6 +417,9 @@ function publicActivity(activity, options = {}) {
       if (vehicle) result.rideFulfillment.vehicle = { type: vehicle.type, plateMasked: vehicle.plateMasked };
     }
     result.rideJoinable = isMockRideJoinable(activity, new Date().toISOString());
+    result.canJoinRide = result.rideJoinable && (viewerRole === 'guest' || viewerRole === 'applicant');
+    result.canLeaveRide = viewerRole === 'member' && Boolean(fulfillment && fulfillment.status === 'UNASSIGNED');
+    result.rideExitLocked = viewerRole === 'member' && Boolean(fulfillment && fulfillment.status !== 'UNASSIGNED');
     result.driverAcceptable = isMockRideAcceptable(activity, new Date().toISOString());
     result.driverUnacceptableReason = result.driverAcceptable
       ? ''
@@ -684,6 +697,7 @@ function acceptRide(input) {
   assert(Number(vehicle.passengerCapacity) >= 7, 'VEHICLE_NOT_APPROVED', '车辆核定乘客容量不足');
   const activity = activityById(input.activityId);
   assert(activity && activity.type === 'ride', 'NOT_FOUND', '行程不存在');
+  assert(!activeMember(activity.id, user.id), 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
   assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '当前行程暂不可承接');
   const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
   assert(fulfillment && fulfillment.status === 'UNASSIGNED', 'RIDE_ALREADY_ASSIGNED', '该行程刚刚已被其他司机承接');
@@ -758,6 +772,35 @@ function submitApplication(input) {
   state.applications.push(application);
   state.notifications.unshift({ id: nextId('notification'), userId: activity.ownerId, type: 'NEW_APPLICATION', activityId: activity.id, title: `“${activity.title}”有新的加入申请`, read: false, createdAt: now });
   return { application: publicApplication(application) };
+}
+
+function joinRide(input) {
+  const user = requireUser();
+  const activity = activityById(input.activityId);
+  const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
+  assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
+  assert(activity.ownerId !== user.id, 'CONFLICT', '发起者已经在行程中');
+  assert(fulfillment.driverId !== user.id, 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
+  const existing = state.members.find((item) => item.activityId === activity.id && item.userId === user.id);
+  if (existing && existing.status === 'ACTIVE') return { activity: publicActivity(activity) };
+  const now = new Date().toISOString();
+  assert(isMockRideJoinable(activity, now), activity.memberCount >= 7 ? 'CAPACITY_FULL' : 'CONFLICT', '该行程当前不可加入');
+  const member = existing || { id: nextId('member'), activityId: activity.id, userId: user.id, role: 'MEMBER' };
+  member.status = 'ACTIVE';
+  member.joinedAt = now;
+  delete member.leftAt;
+  delete member.leaveReason;
+  if (!existing) state.members.push(member);
+  activity.memberCount += 1;
+  activity.status = activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING';
+  if (activity.status === 'FORMED') activity.formedAt = activity.formedAt || now;
+  activity.rideJoinable = isMockRideJoinable(activity, now);
+  activity.updatedAt = now;
+  activity.version += 1;
+  const legacy = state.applications.find((item) => item.activityId === activity.id && item.applicantId === user.id);
+  if (legacy) Object.assign(legacy, { status: 'APPROVED', approvedAt: now, updatedAt: now });
+  state.notifications.unshift({ id: nextId('notification'), userId: activity.ownerId, type: 'RIDE_MEMBER_JOINED', activityId: activity.id, title: `有新乘客加入“${activity.title}”`, read: false, createdAt: now });
+  return { activity: publicActivity(activity) };
 }
 
 function approveApplication(input) {
@@ -951,6 +994,7 @@ function handle(action, input, idempotencyKey = '') {
   if (action === 'ride.driver.accept') return acceptRide(input);
   if (action === 'ride.driver.cancel') return cancelRideAssignment(input);
   if (action === 'application.submit') return submitApplication(input);
+  if (action === 'ride.join') return joinRide(input);
   if (action === 'application.listForOwner') {
     const activity = activityById(input.activityId);
     assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限查看申请');
@@ -989,8 +1033,8 @@ function handle(action, input, idempotencyKey = '') {
       : null;
     assert(
       activity.type !== 'ride' || !fulfillment || fulfillment.status === 'UNASSIGNED',
-      'CONFLICT',
-      '司机已确认后暂不可退团，请联系发起者处理'
+      'RIDE_MEMBER_LOCKED',
+      '司机已确认承接，当前不可退出拼车'
     );
     member.status = 'LEFT';
     member.leaveReason = input.reason || '';

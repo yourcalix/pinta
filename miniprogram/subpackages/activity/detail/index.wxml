@@ -101,7 +101,14 @@
       <button wx:else class="driver-primary-button" bindtap="handleOpenDriverSheet">选择接送时间</button>
     </view>
 
-    <view wx:if="{{viewMode === 'passenger' && activity.canApply}}" class="apply-card surface">
+    <view wx:if="{{viewMode === 'passenger' && activity.type === 'ride' && activity.canJoinRide}}" class="apply-card surface">
+      <view class="block-title">立即加入拼车</view>
+      <view class="join-ride-hint">加入即占用名额；司机确认承接前可自由退出。</view>
+      <view class="join-ride-subhint">校园互助合乘，拼满 7 人解锁联系方式；能否出行以司机承接为准。</view>
+      <button class="primary-button" loading="{{pending}}" disabled="{{pending}}" bindtap="handleJoinRide" aria-busy="{{pending}}">{{pending ? '正在抢位中…' : '立即加入拼车'}}</button>
+    </view>
+
+    <view wx:if="{{viewMode === 'passenger' && activity.type !== 'ride' && activity.canApply}}" class="apply-card surface">
       <view class="block-title">申请加入</view>
       <textarea class="textarea apply-note" maxlength="120" cursor-spacing="120" adjust-position="true" placeholder="选填：说明行李、数量、经验或时间情况" value="{{note}}" bindinput="handleNote" />
       <checkbox-group bindchange="handleConsent">
@@ -113,7 +120,20 @@
       <button class="primary-button" loading="{{pending}}" disabled="{{pending || !consent}}" bindtap="handleApply">提交申请</button>
     </view>
 
-    <view wx:if="{{viewMode === 'passenger' && activity.viewerRole === 'applicant' && activity.viewerApplication.status === 'PENDING'}}" class="state-card surface">
+    <view wx:if="{{viewMode === 'passenger' && activity.type === 'ride' && activity.viewerRole === 'member' && activity.canLeaveRide}}" class="state-card surface">
+      <view>
+        <view class="state-title">已加入拼车</view>
+        <view class="state-description">司机确认承接前，你可以随时退出并释放名额。</view>
+      </view>
+      <button class="danger-button compact-button" bindtap="handleLeaveRide" disabled="{{pending}}">退出拼车</button>
+    </view>
+
+    <view wx:if="{{viewMode === 'passenger' && activity.type === 'ride' && activity.rideExitLocked}}" class="ride-exit-lock-card surface" role="status" aria-label="提示：司机已确认承接，退出权限已锁定，当前不可自行退出">
+      <view class="state-title">退出权限已锁定</view>
+      <view class="state-description">司机已确认承接，当前不可退出；如无法出行，请联系发起者或司机。</view>
+    </view>
+
+    <view wx:if="{{viewMode === 'passenger' && activity.type !== 'ride' && activity.viewerRole === 'applicant' && activity.viewerApplication.status === 'PENDING'}}" class="state-card surface">
       <view>
         <view class="state-title">申请已提交</view>
         <view class="state-description">等待发起者处理；获批后会自动占用名额。</view>
@@ -121,9 +141,9 @@
       <button class="secondary-button compact-button" bindtap="handleWithdraw" disabled="{{pending}}">撤回申请</button>
     </view>
 
-    <button wx:if="{{viewMode === 'passenger' && activity.viewerRole === 'owner' && activity.status === 'RECRUITING'}}" class="primary-button bottom-action" bindtap="handleManage">管理申请</button>
+    <button wx:if="{{viewMode === 'passenger' && activity.viewerRole === 'owner' && (activity.status === 'RECRUITING' || activity.status === 'FORMED')}}" class="primary-button bottom-action" bindtap="handleManage">{{activity.type === 'ride' ? '管理行程' : '管理申请'}}</button>
     <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'owner' || activity.viewerRole === 'member') && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleGroup">进入成团页</button>
-    <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.statusLabel}}，暂不可申请</button>
+    <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.statusLabel}}，暂不可{{activity.type === 'ride' ? '加入' : '申请'}}</button>
 
     <view class="qa-card surface" aria-role="region" aria-label="公开问答">
       <view class="qa-heading">

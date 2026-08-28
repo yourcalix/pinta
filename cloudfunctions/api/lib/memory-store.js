@@ -280,10 +280,17 @@ class MemoryStore {
     const member = [...this.members.values()].find(
       (item) => item.activityId === activityId && item.userId === actorId && item.status === MEMBER_STATUS.ACTIVE
     );
+    const fulfillment = activity.type === 'ride' ? this.rideFulfillments.get(activityId) : null;
     return clone({
       application,
       member,
-      role: activity.ownerId === actorId ? 'owner' : member ? 'member' : application ? 'applicant' : 'guest'
+      role: activity.ownerId === actorId
+        ? 'owner'
+        : member
+          ? 'member'
+          : fulfillment && fulfillment.status === RIDE_FULFILLMENT_STATUS.ASSIGNED && fulfillment.driverId === actorId
+            ? 'driver'
+            : application ? 'applicant' : 'guest'
     });
   }
 
@@ -521,8 +528,7 @@ class MemoryStore {
       activity.type !== 'ride'
         || !effectiveActivity.rideFulfillment
         || effectiveActivity.rideFulfillment.status === RIDE_FULFILLMENT_STATUS.UNASSIGNED,
-      'CONFLICT',
-      '司机已确认后暂不可退团，请联系发起者处理'
+      'RIDE_MEMBER_LOCKED'
     );
     invariant(activity.ownerId !== actorId, 'FORBIDDEN', '发起者不能退团，请取消活动');
     const member = [...this.members.values()].find(
@@ -560,6 +566,36 @@ class MemoryStore {
       }
     }
     return clone({ activity, member });
+  }
+
+  async joinRideAtomic({ activityId, actorId, at }) {
+    const activity = this.activities.get(activityId);
+    const fulfillment = this.rideFulfillments.get(activityId);
+    invariant(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND');
+    invariant(activity.ownerId !== actorId, 'CONFLICT', '发起者已经在行程中');
+    invariant(fulfillment.driverId !== actorId, 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
+    const memberId = stableEntityId('member', activityId, actorId);
+    const existing = this.members.get(memberId);
+    if (existing && existing.status === MEMBER_STATUS.ACTIVE) {
+      return clone({ activity: { ...activity, rideFulfillment: rideFulfillmentSummary(fulfillment) }, member: existing, joined: false });
+    }
+    const effectiveActivity = normalizeRideCapacity({ ...activity, rideFulfillment: rideFulfillmentSummary(fulfillment) });
+    invariant(isRideJoinable(effectiveActivity, at), activity.memberCount >= rideCapacity(activity) ? 'CAPACITY_FULL' : 'CONFLICT', '该行程当前不可加入');
+    const member = existing || { id: memberId, activityId, userId: actorId, role: 'MEMBER' };
+    Object.assign(member, { status: MEMBER_STATUS.ACTIVE, joinedAt: at });
+    delete member.leftAt;
+    delete member.leaveReason;
+    this.members.set(memberId, member);
+    activity.memberCount += 1;
+    Object.assign(activity, normalizeRideCapacity(activity));
+    if (activity.status === ACTIVITY_STATUS.FORMED) activity.formedAt = activity.formedAt || at;
+    activity.rideFulfillment = rideFulfillmentSummary(fulfillment);
+    activity.rideJoinable = isRideJoinable(activity, at);
+    activity.updatedAt = at;
+    activity.version += 1;
+    const application = this.applications.get(stableEntityId('application', activityId, actorId));
+    if (application) Object.assign(application, { status: APPLICATION_STATUS.APPROVED, approvedAt: at, updatedAt: at });
+    return clone({ activity, member, joined: true });
   }
 
   async cancelActivity(activityId, ownerId, reason, at) {
@@ -659,6 +695,8 @@ class MemoryStore {
     invariant(driver && driver.status === DRIVER_STATUS.ACTIVE && driver.reviewStatus === DRIVER_REVIEW_STATUS.APPROVED, 'DRIVER_NOT_APPROVED');
     invariant(vehicle && vehicle.driverId === driverId && vehicle.status === VEHICLE_STATUS.ACTIVE && vehicle.reviewStatus === VEHICLE_REVIEW_STATUS.APPROVED, 'VEHICLE_NOT_APPROVED');
     invariant(Number(vehicle.passengerCapacity) >= rideCapacity(activity), 'VEHICLE_NOT_APPROVED', '车辆核定乘客容量不足');
+    const passengerMember = this.members.get(stableEntityId('member', activityId, driverId));
+    invariant(!passengerMember || passengerMember.status !== MEMBER_STATUS.ACTIVE, 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
     if (fulfillment.status !== RIDE_FULFILLMENT_STATUS.UNASSIGNED) {
       if (fulfillment.operationKeyHash === operationKeyHash) return clone({ activity, fulfillment });
       throw new AppError('RIDE_ALREADY_ASSIGNED');

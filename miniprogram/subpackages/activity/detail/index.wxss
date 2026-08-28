@@ -619,6 +619,23 @@
   line-height: 1.4;
 }
 
+.join-ride-hint,
+.join-ride-subhint {
+  margin-top: 12rpx;
+  color: #52615a;
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
+.join-ride-subhint { color: #748078; }
+
+.ride-exit-lock-card {
+  margin-top: 20rpx;
+  padding: 26rpx;
+  border: 1rpx solid #dfe8e3;
+  background: #f7faf8;
+}
+
 .detail-skeleton {
   margin-top: 30rpx;
   padding: 32rpx;

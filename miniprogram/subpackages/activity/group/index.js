@@ -161,8 +161,8 @@ Page({
 
   handleLeave() {
     wx.showModal({
-      title: '退出活动？',
-      content: '退出后名额会释放，联系方式也将无法继续查看。请尽早告知发起者。',
+      title: this.data.activity && this.data.activity.type === 'ride' ? '退出拼车？' : '退出活动？',
+      content: '退出后名额会释放，联系方式也将无法继续查看。',
       confirmText: '确认退出',
       confirmColor: '#E5484D',
       success: async (result) => {
@@ -170,10 +170,12 @@ Page({
         this.setData({ pending: true });
         try {
           await activityService.leave(this.data.id, '参与者计划变化，主动退出活动');
-          wx.showToast({ title: '已退出活动', icon: 'success' });
+          wx.showToast({ title: this.data.activity.type === 'ride' ? '已退出拼车' : '已退出活动', icon: 'success' });
           setTimeout(() => wx.navigateBack(), 400);
         } catch (error) {
-          if (!error.handled) wx.showToast({ title: error.message || '退出失败', icon: 'none' });
+          if (error.code === 'RIDE_MEMBER_LOCKED') {
+            wx.showModal({ title: '暂不可退出', content: error.message, showCancel: false, complete: () => this.loadDetail() });
+          } else if (!error.handled) wx.showToast({ title: error.message || '退出失败', icon: 'none' });
         } finally {
           this.setData({ pending: false });
         }

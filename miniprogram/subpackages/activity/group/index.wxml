@@ -50,7 +50,11 @@
     </view>
 
     <button wx:if="{{activity.viewerRole === 'owner' && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleComplete" disabled="{{pending}}">标记活动已完成</button>
-    <button wx:if="{{activity.viewerRole === 'member' && (activity.status === 'FORMED' || activity.status === 'RECRUITING')}}" class="danger-button bottom-action" bindtap="handleLeave" disabled="{{pending}}">退出活动</button>
+    <button wx:if="{{activity.viewerRole === 'member' && (activity.type !== 'ride' || activity.canLeaveRide)}}" class="danger-button bottom-action" bindtap="handleLeave" disabled="{{pending}}">{{activity.type === 'ride' ? '退出拼车' : '退出活动'}}</button>
+    <view wx:if="{{activity.type === 'ride' && activity.rideExitLocked}}" class="safety-card" role="status" aria-label="提示：司机已确认承接，退出权限已锁定，当前不可自行退出">
+      <view class="safety-title">退出权限已锁定</view>
+      <view>司机已确认承接，当前不可退出；如无法出行，请联系发起者或司机。</view>
+    </view>
     <button class="report-link" bindtap="handleReport">举报活动</button>
   </block>
   <privacy-popup id="privacy-popup" />

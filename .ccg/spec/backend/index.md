@@ -18,17 +18,17 @@
 ## 状态与并发
 
 - 活动状态：`DRAFT | RECRUITING | FORMED | IN_PROGRESS | COMPLETED | CANCELLED | EXPIRED | SUSPENDED`。
-- 申请状态：`PENDING | APPROVED | REJECTED | WITHDRAWN | LEFT | EXPIRED | CANCELLED_BY_ACTIVITY`。
-- 申请提交必须记录用户同意“获批后自动加入并占位”。
-- 批准申请时在事务中同时检查活动状态、容量和重复成员；批准即占位。
+- 非拼车活动继续使用 `PENDING | APPROVED | REJECTED | WITHDRAWN | LEFT | EXPIRED | CANCELLED_BY_ACTIVITY` 申请流；澳门拼车使用 `ride.join` 直接入团，不经过发起者审批。
+- `ride.join` 必须在 Store 事务边界内检查报名截止、容量、重复成员和同一行程司机/乘客身份冲突；使用确定性 member ID，重复调用不得重复占位，`LEFT` 成员可在仍有名额时恢复为 `ACTIVE`。
 - 达到目标人数自动成团。任何时刻有效成员数不得超过 `targetMembers`。
 - 所有写动作接收幂等键；状态转换必须校验源状态并写审计记录。
 - CloudBase 文档数据库事务内只使用 `transaction.collection(...).doc(id)`；不要在事务内调用 `where()`。需要跨实体唯一性时使用由业务自然键派生的确定性文档 ID。
 - CloudBase 事务中的 `doc(id).get()` 在文档不存在时可能直接抛出 `-502005`，Store 边界只可将该明确错误归一化为“未找到”，其他事务错误必须继续抛出；对可能为 `null` 的对象字段不得使用嵌套路径更新，应在事务中读取并整字段替换。
 - 事务后批量补偿动作必须可重复执行；即使主实体已经到达最终状态，重试仍需重新检查并补齐未完成的关联状态。
 - 活动公开问答使用独立 `activityQuestions` 集合，一问最多一个回答。提问事务必须同时读取活动文档并重验下架、截止和 `RECRUITING | FORMED` 状态；回答事务必须重验发起者权限和 `RECRUITING | FORMED | IN_PROGRESS` 状态。问题/回答与对应审计日志必须在同一事务内提交。
-- 拼车司机履约以独立 `rideFulfillments` 集合/Map 为事实源，`activities.rideFulfillment` 与 `rideJoinable` 只作为缓存。详情、列表、我的、申请、审批和退团等所有权限或可见性判断必须先水合事实源；缺失 fulfillment 一律 fail-closed。CloudBase 的 `command.in` ID 查询按不超过 10 个值分片。
+- 拼车司机履约以独立 `rideFulfillments` 集合/Map 为事实源，`activities.rideFulfillment` 与 `rideJoinable` 只作为缓存。详情、列表、我的、直接入团和退出等所有权限或可见性判断必须先水合事实源；缺失 fulfillment 一律 fail-closed。CloudBase 的 `command.in` ID 查询按不超过 10 个值分片。
 - 司机已确认承接后，MVP 不允许乘客自行退团，以避免 `RECRUITING + ASSIGNED` 跨集合矛盾状态；未来若开放，必须在同一事务中同步解除司机承接并重新计算活动状态。
+- 服务端 DTO 必须明确返回 `canJoinRide`、`canLeaveRide` 与 `rideExitLocked`。司机承接只锁定已有成员的退出权限；若报名仍开放且未满 7 人，新乘客仍可直接加入。同一用户不得在同一行程同时成为有效乘客与承接司机。
 - 澳门校园拼车固定为 7 个乘客名额，司机不计入乘客人数；活动只有在有效乘客数达到 7 时进入 `FORMED`，不得再读取或接受客户端自定义成团人数。
 - 司机承接资格与乘客成团状态解耦：只要行程未取消、未下架、未被其他司机承接且服务端当前时间早于接车时间窗上限，审核通过的司机即可承接。报名截止只关闭乘客申请，不得提前关闭司机承接；司机确认后，未满 7 人且仍在报名期内的乘客通道继续开放。
 - 接车时间窗上限代表该趟未承接行程已经错过实际出发机会：未分配司机的行程到达该上限后整体读时归一化为 `EXPIRED`。这不等于用司机截止替代报名截止；正常数据必须满足报名截止早于接车时间窗，乘客申请仍先由报名截止关闭。

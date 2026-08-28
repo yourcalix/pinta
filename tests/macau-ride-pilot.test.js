@@ -425,10 +425,53 @@ test('接车事实源已分配后仍允许乘客申请和审批直到七人满�
 
   await assert.rejects(
     () => store.leaveActivity(activityId, 'member-openid', '行程有变', '2026-08-23T03:00:00.000Z'),
-    (error) => error.code === 'CONFLICT' && /司机已确认/.test(error.message)
+    (error) => error.code === 'RIDE_MEMBER_LOCKED' && /司机已确认/.test(error.message)
   );
   assert.equal(store.activities.get(activityId).status, 'RECRUITING');
   assert.equal(store.activities.get(activityId).memberCount, 2);
+});
+
+test('拼车乘客直接入团且司机承接前可退出，承接后仍可补足名额但旧成员不可退出', async () => {
+  const { call, store } = setup();
+  const { activityId } = await createAndFormRide(call, 'direct-join-leave');
+
+  const joined = await call('ride.join', { activityId }, 'member-openid', 'direct-join-001');
+  assert.equal(joined.ok, true);
+  assert.equal(joined.data.activity.viewerRole, 'member');
+  assert.equal(joined.data.activity.canLeaveRide, true);
+  assert.equal(store.activities.get(activityId).memberCount, 2);
+
+  const replayed = await call('ride.join', { activityId }, 'member-openid', 'direct-join-001');
+  assert.equal(replayed.ok, true);
+  assert.equal(store.activities.get(activityId).memberCount, 2);
+
+  const left = await call('member.leave', { activityId, reason: '计划变化' }, 'member-openid', 'direct-leave-001');
+  assert.equal(left.ok, true);
+  assert.equal(store.activities.get(activityId).memberCount, 1);
+
+  const rejoined = await call('ride.join', { activityId }, 'member-openid', 'direct-rejoin-001');
+  assert.equal(rejoined.ok, true);
+  assert.equal(store.activities.get(activityId).memberCount, 2);
+
+  const accepted = await call('ride.driver.accept', {
+    activityId,
+    vehicleId: 'vehicle-one',
+    pickupAt: '2026-08-24T10:15:00.000Z'
+  }, 'driver-one-openid', 'direct-accept-001');
+  assert.equal(accepted.ok, true);
+
+  const driverDetail = await call('activity.detail', { activityId }, 'driver-one-openid');
+  assert.equal(driverDetail.ok, true);
+  assert.equal(driverDetail.data.activity.viewerRole, 'driver');
+  assert.equal(driverDetail.data.activity.canJoinRide, false);
+
+  const lateJoin = await call('ride.join', { activityId }, 'second-openid', 'direct-late-join-001');
+  assert.equal(lateJoin.ok, true);
+  assert.equal(store.activities.get(activityId).memberCount, 3);
+
+  const lockedLeave = await call('member.leave', { activityId, reason: '计划变化' }, 'member-openid', 'direct-locked-leave-001');
+  assert.equal(lockedLeave.ok, false);
+  assert.equal(lockedLeave.error.code, 'RIDE_MEMBER_LOCKED');
 });
 
 test('已过接车窗口的行程不会出现在司机列表且不可承接', async () => {

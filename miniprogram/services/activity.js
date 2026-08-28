@@ -13,6 +13,7 @@ module.exports = {
   askQuestion: (activityId, content) => api.invoke('activity.question.ask', { activityId, content }, { mutating: true }),
   answerQuestion: (activityId, questionId, content) => api.invoke('activity.question.answer', { activityId, questionId, content }, { mutating: true }),
   apply: (activityId, note) => api.invoke('application.submit', { activityId, note, autoJoinConsent: true }, { mutating: true }),
+  joinRide: (activityId) => api.invoke('ride.join', { activityId }, { mutating: true }),
   withdraw: (applicationId) => api.invoke('application.withdraw', { applicationId }, { mutating: true }),
   leave: (activityId, reason) => api.invoke('member.leave', { activityId, reason }, { mutating: true }),
   applications: (activityId) => api.invoke('application.listForOwner', { activityId }),
