@@ -60,3 +60,18 @@ test('已撤回的申请可重新申请，拼车成团后在满员前仍可加�
   }));
   assert.equal(assigned.canApply, true);
 });
+
+test('拼车终态和异常状态优先于人数徽标，不得回退为招募中', () => {
+  const expected = {
+    CANCELLED: '已取消',
+    EXPIRED: '已过期',
+    COMPLETED: '已完成',
+    IN_PROGRESS: '进行中',
+    SUSPENDED: '已下架'
+  };
+  Object.entries(expected).forEach(([status, label]) => {
+    const decorated = decorateActivity(activity({ status, memberCount: 1 }));
+    assert.equal(decorated.statusLabel, label);
+    assert.notEqual(decorated.statusLabel, '招募中');
+  });
+});

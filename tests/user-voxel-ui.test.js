@@ -71,3 +71,11 @@ test('我的页面继续使用原生规范 TabBar 素材', () => {
   assert.equal(discoverTab.iconPath, 'assets/images/discover/tab-discover-inactive.png');
   assert.equal(publishTab.iconPath, 'assets/images/discover/tab-publish-inactive.png');
 });
+
+test('我的页面只允许最新 dashboard 请求更新状态并在离屏时废弃旧响应', () => {
+  const script = read('pages/user/index.js');
+  assert.match(script, /const loadSeq = \(this\._dashboardLoadSeq = \(this\._dashboardLoadSeq \|\| 0\) \+ 1\)/);
+  assert.match(script, /if \(loadSeq !== this\._dashboardLoadSeq\) return/);
+  assert.match(script, /onHide\(\)[\s\S]*?_dashboardLoadSeq/);
+  assert.match(script, /onUnload\(\)[\s\S]*?_dashboardLoadSeq/);
+});

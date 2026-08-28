@@ -1,0 +1,12 @@
+{
+  "id": "fix-cancelled-ride-stale-user-status",
+  "title": "修复取消拼车后我的页面仍显示招募中",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交修复",
+  "createdAt": "2026-08-28T10:10:00+08:00",
+  "branch": "main"
+}

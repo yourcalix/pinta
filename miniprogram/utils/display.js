@@ -85,7 +85,7 @@ function decorateActivity(activity) {
     : displayTime;
   let statusLabel = statusMeta.label;
   let statusTone = statusMeta.tone;
-  if (activity.type === 'ride') {
+  if (activity.type === 'ride' && ['RECRUITING', 'FORMED'].includes(activity.status)) {
     statusLabel = remaining === 0 ? '已满员' : '招募中';
     statusTone = remaining === 0 ? 'muted' : 'success';
   }

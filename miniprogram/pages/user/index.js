@@ -51,7 +51,16 @@ Page({
     this.loadDashboard();
   },
 
+  onHide() {
+    this._dashboardLoadSeq = (this._dashboardLoadSeq || 0) + 1;
+  },
+
+  onUnload() {
+    this._dashboardLoadSeq = (this._dashboardLoadSeq || 0) + 1;
+  },
+
   async loadDashboard() {
+    const loadSeq = (this._dashboardLoadSeq = (this._dashboardLoadSeq || 0) + 1);
     this.setData({ loading: true, error: '' });
     try {
       const user = await userService.login();
@@ -69,6 +78,8 @@ Page({
           ...item,
           displayTime: formatDateTime(item.createdAt)
         }));
+      if (loadSeq !== this._dashboardLoadSeq) return;
+
       this.setData({
         user,
         profileAvatarPath: api.getMockPersona() === 'u_member'
@@ -94,6 +105,8 @@ Page({
         loading: false
       });
     } catch (error) {
+      if (loadSeq !== this._dashboardLoadSeq) return;
+
       this.setData({
         loading: false,
         error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试',
