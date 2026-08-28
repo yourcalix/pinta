@@ -1,0 +1,12 @@
+{
+  "id": "fix-deployed-ride-capacity-validation",
+  "title": "修复云端拼车发布仍校验2到4人的旧规则",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "请在真机重新发布一条拼车活动验证云端链路",
+  "createdAt": "2026-08-28T00:00:00+08:00",
+  "branch": "main"
+}
