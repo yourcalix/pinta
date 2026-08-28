@@ -1,0 +1,12 @@
+{
+  "id": "seed-one-discover-ride",
+  "title": "向当前 CloudBase 开发环境写入一条可见澳门拼车测试帖",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-08-28T00:00:00+08:00",
+  "branch": "main"
+}
