@@ -96,3 +96,191 @@ test('CloudStore 创建活动时将事务缺失文档错误视为空槽位', asy
     ['rideFulfillments', 'fulfillment-preview']
   ]);
 });
+
+test('CloudStore 首次提交司机认证时将不存在的申请文档视为空记录', async () => {
+  const at = '2026-08-28T01:00:00.000Z';
+  const userId = 'driver-candidate';
+  const uploadId = 'upload-identity-front';
+  const missing = new Error(`document.get:fail document with _id ${userId} does not exist`);
+  missing.errCode = -502005;
+  const writes = [];
+  const updates = [];
+  const transaction = {
+    collection(name) {
+      return {
+        doc(id) {
+          return {
+            async get() {
+              if (name === 'driverApplications') throw missing;
+              if (name === 'driverDocumentUploads' && id === uploadId) {
+                return {
+                  data: {
+                    _id: uploadId,
+                    userId,
+                    kind: 'identityFront',
+                    status: 'INSPECTED',
+                    expiresAt: '2026-08-28T02:00:00.000Z',
+                    sealedFileID: 'cloud://test/private-driver-sealed/identity.bin'
+                  }
+                };
+              }
+              return { data: null };
+            },
+            async set({ data }) { writes.push({ name, id, data }); },
+            async update({ data }) { updates.push({ name, id, data }); }
+          };
+        }
+      };
+    }
+  };
+  const cloud = {
+    database() {
+      return {
+        command: {},
+        async runTransaction(callback) { return callback(transaction); }
+      };
+    }
+  };
+  const store = new CloudStore(cloud);
+  const application = {
+    id: userId,
+    userId,
+    status: 'SUBMITTED',
+    revision: 1,
+    operationKeyHash: 'operation-hash',
+    payloadHash: 'payload-hash',
+    documentFileHashes: { identityFront: 'file-hash' },
+    updatedAt: at
+  };
+  const documentRefs = {
+    identityFront: {
+      uploadId,
+      fileID: 'cloud://test/private-driver-sealed/identity.bin'
+    }
+  };
+
+  const result = await store.submitDriverApplication({
+    userId,
+    application,
+    secrets: { keyVersion: 1 },
+    documentRefs,
+    audit: { id: 'audit-driver-submit', action: 'driver.application.submit', at }
+  });
+
+  assert.equal(result, application);
+  assert.deepEqual(updates.map((item) => [item.name, item.id]), [
+    ['driverDocumentUploads', uploadId]
+  ]);
+  assert.deepEqual(writes.map((item) => [item.name, item.id]), [
+    ['driverApplications', userId],
+    ['driverSecrets', userId],
+    ['auditLogs', 'audit-driver-submit']
+  ]);
+});
+
+test('CloudStore 司机认证读取遇到非缺失事务错误时继续向外抛出', async () => {
+  const permissionError = new Error('database permission denied');
+  permissionError.errCode = -502003;
+  const cloud = {
+    database() {
+      return {
+        command: {},
+        async runTransaction(callback) {
+          return callback({
+            collection() {
+              return { doc: () => ({ async get() { throw permissionError; } }) };
+            }
+          });
+        }
+      };
+    }
+  };
+  const store = new CloudStore(cloud);
+
+  await assert.rejects(
+    store.submitDriverApplication({
+      userId: 'driver-candidate',
+      application: { id: 'driver-candidate', updatedAt: '2026-08-28T01:00:00.000Z' },
+      secrets: {},
+      documentRefs: {},
+      audit: null
+    }),
+    (error) => error === permissionError
+  );
+});
+
+test('CloudStore 司机认证事务后段失败时不提交申请、敏感记录或上传绑定', async () => {
+  const committed = [];
+  const missing = new Error('document does not exist');
+  missing.errCode = -502005;
+  const auditFailure = new Error('audit write failed');
+  const userId = 'driver-candidate';
+  const uploadId = 'upload-identity-front';
+  const cloud = {
+    database() {
+      return {
+        command: {},
+        async runTransaction(callback) {
+          const pending = [];
+          const transaction = {
+            collection(name) {
+              return {
+                doc(id) {
+                  return {
+                    async get() {
+                      if (name === 'driverApplications') throw missing;
+                      if (name === 'driverDocumentUploads') {
+                        return {
+                          data: {
+                            _id: uploadId,
+                            userId,
+                            kind: 'identityFront',
+                            status: 'INSPECTED',
+                            expiresAt: '2026-08-28T02:00:00.000Z',
+                            sealedFileID: 'cloud://test/private-driver-sealed/identity.bin'
+                          }
+                        };
+                      }
+                      return { data: null };
+                    },
+                    async update({ data }) { pending.push({ type: 'update', name, id, data }); },
+                    async set({ data }) {
+                      if (name === 'auditLogs') throw auditFailure;
+                      pending.push({ type: 'set', name, id, data });
+                    }
+                  };
+                }
+              };
+            }
+          };
+          const result = await callback(transaction);
+          committed.push(...pending);
+          return result;
+        }
+      };
+    }
+  };
+  const store = new CloudStore(cloud);
+
+  await assert.rejects(store.submitDriverApplication({
+    userId,
+    application: {
+      id: userId,
+      operationKeyHash: 'operation-hash',
+      payloadHash: 'payload-hash',
+      revision: 1,
+      documentFileHashes: { identityFront: 'file-hash' },
+      updatedAt: '2026-08-28T01:00:00.000Z'
+    },
+    secrets: { keyVersion: 1 },
+    documentRefs: {
+      identityFront: {
+        uploadId,
+        fileID: 'cloud://test/private-driver-sealed/identity.bin'
+      }
+    },
+    audit: { id: 'audit-driver-submit' }
+  }), (error) => error === auditFailure);
+
+  assert.deepEqual(committed, []);
+});

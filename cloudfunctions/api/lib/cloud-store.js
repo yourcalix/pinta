@@ -215,7 +215,9 @@ class CloudStore {
 
   async submitDriverApplication({ userId, application, secrets, documentRefs, audit }) {
     return this.db.runTransaction(async (transaction) => {
-      const current = first(await transaction.collection('driverApplications').doc(userId).get());
+      const current = await getTransactionDocument(
+        transaction.collection('driverApplications').doc(userId)
+      );
       if (current && current.operationKeyHash === application.operationKeyHash) {
         invariant(current.payloadHash === application.payloadHash, 'CONFLICT', '幂等键已用于其他司机认证资料');
         return current;

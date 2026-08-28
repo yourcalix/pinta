@@ -1,0 +1,12 @@
+{
+  "id": "fix-driver-application-submit-unavailable",
+  "title": "修复真实 CloudBase 环境司机认证提交显示服务暂时不可用",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "请用户在真机直接重试提交司机认证",
+  "createdAt": "2026-08-28T07:18:30Z",
+  "branch": "main"
+}
