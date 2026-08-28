@@ -1,0 +1,12 @@
+{
+  "id": "design-user-page-image2-prompt",
+  "title": "为拼吧我的页面设计 Image 2 视觉稿提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待用户用 Image 2 生成首版我的页面视觉稿",
+  "createdAt": "2026-08-28T00:00:00+08:00",
+  "branch": "main"
+}
