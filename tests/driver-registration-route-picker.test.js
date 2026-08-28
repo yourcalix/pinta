@@ -142,6 +142,121 @@ test('司机意向不授予权限，只有开发审核通过才物化司机与�
   assert.equal(profile.data.driver.vehicles[0].canUseForRide, true);
 });
 
+test('开发自动审核在提交事务中直接通过并由幂等重放补齐司机车辆事实', async () => {
+  const store = new MemoryStore({ users: [activeUser('candidate')] });
+  const service = createPinbaService({
+    store,
+    clock: () => new Date('2026-08-27T00:00:00.000Z'),
+    idGenerator: () => 'request-id',
+    driverCredentialSecret: 'synthetic-test-secret-value',
+    driverReviewEnabled: true,
+    driverApplicationAutoApprove: true,
+    driverAutoApprovalEnvironment: 'test',
+    rideDriverAcceptanceEnabled: true
+  });
+  const call = (action, data, key) => service.execute({
+    action,
+    data,
+    requestId: `${action}-request`,
+    idempotencyKey: key
+  }, { actorId: 'candidate' });
+  const documents = {};
+  for (const kind of ['identityFront', 'driverLicense', 'vehicleExterior']) {
+    const prepared = await call('driver.document.prepare', { kind }, `auto-${kind}-prepare-12345678`);
+    const reference = {
+      uploadId: prepared.data.upload.id,
+      fileID: `cloud://test-env/${prepared.data.upload.cloudPath}`
+    };
+    await call('driver.document.confirm', { kind, ...reference }, `auto-${kind}-confirm-12345678`);
+    documents[kind] = { uploadId: reference.uploadId };
+  }
+  const submitKey = 'auto-submit-12345678';
+  const submitted = await call('driver.application.submit', driverPayload(documents), submitKey);
+
+  assert.equal(submitted.ok, true);
+  assert.equal(submitted.data.application.status, 'APPROVED');
+  assert.equal(submitted.data.application.review.reasonCode, 'DEV_AUTO_APPROVED');
+  assert.equal(store.drivers.get('candidate').reviewStatus, 'APPROVED');
+  assert.equal(store.vehicles.get('vehicle-candidate').reviewStatus, 'APPROVED');
+  assert.ok([...store.auditLogs.values()].some((item) => item.reasonCode === 'DEV_AUTO_APPROVED'));
+  assert.ok([...store.auditLogs.values()].some((item) => item.autoApprovalEnvironment === 'test' && item.autoApprovalGateEnabled === true));
+
+  store.drivers.delete('candidate');
+  store.vehicles.delete('vehicle-candidate');
+  const replay = await call('driver.application.submit', driverPayload(documents), submitKey);
+
+  assert.equal(replay.ok, true);
+  assert.equal(replay.data.application.status, 'APPROVED');
+  assert.equal(store.drivers.get('candidate').reviewStatus, 'APPROVED');
+  assert.equal(store.vehicles.get('vehicle-candidate').reviewStatus, 'APPROVED');
+});
+
+test('开发自动审核并发不同幂等键只批准并物化一次', async () => {
+  const store = new MemoryStore({ users: [activeUser('candidate')] });
+  const service = createPinbaService({
+    store,
+    clock: () => new Date('2026-08-27T00:00:00.000Z'),
+    driverCredentialSecret: 'synthetic-test-secret-value',
+    driverReviewEnabled: true,
+    driverApplicationAutoApprove: true,
+    driverAutoApprovalEnvironment: 'test'
+  });
+  const call = (action, data, key) => service.execute({ action, data, idempotencyKey: key }, { actorId: 'candidate' });
+  const documents = {};
+  for (const kind of ['identityFront', 'driverLicense', 'vehicleExterior']) {
+    const prepared = await call('driver.document.prepare', { kind }, `concurrent-${kind}-prepare-12345678`);
+    const reference = { uploadId: prepared.data.upload.id, fileID: `cloud://test/${prepared.data.upload.cloudPath}` };
+    await call('driver.document.confirm', { kind, ...reference }, `concurrent-${kind}-confirm-12345678`);
+    documents[kind] = { uploadId: reference.uploadId };
+  }
+
+  const results = await Promise.all([
+    call('driver.application.submit', driverPayload(documents), 'concurrent-submit-a-12345678'),
+    call('driver.application.submit', driverPayload(documents), 'concurrent-submit-b-12345678')
+  ]);
+
+  assert.equal(results.filter((result) => result.ok).length, 1);
+  assert.equal(results.filter((result) => !result.ok && result.error.code === 'DRIVER_APPLICATION_LOCKED').length, 1);
+  assert.equal(store.drivers.size, 1);
+  assert.equal(store.vehicles.size, 1);
+  assert.equal([...store.auditLogs.values()].filter((item) => item.reasonCode === 'DEV_AUTO_APPROVED').length, 1);
+});
+
+test('自动审核关闭时保持待审，后续开启也不会隐式升级旧申请', async () => {
+  const store = new MemoryStore({ users: [activeUser('candidate')] });
+  const baseOptions = {
+    store,
+    clock: () => new Date('2026-08-27T00:00:00.000Z'),
+    driverCredentialSecret: 'synthetic-test-secret-value'
+  };
+  const manualService = createPinbaService(baseOptions);
+  const call = (service, action, data, key) => service.execute({ action, data, idempotencyKey: key }, { actorId: 'candidate' });
+  const documents = {};
+  for (const kind of ['identityFront', 'driverLicense', 'vehicleExterior']) {
+    const prepared = await call(manualService, 'driver.document.prepare', { kind }, `manual-${kind}-prepare-12345678`);
+    const reference = { uploadId: prepared.data.upload.id, fileID: `cloud://test/${prepared.data.upload.cloudPath}` };
+    await call(manualService, 'driver.document.confirm', { kind, ...reference }, `manual-${kind}-confirm-12345678`);
+    documents[kind] = { uploadId: reference.uploadId };
+  }
+  const submitted = await call(manualService, 'driver.application.submit', driverPayload(documents), 'manual-submit-12345678');
+  assert.equal(submitted.data.application.status, 'SUBMITTED');
+
+  const autoService = createPinbaService({ ...baseOptions, driverReviewEnabled: true, driverApplicationAutoApprove: true });
+  const retry = await call(autoService, 'driver.application.submit', driverPayload(documents), 'different-submit-12345678');
+  assert.equal(retry.ok, false);
+  assert.equal(retry.error.code, 'DRIVER_APPLICATION_PENDING');
+  assert.equal(store.drivers.has('candidate'), false);
+  assert.equal(store.vehicles.has('vehicle-candidate'), false);
+});
+
+test('云函数入口只在开发或测试环境且审核开关开启时自动通过', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/index.js'), 'utf8');
+  assert.match(source, /\['development', 'test'\]\.includes\(process\.env\.PINBA_ENV\)/);
+  assert.match(source, /process\.env\.ENABLE_DEV_DRIVER_REVIEW === 'true'/);
+  assert.match(source, /driverApplicationAutoApprove:\s*developmentDriverReviewEnabled/);
+  assert.match(source, /driverAutoApprovalEnvironment:\s*developmentDriverReviewEnabled\s*\?\s*process\.env\.PINBA_ENV\s*:\s*''/);
+});
+
 test('未配置凭据密钥时司机申请 fail-closed', async () => {
   const store = new MemoryStore({ users: [activeUser('candidate')] });
   const service = createPinbaService({ store, clock: () => new Date('2026-08-27T00:00:00.000Z') });

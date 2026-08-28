@@ -1,0 +1,12 @@
+{
+  "id": "auto-approve-driver-application-in-dev",
+  "title": "开发环境司机认证提交后自动审核通过",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "请用户在真机提交新司机认证并确认司机任务视图",
+  "createdAt": "2026-08-28T08:00:00Z",
+  "branch": "main"
+}

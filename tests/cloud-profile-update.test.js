@@ -145,11 +145,16 @@ test('CloudStore 首次提交司机认证时将不存在的申请文档视为空
   const application = {
     id: userId,
     userId,
-    status: 'SUBMITTED',
+    status: 'APPROVED',
     revision: 1,
     operationKeyHash: 'operation-hash',
     payloadHash: 'payload-hash',
     documentFileHashes: { identityFront: 'file-hash' },
+    summary: {
+      vehicleType: '七座轿车',
+      plateMasked: '***45',
+      passengerCapacity: 7
+    },
     updatedAt: at
   };
   const documentRefs = {
@@ -164,6 +169,7 @@ test('CloudStore 首次提交司机认证时将不存在的申请文档视为空
     application,
     secrets: { keyVersion: 1 },
     documentRefs,
+    autoApprove: true,
     audit: { id: 'audit-driver-submit', action: 'driver.application.submit', at }
   });
 
@@ -174,6 +180,8 @@ test('CloudStore 首次提交司机认证时将不存在的申请文档视为空
   assert.deepEqual(writes.map((item) => [item.name, item.id]), [
     ['driverApplications', userId],
     ['driverSecrets', userId],
+    ['drivers', userId],
+    ['vehicles', `vehicle-${userId}`],
     ['auditLogs', 'audit-driver-submit']
   ]);
 });

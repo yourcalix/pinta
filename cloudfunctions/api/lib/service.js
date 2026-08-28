@@ -266,6 +266,8 @@ function createPinbaService(options) {
   const rideDriverAcceptanceEnabled = options.rideDriverAcceptanceEnabled === true;
   const driverCredentialSecret = options.driverCredentialSecret || '';
   const driverReviewEnabled = options.driverReviewEnabled === true;
+  const driverApplicationAutoApprove = options.driverApplicationAutoApprove === true;
+  const driverAutoApprovalEnvironment = options.driverAutoApprovalEnvironment || '';
 
   function nowIso() {
     return clock().toISOString();
@@ -388,15 +390,22 @@ function createPinbaService(options) {
       const operationKeyHash = operationId(context, 'driver-application-operation');
       if (current && current.operationKeyHash === operationKeyHash) {
         invariant(current.payloadHash === payloadHash, 'CONFLICT', '幂等键已用于其他司机认证资料');
+        if (driverApplicationAutoApprove && current.status === 'APPROVED') {
+          await store.ensureApprovedDriverFacts(user.id, current, current.updatedAt);
+        }
         return { application: publicDriverApplication(current) };
       }
+      invariant(
+        !current || !['SUBMITTED', 'APPROVED'].includes(current.status),
+        current && current.status === 'SUBMITTED' ? 'DRIVER_APPLICATION_PENDING' : 'DRIVER_APPLICATION_LOCKED'
+      );
       const documentRefs = await store.resolveDriverDocumentReferences(user.id, payload.documents, at);
       const protectedInput = { ...payload, documents: documentRefs };
       const protectedPayload = protectDriverApplication(protectedInput, driverCredentialSecret, { userId: user.id, keyVersion: 1 });
       const application = {
         id: user.id,
         userId: user.id,
-        status: 'SUBMITTED',
+        status: driverApplicationAutoApprove ? 'APPROVED' : 'SUBMITTED',
         revision: Number(current && current.revision || 0) + 1,
         operationKeyHash,
         payloadHash,
@@ -408,12 +417,34 @@ function createPinbaService(options) {
         createdAt: current && current.createdAt || at,
         updatedAt: at
       };
+      if (driverApplicationAutoApprove) {
+        application.review = {
+          reviewerId: 'system:dev-auto-approval',
+          reasonCode: 'DEV_AUTO_APPROVED',
+          reviewedAt: at
+        };
+      }
       const stored = await store.submitDriverApplication({
         userId: user.id,
         application,
         secrets: protectedPayload.secrets,
         documentRefs,
-        audit: { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'driverApplication', targetId: user.id, at }
+        autoApprove: driverApplicationAutoApprove,
+        audit: {
+          id: operationId(context, 'audit'),
+          actorId: user.id,
+          action,
+          targetType: 'driverApplication',
+          targetId: user.id,
+          ...(driverApplicationAutoApprove ? {
+            decision: 'APPROVED',
+            reasonCode: 'DEV_AUTO_APPROVED',
+            reviewActor: 'system:dev-auto-approval',
+            autoApprovalEnvironment: driverAutoApprovalEnvironment,
+            autoApprovalGateEnabled: true
+          } : {}),
+          at
+        }
       });
       return { application: publicDriverApplication(stored) };
     }

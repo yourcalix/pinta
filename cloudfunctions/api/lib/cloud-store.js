@@ -16,6 +16,7 @@ const {
 } = require('./constants');
 const { stableEntityId } = require('./ids');
 const { collectPublicActivityPage } = require('./public-activity-page');
+const { driverApprovalFacts } = require('./driver-approval');
 const {
   rideCapacity,
   rideThreshold,
@@ -213,13 +214,19 @@ class CloudStore {
     return result;
   }
 
-  async submitDriverApplication({ userId, application, secrets, documentRefs, audit }) {
+  async submitDriverApplication({ userId, application, secrets, documentRefs, autoApprove, audit }) {
     return this.db.runTransaction(async (transaction) => {
+      const materializeApproval = async (approvedApplication) => {
+        const facts = driverApprovalFacts(userId, approvedApplication, approvedApplication.updatedAt);
+        await transaction.collection('drivers').doc(facts.driver.id).set({ data: document(facts.driver) });
+        await transaction.collection('vehicles').doc(facts.vehicle.id).set({ data: document(facts.vehicle) });
+      };
       const current = await getTransactionDocument(
         transaction.collection('driverApplications').doc(userId)
       );
       if (current && current.operationKeyHash === application.operationKeyHash) {
         invariant(current.payloadHash === application.payloadHash, 'CONFLICT', '幂等键已用于其他司机认证资料');
+        if (autoApprove && current.status === 'APPROVED') await materializeApproval(current);
         return current;
       }
       invariant(!current || !['SUBMITTED', 'APPROVED'].includes(current.status), current && current.status === 'SUBMITTED' ? 'DRIVER_APPLICATION_PENDING' : 'DRIVER_APPLICATION_LOCKED');
@@ -239,8 +246,19 @@ class CloudStore {
       await transaction.collection('driverSecrets').doc(userId).set({
         data: document({ id: userId, userId, ...secrets, status: 'ACTIVE', retentionUntil: null, updatedAt: application.updatedAt })
       });
+      if (autoApprove) await materializeApproval(application);
       if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
       return application;
+    });
+  }
+
+  async ensureApprovedDriverFacts(userId, application, at) {
+    invariant(application && application.status === 'APPROVED', 'DRIVER_APPLICATION_LOCKED');
+    const facts = driverApprovalFacts(userId, application, at);
+    return this.db.runTransaction(async (transaction) => {
+      await transaction.collection('drivers').doc(facts.driver.id).set({ data: document(facts.driver) });
+      await transaction.collection('vehicles').doc(facts.vehicle.id).set({ data: document(facts.vehicle) });
+      return facts;
     });
   }
 
@@ -279,20 +297,9 @@ class CloudStore {
       };
       await transaction.collection('driverApplications').doc(userId).set({ data: document(next) });
       if (decision === 'APPROVED') {
-        await transaction.collection('drivers').doc(userId).set({
-          data: { userId, status: 'ACTIVE', reviewStatus: 'APPROVED', approvedApplicationId: next.id, approvedAt: at }
-        });
-        await transaction.collection('vehicles').doc(`vehicle-${userId}`).set({
-          data: {
-            driverId: userId,
-            status: 'ACTIVE',
-            reviewStatus: 'APPROVED',
-            type: next.summary.vehicleType,
-            plateMasked: next.summary.plateMasked,
-            passengerCapacity: next.summary.passengerCapacity,
-            approvedAt: at
-          }
-        });
+        const facts = driverApprovalFacts(userId, next, at);
+        await transaction.collection('drivers').doc(facts.driver.id).set({ data: document(facts.driver) });
+        await transaction.collection('vehicles').doc(facts.vehicle.id).set({ data: document(facts.vehicle) });
       }
       if (['REJECTED', 'NEEDS_MORE_INFO'].includes(decision)) {
         const retentionUntil = new Date(Date.parse(at) + 30 * 24 * 60 * 60 * 1000).toISOString();

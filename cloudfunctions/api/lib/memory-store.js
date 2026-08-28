@@ -15,6 +15,7 @@ const {
 } = require('./constants');
 const { stableEntityId } = require('./ids');
 const { collectPublicActivityPage } = require('./public-activity-page');
+const { driverApprovalFacts } = require('./driver-approval');
 const {
   rideCapacity,
   rideThreshold,
@@ -126,10 +127,15 @@ class MemoryStore {
     }));
   }
 
-  async submitDriverApplication({ userId, application, secrets, documentRefs, audit }) {
+  async submitDriverApplication({ userId, application, secrets, documentRefs, autoApprove, audit }) {
     const current = this.driverApplications.get(userId);
     if (current && current.operationKeyHash === application.operationKeyHash) {
       invariant(current.payloadHash === application.payloadHash, 'CONFLICT', '幂等键已用于其他司机认证资料');
+      if (autoApprove && current.status === 'APPROVED') {
+        const facts = driverApprovalFacts(userId, current, current.updatedAt);
+        this.drivers.set(userId, clone(facts.driver));
+        this.vehicles.set(facts.vehicle.id, clone(facts.vehicle));
+      }
       return clone(current);
     }
     invariant(!current || !['SUBMITTED', 'APPROVED'].includes(current.status), current && current.status === 'SUBMITTED' ? 'DRIVER_APPLICATION_PENDING' : 'DRIVER_APPLICATION_LOCKED');
@@ -145,8 +151,21 @@ class MemoryStore {
     });
     this.driverApplications.set(userId, clone(application));
     this.driverSecrets.set(userId, clone({ id: userId, userId, ...secrets, status: 'ACTIVE', retentionUntil: null, updatedAt: application.updatedAt }));
+    if (autoApprove) {
+      const facts = driverApprovalFacts(userId, application, application.updatedAt);
+      this.drivers.set(userId, clone(facts.driver));
+      this.vehicles.set(facts.vehicle.id, clone(facts.vehicle));
+    }
     if (audit) this.auditLogs.set(audit.id, clone(audit));
     return clone(application);
+  }
+
+  async ensureApprovedDriverFacts(userId, application, at) {
+    invariant(application && application.status === 'APPROVED', 'DRIVER_APPLICATION_LOCKED');
+    const facts = driverApprovalFacts(userId, application, at);
+    this.drivers.set(userId, clone(facts.driver));
+    this.vehicles.set(facts.vehicle.id, clone(facts.vehicle));
+    return clone(facts);
   }
 
   async withdrawDriverApplication(userId, at, audit) {
@@ -177,19 +196,9 @@ class MemoryStore {
     application.reviewOperationKeyHash = audit.operationKeyHash;
     application.reviewPayloadHash = reviewPayloadHash;
     if (decision === 'APPROVED') {
-      this.drivers.set(userId, { id: userId, userId, status: 'ACTIVE', reviewStatus: 'APPROVED', approvedApplicationId: application.id, approvedAt: at });
-      const summary = application.summary;
-      const vehicleId = `vehicle-${userId}`;
-      this.vehicles.set(vehicleId, {
-        id: vehicleId,
-        driverId: userId,
-        status: 'ACTIVE',
-        reviewStatus: 'APPROVED',
-        type: summary.vehicleType,
-        plateMasked: summary.plateMasked,
-        passengerCapacity: summary.passengerCapacity,
-        approvedAt: at
-      });
+      const facts = driverApprovalFacts(userId, application, at);
+      this.drivers.set(userId, clone(facts.driver));
+      this.vehicles.set(facts.vehicle.id, clone(facts.vehicle));
     }
     if (['REJECTED', 'NEEDS_MORE_INFO'].includes(decision)) {
       const secret = this.driverSecrets.get(userId);
