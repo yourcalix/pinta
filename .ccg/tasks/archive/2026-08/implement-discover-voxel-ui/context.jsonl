@@ -1,0 +1,6 @@
+{"path":"miniprogram/pages/discover/index.wxml","reason":"发现页真实结构与状态分支"}
+{"path":"miniprogram/pages/discover/index.wxss","reason":"发现页当前布局与视觉样式"}
+{"path":"miniprogram/components/activity-card/index.wxml","reason":"行程卡片真实信息结构"}
+{"path":"miniprogram/components/activity-card/index.wxss","reason":"行程卡片响应式样式"}
+{"path":"miniprogram/app.json","reason":"微信原生 TabBar 配置"}
+{"path":"miniprogram/assets/images/discover/","reason":"已验收的 16 张透明体素素材"}

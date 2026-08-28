@@ -1,0 +1,12 @@
+{
+  "id": "implement-discover-voxel-ui",
+  "title": "将已验收体素素材接入发现页与原生 TabBar",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务；在澳门拼车 G 阶段闭环时统一提交并推送代码",
+  "createdAt": "2026-08-28T00:00:00+08:00",
+  "branch": "main"
+}
