@@ -3,6 +3,7 @@
   "navigationBarTextStyle": "black",
   "backgroundColorTop": "#F5F7F6",
   "usingComponents": {
+    "activity-card": "/components/activity-card/index",
     "status-badge": "/components/status-badge/index",
     "empty-state": "/components/empty-state/index"
   }

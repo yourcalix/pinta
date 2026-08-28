@@ -98,6 +98,7 @@
   margin-top: 18rpx;
   padding-top: 16rpx;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16rpx;
   border-top: 1rpx solid #eef1ef;
 }
@@ -179,7 +180,8 @@
   }
 
   .route-voxel-scene {
-    flex-basis: 220rpx;
+    flex: 0 0 220rpx;
     width: 220rpx;
+    margin-left: auto;
   }
 }

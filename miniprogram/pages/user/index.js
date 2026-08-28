@@ -23,7 +23,7 @@ Page({
     loading: true,
     error: '',
     user: null,
-    avatarLetter: '拼',
+    profileAvatarPath: '../../assets/images/discover/avatar-passenger-a.png',
     isMock: api.isMock(),
     persona: api.getMockPersona(),
     personas: [
@@ -71,7 +71,9 @@ Page({
         }));
       this.setData({
         user,
-        avatarLetter: user.profile && user.profile.nickname ? user.profile.nickname.slice(0, 1) : '拼',
+        profileAvatarPath: api.getMockPersona() === 'u_member'
+          ? '../../assets/images/discover/avatar-passenger-b.png'
+          : '../../assets/images/discover/avatar-passenger-a.png',
         tasks,
         owned: mine.owned.map(decorateActivity),
         joined: mine.joined.map(decorateActivity),
@@ -83,7 +85,10 @@ Page({
           activity: decorateActivity(item.activity),
           pickupLabel: item.rideFulfillment && item.rideFulfillment.pickupAt
             ? formatDateTime(item.rideFulfillment.pickupAt)
-            : '待确认'
+            : '待确认',
+          vehicleLabel: item.rideFulfillment && item.rideFulfillment.vehicle
+            ? `${item.rideFulfillment.vehicle.type} · ${item.rideFulfillment.vehicle.plateMasked}`
+            : '车辆信息待确认'
         })),
         persona: api.getMockPersona(),
         loading: false
@@ -121,16 +126,27 @@ Page({
   },
 
   handleActivityTap(event) {
-    const item = event.currentTarget.dataset.item;
+    this.navigateToActivity(event.currentTarget.dataset.item);
+  },
+
+  handleActivitySelect(event) {
+    const id = event.detail && event.detail.id;
+    const item = [...this.data.owned, ...this.data.joined].find((activity) => activity.id === id);
+    this.navigateToActivity(item);
+  },
+
+  navigateToActivity(item) {
+    if (!item) return;
+    const activityId = encodeURIComponent(item.id);
     if (item.viewerRole === 'owner' && item.status === 'RECRUITING') {
-      wx.navigateTo({ url: `/subpackages/activity/manage/index?id=${item.id}` });
+      wx.navigateTo({ url: `/subpackages/activity/manage/index?id=${activityId}` });
       return;
     }
     if (['FORMED', 'IN_PROGRESS'].includes(item.status) && ['owner', 'member'].includes(item.viewerRole)) {
-      wx.navigateTo({ url: `/subpackages/activity/group/index?id=${item.id}` });
+      wx.navigateTo({ url: `/subpackages/activity/group/index?id=${activityId}` });
       return;
     }
-    wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${item.id}` });
+    wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${activityId}` });
   },
 
   async handleTaskTap(event) {
