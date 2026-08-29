@@ -1,0 +1,12 @@
+{
+  "id": "approve-publish-entry-final-design",
+  "title": "确认发布入口页最终视觉稿",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "等待产品负责人授权 WXML/WXSS 实装",
+  "createdAt": "2026-08-30T00:35:00+08:00",
+  "branch": "main"
+}
