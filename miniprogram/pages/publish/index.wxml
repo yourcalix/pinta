@@ -1,28 +1,51 @@
 <view class="page publish-page" style="padding-top: {{contentTopInset}}px;">
-  <view class="publish-heading">
-    <view class="eyebrow">两步即可发起</view>
-    <view class="title">发起澳门校园拼车</view>
-    <view class="description">乘客选择 60 分钟期望时间窗，成团后由已审核司机选择具体接送时间。</view>
-  </view>
-
-  <button
-    wx:for="{{types}}"
-    wx:key="value"
-    class="type-card surface"
-    data-type="{{item.value}}"
-    bindtap="handleSelect"
-    disabled="{{pending}}"
-  >
-    <view class="type-icon" style="color: {{item.color}}; border-color: {{item.color}}">{{item.icon}}</view>
-    <view class="type-content">
-      <view class="type-title">{{item.title}}</view>
-      <view class="type-description">{{item.description}}</view>
+  <view class="publish-content">
+    <view class="publish-hero surface">
+      <image class="hero-puzzle" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
+      <view class="hero-copy">
+        <view class="hero-eyebrow">两步即可发起</view>
+        <view class="hero-title">发起澳门校园拼车</view>
+        <view class="hero-description">选择固定路线和 60 分钟时间窗，邀请同路同学一起出发</view>
+      </view>
+      <view class="hero-scene" aria-hidden="true">
+        <image class="hero-start" src="../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
+        <view class="hero-route-dots" aria-hidden="true"></view>
+        <image class="hero-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
+        <image class="hero-campus" src="../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
+      </view>
     </view>
-    <text class="arrow">›</text>
-  </button>
 
-  <view class="safety-note">
-    <view class="safety-title">安全边界</view>
-    <view>拼吧只提供校园行程信息撮合，不提供车辆、在线收款或交通服务。司机承接功能仅向已完成合规审核的账号开放。</view>
+    <button
+      wx:for="{{types}}"
+      wx:key="value"
+      class="type-card surface"
+      data-type="{{item.value}}"
+      bindtap="handleSelect"
+      disabled="{{pending}}"
+      aria-label="发起校园拼车，点击进入发布行程表单"
+    >
+      <image class="type-icon" src="../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
+      <view class="type-content">
+        <view class="type-title">{{item.title}}</view>
+        <view class="type-description">{{item.description}}</view>
+      </view>
+      <text class="arrow" aria-hidden="true">›</text>
+      <image class="type-watermark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
+    </button>
+
+    <view class="safety-note surface" role="note" aria-label="安全边界，拼吧只提供校园行程信息撮合，不提供车辆、在线收款或交通服务。司机承接功能仅向已完成合规审核的账号开放。">
+      <view class="safety-icon" aria-hidden="true">
+        <view class="safety-lock-shackle"></view>
+        <view class="safety-lock-body">
+          <view class="safety-lock-keyhole"></view>
+        </view>
+      </view>
+      <view class="safety-copy">
+        <view class="safety-title">安全边界</view>
+        <view class="safety-description">拼吧只提供校园行程信息撮合，不提供车辆、在线收款或交通服务。司机承接功能仅向已完成合规审核的账号开放。</view>
+      </view>
+    </view>
   </view>
+
+  <image class="page-watermark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
 </view>

@@ -1,0 +1,12 @@
+{
+  "id": "implement-publish-entry-final-design",
+  "title": "实装发布入口页最终体素视觉",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并推送 GitHub",
+  "createdAt": "2026-08-30T00:45:00+08:00",
+  "branch": "main"
+}

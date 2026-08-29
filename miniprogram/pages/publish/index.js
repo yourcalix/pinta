@@ -18,7 +18,7 @@ Page({
   data: {
     contentTopInset: 88,
     types: [
-      { value: 'ride', icon: '↗', title: '发起校园拼车', description: '在 8 条澳门固定路线中发起行程，邀请同路同学加入', color: '#3478F6' }
+      { value: 'ride', title: '发起校园拼车', description: '在 8 条澳门固定路线中发起行程，邀请同路同学加入' }
     ],
     pending: false
   },
