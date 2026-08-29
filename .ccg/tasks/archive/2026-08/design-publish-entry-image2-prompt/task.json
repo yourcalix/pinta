@@ -1,0 +1,12 @@
+{
+  "id": "design-publish-entry-image2-prompt",
+  "title": "整理发布入口页 Image 2 视觉提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "等待用户生成首版视觉稿后审查",
+  "createdAt": "2026-08-29T23:55:00+08:00",
+  "branch": "main"
+}
