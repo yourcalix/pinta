@@ -2,6 +2,7 @@
 
 const { formatDateTime, toTimeInput } = require('./date');
 const { getRideRoute } = require('../config/locations');
+const { normalizeAvatarSlots } = require('./passenger-avatar');
 
 const TYPE_META = Object.freeze({
   ride: { label: '拼车', icon: '↗', color: '#3478F6' },
@@ -40,15 +41,6 @@ function rideTimeWindow(startsAt, endsAt) {
   nextDay.setDate(nextDay.getDate() + 1);
   if (sameCalendarDay(nextDay, end)) return `${startLabel}–次日${toTimeInput(end)}`;
   return `${startLabel}–${formatDateTime(endsAt)}`;
-}
-
-function passengerAvatarSlots(memberCount, maxPassengers) {
-  const total = Math.min(4, Math.max(1, maxPassengers));
-  const occupied = Math.min(total, Math.max(0, memberCount));
-  return Array.from({ length: total }, (_, index) => ({
-    id: index + 1,
-    kind: index >= occupied ? 'empty' : (index % 2 === 0 ? 'a' : 'b')
-  }));
 }
 
 function decorateActivity(activity) {
@@ -128,7 +120,7 @@ function decorateActivity(activity) {
     originLocationId: (typeData.origin && typeData.origin.id) || (route && route.originId) || '',
     destinationLocationId: (typeData.destination && typeData.destination.id) || (route && route.destinationId) || '',
     timeWindowLabel,
-    avatarSlots: passengerAvatarSlots(memberCount, maxPassengers),
+    avatarSlots: normalizeAvatarSlots(activity.avatarSlots, activity.type === 'ride' ? 7 : Math.min(4, maxPassengers)),
     progressPercent,
     canApply,
     joinUnavailableTip,

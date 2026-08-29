@@ -43,6 +43,12 @@ const {
   rideDriverAvailability,
   normalizeRideCapacity
 } = require('./ride-policy');
+const {
+  avatarKindFromGender,
+  isCompleteRideProfile,
+  publicAvatarSlots,
+  upsertAvatarRoster
+} = require('./passenger-avatar');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -77,7 +83,8 @@ function stableSerialize(value) {
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(',')}}`;
 }
 
-function publicUser(user) {
+// Authenticated self-profile DTO. It is never used by public activity endpoints.
+function selfUser(user) {
   if (!user) return null;
   return {
     role: user.role,
@@ -88,11 +95,13 @@ function publicUser(user) {
     profile: user.profile
       ? {
           nickname: user.profile.nickname,
+          gender: user.profile.gender || null,
           city: user.profile.city,
           interests: user.profile.interests || [],
           adultConfirmed: user.profile.adultConfirmed === true
         }
-      : null
+      : null,
+    profileComplete: isCompleteRideProfile(user.profile)
   };
 }
 
@@ -151,6 +160,7 @@ function publicActivity(activity, viewer = {}, at) {
     updatedAt: activity.updatedAt
   };
   if (activity.type === 'ride') {
+    result.avatarSlots = publicAvatarSlots(activity.avatarRoster, maxPassengers);
     result.rideFulfillment = publicRideFulfillment(activity.rideFulfillment);
     const availability = rideDriverAvailability(activity, at);
     result.rideJoinable = isRidePassengerJoinable(activity, at);
@@ -335,9 +345,9 @@ function createPinbaService(options) {
         ? await store.getDriverApplication(actorId)
         : null;
       return {
-        user: publicUser(user),
+        user: selfUser(user),
         onboarding: {
-          profileComplete: Boolean(user.profile && user.profile.adultConfirmed === true),
+          profileComplete: isCompleteRideProfile(user.profile),
           roleIntent: user.onboarding && user.onboarding.roleIntent || null,
           driverApplication: publicDriverApplication(driverApplication)
         },
@@ -346,7 +356,7 @@ function createPinbaService(options) {
     }
 
     if (action === 'profile.get') {
-      return { user: publicUser(await requireActiveUser(context, false)) };
+      return { user: selfUser(await requireActiveUser(context, false)) };
     }
 
     if (action === 'profile.update') {
@@ -354,8 +364,17 @@ function createPinbaService(options) {
       assertActiveAccount(await store.ensureUser(actorId, at));
       const profile = validateProfileInput(input);
       const user = await store.updateProfile(actorId, profile, at);
+      if (typeof store.syncUserAvatarKind === 'function') {
+        try {
+          await store.syncUserAvatarKind(actorId, avatarKindFromGender(profile.gender), at);
+        } catch (error) {
+          // The self profile is the source of truth. A snapshot sync failure must
+          // not make the already-persisted profile look unsaved to the client.
+          console.error('[pinba-avatar-sync]', actorId, error && error.stack ? error.stack : error);
+        }
+      }
       await store.addAudit({ id: operationId(context, 'audit'), actorId, action, targetType: 'user', targetId: actorId, at });
-      return { user: publicUser(user) };
+      return { user: selfUser(user) };
     }
 
     if (action === 'onboarding.selectRole') {
@@ -364,7 +383,7 @@ function createPinbaService(options) {
       const payload = validateOnboardingRoleInput(input);
       const user = await store.updateOnboardingRole(actorId, payload.roleIntent, at);
       await store.addAudit({ id: operationId(context, 'audit'), actorId, action, targetType: 'user', targetId: actorId, at });
-      return { user: publicUser(user) };
+      return { user: selfUser(user) };
     }
 
     if (action === 'driver.application.get') {
@@ -647,6 +666,7 @@ function createPinbaService(options) {
     if (action === 'activity.create') {
       const user = await requireActiveUser(context);
       const payload = validateActivityInput(input, clock());
+      if (payload.type === 'ride') invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
       const { luggageType, contactInfo, ...activityPayload } = payload;
       await moderation.check([activityPayload.title, activityPayload.description, activityPayload.rules], { actorId: user.id, scene: 2 });
       const activityId = operationId(context, 'activity');
@@ -670,8 +690,14 @@ function createPinbaService(options) {
         role: 'OWNER',
         status: 'ACTIVE',
         joinedAt: at,
-        ...(activity.type === 'ride' ? { luggageType } : {})
+        ...(activity.type === 'ride' ? {
+          luggageType,
+          avatarKind: avatarKindFromGender(user.profile.gender)
+        } : {})
       };
+      if (activity.type === 'ride') {
+        activity.avatarRoster = upsertAvatarRoster([], ownerMember.id, ownerMember.avatarKind);
+      }
       const rideFulfillment = activity.type === 'ride'
         ? {
             id: stableEntityId('rideFulfillment', activityId),
@@ -705,9 +731,17 @@ function createPinbaService(options) {
 
     if (action === 'ride.join') {
       const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
       const payload = validateRideJoinInput(input);
       const { activityId, luggageType, phone } = payload;
-      const result = await store.joinRideAtomic({ activityId, actorId: user.id, luggageType, phone, at });
+      const result = await store.joinRideAtomic({
+        activityId,
+        actorId: user.id,
+        luggageType,
+        phone,
+        avatarKind: avatarKindFromGender(user.profile.gender),
+        at
+      });
       if (result.joined) {
         await store.addNotification({
           id: operationId(context, 'notification'),
@@ -1017,6 +1051,6 @@ module.exports = {
   publicRideFulfillment,
   publicDriverProfile,
   publicNotification,
-  publicUser,
+  selfUser,
   publicDriverApplication
 };

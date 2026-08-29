@@ -26,6 +26,21 @@
       <input class="input" maxlength="20" cursor-spacing="120" adjust-position="true" placeholder="2—20个字" value="{{form.nickname}}" data-field="nickname" bindinput="handleInput" />
     </view>
     <view class="field">
+      <text class="field-label required">性别</text>
+      <view class="gender-options {{genderError ? 'gender-options--error' : ''}}" role="radiogroup" aria-label="选择性别">
+        <button class="gender-option {{form.gender === 'MALE' ? 'gender-option--active' : ''}}" data-gender="MALE" bindtap="handleGender" role="radio" aria-checked="{{form.gender === 'MALE'}}" aria-label="男性，使用乘客头像A">
+          <image class="gender-avatar" src="../../../assets/images/discover/avatar-passenger-a.png" mode="aspectFit" aria-hidden="true" />
+          <text>男</text>
+        </button>
+        <button class="gender-option {{form.gender === 'FEMALE' ? 'gender-option--active' : ''}}" data-gender="FEMALE" bindtap="handleGender" role="radio" aria-checked="{{form.gender === 'FEMALE'}}" aria-label="女性，使用乘客头像B">
+          <image class="gender-avatar" src="../../../assets/images/discover/avatar-passenger-b.png" mode="aspectFit" aria-hidden="true" />
+          <text>女</text>
+        </button>
+      </view>
+      <view wx:if="{{genderError}}" class="gender-error-tip" role="alert">请选择性别</view>
+      <view class="field-hint">头像会自动用于“我的”和拼车成员列表；不对其他成员公开性别字段。</view>
+    </view>
+    <view class="field">
       <text class="field-label required">所在城市</text>
       <input class="input" maxlength="20" cursor-spacing="120" adjust-position="true" value="{{form.city}}" data-field="city" bindinput="handleInput" />
     </view>

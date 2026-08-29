@@ -12,6 +12,7 @@ const {
   VEHICLE_STATUS,
   RIDE_PICKUP_SLOT_MINUTES,
   MEMBER_LUGGAGE_TYPES,
+  PASSENGER_AVATAR_KINDS,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { stableEntityId } = require('./ids');
@@ -25,6 +26,10 @@ const {
   rideDriverAvailability,
   normalizeRideCapacity
 } = require('./ride-policy');
+const {
+  upsertAvatarRoster,
+  removeAvatarRosterMember
+} = require('./passenger-avatar');
 
 function clone(value) {
   if (value === undefined) return undefined;
@@ -90,6 +95,20 @@ class MemoryStore {
     user.profile = clone(profile);
     user.updatedAt = at;
     return clone(user);
+  }
+
+  async syncUserAvatarKind(actorId, avatarKind, at) {
+    invariant(PASSENGER_AVATAR_KINDS.includes(avatarKind), 'VALIDATION_ERROR', '头像类型无效');
+    for (const member of this.members.values()) {
+      if (member.userId !== actorId || member.status !== MEMBER_STATUS.ACTIVE) continue;
+      const activity = this.activities.get(member.activityId);
+      if (activity && activity.type === 'ride' && [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)) {
+        member.avatarKind = avatarKind;
+        member.updatedAt = at;
+        activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
+        activity.updatedAt = at;
+      }
+    }
   }
 
   async updateOnboardingRole(actorId, roleIntent, at) {
@@ -566,6 +585,7 @@ class MemoryStore {
     if (activity.type === 'ride') {
       activity.rideFulfillment = effectiveActivity.rideFulfillment;
       activity.rideJoinable = isRideJoinable(activity, at);
+      activity.avatarRoster = removeAvatarRosterMember(activity.avatarRoster, member.id);
     }
     for (const item of this.applications.values()) {
       if (item.activityId === activityId && item.applicantId === actorId && item.status === APPLICATION_STATUS.APPROVED) {
@@ -576,8 +596,9 @@ class MemoryStore {
     return clone({ activity, member });
   }
 
-  async joinRideAtomic({ activityId, actorId, luggageType, phone, at }) {
+  async joinRideAtomic({ activityId, actorId, luggageType, phone, avatarKind, at }) {
     invariant(MEMBER_LUGGAGE_TYPES.includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
+    invariant(PASSENGER_AVATAR_KINDS.includes(avatarKind), 'PROFILE_INCOMPLETE', '请先补全性别资料');
     const activity = this.activities.get(activityId);
     const fulfillment = this.rideFulfillments.get(activityId);
     invariant(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND');
@@ -591,7 +612,7 @@ class MemoryStore {
     const effectiveActivity = normalizeRideCapacity({ ...activity, rideFulfillment: rideFulfillmentSummary(fulfillment) });
     invariant(isRideJoinable(effectiveActivity, at), activity.memberCount >= rideCapacity(activity) ? 'CAPACITY_FULL' : 'CONFLICT', '该行程当前不可加入');
     const member = existing || { id: memberId, activityId, userId: actorId, role: 'MEMBER' };
-    Object.assign(member, { status: MEMBER_STATUS.ACTIVE, joinedAt: at, luggageType });
+    Object.assign(member, { status: MEMBER_STATUS.ACTIVE, joinedAt: at, luggageType, avatarKind });
     delete member.leftAt;
     delete member.leaveReason;
     this.members.set(memberId, member);
@@ -604,6 +625,7 @@ class MemoryStore {
       updatedAt: at
     });
     activity.memberCount += 1;
+    activity.avatarRoster = upsertAvatarRoster(effectiveActivity.avatarRoster, member.id, avatarKind);
     Object.assign(activity, normalizeRideCapacity(activity));
     if (activity.status === ACTIVITY_STATUS.FORMED) activity.formedAt = activity.formedAt || at;
     activity.rideFulfillment = rideFulfillmentSummary(fulfillment);

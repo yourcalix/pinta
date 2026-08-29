@@ -15,14 +15,15 @@
       class="profile-card surface"
       bindtap="handleProfile"
       role="button"
-      aria-label="编辑个人资料，{{user.profile.nickname}}，{{user.profile.city}}，已确认年满18岁"
+      aria-label="编辑个人资料，{{user.profile.nickname}}，{{user.profile.city}}，{{profileGenderLabel}}，已确认年满18岁"
     >
       <view class="profile-avatar-shell" aria-hidden="true">
         <image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" />
       </view>
       <view class="profile-main">
         <view class="profile-name">{{user.profile.nickname}}</view>
-        <view class="profile-meta">{{user.profile.city}} · 已确认年满18岁</view>
+        <view class="profile-meta">{{user.profile.city}} · {{profileGenderLabel}} · 已确认年满18岁</view>
+        <view wx:if="{{needsGenderProfile}}" class="profile-gender-reminder">请补充性别</view>
         <view class="profile-status">{{driverProfile && driverProfile.canAcceptRide ? '认证合乘司机' : '校园公益合乘用户'}}</view>
       </view>
       <image class="profile-brand-mark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />

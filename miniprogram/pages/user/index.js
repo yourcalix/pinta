@@ -7,6 +7,7 @@ const notificationRouter = require('../../services/notification-router');
 const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
+const { profileAvatarPath } = require('../../utils/passenger-avatar');
 
 async function optionalDriverRequest(request, fallback) {
   try {
@@ -23,7 +24,9 @@ Page({
     loading: true,
     error: '',
     user: null,
-    profileAvatarPath: '../../assets/images/discover/avatar-passenger-a.png',
+    profileAvatarPath: profileAvatarPath(null),
+    profileGenderLabel: '性别未设置',
+    needsGenderProfile: true,
     isMock: api.isMock(),
     persona: api.getMockPersona(),
     personas: [
@@ -82,9 +85,11 @@ Page({
 
       this.setData({
         user,
-        profileAvatarPath: api.getMockPersona() === 'u_member'
-          ? '../../assets/images/discover/avatar-passenger-b.png'
-          : '../../assets/images/discover/avatar-passenger-a.png',
+        profileAvatarPath: profileAvatarPath(user.profile && user.profile.gender),
+        profileGenderLabel: user.profile && user.profile.gender === 'MALE'
+          ? '男'
+          : user.profile && user.profile.gender === 'FEMALE' ? '女' : '性别未设置',
+        needsGenderProfile: !user.profile || !['MALE', 'FEMALE'].includes(user.profile.gender),
         tasks,
         owned: mine.owned.map(decorateActivity),
         joined: mine.joined.map(decorateActivity),
@@ -111,6 +116,9 @@ Page({
         loading: false,
         error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试',
         user: null,
+        profileAvatarPath: profileAvatarPath(null),
+        profileGenderLabel: '性别未设置',
+        needsGenderProfile: true,
         tasks: [],
         owned: [],
         joined: [],

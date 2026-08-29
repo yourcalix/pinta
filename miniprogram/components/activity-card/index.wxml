@@ -35,23 +35,8 @@
     <view class="passenger-avatars">
       <block wx:for="{{item.avatarSlots}}" wx:key="id" wx:for-item="slot">
         <image
-          wx:if="{{slot.kind === 'a'}}"
-          class="passenger-avatar"
-          src="../../assets/images/discover/avatar-passenger-a.png"
-          mode="aspectFit"
-          aria-hidden="true"
-        />
-        <image
-          wx:elif="{{slot.kind === 'b'}}"
-          class="passenger-avatar"
-          src="../../assets/images/discover/avatar-passenger-b.png"
-          mode="aspectFit"
-          aria-hidden="true"
-        />
-        <image
-          wx:else
-          class="passenger-avatar passenger-avatar--empty"
-          src="../../assets/images/discover/avatar-passenger-empty.png"
+          class="passenger-avatar {{slot.empty ? 'passenger-avatar--empty' : ''}}"
+          src="{{slot.src}}"
           mode="aspectFit"
           aria-hidden="true"
         />

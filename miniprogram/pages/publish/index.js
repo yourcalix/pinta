@@ -3,6 +3,17 @@
 const userService = require('../../services/user');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 
+function promptGenderProfile(nextUrl) {
+  wx.showModal({
+    title: '请先完善性别资料',
+    content: '发布或加入拼车前需要选择性别，成员头像会按性别自动显示。',
+    confirmText: '去设置',
+    success: (result) => {
+      if (result.confirm) wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent(nextUrl)}` });
+    }
+  });
+}
+
 Page({
   data: {
     contentTopInset: 88,
@@ -26,6 +37,10 @@ Page({
       const user = await userService.login();
       if (!user.profile || !user.profile.adultConfirmed) {
         wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent(`/subpackages/publish/form/index?type=${type}`)}` });
+        return;
+      }
+      if (!['MALE', 'FEMALE'].includes(user.profile.gender)) {
+        promptGenderProfile(`/subpackages/publish/form/index?type=${type}`);
         return;
       }
       wx.navigateTo({ url: `/subpackages/publish/form/index?type=${type}` });

@@ -20,6 +20,7 @@ const {
   BUDDY_LEVELS,
   REPORT_REASONS,
   ONBOARDING_ROLE_INTENTS,
+  USER_GENDERS,
   DRIVER_IDENTITY_TYPES,
   DRIVER_DOCUMENT_KINDS
 } = require('./constants');
@@ -239,6 +240,7 @@ function validateProfileInput(input) {
     : [];
   return {
     nickname: stringValue(input.nickname, '昵称', { required: true, min: 2, max: 20 }),
+    gender: enumValue(input.gender, '性别', USER_GENDERS),
     city: stringValue(input.city, '城市', { required: true, max: 20 }),
     interests,
     adultConfirmed: true

@@ -21,6 +21,7 @@ function user(id, nickname) {
     status: 'ACTIVE',
     profile: {
       nickname,
+      gender: 'MALE',
       city: '澳门',
       interests: ['校园出行'],
       adultConfirmed: true

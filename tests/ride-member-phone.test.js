@@ -15,7 +15,7 @@ function user(id, nickname) {
     id,
     role: 'user',
     status: 'ACTIVE',
-    profile: { nickname, city: '澳门', interests: ['校园出行'], adultConfirmed: true },
+    profile: { nickname, gender: 'MALE', city: '澳门', interests: ['校园出行'], adultConfirmed: true },
     createdAt: NOW.toISOString(),
     updatedAt: NOW.toISOString()
   };

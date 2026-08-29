@@ -40,6 +40,42 @@ const BUSINESS_IDEMPOTENT_ACTIONS = new Set(['driver.application.submit', 'admin
 const PUBLIC_ACTIONS = new Set(['activity.list', 'activity.detail', 'activity.question.list']);
 const MAX_PUBLIC_SCAN = 500;
 const mockSensitiveHashSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
+const PASSENGER_AVATAR_KINDS = Object.freeze(['PASSENGER_A', 'PASSENGER_B']);
+
+function avatarKindFromGender(gender) {
+  if (gender === 'MALE') return 'PASSENGER_A';
+  if (gender === 'FEMALE') return 'PASSENGER_B';
+  return null;
+}
+
+function completeRideProfile(profile) {
+  return Boolean(profile && profile.adultConfirmed === true && ['MALE', 'FEMALE'].includes(profile.gender));
+}
+
+function normalizeAvatarRoster(roster) {
+  if (!Array.isArray(roster)) return [];
+  const seen = new Set();
+  return roster.filter((item) => {
+    if (!item || typeof item.memberId !== 'string' || !PASSENGER_AVATAR_KINDS.includes(item.avatarKind) || seen.has(item.memberId)) return false;
+    seen.add(item.memberId);
+    return true;
+  }).slice(0, 7).map((item) => ({ memberId: item.memberId, avatarKind: item.avatarKind }));
+}
+
+function upsertAvatarRoster(roster, memberId, avatarKind) {
+  const next = normalizeAvatarRoster(roster);
+  if (!PASSENGER_AVATAR_KINDS.includes(avatarKind)) return next;
+  const existing = next.find((item) => item.memberId === memberId);
+  if (existing) existing.avatarKind = avatarKind;
+  else if (next.length < 7) next.push({ memberId, avatarKind });
+  return next;
+}
+
+function publicAvatarSlots(roster) {
+  const kinds = normalizeAvatarRoster(roster).map((item) => item.avatarKind);
+  while (kinds.length < 7) kinds.push('EMPTY');
+  return kinds.slice(0, 7).map((kind) => ({ kind }));
+}
 
 function resolveNotificationTarget(type) {
   if (type === 'NEW_APPLICATION') return 'MANAGE';
@@ -126,15 +162,15 @@ function seedState() {
   const rideStartsAt = rideStartDate.toISOString();
   const rideWindowEnd = new Date(rideStartDate.getTime() + 60 * 60 * 1000).toISOString();
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     sequence: 100,
     users: [
-      { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', city: '澳门', interests: ['校园出行'], adultConfirmed: true } },
-      { id: 'u_member', role: 'user', status: 'ACTIVE', profile: { nickname: '阿同', city: '澳门', interests: ['校园出行'], adultConfirmed: true } },
-      { id: 'u_driver', role: 'user', status: 'ACTIVE', onboarding: { roleIntent: 'DRIVER', completedAt: now }, profile: { nickname: '林师傅', city: '澳门', interests: ['校园互助'], adultConfirmed: true } },
-      { id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', city: '澳门', interests: ['凑单'], adultConfirmed: true } },
-      { id: 'u_admin', role: 'admin', status: 'ACTIVE', profile: { nickname: '运营', city: '澳门', interests: [], adultConfirmed: true } },
-      { id: 'u_disabled', role: 'user', status: 'DISABLED', profile: { nickname: '受限账号', city: '澳门', interests: [], adultConfirmed: true } }
+      { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['校园出行'], adultConfirmed: true } },
+      { id: 'u_member', role: 'user', status: 'ACTIVE', profile: { nickname: '阿同', gender: 'FEMALE', city: '澳门', interests: ['校园出行'], adultConfirmed: true } },
+      { id: 'u_driver', role: 'user', status: 'ACTIVE', onboarding: { roleIntent: 'DRIVER', completedAt: now }, profile: { nickname: '林师傅', gender: 'MALE', city: '澳门', interests: ['校园互助'], adultConfirmed: true } },
+      { id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', gender: 'FEMALE', city: '澳门', interests: ['凑单'], adultConfirmed: true } },
+      { id: 'u_admin', role: 'admin', status: 'ACTIVE', profile: { nickname: '运营', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } },
+      { id: 'u_disabled', role: 'user', status: 'DISABLED', profile: { nickname: '受限账号', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } }
     ],
     activities: [
       {
@@ -148,7 +184,7 @@ function seedState() {
           origin: { id: 'QINGMAO', label: '青茂口岸' }, destination: { id: 'TAIPA_CAMPUS', label: '凼仔校区' },
           pickupWindowEnd: rideWindowEnd, feeType: 'SHARED_COST', luggageRule: 'ONE_SMALL'
         },
-        status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
+        status: 'RECRUITING', avatarRoster: [{ memberId: 'm_ride_owner', avatarKind: 'PASSENGER_A' }], version: 1, createdAt: now, updatedAt: now
       },
       {
         id: 'a_product', ownerId: 'u_merchant', owner: { nickname: '邻里团长' }, type: 'product',
@@ -212,7 +248,7 @@ function seedState() {
       }
     ],
     members: [
-      { id: 'm_ride_owner', activityId: 'a_ride', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now, luggageType: 'NONE' },
+      { id: 'm_ride_owner', activityId: 'a_ride', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now, luggageType: 'NONE', avatarKind: 'PASSENGER_A' },
       { id: 'm_product_owner', activityId: 'a_product', userId: 'u_merchant', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
       { id: 'm_buddy_owner', activityId: 'a_buddy', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
       { id: 'm_buddy_member', activityId: 'a_buddy', userId: 'u_member', role: 'MEMBER', status: 'ACTIVE', joinedAt: now }
@@ -261,7 +297,7 @@ function writeStorage(key, value) {
 }
 
 let state = readStorage(STATE_KEY) || seedState();
-if (!state || state.schemaVersion !== 4) state = seedState();
+if (!state || state.schemaVersion !== 5) state = seedState();
 let currentUserId = readStorage(PERSONA_KEY) || 'u_owner';
 if (!state.idempotency) state.idempotency = {};
 if (!state.activityQuestions) state.activityQuestions = [];
@@ -322,12 +358,14 @@ function isMockRideAcceptable(activity, at) {
   return Date.parse(activity.typeData && activity.typeData.pickupWindowEnd) > Date.parse(at);
 }
 
-function publicUser(user) {
+// Authenticated self-profile DTO. Public activity responses never use this helper.
+function selfUser(user) {
   return user ? {
     role: user.role,
     status: user.status,
     onboarding: user.onboarding ? clone(user.onboarding) : { roleIntent: null, completedAt: null },
-    profile: clone(user.profile)
+    profile: clone(user.profile),
+    profileComplete: completeRideProfile(user.profile)
   } : null;
 }
 
@@ -411,7 +449,7 @@ function publicActivity(activity, options = {}) {
         : viewerFulfillment && viewerFulfillment.status === 'ASSIGNED' && viewerFulfillment.driverId === currentUserId
           ? 'driver'
           : viewerApplication ? 'applicant' : 'guest';
-  const { contactInfo, ownerId, version, suspension, operationKeyHash, ...safe } = activity;
+  const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, ...safe } = activity;
   const rideCapacity = activity.type === 'ride' ? 7 : (activity.maxPassengers || activity.targetMembers);
   const result = {
     ...clone(safe),
@@ -425,6 +463,7 @@ function publicActivity(activity, options = {}) {
     viewerRole
   };
   if (activity.type === 'ride') {
+    result.avatarSlots = publicAvatarSlots(avatarRoster);
     const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
     result.rideFulfillment = fulfillment ? {
       status: fulfillment.status,
@@ -673,6 +712,7 @@ function createActivity(input) {
     ...activityInput, memberCount: 1, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
   };
   if (activity.type === 'ride') {
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
     const route = getRideRoute(activity.typeData && activity.typeData.routeId);
     assert(route, 'VALIDATION_ERROR', '请选择固定路线');
     const startsAt = Date.parse(activity.startsAt);
@@ -715,10 +755,11 @@ function createActivity(input) {
     role: 'OWNER',
     status: 'ACTIVE',
     joinedAt: now,
-    ...(activity.type === 'ride' ? { luggageType } : {})
+    ...(activity.type === 'ride' ? { luggageType, avatarKind: avatarKindFromGender(user.profile.gender) } : {})
   };
   state.members.push(ownerMember);
   if (activity.type === 'ride') {
+    activity.avatarRoster = upsertAvatarRoster([], ownerMember.id, ownerMember.avatarKind);
     state.memberContacts.push({
       id: nextId('memberContact'), activityId: activity.id, memberId: ownerMember.id, userId: user.id,
       phone: contactInfo.replace(/[\s()-]+/g, ''), status: 'ACTIVE', createdAt: now, updatedAt: now
@@ -839,6 +880,7 @@ function joinRide(input) {
   assert(['NONE', 'SMALL', 'LARGE'].includes(input.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
   assert(validRidePhone(input.phone), 'VALIDATION_ERROR', '请输入正确的联系电话');
   const user = requireUser();
+  assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
   const activity = activityById(input.activityId);
   const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
   assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
@@ -852,6 +894,7 @@ function joinRide(input) {
   member.status = 'ACTIVE';
   member.joinedAt = now;
   member.luggageType = input.luggageType;
+  member.avatarKind = avatarKindFromGender(user.profile.gender);
   delete member.leftAt;
   delete member.leaveReason;
   if (!existing) state.members.push(member);
@@ -862,6 +905,7 @@ function joinRide(input) {
     phone: input.phone.replace(/[\s()-]+/g, ''), status: 'ACTIVE', createdAt: now, updatedAt: now
   });
   activity.memberCount += 1;
+  activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
   activity.status = activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING';
   if (activity.status === 'FORMED') activity.formedAt = activity.formedAt || now;
   activity.rideJoinable = isMockRideJoinable(activity, now);
@@ -926,26 +970,37 @@ function handle(action, input, idempotencyKey = '') {
     const user = requireUser();
     const application = state.driverApplications.find((item) => item.userId === user.id);
     return {
-      user: publicUser(user),
+      user: selfUser(user),
       onboarding: {
-        profileComplete: Boolean(user.profile && user.profile.adultConfirmed),
+        profileComplete: completeRideProfile(user.profile),
         roleIntent: user.onboarding && user.onboarding.roleIntent || null,
         driverApplication: publicDriverApplication(application)
       },
       sessionScope: `mock-session-${currentUserId}`
     };
   }
-  if (action === 'profile.get') return { user: publicUser(requireUser()) };
+  if (action === 'profile.get') return { user: selfUser(requireUser()) };
   if (action === 'profile.update') {
     const user = requireUser();
+    assert(['MALE', 'FEMALE'].includes(input.gender), 'VALIDATION_ERROR', '请选择性别');
     user.profile = clone(input);
-    return { user: publicUser(user) };
+    const avatarKind = avatarKindFromGender(input.gender);
+    state.members.filter((member) => member.userId === user.id && member.status === 'ACTIVE').forEach((member) => {
+      const activity = activityById(member.activityId);
+      if (activity && activity.type === 'ride' && ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status)) {
+        member.avatarKind = avatarKind;
+        member.updatedAt = new Date().toISOString();
+        activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
+        activity.updatedAt = member.updatedAt;
+      }
+    });
+    return { user: selfUser(user) };
   }
   if (action === 'onboarding.selectRole') {
     const user = requireUser();
     assert(['PASSENGER', 'DRIVER'].includes(input.roleIntent), 'VALIDATION_ERROR', '注册身份无效');
     user.onboarding = { roleIntent: input.roleIntent, completedAt: new Date().toISOString() };
-    return { user: publicUser(user) };
+    return { user: selfUser(user) };
   }
   if (action === 'driver.application.get') {
     const application = state.driverApplications.find((item) => item.userId === currentUserId);
@@ -1136,6 +1191,9 @@ function handle(action, input, idempotencyKey = '') {
     member.leftAt = now;
     const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
     if (contact) Object.assign(contact, { status: 'INACTIVE', updatedAt: now });
+    if (activity.type === 'ride') {
+      activity.avatarRoster = normalizeAvatarRoster(activity.avatarRoster).filter((item) => item.memberId !== member.id);
+    }
     activity.memberCount = Math.max(1, activity.memberCount - 1);
     if (activity.status === 'FORMED' && activity.memberCount < (activity.minPassengers || activity.targetMembers)) {
       activity.status = 'RECRUITING';

@@ -13,6 +13,7 @@ const {
   VEHICLE_STATUS,
   RIDE_PICKUP_SLOT_MINUTES,
   MEMBER_LUGGAGE_TYPES,
+  PASSENGER_AVATAR_KINDS,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { stableEntityId } = require('./ids');
@@ -26,6 +27,10 @@ const {
   rideDriverAvailability,
   normalizeRideCapacity
 } = require('./ride-policy');
+const {
+  upsertAvatarRoster,
+  removeAvatarRosterMember
+} = require('./passenger-avatar');
 
 const CLOUD_IN_QUERY_CHUNK_SIZE = 10;
 const DRIVER_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
@@ -135,6 +140,32 @@ class CloudStore {
       await userDocument.set({ data: document(next) });
       return next;
     });
+  }
+
+  async syncUserAvatarKind(actorId, avatarKind, at) {
+    invariant(PASSENGER_AVATAR_KINDS.includes(avatarKind), 'VALIDATION_ERROR', '头像类型无效');
+    const members = [];
+    const pageSize = 20;
+    for (let offset = 0; ; offset += pageSize) {
+      const result = await this.db.collection('members').where({ userId: actorId }).skip(offset).limit(pageSize).get();
+      const page = (result.data || []).map(entity);
+      members.push(...page.filter((member) => member.status === MEMBER_STATUS.ACTIVE));
+      if (page.length < pageSize) break;
+    }
+    for (const candidate of members) {
+      await this.db.runTransaction(async (transaction) => {
+        const memberRef = transaction.collection('members').doc(candidate.id);
+        const activityRef = transaction.collection('activities').doc(candidate.activityId);
+        const member = await getTransactionDocument(memberRef);
+        const activity = await getTransactionDocument(activityRef);
+        if (!member || member.userId !== actorId || member.status !== MEMBER_STATUS.ACTIVE) return;
+        if (!activity || activity.type !== 'ride') return;
+        if (![ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)) return;
+        const avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
+        await memberRef.update({ data: { avatarKind, updatedAt: at } });
+        await activityRef.update({ data: { avatarRoster } });
+      });
+    }
   }
 
   async updateOnboardingRole(actorId, roleIntent, at) {
@@ -809,7 +840,11 @@ class CloudStore {
           status: nextStatus,
           formedAt: nextStatus === ACTIVITY_STATUS.RECRUITING ? this.command.remove() : activity.formedAt,
           ...(activity.type === 'ride'
-            ? { rideFulfillment: effectiveActivity.rideFulfillment, rideJoinable }
+            ? {
+                rideFulfillment: effectiveActivity.rideFulfillment,
+                rideJoinable,
+                avatarRoster: removeAvatarRosterMember(activity.avatarRoster, member.id)
+              }
             : {}),
           version: activity.version + 1,
           updatedAt: at
@@ -827,8 +862,9 @@ class CloudStore {
     });
   }
 
-  async joinRideAtomic({ activityId, actorId, luggageType, phone, at }) {
+  async joinRideAtomic({ activityId, actorId, luggageType, phone, avatarKind, at }) {
     invariant(MEMBER_LUGGAGE_TYPES.includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
+    invariant(PASSENGER_AVATAR_KINDS.includes(avatarKind), 'PROFILE_INCOMPLETE', '请先补全性别资料');
     return this.db.runTransaction(async (transaction) => {
       const activityRef = transaction.collection('activities').doc(activityId);
       const fulfillmentId = stableEntityId('rideFulfillment', activityId);
@@ -855,12 +891,14 @@ class CloudStore {
         ...(existing || { id: memberId, activityId, userId: actorId, role: 'MEMBER' }),
         status: MEMBER_STATUS.ACTIVE,
         joinedAt: at,
-        luggageType
+        luggageType,
+        avatarKind
       };
       delete member.leftAt;
       delete member.leaveReason;
       const nextCount = Number(activity.memberCount || 0) + 1;
       const nextActivity = normalizeRideCapacity({ ...effectiveActivity, memberCount: nextCount });
+      nextActivity.avatarRoster = upsertAvatarRoster(effectiveActivity.avatarRoster, member.id, avatarKind);
       nextActivity.formedAt = nextActivity.status === ACTIVITY_STATUS.FORMED ? (activity.formedAt || at) : null;
       nextActivity.rideJoinable = isRideJoinable(nextActivity, at);
       nextActivity.updatedAt = at;
@@ -881,6 +919,7 @@ class CloudStore {
         targetMembers: nextActivity.targetMembers,
         minPassengers: nextActivity.minPassengers,
         maxPassengers: nextActivity.maxPassengers,
+        avatarRoster: nextActivity.avatarRoster,
         version: nextActivity.version,
         updatedAt: at
       } });

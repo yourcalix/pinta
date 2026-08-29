@@ -38,7 +38,7 @@ test('CloudStore 以事务整字段替换从 null 初始化用户资料并保留
       };
     }
   };
-  const profile = { nickname: 'pinba test', city: '澳门', interests: [], adultConfirmed: true };
+  const profile = { nickname: 'pinba test', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true };
   const store = new CloudStore(cloud);
 
   const updated = await store.updateProfile('user-1', profile, '2026-08-28T01:00:00.000Z');

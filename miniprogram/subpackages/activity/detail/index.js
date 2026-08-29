@@ -22,6 +22,17 @@ const QA_PAGE_LIMIT = 10;
 const QA_ASK_STATUSES = Object.freeze(['RECRUITING', 'FORMED']);
 const QA_ANSWER_STATUSES = Object.freeze(['RECRUITING', 'FORMED', 'IN_PROGRESS']);
 
+function promptGenderProfile(nextUrl) {
+  wx.showModal({
+    title: '请先完善性别资料',
+    content: '发布或加入拼车前需要选择性别，成员头像会按性别自动显示。',
+    confirmText: '去设置',
+    success: (result) => {
+      if (result.confirm) wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent(nextUrl)}` });
+    }
+  });
+}
+
 function locationLabel(value) {
   return value && typeof value === 'object' ? value.label || '' : value || '';
 }
@@ -574,6 +585,10 @@ Page({
         wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent(`/subpackages/activity/detail/index?id=${this.data.id}`)}` });
         return;
       }
+      if (!['MALE', 'FEMALE'].includes(user.profile.gender)) {
+        promptGenderProfile(`/subpackages/activity/detail/index?id=${this.data.id}`);
+        return;
+      }
       await subscriptionService.requestStatusUpdates();
       await activityService.apply(this.data.id, this.data.note.trim());
       wx.showToast({ title: '申请已提交', icon: 'success' });
@@ -600,6 +615,10 @@ Page({
       const user = await userService.login();
       if (!user.profile || !user.profile.adultConfirmed) {
         wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent(`/subpackages/activity/detail/index?id=${this.data.id}`)}` });
+        return;
+      }
+      if (!['MALE', 'FEMALE'].includes(user.profile.gender)) {
+        promptGenderProfile(`/subpackages/activity/detail/index?id=${this.data.id}`);
         return;
       }
       await subscriptionService.requestStatusUpdates();

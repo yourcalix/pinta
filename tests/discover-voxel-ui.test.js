@@ -51,9 +51,7 @@ test('行程卡片将信息与体素视觉底带分层并保持整卡点击', ()
   assert.match(template, /node-start-blue\.png/);
   assert.match(template, /node-end-taipa\.png/);
   assert.match(template, /node-end-golden-dragon\.png/);
-  assert.match(template, /avatar-passenger-a\.png/);
-  assert.match(template, /avatar-passenger-b\.png/);
-  assert.match(template, /avatar-passenger-empty\.png/);
+  assert.match(template, /src="\{\{slot\.src\}\}"/);
   assert.doesNotMatch(template, />查看详情</);
   assert.match(template, /bindtap="handleTap"/);
 });
@@ -74,6 +72,11 @@ test('拼车展示模型提供路线代号、时间窗、节点与非身份化�
     status: 'FORMED',
     viewerRole: 'guest',
     rideFulfillment: { status: 'UNASSIGNED' },
+    avatarSlots: [
+      { kind: 'PASSENGER_A' },
+      { kind: 'PASSENGER_B' },
+      { kind: 'EMPTY' }
+    ],
     typeData: {
       routeId: 'QINGMAO_TO_TAIPA',
       routeCode: '青城',
@@ -87,5 +90,7 @@ test('拼车展示模型提供路线代号、时间窗、节点与非身份化�
   assert.equal(activity.originLocationId, 'QINGMAO');
   assert.equal(activity.destinationLocationId, 'TAIPA_CAMPUS');
   assert.match(activity.timeWindowLabel, /\d{2}:\d{2}–\d{2}:\d{2}/);
-  assert.deepEqual(activity.avatarSlots.map((slot) => slot.kind), ['a', 'b', 'empty', 'empty']);
+  assert.deepEqual(activity.avatarSlots.map((slot) => slot.kind), [
+    'PASSENGER_A', 'PASSENGER_B', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'
+  ]);
 });

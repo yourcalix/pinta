@@ -37,12 +37,12 @@ test('routeId 可回填滚轮且越界索引会安全钳制', () => {
   assert.equal(rideRouteFromIndexes([-1, -1]).id, 'QINGMAO_TO_TAIPA');
 });
 
-test('司机注册页面和服务契约不在公开用户 DTO 中回显证件字段', () => {
+test('司机注册页面和服务契约不在本人资料 DTO 中回显证件字段', () => {
   const service = require('../cloudfunctions/api/lib/service');
-  const source = service.publicUser({
+  const source = service.selfUser({
     role: 'user',
     status: 'ACTIVE',
-    profile: { nickname: '测试', city: '澳门', adultConfirmed: true },
+    profile: { nickname: '测试', gender: 'MALE', city: '澳门', adultConfirmed: true },
     onboarding: { roleIntent: 'DRIVER' },
     identityNumber: 'sensitive-value',
     documentFileId: 'private-file-id'
@@ -75,7 +75,7 @@ test('司机认证写请求的本地幂等指纹不包含完整敏感 payload', 
 function activeUser(id, role = 'user') {
   return {
     id, role, status: 'ACTIVE',
-    profile: { nickname: id, city: '澳门', interests: [], adultConfirmed: true },
+    profile: { nickname: id, gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true },
     createdAt: '2026-08-27T00:00:00.000Z', updatedAt: '2026-08-27T00:00:00.000Z'
   };
 }

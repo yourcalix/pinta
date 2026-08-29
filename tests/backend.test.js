@@ -18,6 +18,7 @@ function user(id, nickname, role = 'user') {
     status: 'ACTIVE',
     profile: {
       nickname,
+      gender: 'MALE',
       city: '澳门',
       interests: ['咖啡'],
       adultConfirmed: true

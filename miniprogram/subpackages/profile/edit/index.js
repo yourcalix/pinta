@@ -6,12 +6,14 @@ Page({
   data: {
     form: {
       nickname: '',
+      gender: '',
       city: '澳门',
       interestsText: '',
       adultConfirmed: false,
       roleIntent: 'PASSENGER'
     },
     saving: false,
+    genderError: false,
     errorMessage: ''
   },
 
@@ -30,6 +32,7 @@ Page({
         this.setData({
           form: {
             nickname: profile.nickname || '',
+            gender: profile.gender || '',
             city: profile.city || '澳门',
             interestsText: (profile.interests || []).join('、'),
             adultConfirmed: profile.adultConfirmed === true,
@@ -54,15 +57,23 @@ Page({
     this.setData({ 'form.roleIntent': event.currentTarget.dataset.role, errorMessage: '' });
   },
 
+  handleGender(event) {
+    const gender = event.currentTarget.dataset.gender;
+    if (!['MALE', 'FEMALE'].includes(gender)) return;
+    this.setData({ 'form.gender': gender, genderError: false, errorMessage: '' });
+  },
+
   async handleSave() {
     if (this.data.saving) return;
     const form = this.data.form;
     if (form.nickname.trim().length < 2) return this.setData({ errorMessage: '昵称至少需要2个字' });
+    if (!['MALE', 'FEMALE'].includes(form.gender)) return this.setData({ genderError: true, errorMessage: '请选择性别' });
     if (!form.adultConfirmed) return this.setData({ errorMessage: 'MVP 仅面向18岁及以上用户' });
     this.setData({ saving: true, errorMessage: '' });
     try {
       const result = await userService.updateProfile({
         nickname: form.nickname.trim(),
+        gender: form.gender,
         city: form.city.trim() || '澳门',
         interests: form.interestsText.split(/[、,，\s]+/).map((item) => item.trim()).filter(Boolean).slice(0, 8),
         adultConfirmed: true

@@ -104,15 +104,16 @@
 }
 
 .passenger-avatars {
-  flex: 0 0 auto;
+  flex: 1 1 260rpx;
+  min-width: 0;
   padding-left: 4rpx;
 }
 
 .passenger-avatar {
   position: relative;
-  width: 58rpx;
-  height: 58rpx;
-  margin-left: -10rpx;
+  width: 52rpx;
+  height: 52rpx;
+  margin-left: -8rpx;
   background: #fff;
   border: 2rpx solid #fff;
   border-radius: 15rpx;
