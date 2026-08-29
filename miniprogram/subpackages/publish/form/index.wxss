@@ -132,6 +132,14 @@
   transform: translateY(2rpx);
 }
 
+.section-icon--phone {
+  flex: 0 0 auto;
+  width: 58rpx;
+  height: 58rpx;
+  transform: rotate(15deg) translateY(2rpx);
+  transform-origin: center center;
+}
+
 .section-copy {
   flex: 1;
   min-width: 0;
@@ -498,12 +506,6 @@
 
 .private-card {
   background: linear-gradient(135deg, #ffffff 0%, #f2f8f5 100%);
-}
-
-.section-mark--phone {
-  font-size: 34rpx;
-  font-weight: 700;
-  transform: rotate(-28deg);
 }
 
 .phone-input-row {

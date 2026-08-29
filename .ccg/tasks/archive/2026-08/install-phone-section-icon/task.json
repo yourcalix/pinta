@@ -1,0 +1,12 @@
+{
+  "id": "install-phone-section-icon",
+  "title": "安装本人联系电话标题体素图标",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并推送 GitHub",
+  "createdAt": "2026-08-30T01:46:10+08:00",
+  "branch": "main"
+}

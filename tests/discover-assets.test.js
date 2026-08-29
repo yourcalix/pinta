@@ -16,6 +16,7 @@ const EXPECTED_ASSETS = {
   'node-start-blue.png': [144, 144],
   'node-end-taipa.png': [144, 144],
   'node-end-golden-dragon.png': [144, 144],
+  'phone-section-handset.png': [144, 144],
   'route-section-pin.png': [144, 144],
   'avatar-passenger-a.png': [144, 144],
   'avatar-passenger-b.png': [144, 144],

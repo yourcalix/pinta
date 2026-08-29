@@ -122,7 +122,7 @@
 
   <view id="field-phone" class="form-card surface private-card {{errorField === 'phone' ? 'form-card--error' : ''}}">
     <view class="section-heading">
-      <view class="section-mark section-mark--phone" aria-hidden="true">⌕</view>
+      <image class="section-icon section-icon--phone" src="../../../assets/images/discover/phone-section-handset.png" mode="aspectFit" aria-hidden="true" />
       <view class="section-copy">
         <view class="section-title required">本人联系电话</view>
         <view class="section-description">仅在司机确认承接后向该司机展示</view>

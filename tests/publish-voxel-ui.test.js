@@ -70,11 +70,15 @@ test('发布适配器自动生成路线标题并把隐藏截止设为出发前�
 
 test('行李电话协议共同控制发布按钮且电话只停留在当前页面内存', () => {
   const template = read('subpackages/publish/form/index.wxml');
+  const styles = read('subpackages/publish/form/index.wxss');
   const script = read('subpackages/publish/form/index.js');
 
   assert.match(template, /class="luggage-chip[\s\S]*role="radio"/);
   assert.match(template, /disabled="\{\{submitting \|\| !submitReady\}\}"/);
   assert.match(template, /class="agreement[\s\S]*aria-invalid/);
+  assert.match(template, /phone-section-handset\.png[\s\S]*aria-hidden="true"/);
+  assert.doesNotMatch(template, /section-mark--phone/);
+  assert.match(styles, /\.section-icon--phone\s*\{[\s\S]*width:\s*58rpx;[\s\S]*height:\s*58rpx;[\s\S]*rotate\(15deg\) translateY\(2rpx\)/);
   assert.match(script, /submitReady:\s*false/);
   assert.match(script, /onHide\(\)[\s\S]*phoneNumber/);
   assert.match(script, /const \{ phoneNumber, \.\.\.safeForm \}/);
