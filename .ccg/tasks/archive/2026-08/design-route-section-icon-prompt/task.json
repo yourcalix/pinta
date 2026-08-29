@@ -1,0 +1,12 @@
+{
+  "id": "design-route-section-icon-prompt",
+  "title": "设计起终点标题体素图标提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "等待用户生成透明图标并回传",
+  "createdAt": "2026-08-30T01:00:00+08:00",
+  "branch": "main"
+}
