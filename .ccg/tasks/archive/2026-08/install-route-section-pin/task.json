@@ -1,0 +1,12 @@
+{
+  "id": "install-route-section-pin",
+  "title": "安装起终点标题体素定位图标",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并推送 GitHub",
+  "createdAt": "2026-08-30T01:28:00+08:00",
+  "branch": "main"
+}

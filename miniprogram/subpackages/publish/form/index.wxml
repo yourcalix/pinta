@@ -15,7 +15,7 @@
 
   <view id="field-route" class="form-card surface {{errorField === 'route' ? 'form-card--error' : ''}}">
     <view class="section-heading">
-      <view class="section-mark section-mark--pin" aria-hidden="true"><view class="pin-dot"></view></view>
+      <image class="section-icon section-icon--route" src="../../../assets/images/discover/route-section-pin.png" mode="aspectFit" aria-hidden="true" />
       <view class="section-copy">
         <view class="section-title required">选择起点与终点</view>
         <view class="section-description">仅支持澳门试点的 8 条校园往返路线</view>

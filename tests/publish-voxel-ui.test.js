@@ -26,11 +26,15 @@ test('发布拼车采用体素风格单页长表单且不再暴露分步控件',
 
 test('路线双框由同一个固定路线 multiSelector 驱动并按选择展示体素预览', () => {
   const template = read('subpackages/publish/form/index.wxml');
+  const styles = read('subpackages/publish/form/index.wxss');
   const script = read('subpackages/publish/form/index.js');
 
   assert.match(template, /mode="multiSelector"[\s\S]*class="route-picker-grid"/);
   assert.match(template, /routeOriginLabel/);
   assert.match(template, /routeDestinationLabel/);
+  assert.match(template, /route-section-pin\.png[\s\S]*aria-hidden="true"/);
+  assert.doesNotMatch(template, /section-mark--pin|pin-dot/);
+  assert.match(styles, /\.section-icon--route\s*\{[\s\S]*width:\s*58rpx;[\s\S]*height:\s*58rpx;[\s\S]*translateY\(2rpx\)/);
   assert.match(template, /wx:if="\{\{routeSelected\}\}"[\s\S]*route-visual/);
   assert.match(script, /routeSelected:\s*false/);
   assert.match(script, /routeOriginLabel:\s*'选择起点'/);

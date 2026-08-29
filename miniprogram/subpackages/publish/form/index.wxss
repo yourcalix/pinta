@@ -125,20 +125,11 @@
   border-radius: 17rpx;
 }
 
-.section-mark--pin {
-  width: 38rpx;
-  height: 50rpx;
-  margin: 2rpx 10rpx;
-  border-radius: 24rpx 24rpx 24rpx 5rpx;
-  transform: rotate(-45deg);
-}
-
-.pin-dot {
-  width: 14rpx;
-  height: 14rpx;
-  background: #ffffff;
-  border: 4rpx solid #16a36a;
-  border-radius: 50%;
+.section-icon--route {
+  flex: 0 0 auto;
+  width: 58rpx;
+  height: 58rpx;
+  transform: translateY(2rpx);
 }
 
 .section-copy {
