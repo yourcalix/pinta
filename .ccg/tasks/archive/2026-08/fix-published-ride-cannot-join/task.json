@@ -1,0 +1,12 @@
+{
+  "id": "fix-published-ride-cannot-join",
+  "title": "修复新发布拼车在另一账号显示招募中但不可加入",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "请用另一个账号重新进入招募中行程并验证直接入团",
+  "createdAt": "2026-08-29T00:00:00+08:00",
+  "branch": "main"
+}

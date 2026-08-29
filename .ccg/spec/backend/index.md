@@ -28,7 +28,7 @@
 - 活动公开问答使用独立 `activityQuestions` 集合，一问最多一个回答。提问事务必须同时读取活动文档并重验下架、截止和 `RECRUITING | FORMED` 状态；回答事务必须重验发起者权限和 `RECRUITING | FORMED | IN_PROGRESS` 状态。问题/回答与对应审计日志必须在同一事务内提交。
 - 拼车司机履约以独立 `rideFulfillments` 集合/Map 为事实源，`activities.rideFulfillment` 与 `rideJoinable` 只作为缓存。详情、列表、我的、直接入团和退出等所有权限或可见性判断必须先水合事实源；缺失 fulfillment 一律 fail-closed。CloudBase 的 `command.in` ID 查询按不超过 10 个值分片。
 - 司机已确认承接后，MVP 不允许乘客自行退团，以避免 `RECRUITING + ASSIGNED` 跨集合矛盾状态；未来若开放，必须在同一事务中同步解除司机承接并重新计算活动状态。
-- 服务端 DTO 必须明确返回 `canJoinRide`、`canLeaveRide` 与 `rideExitLocked`。司机承接只锁定已有成员的退出权限；若报名仍开放且未满 7 人，新乘客仍可直接加入。同一用户不得在同一行程同时成为有效乘客与承接司机。
+- 服务端 DTO 必须明确返回 `canJoinRide`、`canLeaveRide` 与 `rideExitLocked`。`canJoinRide` 为 false 时同时返回稳定、脱敏的 `joinUnavailableReason`，不让客户端自行推导权限原因。司机承接只锁定已有成员的退出权限；若报名仍开放且未满 7 人，新乘客仍可直接加入。同一用户不得在同一行程同时成为有效乘客与承接司机。
 - 澳门校园拼车固定为 7 个乘客名额，司机不计入乘客人数；活动只有在有效乘客数达到 7 时进入 `FORMED`，不得再读取或接受客户端自定义成团人数。
 - 澳门拼车成员行李使用成员级 `luggageType: NONE | SMALL | LARGE`，不得再把活动级旧字段 `typeData.luggageRule` 写入或映射为个人行李。发起者创建行程与乘客直接入团都必须显式选择且在 API、Store 两层校验；重复加入中的 `ACTIVE` 成员不得被新请求静默改写，`LEFT` 成员重新加入时使用本次选择覆盖旧值。旧成员缺失该字段时保持 `null/未填写`，不得默认成“无行李”。
 - 司机承接资格与乘客成团状态解耦：只要行程未取消、未下架、未被其他司机承接且服务端当前时间早于接车时间窗上限，审核通过的司机即可承接。报名截止只关闭乘客申请，不得提前关闭司机承接；司机确认后，未满 7 人且仍在报名期内的乘客通道继续开放。

@@ -71,6 +71,11 @@ function decorateActivity(activity) {
   const canApply = activity.type === 'ride'
     ? activity.canJoinRide === true
     : canApplyStatus && (activity.viewerRole === 'guest' || (activity.viewerRole === 'applicant' && canReapply));
+  const joinUnavailableTip = activity.type === 'ride'
+    ? typeof activity.canJoinRide !== 'boolean'
+      ? '服务更新中，请刷新后重试'
+      : activity.joinUnavailableReason || '当前行程暂不可加入'
+    : '';
   let sceneLine = activity.placeLabel;
   const typeData = activity.typeData || {};
   const route = activity.type === 'ride' ? getRideRoute(typeData.routeId) : null;
@@ -126,6 +131,7 @@ function decorateActivity(activity) {
     avatarSlots: passengerAvatarSlots(memberCount, maxPassengers),
     progressPercent,
     canApply,
+    joinUnavailableTip,
     capacityLabel: `已有 ${memberCount} 人 · 最多 ${maxPassengers} 人`,
     driverStatusLabel,
     driverStatusTone,

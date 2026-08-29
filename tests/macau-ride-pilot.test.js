@@ -10,6 +10,7 @@ const {
   PILOT_CITY,
   RIDE_FULFILLMENT_STATUS
 } = require('../cloudfunctions/api/lib/constants');
+const { ridePassengerJoinUnavailableReason } = require('../cloudfunctions/api/lib/ride-policy');
 
 const NOW = new Date('2026-08-23T02:00:00.000Z');
 
@@ -441,6 +442,16 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   const { call, store } = setup();
   const { activityId } = await createAndFormRide(call, 'direct-join-leave');
 
+  const guestDetail = await call('activity.detail', { activityId }, 'second-openid');
+  assert.equal(guestDetail.ok, true);
+  assert.equal(guestDetail.data.activity.status, 'RECRUITING');
+  assert.equal(guestDetail.data.activity.canJoinRide, true);
+  assert.equal(guestDetail.data.activity.joinUnavailableReason, '');
+
+  const ownerDetail = await call('activity.detail', { activityId }, 'owner-openid');
+  assert.equal(ownerDetail.data.activity.canJoinRide, false);
+  assert.equal(ownerDetail.data.activity.joinUnavailableReason, '这是你发布的行程');
+
   const ownerMember = [...store.members.values()].find((item) => item.activityId === activityId && item.role === 'OWNER');
   assert.equal(ownerMember.luggageType, 'SMALL');
 
@@ -464,6 +475,7 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   assert.equal(joined.data.activity.viewerRole, 'member');
   assert.equal(joined.data.activity.viewerMembership.luggageType, 'SMALL');
   assert.equal(joined.data.activity.canLeaveRide, true);
+  assert.equal(joined.data.activity.joinUnavailableReason, '你已加入该行程');
   assert.equal(store.activities.get(activityId).memberCount, 2);
 
   const replayed = await call('ride.join', { activityId, luggageType: 'LARGE' }, 'member-openid', 'direct-join-active-002');
@@ -491,6 +503,7 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   assert.equal(driverDetail.ok, true);
   assert.equal(driverDetail.data.activity.viewerRole, 'driver');
   assert.equal(driverDetail.data.activity.canJoinRide, false);
+  assert.equal(driverDetail.data.activity.joinUnavailableReason, '你已承接该行程，不能同时作为乘客');
 
   const lateJoin = await call('ride.join', { activityId, luggageType: 'NONE' }, 'second-openid', 'direct-late-join-001');
   assert.equal(lateJoin.ok, true);
@@ -499,6 +512,20 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   const lockedLeave = await call('member.leave', { activityId, reason: '计划变化' }, 'member-openid', 'direct-locked-leave-001');
   assert.equal(lockedLeave.ok, false);
   assert.equal(lockedLeave.error.code, 'RIDE_MEMBER_LOCKED');
+});
+
+test('拼车不可加入原因对满员、截止、终态和畸形时间保持稳定契约', () => {
+  const base = {
+    type: 'ride',
+    status: 'RECRUITING',
+    memberCount: 1,
+    deadlineAt: '2026-08-24T08:00:00.000Z'
+  };
+  assert.equal(ridePassengerJoinUnavailableReason({ ...base, memberCount: 7 }, NOW.toISOString()), '行程已满员');
+  assert.equal(ridePassengerJoinUnavailableReason(base, '2026-08-24T08:00:00.000Z'), '报名已截止');
+  assert.equal(ridePassengerJoinUnavailableReason({ ...base, status: 'CANCELLED' }, NOW.toISOString()), '行程已取消');
+  assert.equal(ridePassengerJoinUnavailableReason({ ...base, status: 'EXPIRED' }, NOW.toISOString()), '行程已过期');
+  assert.equal(ridePassengerJoinUnavailableReason({ ...base, deadlineAt: 'invalid' }, NOW.toISOString()), '加入资格暂不可用，请稍后重试');
 });
 
 test('已过接车窗口的行程不会出现在司机列表且不可承接', async () => {

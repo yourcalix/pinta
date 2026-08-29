@@ -32,6 +32,19 @@ function isRidePassengerJoinable(activity, at) {
   return Number.isFinite(now) && Number.isFinite(deadline) && deadline > now;
 }
 
+function ridePassengerJoinUnavailableReason(activity, at) {
+  if (!activity || activity.type !== 'ride') return '当前行程暂不可加入';
+  if (activity.status === ACTIVITY_STATUS.CANCELLED) return '行程已取消';
+  if (activity.status === ACTIVITY_STATUS.EXPIRED) return '行程已过期';
+  if (!ACTIVE_RIDE_STATUSES.has(activity.status)) return '当前行程暂不可加入';
+  if (Number(activity.memberCount || 0) >= rideCapacity(activity)) return '行程已满员';
+  const now = Date.parse(at);
+  const deadline = Date.parse(activity.deadlineAt);
+  if (!Number.isFinite(now) || !Number.isFinite(deadline)) return '加入资格暂不可用，请稍后重试';
+  if (deadline <= now) return '报名已截止';
+  return '';
+}
+
 function isRideContactUnlocked(activity, activeMemberCount) {
   if (!activity || activity.type !== 'ride') return true;
   return Number(activeMemberCount || 0) >= rideCapacity(activity);
@@ -82,6 +95,7 @@ module.exports = {
   rideCapacity,
   rideThreshold,
   isRidePassengerJoinable,
+  ridePassengerJoinUnavailableReason,
   isRidePassengerLeaveable,
   isRideContactUnlocked,
   rideDriverAvailability,

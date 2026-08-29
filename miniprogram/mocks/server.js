@@ -294,6 +294,18 @@ function isMockRideJoinable(activity, at) {
   return true;
 }
 
+function mockRideJoinUnavailableReason(activity, at) {
+  if (activity.status === 'CANCELLED') return '行程已取消';
+  if (activity.status === 'EXPIRED') return '行程已过期';
+  if (!['RECRUITING', 'FORMED'].includes(activity.status)) return '当前行程暂不可加入';
+  if (Number(activity.memberCount || 0) >= 7) return '行程已满员';
+  const now = Date.parse(at);
+  const deadline = Date.parse(activity.deadlineAt);
+  if (!Number.isFinite(now) || !Number.isFinite(deadline)) return '加入资格暂不可用，请稍后重试';
+  if (deadline <= now) return '报名已截止';
+  return '';
+}
+
 function isMockRideAcceptable(activity, at) {
   if (!activity || activity.type !== 'ride' || !['RECRUITING', 'FORMED'].includes(activity.status)) return false;
   const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
@@ -416,8 +428,18 @@ function publicActivity(activity, options = {}) {
       if (driver) result.rideFulfillment.driver = { nickname: driver.profile.nickname };
       if (vehicle) result.rideFulfillment.vehicle = { type: vehicle.type, plateMasked: vehicle.plateMasked };
     }
-    result.rideJoinable = isMockRideJoinable(activity, new Date().toISOString());
+    const at = new Date().toISOString();
+    result.rideJoinable = isMockRideJoinable(activity, at);
     result.canJoinRide = result.rideJoinable && (viewerRole === 'guest' || viewerRole === 'applicant');
+    result.joinUnavailableReason = result.canJoinRide
+      ? ''
+      : viewerRole === 'owner'
+        ? '这是你发布的行程'
+        : viewerRole === 'member'
+          ? '你已加入该行程'
+          : viewerRole === 'driver'
+            ? '你已承接该行程，不能同时作为乘客'
+            : mockRideJoinUnavailableReason(activity, at);
     result.canLeaveRide = viewerRole === 'member' && Boolean(fulfillment && fulfillment.status === 'UNASSIGNED');
     result.rideExitLocked = viewerRole === 'member' && Boolean(fulfillment && fulfillment.status !== 'UNASSIGNED');
     result.driverAcceptable = isMockRideAcceptable(activity, new Date().toISOString());

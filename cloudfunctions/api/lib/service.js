@@ -38,6 +38,7 @@ const { parsePublicCursor, normalizeActivityForRead } = require('./public-activi
 const {
   rideCapacity,
   isRidePassengerJoinable,
+  ridePassengerJoinUnavailableReason,
   isRidePassengerLeaveable,
   rideDriverAvailability,
   normalizeRideCapacity
@@ -176,6 +177,15 @@ function publicActivity(activity, viewer = {}, at) {
   if (activity.type === 'ride') {
     result.canJoinRide = result.rideJoinable === true
       && (result.viewerRole === 'guest' || result.viewerRole === 'applicant');
+    result.joinUnavailableReason = result.canJoinRide
+      ? ''
+      : result.viewerRole === 'owner'
+        ? '这是你发布的行程'
+        : result.viewerRole === 'member'
+          ? '你已加入该行程'
+          : result.viewerRole === 'driver'
+            ? '你已承接该行程，不能同时作为乘客'
+            : ridePassengerJoinUnavailableReason(activity, at);
     result.canLeaveRide = result.viewerRole === 'member' && isRidePassengerLeaveable(activity);
     result.rideExitLocked = result.viewerRole === 'member'
       && activity.rideFulfillment

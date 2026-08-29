@@ -162,7 +162,7 @@
 
     <button wx:if="{{viewMode === 'passenger' && activity.viewerRole === 'owner' && (activity.status === 'RECRUITING' || activity.status === 'FORMED')}}" class="primary-button bottom-action" bindtap="handleManage">{{activity.type === 'ride' ? '管理行程' : '管理申请'}}</button>
     <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'owner' || activity.viewerRole === 'member') && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleGroup">进入成团页</button>
-    <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.statusLabel}}，暂不可{{activity.type === 'ride' ? '加入' : '申请'}}</button>
+    <button wx:if="{{viewMode === 'passenger' && (activity.viewerRole === 'guest' || activity.viewerRole === 'applicant') && !activity.canApply && !(activity.viewerApplication && activity.viewerApplication.status === 'PENDING')}}" class="unavailable-button bottom-action" disabled>{{activity.type === 'ride' ? activity.joinUnavailableTip : activity.statusLabel + '，暂不可申请'}}</button>
 
     <view class="qa-card surface" aria-role="region" aria-label="公开问答">
       <view class="qa-heading">

@@ -61,6 +61,19 @@ test('已撤回的申请可重新申请，拼车成团后在满员前仍可加�
   assert.equal(assigned.canApply, true);
 });
 
+test('拼车加入契约缺失时保持 fail-closed 并提示服务更新', () => {
+  const legacyResponse = decorateActivity(activity({ canJoinRide: undefined }));
+  assert.equal(legacyResponse.canApply, false);
+  assert.equal(legacyResponse.joinUnavailableTip, '服务更新中，请刷新后重试');
+
+  const explicitDenial = decorateActivity(activity({
+    canJoinRide: false,
+    joinUnavailableReason: '行程已满员'
+  }));
+  assert.equal(explicitDenial.canApply, false);
+  assert.equal(explicitDenial.joinUnavailableTip, '行程已满员');
+});
+
 test('拼车终态和异常状态优先于人数徽标，不得回退为招募中', () => {
   const expected = {
     CANCELLED: '已取消',
