@@ -1,0 +1,12 @@
+{
+  "id": "review-publish-page-first-draft",
+  "title": "审查发布页面首版视觉稿",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档设计审查任务",
+  "createdAt": "2026-08-29T22:49:00+08:00",
+  "branch": "main"
+}
