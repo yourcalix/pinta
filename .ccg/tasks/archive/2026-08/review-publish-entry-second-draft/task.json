@@ -1,0 +1,12 @@
+{
+  "id": "review-publish-entry-second-draft",
+  "title": "审查发布入口页第二版视觉稿",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "按定向提示压缩主入口卡片",
+  "createdAt": "2026-08-30T00:25:00+08:00",
+  "branch": "main"
+}
