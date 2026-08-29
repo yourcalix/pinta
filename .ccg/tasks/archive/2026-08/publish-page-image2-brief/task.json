@@ -1,0 +1,12 @@
+{
+  "id": "publish-page-image2-brief",
+  "title": "发布页面 Image 2 视觉提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档设计提示词任务",
+  "createdAt": "2026-08-29T22:40:16+08:00",
+  "branch": "main"
+}
