@@ -62,7 +62,7 @@ npm run verify
 
 1. 使用被 Git 忽略的 `project.private.config.json` 配置真实小程序 AppID，公共 `project.config.json` 继续保留 `touristappid`。
 2. 在微信开发者工具中开通云开发环境。G1 联调时再通过不进入版本控制的本地配置或已选默认环境指定环境 ID；当前仓库中的 `cloudEnv` 保持空值。
-3. 创建集合：`users`、`activities`、`applications`、`members`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`。
+3. 创建集合：`users`、`activities`、`applications`、`members`、`memberContacts`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`。
    当前 MVP 使用确定性文档 ID 保障并发和幂等，正式环境应使用新建空库初始化，不要与采用随机成员/申请 ID 的旧版数据混用。
 4. 将数据库集合权限设为“所有用户不可直接读写”，业务数据只允许通过 `cloudfunctions/api` 云函数访问。`driverSecrets`、`driverApplications`、`driverDocumentUploads`、`drivers` 和 `vehicles` 不得开放客户端直读。
 5. 将 `private-driver/**` 与 `private-driver-sealed/**` 配置为私有云存储路径：客户端仅可向后端签发的临时 staging 路径上传，单文件上限 5MB；禁止列目录、覆盖 sealed 路径或直接下载。服务端确认 JPEG/PNG 内容后会迁移到随机 sealed 路径并删除 staging 文件。
@@ -91,6 +91,7 @@ npm run verify
 - `activities`：`status + startsAt`、`type + status + startsAt`、`city + district + status + startsAt`、`type + status + typeData.routeId + startsAt`、`ownerId + updatedAt`。
 - `applications`：`activityId + createdAt`、`activityId + applicantId + status`。
 - `members`：`activityId + userId + status`、`userId + role + status`。
+- `memberContacts`：成员电话敏感集合，仅云函数读写；以活动和成员确定性 ID 保存，禁止开放客户端直读权限。
 - `notifications`：`userId + createdAt`。
 - `reports`：`reporterId + targetType + targetId + status`。
 

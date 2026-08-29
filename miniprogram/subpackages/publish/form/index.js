@@ -5,6 +5,7 @@ const subscriptionService = require('../../../services/subscription');
 const { futureLocal, combineLocal } = require('../../../utils/date');
 const { TYPE_META } = require('../../../utils/display');
 const { MEMBER_LUGGAGE_OPTIONS, MEMBER_LUGGAGE_TYPES } = require('../../../config/luggage');
+const { PHONE_REGION_OPTIONS, phoneDigits, phoneOption, isPhoneValid, buildPhone } = require('../../../utils/phone');
 const {
   PILOT_CITY,
   PILOT_DISTRICTS,
@@ -61,7 +62,8 @@ function initialForm(type) {
     targetMembers: 7,
     minPassengers: 7,
     maxPassengers: 7,
-    contactInfo: '',
+    phoneRegion: '+853',
+    phoneNumber: '',
     rules: '',
     routeId: defaultRoute.id,
     origin: defaultRoute.origin,
@@ -97,6 +99,9 @@ Page({
     feeOptions: RIDE_FEES,
     feeIndex: 1,
     luggageOptions: MEMBER_LUGGAGE_OPTIONS,
+    phoneRegionOptions: PHONE_REGION_OPTIONS,
+    phoneRegionIndex: 0,
+    phonePlaceholder: PHONE_REGION_OPTIONS[0].placeholder,
     deliveryOptions: DELIVERY_MODES,
     deliveryIndex: 0,
     buddyCostOptions: BUDDY_COSTS,
@@ -142,6 +147,7 @@ Page({
 
   onUnload() {
     if (!this.data.submitting) this.saveDraft();
+    this.data.form.phoneNumber = '';
   },
 
   restoreDraft(draft) {
@@ -159,14 +165,17 @@ Page({
       feeIndex: Math.max(RIDE_FEES.findIndex((item) => item.value === form.feeType), 0),
       deliveryIndex: Math.max(DELIVERY_MODES.findIndex((item) => item.value === form.deliveryMode), 0),
       buddyCostIndex: Math.max(BUDDY_COSTS.findIndex((item) => item.value === form.costMode), 0),
-      buddyLevelIndex: Math.max(BUDDY_LEVELS.findIndex((item) => item.value === form.level), 0)
+      buddyLevelIndex: Math.max(BUDDY_LEVELS.findIndex((item) => item.value === form.level), 0),
+      phoneRegionIndex: Math.max(PHONE_REGION_OPTIONS.findIndex((item) => item.code === form.phoneRegion), 0),
+      phonePlaceholder: phoneOption(form.phoneRegion).placeholder
     });
   },
 
   saveDraft() {
     if (!this.draftKey) return;
+    const { phoneNumber, ...safeForm } = this.data.form;
     wx.setStorageSync(this.draftKey, {
-      form: this.data.form,
+      form: safeForm,
       step: this.data.step,
       safetyAgreed: this.data.safetyAgreed,
       savedAt: Date.now()
@@ -176,6 +185,21 @@ Page({
   handleInput(event) {
     const field = event.currentTarget.dataset.field;
     this.setData({ [`form.${field}`]: event.detail.value, errorMessage: '' });
+  },
+
+  handlePhoneInput(event) {
+    this.setData({ 'form.phoneNumber': phoneDigits(event.detail.value), errorMessage: '' });
+  },
+
+  handlePhoneRegion(event) {
+    const index = Math.min(Math.max(Number(event.detail.value) || 0, 0), PHONE_REGION_OPTIONS.length - 1);
+    const option = PHONE_REGION_OPTIONS[index];
+    this.setData({
+      phoneRegionIndex: index,
+      phonePlaceholder: option.placeholder,
+      'form.phoneRegion': option.code,
+      errorMessage: ''
+    });
   },
 
   handleDistrict(event) {
@@ -285,7 +309,7 @@ Page({
       startsAt: combineLocal(form.startDate, form.startTime),
       deadlineAt: combineLocal(form.deadlineDate, form.deadlineTime),
       targetMembers: this.data.type === 'ride' ? 7 : Number(form.targetMembers),
-      contactInfo: form.contactInfo.trim(),
+      contactInfo: buildPhone(form.phoneRegion, form.phoneNumber),
       rules: form.rules.trim()
     };
     if (this.data.type === 'ride') {
@@ -314,13 +338,14 @@ Page({
   async handleSubmit() {
     if (this.data.submitting) return;
     if (this.data.type === 'ride' && !this.data.form.luggageType) return this.setData({ errorMessage: '请先选择我的行李' });
-    if (!this.data.form.contactInfo.trim()) return this.setData({ errorMessage: '请填写成团后联系方式' });
+    if (!isPhoneValid(this.data.form.phoneRegion, this.data.form.phoneNumber)) return this.setData({ errorMessage: '请输入正确的本人联系电话' });
     if (!this.data.safetyAgreed) return this.setData({ errorMessage: '请阅读并同意安全规则' });
     this.setData({ submitting: true, errorMessage: '' });
     try {
       await subscriptionService.requestStatusUpdates();
       const result = await activityService.create(this.buildPayload(), this.data.submissionKey);
       wx.removeStorageSync(this.draftKey);
+      this.setData({ 'form.phoneNumber': '' });
       wx.showToast({ title: '发布成功', icon: 'success' });
       setTimeout(() => {
         wx.redirectTo({ url: `/subpackages/activity/detail/index?id=${result.activity.id}` });

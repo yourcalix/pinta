@@ -43,7 +43,7 @@ function rideInput(overrides = {}) {
     minPassengers: 7,
     maxPassengers: 7,
     luggageType: 'SMALL',
-    contactInfo: '微信号 pinba_macau',
+    contactInfo: '+85361234567',
     rules: '请按确认时间提前到达上车点',
     typeData: {
       routeId: 'QINGMAO_TO_TAIPA',
@@ -279,7 +279,7 @@ test('旧数据即使残留成团状态也必须满七名乘客后才能解锁�
   }
   const unlocked = await call('group.contact', { activityId }, 'owner-openid');
   assert.equal(unlocked.ok, true);
-  assert.equal(unlocked.data.contactInfo, '微信号 pinba_macau');
+  assert.equal(unlocked.data.contactInfo, undefined);
 });
 
 test('司机承接在生产门禁未开启时 fail-closed', async () => {
@@ -464,13 +464,14 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
       activityId,
       actorId: 'member-openid',
       luggageType: 'INVALID',
+      phone: '+85362345678',
       at: '2026-08-23T02:05:00.000Z'
     }),
     (error) => error.code === 'VALIDATION_ERROR'
   );
   assert.equal(store.activities.get(activityId).memberCount, 1);
 
-  const joined = await call('ride.join', { activityId, luggageType: 'SMALL' }, 'member-openid', 'direct-join-001');
+  const joined = await call('ride.join', { activityId, luggageType: 'SMALL', phone: '+85362345678' }, 'member-openid', 'direct-join-001');
   assert.equal(joined.ok, true);
   assert.equal(joined.data.activity.viewerRole, 'member');
   assert.equal(joined.data.activity.viewerMembership.luggageType, 'SMALL');
@@ -478,7 +479,7 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   assert.equal(joined.data.activity.joinUnavailableReason, '你已加入该行程');
   assert.equal(store.activities.get(activityId).memberCount, 2);
 
-  const replayed = await call('ride.join', { activityId, luggageType: 'LARGE' }, 'member-openid', 'direct-join-active-002');
+  const replayed = await call('ride.join', { activityId, luggageType: 'LARGE', phone: '+85362345678' }, 'member-openid', 'direct-join-active-002');
   assert.equal(replayed.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 2);
   assert.equal(replayed.data.activity.viewerMembership.luggageType, 'SMALL');
@@ -487,7 +488,7 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   assert.equal(left.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 1);
 
-  const rejoined = await call('ride.join', { activityId, luggageType: 'LARGE' }, 'member-openid', 'direct-rejoin-001');
+  const rejoined = await call('ride.join', { activityId, luggageType: 'LARGE', phone: '+85362345678' }, 'member-openid', 'direct-rejoin-001');
   assert.equal(rejoined.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 2);
   assert.equal(rejoined.data.activity.viewerMembership.luggageType, 'LARGE');
@@ -505,7 +506,7 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   assert.equal(driverDetail.data.activity.canJoinRide, false);
   assert.equal(driverDetail.data.activity.joinUnavailableReason, '你已承接该行程，不能同时作为乘客');
 
-  const lateJoin = await call('ride.join', { activityId, luggageType: 'NONE' }, 'second-openid', 'direct-late-join-001');
+  const lateJoin = await call('ride.join', { activityId, luggageType: 'NONE', phone: '+85363456789' }, 'second-openid', 'direct-late-join-001');
   assert.equal(lateJoin.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 3);
 

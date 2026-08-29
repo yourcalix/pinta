@@ -637,10 +637,17 @@ function createPinbaService(options) {
       };
     }
 
+    if (action === 'ride.driver.memberContacts') {
+      const user = await requireActiveUser(context, false);
+      const activityId = validateId(input && input.activityId, '活动ID');
+      const items = await store.listRideMemberContactsForAssignedDriver(activityId, user.id);
+      return { activityId, items };
+    }
+
     if (action === 'activity.create') {
       const user = await requireActiveUser(context);
       const payload = validateActivityInput(input, clock());
-      const { luggageType, ...activityPayload } = payload;
+      const { luggageType, contactInfo, ...activityPayload } = payload;
       await moderation.check([activityPayload.title, activityPayload.description, activityPayload.rules], { actorId: user.id, scene: 2 });
       const activityId = operationId(context, 'activity');
       const activity = {
@@ -648,6 +655,7 @@ function createPinbaService(options) {
         ownerId: user.id,
         owner: { nickname: user.profile.nickname },
         ...activityPayload,
+        ...(payload.type === 'ride' ? {} : { contactInfo }),
         memberCount: 1,
         status: activityPayload.targetMembers === 1 ? ACTIVITY_STATUS.FORMED : ACTIVITY_STATUS.RECRUITING,
         operationKeyHash: operationId(context, 'operation'),
@@ -674,11 +682,23 @@ function createPinbaService(options) {
             updatedAt: at
           }
         : null;
+      const ownerContact = activity.type === 'ride'
+        ? {
+            id: stableEntityId('memberContact', activityId, ownerMember.id),
+            activityId,
+            memberId: ownerMember.id,
+            userId: user.id,
+            phone: contactInfo,
+            status: 'ACTIVE',
+            createdAt: at,
+            updatedAt: at
+          }
+        : null;
       if (rideFulfillment) {
         activity.rideFulfillment = { status: RIDE_FULFILLMENT_STATUS.UNASSIGNED };
         activity.rideJoinable = true;
       }
-      const storedActivity = await store.createActivityWithOwner(activity, ownerMember, rideFulfillment);
+      const storedActivity = await store.createActivityWithOwner(activity, ownerMember, rideFulfillment, ownerContact);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
       return { activity: publicActivity(storedActivity, { role: 'owner' }, at) };
     }
@@ -686,8 +706,8 @@ function createPinbaService(options) {
     if (action === 'ride.join') {
       const user = await requireActiveUser(context);
       const payload = validateRideJoinInput(input);
-      const { activityId, luggageType } = payload;
-      const result = await store.joinRideAtomic({ activityId, actorId: user.id, luggageType, at });
+      const { activityId, luggageType, phone } = payload;
+      const result = await store.joinRideAtomic({ activityId, actorId: user.id, luggageType, phone, at });
       if (result.joined) {
         await store.addNotification({
           id: operationId(context, 'notification'),

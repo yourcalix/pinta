@@ -278,7 +278,7 @@ test('Mock 在稀疏关键词与过期候选交错时仍按 raw cursor 找全结
   try {
     mockServer.reset();
     const source = storage.pinba_mock_state_v2.activities.find((item) => item.id === 'a_ride');
-    storage.pinba_mock_state_v2.activities = Array.from({ length: 7 }, (_, index) => ({
+    storage.pinba_mock_state_v2.activities.splice(0, storage.pinba_mock_state_v2.activities.length, ...Array.from({ length: 7 }, (_, index) => ({
       ...source,
       id: `a_sparse_${index}`,
       title: index % 2 === 0 ? `稀疏命中 ${index}` : `普通候选 ${index}`,
@@ -287,14 +287,14 @@ test('Mock 在稀疏关键词与过期候选交错时仍按 raw cursor 找全结
         ? new Date(Date.now() - 60 * 1000).toISOString()
         : new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       status: 'RECRUITING'
-    }));
-    storage.pinba_mock_state_v2.rideFulfillments = Array.from({ length: 7 }, (_, index) => ({
+    })));
+    storage.pinba_mock_state_v2.rideFulfillments.splice(0, storage.pinba_mock_state_v2.rideFulfillments.length, ...Array.from({ length: 7 }, (_, index) => ({
       activityId: `a_sparse_${index}`,
       status: 'UNASSIGNED',
       pickupAt: null,
       driverId: null,
       vehicleId: null
-    }));
+    })));
 
     const first = await call('activity.list', { limit: 2, keyword: '稀疏命中' });
     assert.deepEqual(first.data.items.map((item) => item.id), ['a_sparse_0', 'a_sparse_4']);

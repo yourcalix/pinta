@@ -196,6 +196,33 @@
   border-radius: 18rpx;
 }
 
+.phone-input-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12rpx;
+}
+
+.phone-region-picker {
+  box-sizing: border-box;
+  min-width: 176rpx;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 0 18rpx;
+  color: #28513f;
+  background: #ffffff;
+  border: 1rpx solid #cadbd2;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+}
+
+.phone-number-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .risk-note {
   margin: 4rpx 0 24rpx;
   padding: 22rpx;

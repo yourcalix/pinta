@@ -1,0 +1,12 @@
+{
+  "id": "driver-registration-wheel-routes",
+  "title": "司机注册认证与起终点滚轮选择",
+  "status": "in_progress",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "review",
+  "nextAction": "生成预览并完成 iPhone 真机司机注册与双列路线滚轮验收",
+  "createdAt": "2026-08-27T00:00:00+08:00",
+  "branch": "main"
+}

@@ -112,9 +112,14 @@
     </view>
 
     <view class="field private-field">
-      <text class="field-label required">成团后联系方式</text>
-      <input class="input" maxlength="80" cursor-spacing="120" adjust-position="true" placeholder="只填写微信号文本，不要上传二维码" value="{{form.contactInfo}}" data-field="contactInfo" bindinput="handleInput" />
-      <view class="field-hint">公开列表和详情不会返回此字段</view>
+      <text class="field-label required">本人联系电话</text>
+      <view class="phone-input-row">
+        <picker mode="selector" range="{{phoneRegionOptions}}" range-key="label" value="{{phoneRegionIndex}}" bindchange="handlePhoneRegion">
+          <view class="phone-region-picker" role="button" aria-label="选择电话地区，当前为{{phoneRegionOptions[phoneRegionIndex].label}}">{{phoneRegionOptions[phoneRegionIndex].code}} <text aria-hidden="true">⌄</text></view>
+        </picker>
+        <input class="input phone-number-input" type="number" maxlength="11" cursor-spacing="120" adjust-position="true" placeholder="{{phonePlaceholder}}" value="{{form.phoneNumber}}" bindinput="handlePhoneInput" />
+      </view>
+      <view class="field-hint">仅用于本次行程接送联系；司机成功承接后才能查看，不会出现在公开列表和详情中。</view>
     </view>
 
     <view class="risk-note">

@@ -221,7 +221,7 @@ test('Mock 发布拒绝非法容量与非 60 分钟接车窗口', async () => {
     minPassengers: 4,
     maxPassengers: 3,
     luggageType: 'SMALL',
-    contactInfo: '微信号 mock_owner',
+    contactInfo: '+85361234567',
     rules: '',
     typeData: {
       routeId: 'QINGMAO_TO_TAIPA',

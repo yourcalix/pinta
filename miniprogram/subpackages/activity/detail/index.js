@@ -7,6 +7,7 @@ const { decorateActivity } = require('../../../utils/display');
 const { resolveDetailError } = require('../../../utils/detail-error');
 const { decodeActivityId } = require('../../../utils/activity-route');
 const { MEMBER_LUGGAGE_OPTIONS, MEMBER_LUGGAGE_TYPES } = require('../../../config/luggage');
+const { PHONE_REGION_OPTIONS, phoneDigits, phoneOption, isPhoneValid, buildPhone, spokenPhone } = require('../../../utils/phone');
 
 const FEE_LABELS = { FREE: '免费互助', SHARED_COST: '合理成本均摊', NO_COST: '不涉及费用' };
 const DELIVERY_LABELS = { FACE_TO_FACE: '当面验货交付', PICKUP: '指定商圈自提', ARRANGE_AFTER_FORMED: '成团后协商' };
@@ -93,6 +94,20 @@ function initialQaModal() {
   };
 }
 
+function initialDriverContacts() {
+  return { loading: false, error: '', items: [] };
+}
+
+function decorateDriverContact(item) {
+  const luggage = MEMBER_LUGGAGE_OPTIONS.find((option) => option.value === item.luggageType);
+  return {
+    ...item,
+    roleLabel: item.role === 'OWNER' ? '发起者' : '乘客',
+    luggageLabel: luggage ? luggage.label : '未填写',
+    phoneAriaLabel: spokenPhone(item.phone)
+  };
+}
+
 function rowsFor(activity) {
   if (activity.type === 'ride') {
     const startLabel = pickupSlotLabel(activity.startsAt, activity.startsAt);
@@ -135,6 +150,12 @@ Page({
     pending: false,
     luggageOptions: MEMBER_LUGGAGE_OPTIONS,
     selectedLuggageType: '',
+    phoneRegionOptions: PHONE_REGION_OPTIONS,
+    phoneRegionIndex: 0,
+    phoneRegion: '+853',
+    phoneNumber: '',
+    phonePlaceholder: PHONE_REGION_OPTIONS[0].placeholder,
+    driverContacts: initialDriverContacts(),
     qa: initialQaState(),
     qaModal: initialQaModal(),
     viewMode: 'passenger',
@@ -169,6 +190,18 @@ Page({
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
     this._qaLoadSeq = (this._qaLoadSeq || 0) + 1;
+    this._contactsReqSeq = (this._contactsReqSeq || 0) + 1;
+    this.data.phoneNumber = '';
+    this.data.driverContacts = initialDriverContacts();
+  },
+
+  onHide() {
+    this.clearSensitiveContactState();
+  },
+
+  clearSensitiveContactState() {
+    this._contactsReqSeq = (this._contactsReqSeq || 0) + 1;
+    this.setData({ phoneNumber: '', driverContacts: initialDriverContacts() });
   },
 
   async loadDetail() {
@@ -197,7 +230,9 @@ Page({
       pickupSlots: [],
       selectedPickupAt: '',
       driverSheetVisible: false,
-      selectedLuggageType: ''
+      selectedLuggageType: '',
+      phoneNumber: '',
+      driverContacts: initialDriverContacts()
     });
     try {
       const result = await activityService.detail(this.data.id);
@@ -213,7 +248,14 @@ Page({
         loading: false
       });
       this.loadQuestions(activity);
-      if (this.data.viewMode === 'driver' && activity.type === 'ride') this.loadDriverProfile(loadSeq);
+      if (this.data.viewMode === 'driver' && activity.type === 'ride') {
+        this.loadDriverProfile(loadSeq);
+        if (activity.viewerRole === 'driver'
+          && activity.rideFulfillment
+          && activity.rideFulfillment.status === 'ASSIGNED') {
+          this.loadDriverContacts(activity.id);
+        }
+      }
     } catch (error) {
       if (loadSeq !== this._loadSeq) return;
       this.setData({ loading: false, ...resolveDetailError(error) });
@@ -243,17 +285,78 @@ Page({
     }
   },
 
+  async loadDriverContacts(activityId = this.data.id) {
+    const requestSeq = (this._contactsReqSeq = (this._contactsReqSeq || 0) + 1);
+    this.setData({ driverContacts: { loading: true, error: '', items: [] } });
+    try {
+      const result = await activityService.driverMemberContacts(activityId);
+      if (requestSeq !== this._contactsReqSeq) return;
+      this.setData({
+        driverContacts: {
+          loading: false,
+          error: '',
+          items: (result.items || []).map(decorateDriverContact)
+        }
+      });
+    } catch (error) {
+      if (requestSeq !== this._contactsReqSeq) return;
+      const message = error.code === 'CONTACT_INCOMPLETE'
+        ? '有成员尚未补齐联系电话，请稍后再试'
+        : error.code === 'FORBIDDEN'
+          ? '当前承接关系已变化，无法查看成员电话'
+          : '成员联系方式加载失败，请重试';
+      this.setData({ driverContacts: { loading: false, error: message, items: [] } });
+    }
+  },
+
+  handleRetryDriverContacts() {
+    this.loadDriverContacts(this.data.id);
+  },
+
   handleViewModeChange(event) {
     const viewMode = event.currentTarget.dataset.value === 'driver' ? 'driver' : 'passenger';
     if (viewMode === this.data.viewMode) return;
+    this.clearSensitiveContactState();
     this.setData({ viewMode, driverSheetVisible: false });
-    if (viewMode === 'driver' && this.data.activity && this.data.activity.type === 'ride') this.loadDriverProfile();
+    if (viewMode === 'driver' && this.data.activity && this.data.activity.type === 'ride') {
+      this.loadDriverProfile();
+      if (this.data.activity.viewerRole === 'driver'
+        && this.data.activity.rideFulfillment
+        && this.data.activity.rideFulfillment.status === 'ASSIGNED') {
+        this.loadDriverContacts();
+      }
+    }
   },
 
   handleLuggageSelect(event) {
     const luggageType = event.currentTarget.dataset.luggageType;
     if (!MEMBER_LUGGAGE_TYPES.includes(luggageType) || this.data.pending) return;
     this.setData({ selectedLuggageType: luggageType });
+  },
+
+  handlePhoneInput(event) {
+    if (this.data.pending) return;
+    this.setData({ phoneNumber: phoneDigits(event.detail.value) });
+  },
+
+  handlePhoneRegion(event) {
+    if (this.data.pending) return;
+    const index = Math.min(Math.max(Number(event.detail.value) || 0, 0), PHONE_REGION_OPTIONS.length - 1);
+    const option = PHONE_REGION_OPTIONS[index];
+    this.setData({
+      phoneRegionIndex: index,
+      phoneRegion: option.code,
+      phonePlaceholder: option.placeholder
+    });
+  },
+
+  handleCallMember(event) {
+    const phone = event.currentTarget.dataset.phone;
+    if (!phone) return;
+    wx.makePhoneCall({
+      phoneNumber: phone,
+      fail: () => wx.showToast({ title: '未能发起电话，请长按号码复制', icon: 'none' })
+    });
   },
 
   showLuggageHelp() {
@@ -488,6 +591,10 @@ Page({
       wx.showToast({ title: '请先选择行李类型', icon: 'none' });
       return;
     }
+    if (!isPhoneValid(this.data.phoneRegion, this.data.phoneNumber)) {
+      wx.showToast({ title: '请输入正确的本人联系电话', icon: 'none' });
+      return;
+    }
     this.setData({ pending: true });
     try {
       const user = await userService.login();
@@ -496,7 +603,12 @@ Page({
         return;
       }
       await subscriptionService.requestStatusUpdates();
-      await activityService.joinRide(this.data.id, this.data.selectedLuggageType);
+      await activityService.joinRide(
+        this.data.id,
+        this.data.selectedLuggageType,
+        buildPhone(this.data.phoneRegion, this.data.phoneNumber)
+      );
+      this.setData({ phoneNumber: '' });
       wx.showToast({ title: '已加入拼车', icon: 'success' });
       await this.loadDetail();
     } catch (error) {

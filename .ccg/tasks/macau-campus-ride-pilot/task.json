@@ -1,0 +1,12 @@
+{
+  "id": "macau-campus-ride-pilot",
+  "title": "完善澳门校园拼车双角色功能并准备上线试点",
+  "status": "in_progress",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "review",
+  "nextAction": "在 iPhone 真机完成澳门乘客发布、申请成团、司机承接与状态回显验收",
+  "createdAt": "2026-08-27T02:31:44Z",
+  "branch": "main"
+}

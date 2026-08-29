@@ -1,0 +1,12 @@
+{
+  "id": "macau-seven-passenger-contract-review",
+  "title": "审查澳门拼车七名乘客与司机承接契约",
+  "status": "in_progress",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "review",
+  "nextAction": "读取 diff 与相关文件并输出分级审查报告",
+  "createdAt": "2026-08-28T03:27:07Z",
+  "branch": "main"
+}

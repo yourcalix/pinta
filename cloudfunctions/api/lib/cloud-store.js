@@ -314,7 +314,7 @@ class CloudStore {
     });
   }
 
-  async createActivityWithOwner(activity, ownerMember, rideFulfillment = null) {
+  async createActivityWithOwner(activity, ownerMember, rideFulfillment = null, ownerContact = null) {
     if (activity.type === 'ride') {
       invariant(MEMBER_LUGGAGE_TYPES.includes(ownerMember.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     }
@@ -328,6 +328,9 @@ class CloudStore {
       }
       await transaction.collection('activities').doc(activity.id).set({ data: document(activity) });
       await transaction.collection('members').doc(ownerMember.id).set({ data: document(ownerMember) });
+      if (ownerContact) {
+        await transaction.collection('memberContacts').doc(ownerContact.id).set({ data: document(ownerContact) });
+      }
       if (rideFulfillment) {
         await transaction.collection('rideFulfillments').doc(rideFulfillment.id).set({ data: document(rideFulfillment) });
       }
@@ -782,9 +785,24 @@ class CloudStore {
         : activity.status;
       const nextActivity = { ...effectiveActivity, memberCount: nextCount, status: nextStatus };
       const rideJoinable = activity.type === 'ride' && isRideJoinable(nextActivity, at);
+      const contactId = activity.type === 'ride'
+        ? stableEntityId('memberContact', activityId, member.id)
+        : null;
+      const contact = contactId
+        ? await getTransactionDocument(transaction.collection('memberContacts').doc(contactId))
+        : null;
+      const applicationId = stableEntityId('application', activityId, actorId);
+      const application = await getTransactionDocument(
+        transaction.collection('applications').doc(applicationId)
+      );
       await transaction.collection('members').doc(member.id).update({
         data: { status: MEMBER_STATUS.LEFT, leftAt: at, leaveReason: reason }
       });
+      if (contact) {
+        await transaction.collection('memberContacts').doc(contactId).update({
+          data: { status: 'INACTIVE', updatedAt: at }
+        });
+      }
       await transaction.collection('activities').doc(activityId).update({
         data: {
           memberCount: nextCount,
@@ -797,9 +815,7 @@ class CloudStore {
           updatedAt: at
         }
       });
-      const applicationId = stableEntityId('application', activityId, actorId);
-      const approved = first(await transaction.collection('applications').doc(applicationId).get());
-      if (approved && approved.status === APPLICATION_STATUS.APPROVED) {
+      if (application && application.status === APPLICATION_STATUS.APPROVED) {
         await transaction.collection('applications').doc(applicationId).update({
           data: { status: APPLICATION_STATUS.LEFT, updatedAt: at }
         });
@@ -811,7 +827,7 @@ class CloudStore {
     });
   }
 
-  async joinRideAtomic({ activityId, actorId, luggageType, at }) {
+  async joinRideAtomic({ activityId, actorId, luggageType, phone, at }) {
     invariant(MEMBER_LUGGAGE_TYPES.includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     return this.db.runTransaction(async (transaction) => {
       const activityRef = transaction.collection('activities').doc(activityId);
@@ -826,6 +842,9 @@ class CloudStore {
       const existing = await getTransactionDocument(memberRef);
       const applicationRef = transaction.collection('applications').doc(stableEntityId('application', activityId, actorId));
       const application = await getTransactionDocument(applicationRef);
+      const contactId = stableEntityId('memberContact', activityId, memberId);
+      const contactRef = transaction.collection('memberContacts').doc(contactId);
+      const existingContact = await getTransactionDocument(contactRef);
       const rideFulfillment = rideFulfillmentSummary(fulfillment);
       if (existing && existing.status === MEMBER_STATUS.ACTIVE) {
         return { activity: { ...activity, rideFulfillment }, member: existing, joined: false };
@@ -847,6 +866,12 @@ class CloudStore {
       nextActivity.updatedAt = at;
       nextActivity.version = Number(activity.version || 1) + 1;
       await memberRef.set({ data: document(member) });
+      await contactRef.set({ data: document({
+        ...(existingContact || { id: contactId, activityId, memberId, userId: actorId, createdAt: at }),
+        phone,
+        status: 'ACTIVE',
+        updatedAt: at
+      }) });
       await activityRef.update({ data: {
         memberCount: nextCount,
         status: nextActivity.status,
@@ -1091,6 +1116,52 @@ class CloudStore {
       };
     })
       .filter((item) => item.activity);
+  }
+
+  async listRideMemberContactsForAssignedDriver(activityId, driverId) {
+    const activity = await this.getDocument('activities', activityId);
+    const fulfillmentId = stableEntityId('rideFulfillment', activityId);
+    const fulfillment = await this.getDocument('rideFulfillments', fulfillmentId);
+    invariant(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND');
+    invariant(
+      [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status),
+      'CONFLICT',
+      '该行程当前不可查看成员联系方式'
+    );
+    invariant(
+      fulfillment.status === RIDE_FULFILLMENT_STATUS.ASSIGNED && fulfillment.driverId === driverId,
+      'FORBIDDEN'
+    );
+    const memberResult = await this.db.collection('members').where({
+      activityId,
+      status: MEMBER_STATUS.ACTIVE
+    }).limit(7).get();
+    const members = (memberResult.data || [])
+      .map(entity)
+      .sort((left, right) => String(left.joinedAt || '').localeCompare(String(right.joinedAt || '')));
+    const items = await Promise.all(members.map(async (member) => {
+      const contact = await this.getDocument(
+        'memberContacts',
+        stableEntityId('memberContact', activityId, member.id)
+      );
+      invariant(contact && contact.status === 'ACTIVE' && contact.phone, 'CONTACT_INCOMPLETE');
+      const user = await this.getDocument('users', member.userId);
+      return {
+        memberId: member.id,
+        nickname: user && user.profile && user.profile.nickname || (member.role === 'OWNER' ? '发起者' : '乘客'),
+        phone: contact.phone,
+        luggageType: member.luggageType || null,
+        role: member.role
+      };
+    }));
+    const currentFulfillment = await this.getDocument('rideFulfillments', fulfillmentId);
+    invariant(
+      currentFulfillment
+        && currentFulfillment.status === RIDE_FULFILLMENT_STATUS.ASSIGNED
+        && currentFulfillment.driverId === driverId,
+      'FORBIDDEN'
+    );
+    return items;
   }
 
   async listApplicationsForOwner(activityId, ownerId) {

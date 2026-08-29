@@ -1,0 +1,12 @@
+{
+  "id": "discover-minimal-filter-review",
+  "title": "审查发现页最小筛选后端契约未提交改动",
+  "status": "superseded",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "backend",
+  "currentPhase": "review",
+  "nextAction": "审查结论并入 macau-campus-ride-pilot，不再单独推进上海筛选",
+  "createdAt": "2026-08-27T00:00:00Z",
+  "branch": "main"
+}

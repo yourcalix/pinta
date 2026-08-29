@@ -99,7 +99,7 @@ Page({
   },
 
   handleReveal() {
-    if (this.data.revealing || this.data.contact) return;
+    if (this.data.revealing || this.data.contact || (this.data.activity && this.data.activity.type === 'ride')) return;
     wx.showModal({
       title: '查看联系信息前请确认',
       content: '拼吧不提供资金担保。不要向陌生人提前转账；线下见面请选择公共场所并告知亲友。',

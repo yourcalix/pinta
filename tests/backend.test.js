@@ -70,7 +70,7 @@ function rideInput(overrides = {}) {
     minPassengers: 7,
     maxPassengers: 7,
     luggageType: 'SMALL',
-    contactInfo: '微信号 pinba_demo',
+    contactInfo: '+85361234567',
     rules: '成团后在公共地点会合',
     typeData: {
       routeId: 'QINGMAO_TO_TAIPA',
@@ -258,7 +258,7 @@ test('只有七人满员后的有效成员可以读取联系方式', async () =>
   assert.equal(outsider.error.code, 'FORBIDDEN');
   const member = await call('group.contact', { activityId }, 'member-openid');
   assert.equal(member.ok, true);
-  assert.equal(member.data.contactInfo, '微信号 pinba_demo');
+  assert.equal(member.data.contactInfo, undefined);
 });
 
 test('相同幂等键重放不会重复创建活动', async () => {

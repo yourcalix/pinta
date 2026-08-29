@@ -695,6 +695,133 @@
   font-weight: 650;
 }
 
+.join-phone-field {
+  margin: 8rpx 0 24rpx;
+}
+
+.join-phone-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.join-phone-region {
+  box-sizing: border-box;
+  min-width: 176rpx;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 0 18rpx;
+  color: #28513f;
+  background: #f7faf8;
+  border: 1rpx solid #cadbd2;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+}
+
+.join-phone-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.driver-contacts-card {
+  margin-top: 20rpx;
+  padding: 26rpx;
+  border: 1rpx solid #cfe0f3;
+  background: #f6f9ff;
+}
+
+.driver-contacts-heading,
+.driver-contact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.driver-contacts-subtitle,
+.driver-contact-luggage {
+  margin-top: 6rpx;
+  color: #6d7880;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.driver-contacts-retry,
+.driver-contact-call {
+  flex: 0 0 auto;
+  min-width: 112rpx;
+  min-height: 88rpx;
+  margin: 0;
+  padding: 0 18rpx;
+  color: #1b5d94;
+  background: #ffffff;
+  border: 1rpx solid #9fc3e3;
+  border-radius: 16rpx;
+  font-size: 25rpx;
+  line-height: 88rpx;
+}
+
+.driver-contacts-retry::after,
+.driver-contact-call::after {
+  display: none;
+}
+
+.driver-contact-state {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  color: #68747b;
+  background: #ffffff;
+  border-radius: 14rpx;
+  font-size: 25rpx;
+  text-align: center;
+}
+
+.driver-contact-state--error {
+  color: #a13c43;
+  background: #fff5f5;
+}
+
+.driver-contact-list {
+  margin-top: 18rpx;
+}
+
+.driver-contact-item {
+  padding: 22rpx 0;
+  border-top: 1rpx solid #dce6ef;
+}
+
+.driver-contact-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.driver-contact-name {
+  color: #27342d;
+  font-size: 28rpx;
+  font-weight: 650;
+}
+
+.driver-contact-role {
+  margin-left: 8rpx;
+  color: #5b7182;
+  font-size: 22rpx;
+  font-weight: 400;
+}
+
+.driver-contact-phone {
+  display: block;
+  margin-top: 8rpx;
+  color: #185b91;
+  font-size: 31rpx;
+  font-weight: 650;
+  letter-spacing: 1rpx;
+  word-break: break-all;
+}
+
 .ride-exit-lock-card {
   margin-top: 20rpx;
   padding: 26rpx;

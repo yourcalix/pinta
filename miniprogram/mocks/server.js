@@ -115,6 +115,10 @@ function hasRidePrice(text) {
   return /(?:[¥￥$]\s*\d)|(?:\d+(?:\.\d+)?\s*(?:元|块|rmb|RMB))/.test(text || '');
 }
 
+function validRidePhone(value) {
+  return /^(?:\+8536\d{7}|\+861\d{10}|\+852[569]\d{7})$/.test(String(value || '').replace(/[\s()-]+/g, ''));
+}
+
 function seedState() {
   const now = new Date().toISOString();
   const rideStartDate = new Date(Date.now() + 26 * 60 * 60 * 1000);
@@ -208,10 +212,13 @@ function seedState() {
       }
     ],
     members: [
-      { id: 'm_ride_owner', activityId: 'a_ride', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
+      { id: 'm_ride_owner', activityId: 'a_ride', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now, luggageType: 'NONE' },
       { id: 'm_product_owner', activityId: 'a_product', userId: 'u_merchant', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
       { id: 'm_buddy_owner', activityId: 'a_buddy', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
       { id: 'm_buddy_member', activityId: 'a_buddy', userId: 'u_member', role: 'MEMBER', status: 'ACTIVE', joinedAt: now }
+    ],
+    memberContacts: [
+      { id: 'mc_ride_owner', activityId: 'a_ride', memberId: 'm_ride_owner', userId: 'u_owner', phone: '+85361234567', status: 'ACTIVE', createdAt: now, updatedAt: now }
     ],
     notifications: [
       {
@@ -263,9 +270,11 @@ if (!state.vehicles) state.vehicles = [];
 if (!state.rideFulfillments) state.rideFulfillments = [];
 if (!state.driverApplications) state.driverApplications = [];
 if (!state.driverDocumentUploads) state.driverDocumentUploads = [];
+if (!state.memberContacts) state.memberContacts = [];
 
 function persist() {
-  writeStorage(STATE_KEY, state);
+  const { memberContacts, ...safeState } = state;
+  writeStorage(STATE_KEY, safeState);
   writeStorage(PERSONA_KEY, currentUserId);
 }
 
@@ -658,7 +667,7 @@ function createActivity(input) {
   const user = requireUser();
   assert(user.profile && user.profile.adultConfirmed, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
   const now = new Date().toISOString();
-  const { luggageType, ...activityInput } = clone(input);
+  const { luggageType, contactInfo, ...activityInput } = clone(input);
   const activity = {
     id: nextId('activity'), ownerId: user.id, owner: { nickname: user.profile.nickname },
     ...activityInput, memberCount: 1, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
@@ -680,6 +689,7 @@ function createActivity(input) {
     assert(Number.isFinite(pickupWindowEnd) && pickupWindowEnd - startsAt === 60 * 60 * 1000, 'VALIDATION_ERROR', '接车时间窗必须为 60 分钟');
     assert(['FREE', 'SHARED_COST', 'NO_COST'].includes(activity.typeData.feeType), 'VALIDATION_ERROR', '费用方式无效');
     assert(['NONE', 'SMALL', 'LARGE'].includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
+    assert(validRidePhone(contactInfo), 'VALIDATION_ERROR', '请输入正确的联系电话');
     assert(!hasRidePrice([activity.title, activity.description, activity.rules].join(' ')), 'VALIDATION_ERROR', '拼车仅允许合理成本均摊，不能填写具体收费金额');
     activity.city = PILOT_CITY;
     activity.district = PILOT_DISTRICTS[0];
@@ -698,7 +708,7 @@ function createActivity(input) {
     state.rideFulfillments.push({ activityId: activity.id, status: 'UNASSIGNED', pickupAt: null, driverId: null, vehicleId: null });
   }
   state.activities.unshift(activity);
-  state.members.push({
+  const ownerMember = {
     id: nextId('member'),
     activityId: activity.id,
     userId: user.id,
@@ -706,7 +716,16 @@ function createActivity(input) {
     status: 'ACTIVE',
     joinedAt: now,
     ...(activity.type === 'ride' ? { luggageType } : {})
-  });
+  };
+  state.members.push(ownerMember);
+  if (activity.type === 'ride') {
+    state.memberContacts.push({
+      id: nextId('memberContact'), activityId: activity.id, memberId: ownerMember.id, userId: user.id,
+      phone: contactInfo.replace(/[\s()-]+/g, ''), status: 'ACTIVE', createdAt: now, updatedAt: now
+    });
+  } else {
+    activity.contactInfo = contactInfo;
+  }
   return { activity: publicActivity(activity) };
 }
 
@@ -818,6 +837,7 @@ function joinRide(input) {
   assert(input && typeof input === 'object', 'VALIDATION_ERROR', '请求参数无效');
   assert(typeof input.activityId === 'string' && input.activityId.trim(), 'VALIDATION_ERROR', '活动ID无效');
   assert(['NONE', 'SMALL', 'LARGE'].includes(input.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
+  assert(validRidePhone(input.phone), 'VALIDATION_ERROR', '请输入正确的联系电话');
   const user = requireUser();
   const activity = activityById(input.activityId);
   const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
@@ -835,6 +855,12 @@ function joinRide(input) {
   delete member.leftAt;
   delete member.leaveReason;
   if (!existing) state.members.push(member);
+  const existingContact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
+  if (existingContact) Object.assign(existingContact, { phone: input.phone.replace(/[\s()-]+/g, ''), status: 'ACTIVE', updatedAt: now });
+  else state.memberContacts.push({
+    id: nextId('memberContact'), activityId: activity.id, memberId: member.id, userId: user.id,
+    phone: input.phone.replace(/[\s()-]+/g, ''), status: 'ACTIVE', createdAt: now, updatedAt: now
+  });
   activity.memberCount += 1;
   activity.status = activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING';
   if (activity.status === 'FORMED') activity.formedAt = activity.formedAt || now;
@@ -1035,6 +1061,30 @@ function handle(action, input, idempotencyKey = '') {
         }))
     };
   }
+  if (action === 'ride.driver.memberContacts') {
+    requireUser();
+    const activity = activityById(input.activityId);
+    const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
+    assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
+    assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '该行程当前不可查看成员联系方式');
+    assert(fulfillment.status === 'ASSIGNED' && fulfillment.driverId === currentUserId, 'FORBIDDEN', '你没有权限查看成员联系方式');
+    const items = state.members
+      .filter((member) => member.activityId === activity.id && member.status === 'ACTIVE')
+      .sort((left, right) => Date.parse(left.joinedAt) - Date.parse(right.joinedAt))
+      .map((member) => {
+        const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id && item.status === 'ACTIVE');
+        assert(contact && contact.phone, 'CONTACT_INCOMPLETE', '成员联系方式尚未齐全，请稍后重试');
+        const user = userById(member.userId);
+        return {
+          memberId: member.id,
+          nickname: user && user.profile && user.profile.nickname || (member.role === 'OWNER' ? '发起者' : '乘客'),
+          phone: contact.phone,
+          luggageType: member.luggageType || null,
+          role: member.role
+        };
+      });
+    return { activityId: activity.id, items };
+  }
   if (action === 'ride.driver.accept') return acceptRide(input);
   if (action === 'ride.driver.cancel') return cancelRideAssignment(input);
   if (action === 'application.submit') return submitApplication(input);
@@ -1084,6 +1134,8 @@ function handle(action, input, idempotencyKey = '') {
     member.leaveReason = input.reason || '';
     const now = new Date().toISOString();
     member.leftAt = now;
+    const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
+    if (contact) Object.assign(contact, { status: 'INACTIVE', updatedAt: now });
     activity.memberCount = Math.max(1, activity.memberCount - 1);
     if (activity.status === 'FORMED' && activity.memberCount < (activity.minPassengers || activity.targetMembers)) {
       activity.status = 'RECRUITING';

@@ -1,0 +1,12 @@
+{
+  "id": "pinba-discover-minimal-filter",
+  "title": "实现发现页最小筛选",
+  "status": "superseded",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "review",
+  "nextAction": "由 macau-campus-ride-pilot 任务接管并将上海区域筛选重构为澳门固定路线筛选",
+  "createdAt": "2026-08-24T11:23:28Z",
+  "branch": "main"
+}

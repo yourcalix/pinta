@@ -1,0 +1,8 @@
+{"file":"miniprogram/pages/discover/index.js","reason":"发现页筛选、分页与并发生命周期"}
+{"file":"miniprogram/pages/discover/index.wxml","reason":"现有搜索、场景 Tab、列表和空状态"}
+{"file":"miniprogram/pages/discover/index.wxss","reason":"筛选控件布局与热区"}
+{"file":"cloudfunctions/api/lib/service.js","reason":"公开 activity.list 过滤字段入口"}
+{"file":"cloudfunctions/api/lib/memory-store.js","reason":"Memory city/district 精确过滤"}
+{"file":"cloudfunctions/api/lib/cloud-store.js","reason":"CloudStore city/district 查询"}
+{"file":"miniprogram/mocks/server.js","reason":"Mock 公开列表过滤契约"}
+{"file":"tests/discover-pagination.test.js","reason":"发现页请求抢占、游标与页尾回归"}

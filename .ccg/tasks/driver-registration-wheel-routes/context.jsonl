@@ -1,0 +1,7 @@
+{"file":"cloudfunctions/api/lib/service.js","reason":"认证、资料与司机承接 action 入口"}
+{"file":"cloudfunctions/api/lib/validation.js","reason":"司机申请和固定路线输入校验"}
+{"file":"cloudfunctions/api/lib/memory-store.js","reason":"测试事实源与状态机"}
+{"file":"cloudfunctions/api/lib/cloud-store.js","reason":"CloudBase 持久化与审核事务"}
+{"file":"miniprogram/subpackages/profile/edit/index.js","reason":"首次资料与身份分流"}
+{"file":"miniprogram/subpackages/publish/form/index.js","reason":"拼车发布与路线选择"}
+{"file":"miniprogram/config/locations.js","reason":"8 条固定路线前端唯一配置"}

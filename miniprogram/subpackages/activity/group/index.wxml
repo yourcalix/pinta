@@ -16,7 +16,21 @@
       <view class="formed-meta">{{activity.displayTime}} · {{activity.memberCount}}/{{activity.targetMembers}} 人</view>
     </view>
 
-    <view class="contact-card surface">
+    <view wx:if="{{activity.type === 'ride'}}" class="contact-card surface">
+      <view class="card-heading">
+        <view>
+          <view class="card-title">行程联系说明</view>
+          <view class="card-description">司机承接后将按成员填写的电话逐一联系</view>
+        </view>
+        <status-badge label="隐私保护" tone="info" />
+      </view>
+      <view class="contact-locked">
+        <view class="lock-symbol">⌁</view>
+        <view class="lock-copy">成员电话不会向其他乘客公开，仅当前成功承接的司机可在行程详情中查看。</view>
+      </view>
+    </view>
+
+    <view wx:else class="contact-card surface">
       <view class="card-heading">
         <view>
           <view class="card-title">成员联系信息</view>

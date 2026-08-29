@@ -23,6 +23,7 @@ const ERROR_MESSAGES = Object.freeze({
   RIDE_MEMBER_LOCKED: '司机已确认承接，当前不可退出拼车',
   INVALID_PICKUP_SLOT: '接车时间不在可选范围内',
   PICKUP_TIME_EXPIRED: '接车时间已过，无法承接',
+  CONTACT_INCOMPLETE: '成员联系方式尚未齐全，请稍后重试',
   CONTENT_REJECTED: '内容未通过安全检查，请修改后重试',
   RATE_LIMITED: '操作过于频繁，请稍后重试',
   INTERNAL: '服务暂时不可用，请稍后重试'

@@ -32,7 +32,7 @@ const MUTATING_ACTIONS = new Set([
 const PENDING_MUTATIONS_STORAGE_KEY = 'pinba_pending_mutations_v1';
 const PENDING_MUTATION_TTL_MS = 15 * 60 * 1000;
 const MAX_PENDING_MUTATIONS = 100;
-const SENSITIVE_MUTATING_ACTIONS = new Set(['driver.application.submit']);
+const SENSITIVE_MUTATING_ACTIONS = new Set(['driver.application.submit', 'activity.create', 'ride.join']);
 const sensitiveFingerprintSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 let authenticatedActorScope = '';
 

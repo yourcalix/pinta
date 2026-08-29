@@ -1,6 +1,7 @@
 'use strict';
 
 const { AppError, invariant } = require('./errors');
+const { normalizeRidePhone } = require('./phone');
 const {
   ACTIVITY_TYPES,
   PILOT_CITY,
@@ -126,6 +127,7 @@ function validateActivityInput(input, now = new Date()) {
       { field: 'pickupWindowEnd' }
     );
     result.luggageType = memberLuggageType(input.luggageType);
+    result.contactInfo = normalizeRidePhone(input.contactInfo, 'contactInfo');
     const priceText = [result.title, result.description, result.rules].join(' ');
     invariant(!hasRidePrice(priceText), 'VALIDATION_ERROR', '拼车仅允许合理成本均摊，不能填写具体收费金额', { field: 'description' });
     result.city = PILOT_CITY;
@@ -206,7 +208,8 @@ function validateRideJoinInput(input) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   return {
     activityId: validateId(input.activityId, '活动ID'),
-    luggageType: memberLuggageType(input.luggageType)
+    luggageType: memberLuggageType(input.luggageType),
+    phone: normalizeRidePhone(input.phone, 'phone')
   };
 }
 

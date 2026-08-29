@@ -52,6 +52,7 @@ class MemoryStore {
     this.activities = new Map((seed.activities || []).map((item) => [item.id, clone(item)]));
     this.applications = new Map((seed.applications || []).map((item) => [item.id, clone(item)]));
     this.members = new Map((seed.members || []).map((item) => [item.id, clone(item)]));
+    this.memberContacts = new Map((seed.memberContacts || []).map((item) => [item.id, clone(item)]));
     this.notifications = new Map((seed.notifications || []).map((item) => [item.id, clone(item)]));
     this.activityQuestions = new Map((seed.activityQuestions || []).map((item) => [item.id, clone(item)]));
     this.drivers = new Map((seed.drivers || []).map((item) => [item.userId || item.id, clone(item)]));
@@ -212,7 +213,7 @@ class MemoryStore {
     return clone(application);
   }
 
-  async createActivityWithOwner(activity, ownerMember, rideFulfillment = null) {
+  async createActivityWithOwner(activity, ownerMember, rideFulfillment = null, ownerContact = null) {
     if (activity.type === 'ride') {
       invariant(MEMBER_LUGGAGE_TYPES.includes(ownerMember.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     }
@@ -223,6 +224,7 @@ class MemoryStore {
     }
     this.activities.set(activity.id, clone(activity));
     this.members.set(ownerMember.id, clone(ownerMember));
+    if (ownerContact) this.memberContacts.set(ownerContact.id, clone(ownerContact));
     if (rideFulfillment) this.rideFulfillments.set(activity.id, clone(rideFulfillment));
     return clone(activity);
   }
@@ -549,6 +551,8 @@ class MemoryStore {
     member.status = MEMBER_STATUS.LEFT;
     member.leftAt = at;
     member.leaveReason = reason;
+    const contact = this.memberContacts.get(stableEntityId('memberContact', activityId, member.id));
+    if (contact) Object.assign(contact, { status: 'INACTIVE', updatedAt: at });
     activity.memberCount = Math.max(1, activity.memberCount - 1);
     activity.version += 1;
     activity.updatedAt = at;
@@ -572,7 +576,7 @@ class MemoryStore {
     return clone({ activity, member });
   }
 
-  async joinRideAtomic({ activityId, actorId, luggageType, at }) {
+  async joinRideAtomic({ activityId, actorId, luggageType, phone, at }) {
     invariant(MEMBER_LUGGAGE_TYPES.includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     const activity = this.activities.get(activityId);
     const fulfillment = this.rideFulfillments.get(activityId);
@@ -591,6 +595,14 @@ class MemoryStore {
     delete member.leftAt;
     delete member.leaveReason;
     this.members.set(memberId, member);
+    const contactId = stableEntityId('memberContact', activityId, memberId);
+    const previousContact = this.memberContacts.get(contactId);
+    this.memberContacts.set(contactId, {
+      ...(previousContact || { id: contactId, activityId, memberId, userId: actorId, createdAt: at }),
+      phone,
+      status: 'ACTIVE',
+      updatedAt: at
+    });
     activity.memberCount += 1;
     Object.assign(activity, normalizeRideCapacity(activity));
     if (activity.status === ACTIVITY_STATUS.FORMED) activity.formedAt = activity.formedAt || at;
@@ -777,6 +789,44 @@ class MemoryStore {
       .filter((item) => item.driverId === driverId && item.status !== RIDE_FULFILLMENT_STATUS.UNASSIGNED)
       .map((item) => ({ activity: this.activities.get(item.activityId), fulfillment: item }))
       .filter((item) => item.activity);
+    return clone(items);
+  }
+
+  async listRideMemberContactsForAssignedDriver(activityId, driverId) {
+    const activity = this.activities.get(activityId);
+    const fulfillment = this.rideFulfillments.get(activityId);
+    invariant(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND');
+    invariant(
+      [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status),
+      'CONFLICT',
+      '该行程当前不可查看成员联系方式'
+    );
+    invariant(
+      fulfillment.status === RIDE_FULFILLMENT_STATUS.ASSIGNED && fulfillment.driverId === driverId,
+      'FORBIDDEN'
+    );
+    const members = [...this.members.values()]
+      .filter((member) => member.activityId === activityId && member.status === MEMBER_STATUS.ACTIVE)
+      .sort((left, right) => Date.parse(left.joinedAt) - Date.parse(right.joinedAt));
+    const items = members.map((member) => {
+      const contact = this.memberContacts.get(stableEntityId('memberContact', activityId, member.id));
+      invariant(contact && contact.status === 'ACTIVE' && contact.phone, 'CONTACT_INCOMPLETE');
+      const user = this.users.get(member.userId);
+      return {
+        memberId: member.id,
+        nickname: user && user.profile && user.profile.nickname || (member.role === 'OWNER' ? '发起者' : '乘客'),
+        phone: contact.phone,
+        luggageType: member.luggageType || null,
+        role: member.role
+      };
+    });
+    const currentFulfillment = this.rideFulfillments.get(activityId);
+    invariant(
+      currentFulfillment
+        && currentFulfillment.status === RIDE_FULFILLMENT_STATUS.ASSIGNED
+        && currentFulfillment.driverId === driverId,
+      'FORBIDDEN'
+    );
     return clone(items);
   }
 

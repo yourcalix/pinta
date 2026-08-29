@@ -67,8 +67,8 @@
       </view>
 
       <view class="locked-card">
-        <view class="lock-title">成团后解锁</view>
-        <view class="lock-text">联系方式和具体会合说明不会出现在公开详情中，仅有效成员可以查看。</view>
+        <view class="lock-title">{{activity.type === 'ride' ? '隐私联系方式' : '成团后解锁'}}</view>
+        <view class="lock-text">{{activity.type === 'ride' ? '每位成员的电话不会公开；司机成功承接后，才可查看本次行程有效成员的联系电话与行李。' : '联系方式和具体会合说明不会出现在公开详情中，仅有效成员可以查看。'}}</view>
       </view>
     </view>
 
@@ -101,10 +101,33 @@
       <button wx:else class="driver-primary-button" bindtap="handleOpenDriverSheet">选择接送时间</button>
     </view>
 
+    <view wx:if="{{viewMode === 'driver' && activity.viewerRole === 'driver' && activity.rideFulfillment && activity.rideFulfillment.status === 'ASSIGNED'}}" class="driver-contacts-card surface" role="region" aria-label="本次行程成员联系方式">
+      <view class="driver-contacts-heading">
+        <view>
+          <view class="block-title">成员联系方式</view>
+          <view class="driver-contacts-subtitle">仅当前承接司机可见，请只用于本次接送联系</view>
+        </view>
+        <button class="driver-contacts-retry" wx:if="{{driverContacts.error}}" bindtap="handleRetryDriverContacts">重试</button>
+      </view>
+      <view wx:if="{{driverContacts.loading}}" class="driver-contact-state" role="status">正在安全加载成员电话…</view>
+      <view wx:elif="{{driverContacts.error}}" class="driver-contact-state driver-contact-state--error" role="status">{{driverContacts.error}}</view>
+      <view wx:elif="{{!driverContacts.items.length}}" class="driver-contact-state">暂无有效成员</view>
+      <view wx:else class="driver-contact-list">
+        <view class="driver-contact-item" wx:for="{{driverContacts.items}}" wx:key="memberId">
+          <view class="driver-contact-main">
+            <view class="driver-contact-name">{{item.nickname}} <text class="driver-contact-role">{{item.roleLabel}}</text></view>
+            <text class="driver-contact-phone" user-select="true" aria-label="电话 {{item.phoneAriaLabel}}">{{item.phone}}</text>
+            <view class="driver-contact-luggage">行李：{{item.luggageLabel}}</view>
+          </view>
+          <button class="driver-contact-call" data-phone="{{item.phone}}" bindtap="handleCallMember" aria-label="拨打{{item.nickname}}的电话">拨打</button>
+        </view>
+      </view>
+    </view>
+
     <view wx:if="{{viewMode === 'passenger' && activity.type === 'ride' && activity.canJoinRide}}" class="apply-card surface">
       <view class="block-title">立即加入拼车</view>
       <view class="join-ride-hint">加入即占用名额；司机确认承接前可自由退出。</view>
-      <view class="join-ride-subhint">校园互助合乘，拼满 7 人解锁联系方式；能否出行以司机承接为准。</view>
+      <view class="join-ride-subhint">校园互助合乘；能否出行以司机承接为准。成员电话仅向成功承接的司机开放。</view>
       <view class="join-luggage-heading">
         <view>
           <view class="join-luggage-title">请选择您的行李</view>
@@ -124,7 +147,17 @@
           aria-label="{{item.label}}，{{item.description}}"
         >{{item.label}}</button>
       </view>
-      <button class="primary-button" loading="{{pending}}" disabled="{{pending || !selectedLuggageType}}" bindtap="handleJoinRide" aria-busy="{{pending}}">{{pending ? '正在抢位中…' : (selectedLuggageType ? '立即加入拼车' : '请先选择行李类型')}}</button>
+      <view class="join-phone-field">
+        <view class="join-luggage-title">本人联系电话</view>
+        <view class="join-luggage-subtitle">司机成功承接后可查看，仅用于本次接送联系</view>
+        <view class="join-phone-row">
+          <picker mode="selector" range="{{phoneRegionOptions}}" range-key="label" value="{{phoneRegionIndex}}" bindchange="handlePhoneRegion">
+            <view class="join-phone-region" role="button" aria-label="选择电话地区，当前为{{phoneRegionOptions[phoneRegionIndex].label}}">{{phoneRegionOptions[phoneRegionIndex].code}} <text aria-hidden="true">⌄</text></view>
+          </picker>
+          <input class="input join-phone-input" type="number" maxlength="11" cursor-spacing="120" adjust-position="true" placeholder="{{phonePlaceholder}}" value="{{phoneNumber}}" bindinput="handlePhoneInput" />
+        </view>
+      </view>
+      <button class="primary-button" loading="{{pending}}" disabled="{{pending || !selectedLuggageType || !phoneNumber}}" bindtap="handleJoinRide" aria-busy="{{pending}}">{{pending ? '正在抢位中…' : (!selectedLuggageType ? '请先选择行李类型' : (!phoneNumber ? '请填写本人联系电话' : '立即加入拼车'))}}</button>
     </view>
 
     <view wx:if="{{viewMode === 'passenger' && activity.type !== 'ride' && activity.canApply}}" class="apply-card surface">

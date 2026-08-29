@@ -1,0 +1,12 @@
+{
+  "id": "ride-member-phone-driver-contact",
+  "title": "拼车成员电话收集与司机承接后授权查看",
+  "status": "in_progress",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "review",
+  "nextAction": "执行 GPT-5.5 后端安全复审与网页版 Gemini 前端复审",
+  "createdAt": "2026-08-29T00:00:00+08:00",
+  "branch": "main"
+}

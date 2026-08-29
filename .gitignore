@@ -21,3 +21,4 @@ miniprogram/config/local.js
 # Test artifacts
 coverage/
 tmp/
+.ccg/preview/
