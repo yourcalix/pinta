@@ -2,10 +2,10 @@
 
 const activityService = require('../../../services/activity');
 const subscriptionService = require('../../../services/subscription');
-const { futureLocal, combineLocal } = require('../../../utils/date');
-const { TYPE_META } = require('../../../utils/display');
+const { combineLocal } = require('../../../utils/date');
 const { MEMBER_LUGGAGE_OPTIONS, MEMBER_LUGGAGE_TYPES } = require('../../../config/luggage');
 const { PHONE_REGION_OPTIONS, phoneDigits, phoneOption, isPhoneValid, buildPhone } = require('../../../utils/phone');
+const { AVATAR_PATHS, profileAvatarPath } = require('../../../utils/passenger-avatar');
 const {
   PILOT_CITY,
   PILOT_DISTRICTS,
@@ -17,124 +17,138 @@ const {
   RIDE_ROUTE_ORIGINS
 } = require('../../../config/locations');
 
-const RIDE_FEES = [
-  { value: 'FREE', label: '免费互助' },
-  { value: 'SHARED_COST', label: '合理成本均摊' },
-  { value: 'NO_COST', label: '不涉及费用' }
-];
-const DELIVERY_MODES = [
-  { value: 'FACE_TO_FACE', label: '当面验货交付' },
-  { value: 'PICKUP', label: '指定商圈自提' },
-  { value: 'ARRANGE_AFTER_FORMED', label: '成团后协商' }
-];
-const BUDDY_COSTS = [
-  { value: 'AA', label: 'AA制' },
-  { value: 'SELF_PAY', label: '费用自理' },
-  { value: 'HOST_TREATS', label: '发起者请客' }
-];
-const BUDDY_LEVELS = [
-  { value: 'BEGINNER', label: '新手友好' },
-  { value: 'INTERMEDIATE', label: '需一定基础' },
-  { value: 'ADVANCED', label: '进阶专业' }
-];
+const DEFAULT_RIDE_FEE = 'SHARED_COST';
+const PICKUP_WINDOW_MS = 60 * 60 * 1000;
+const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
+const MAX_SCHEDULE_MS = 7 * 24 * 60 * 60 * 1000;
+const PICKUP_TIME_OPTIONS = Object.freeze(
+  Array.from({ length: 96 }, (_, index) => {
+    const hours = String(Math.floor(index / 4)).padStart(2, '0');
+    const minutes = String((index % 4) * 15).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  })
+);
 
-function initialForm(type) {
-  const starts = futureLocal(30);
-  const deadline = futureLocal(20);
-  const startMinute = Number(starts.time.split(':')[1]);
-  const alignedMinute = Math.ceil(startMinute / 15) * 15;
-  const alignedStarts = new Date(combineLocal(starts.date, starts.time));
-  alignedStarts.setMinutes(alignedStarts.getMinutes() + alignedMinute - startMinute, 0, 0);
-  starts.date = `${alignedStarts.getFullYear()}-${String(alignedStarts.getMonth() + 1).padStart(2, '0')}-${String(alignedStarts.getDate()).padStart(2, '0')}`;
-  starts.time = `${String(alignedStarts.getHours()).padStart(2, '0')}:${String(alignedStarts.getMinutes()).padStart(2, '0')}`;
-  const defaultRoute = RIDE_ROUTES[0];
+function initialForm() {
   return {
-    type,
-    title: '',
+    type: 'ride',
     description: '',
     city: PILOT_CITY,
     district: PILOT_DISTRICTS[0],
-    placeLabel: `${defaultRoute.origin} → ${defaultRoute.destination}`,
-    startDate: starts.date,
-    startTime: starts.time,
-    deadlineDate: deadline.date,
-    deadlineTime: deadline.time,
+    placeLabel: '',
+    startDate: '',
+    startTime: '',
     targetMembers: 7,
     minPassengers: 7,
     maxPassengers: 7,
     phoneRegion: '+853',
     phoneNumber: '',
     rules: '',
-    routeId: defaultRoute.id,
-    origin: defaultRoute.origin,
-    destination: defaultRoute.destination,
-    feeType: RIDE_FEES[1].value,
-    luggageType: '',
-    productName: '',
-    targetQuantity: 2,
-    unitPriceRange: '',
-    shoppingChannel: '',
-    deliveryMode: DELIVERY_MODES[0].value,
-    category: '运动',
-    costMode: BUDDY_COSTS[0].value,
-    level: BUDDY_LEVELS[0].value,
-    equipment: ''
+    routeId: '',
+    origin: '',
+    destination: '',
+    feeType: DEFAULT_RIDE_FEE,
+    luggageType: ''
   };
+}
+
+function createPublisherSlots(gender) {
+  return Array.from({ length: 7 }, (_, index) => ({
+    id: index + 1,
+    src: index === 0 ? profileAvatarPath(gender) : AVATAR_PATHS.EMPTY,
+    empty: index !== 0
+  }));
+}
+
+function formatClock(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function pickupWindowLabel(dateValue, timeValue) {
+  if (!dateValue || !timeValue) return '选择后自动形成 60 分钟时间窗';
+  const startsAt = new Date(combineLocal(dateValue, timeValue));
+  if (!Number.isFinite(startsAt.getTime())) return '选择后自动形成 60 分钟时间窗';
+  const endsAt = new Date(startsAt.getTime() + PICKUP_WINDOW_MS);
+  const nextDay = endsAt.getDate() !== startsAt.getDate();
+  return `${formatClock(startsAt)}–${nextDay ? '次日 ' : ''}${formatClock(endsAt)}`;
+}
+
+function buildRideTitle(route) {
+  return `${route.code}｜${route.origin}→${route.destination}`;
+}
+
+function rideDeadlineAt(startsAt) {
+  const startsAtMs = Date.parse(startsAt);
+  return new Date(startsAtMs - 1000).toISOString();
+}
+
+function safeRideStartsAt(dateValue, timeValue) {
+  try {
+    const startsAt = combineLocal(dateValue, timeValue);
+    return Number.isFinite(Date.parse(startsAt)) ? startsAt : '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function presenceReady(data) {
+  const form = data.form;
+  return Boolean(
+    getRideRoute(form.routeId)
+      && form.startDate
+      && form.startTime
+      && form.luggageType
+      && form.phoneNumber
+      && data.safetyAgreed
+  );
 }
 
 Page({
   data: {
     type: 'ride',
-    typeLabel: '拼车',
-    typeColor: '#3478F6',
-    step: 1,
-    form: initialForm('ride'),
+    form: initialForm(),
     routeOptions: RIDE_ROUTES,
-    routeIndex: 0,
     routeColumns: rideRoutePickerState(RIDE_ROUTES[0].id).columns,
     routeIndexes: rideRoutePickerState(RIDE_ROUTES[0].id).indexes,
-    routeLabel: `${RIDE_ROUTES[0].origin} → ${RIDE_ROUTES[0].destination}（${RIDE_ROUTES[0].code}）`,
-    districtOptions: PILOT_DISTRICTS,
-    districtIndex: 0,
-    feeOptions: RIDE_FEES,
-    feeIndex: 1,
+    routeSelected: false,
+    routeOriginLabel: '选择起点',
+    routeDestinationLabel: '选择终点',
+    routeOriginId: '',
+    routeDestinationId: '',
+    pickupTimeOptions: PICKUP_TIME_OPTIONS,
+    pickupTimeIndex: 0,
+    pickupWindowLabel: '选择后自动形成 60 分钟时间窗',
+    publisherSlots: createPublisherSlots(null),
     luggageOptions: MEMBER_LUGGAGE_OPTIONS,
     phoneRegionOptions: PHONE_REGION_OPTIONS,
     phoneRegionIndex: 0,
     phonePlaceholder: PHONE_REGION_OPTIONS[0].placeholder,
-    deliveryOptions: DELIVERY_MODES,
-    deliveryIndex: 0,
-    buddyCostOptions: BUDDY_COSTS,
-    buddyCostIndex: 0,
-    buddyLevelOptions: BUDDY_LEVELS,
-    buddyLevelIndex: 0,
     safetyAgreed: false,
+    submitReady: false,
     submitting: false,
     errorMessage: '',
+    errorField: '',
     submissionKey: ''
   },
 
-  onLoad(options) {
-    const type = 'ride';
-    const meta = TYPE_META[type];
-    const form = initialForm(type);
-    const routeState = rideRoutePickerState(form.routeId);
-    this.draftKey = `pinba_publish_draft_${type}`;
+  onLoad() {
+    const app = typeof getApp === 'function' ? getApp() : null;
+    const profile = app && app.globalData && app.globalData.user && app.globalData.user.profile;
+    const form = initialForm();
+    const routeState = rideRoutePickerState(RIDE_ROUTES[0].id);
+    this.draftKey = 'pinba_publish_draft_ride';
     this.setData({
-      type,
-      typeLabel: meta.label,
-      typeColor: meta.color,
       form,
       routeColumns: routeState.columns,
       routeIndexes: routeState.indexes,
-      routeLabel: `${routeState.route.origin} → ${routeState.route.destination}（${routeState.route.code}）`,
-      submissionKey: `publish_${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      publisherSlots: createPublisherSlots(profile && profile.gender),
+      submissionKey: `publish_ride_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     });
     const draft = wx.getStorageSync(this.draftKey);
     if (draft && draft.form) {
       wx.showModal({
         title: '继续上次填写？',
-        content: '检测到这个类型有未完成的草稿。',
+        content: '检测到尚未完成的拼车草稿，联系电话不会从草稿恢复。',
         confirmText: '继续填写',
         cancelText: '重新开始',
         success: (result) => {
@@ -145,29 +159,36 @@ Page({
     }
   },
 
+  onHide() {
+    if (!this.data.submitting) this.saveDraft();
+    if (this.data.form.phoneNumber) this.setData({ 'form.phoneNumber': '', submitReady: false });
+  },
+
   onUnload() {
     if (!this.data.submitting) this.saveDraft();
     this.data.form.phoneNumber = '';
   },
 
   restoreDraft(draft) {
-    const form = { ...initialForm(this.data.type), ...draft.form, type: this.data.type };
-    const routeState = rideRoutePickerState(form.routeId);
+    const form = { ...initialForm(), ...draft.form, type: 'ride', phoneNumber: '' };
+    const route = getRideRoute(form.routeId);
+    const routeState = rideRoutePickerState(route && route.id);
+    const pickupTimeIndex = Math.max(PICKUP_TIME_OPTIONS.indexOf(form.startTime), 0);
     this.setData({
       form,
-      step: draft.step || 1,
       safetyAgreed: draft.safetyAgreed === true,
-      routeIndex: Math.max(RIDE_ROUTES.findIndex((item) => item.id === form.routeId), 0),
       routeColumns: routeState.columns,
       routeIndexes: routeState.indexes,
-      routeLabel: `${routeState.route.origin} → ${routeState.route.destination}（${routeState.route.code}）`,
-      districtIndex: Math.max(PILOT_DISTRICTS.indexOf(form.district), 0),
-      feeIndex: Math.max(RIDE_FEES.findIndex((item) => item.value === form.feeType), 0),
-      deliveryIndex: Math.max(DELIVERY_MODES.findIndex((item) => item.value === form.deliveryMode), 0),
-      buddyCostIndex: Math.max(BUDDY_COSTS.findIndex((item) => item.value === form.costMode), 0),
-      buddyLevelIndex: Math.max(BUDDY_LEVELS.findIndex((item) => item.value === form.level), 0),
+      routeSelected: Boolean(route),
+      routeOriginLabel: route ? route.origin : '选择起点',
+      routeDestinationLabel: route ? route.destination : '选择终点',
+      routeOriginId: route ? route.originId : '',
+      routeDestinationId: route ? route.destinationId : '',
+      pickupTimeIndex,
+      pickupWindowLabel: pickupWindowLabel(form.startDate, form.startTime),
       phoneRegionIndex: Math.max(PHONE_REGION_OPTIONS.findIndex((item) => item.code === form.phoneRegion), 0),
-      phonePlaceholder: phoneOption(form.phoneRegion).placeholder
+      phonePlaceholder: phoneOption(form.phoneRegion).placeholder,
+      submitReady: false
     });
   },
 
@@ -176,35 +197,41 @@ Page({
     const { phoneNumber, ...safeForm } = this.data.form;
     wx.setStorageSync(this.draftKey, {
       form: safeForm,
-      step: this.data.step,
       safetyAgreed: this.data.safetyAgreed,
       savedAt: Date.now()
     });
   },
 
+  updateState(patch, fields = []) {
+    const shouldClearError = fields.includes(this.data.errorField);
+    this.setData({
+      ...patch,
+      ...(shouldClearError ? { errorMessage: '', errorField: '' } : {})
+    }, () => this.refreshSubmitReady());
+  },
+
+  refreshSubmitReady() {
+    const submitReady = presenceReady(this.data);
+    if (submitReady !== this.data.submitReady) this.setData({ submitReady });
+  },
+
   handleInput(event) {
     const field = event.currentTarget.dataset.field;
-    this.setData({ [`form.${field}`]: event.detail.value, errorMessage: '' });
+    this.updateState({ [`form.${field}`]: event.detail.value }, [field]);
   },
 
   handlePhoneInput(event) {
-    this.setData({ 'form.phoneNumber': phoneDigits(event.detail.value), errorMessage: '' });
+    this.updateState({ 'form.phoneNumber': phoneDigits(event.detail.value) }, ['phone']);
   },
 
   handlePhoneRegion(event) {
     const index = Math.min(Math.max(Number(event.detail.value) || 0, 0), PHONE_REGION_OPTIONS.length - 1);
     const option = PHONE_REGION_OPTIONS[index];
-    this.setData({
+    this.updateState({
       phoneRegionIndex: index,
       phonePlaceholder: option.placeholder,
-      'form.phoneRegion': option.code,
-      errorMessage: ''
-    });
-  },
-
-  handleDistrict(event) {
-    const index = Number(event.detail.value);
-    this.setData({ districtIndex: index, 'form.district': PILOT_DISTRICTS[index] });
+      'form.phoneRegion': option.code
+    }, ['phone']);
   },
 
   handleRouteColumnChange(event) {
@@ -220,32 +247,25 @@ Page({
   handleRoute(event) {
     const route = rideRouteFromIndexes(event.detail.value || this.data.routeIndexes);
     const routeState = rideRoutePickerState(route.id);
-    this.setData({
-      routeIndex: Math.max(RIDE_ROUTES.findIndex((item) => item.id === route.id), 0),
+    this.updateState({
       routeColumns: routeState.columns,
       routeIndexes: routeState.indexes,
-      routeLabel: `${route.origin} → ${route.destination}（${route.code}）`,
+      routeSelected: true,
+      routeOriginLabel: route.origin,
+      routeDestinationLabel: route.destination,
+      routeOriginId: route.originId,
+      routeDestinationId: route.destinationId,
       'form.routeId': route.id,
       'form.origin': route.origin,
       'form.destination': route.destination,
-      'form.placeLabel': `${route.origin} → ${route.destination}`,
-      errorMessage: ''
-    });
-  },
-
-  handleOption(event) {
-    const index = Number(event.detail.value);
-    const field = event.currentTarget.dataset.field;
-    const source = event.currentTarget.dataset.source;
-    const indexField = event.currentTarget.dataset.indexField;
-    const options = this.data[source];
-    this.setData({ [indexField]: index, [`form.${field}`]: options[index].value });
+      'form.placeLabel': `${route.origin} → ${route.destination}`
+    }, ['route']);
   },
 
   handleLuggageSelect(event) {
     const luggageType = event.currentTarget.dataset.luggageType;
     if (!MEMBER_LUGGAGE_TYPES.includes(luggageType)) return;
-    this.setData({ 'form.luggageType': luggageType, errorMessage: '' });
+    this.updateState({ 'form.luggageType': luggageType }, ['luggage']);
   },
 
   showLuggageHelp() {
@@ -258,89 +278,90 @@ Page({
   },
 
   handleDate(event) {
-    this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value });
+    const startDate = event.detail.value;
+    this.updateState({
+      'form.startDate': startDate,
+      pickupWindowLabel: pickupWindowLabel(startDate, this.data.form.startTime)
+    }, ['time']);
+  },
+
+  handlePickupTime(event) {
+    const index = Math.min(Math.max(Number(event.detail.value) || 0, 0), PICKUP_TIME_OPTIONS.length - 1);
+    const startTime = PICKUP_TIME_OPTIONS[index];
+    this.updateState({
+      pickupTimeIndex: index,
+      'form.startTime': startTime,
+      pickupWindowLabel: pickupWindowLabel(this.data.form.startDate, startTime)
+    }, ['time']);
   },
 
   handleSafety(event) {
-    this.setData({ safetyAgreed: event.detail.value.includes('agreed') });
+    this.updateState({ safetyAgreed: event.detail.value.includes('agreed') }, ['safety']);
   },
 
-  validateStepOne() {
+  validateForm() {
     const form = this.data.form;
-    if (!form.title.trim()) return '请填写活动标题';
-    if (this.data.type === 'ride' && !getRideRoute(form.routeId)) return '请选择固定路线';
-    if (this.data.type === 'product' && (!form.productName.trim() || !form.unitPriceRange.trim())) return '请填写商品名称和预估价格区间';
-    if (this.data.type === 'buddy' && !form.category.trim()) return '请填写活动类别';
-    const startsAt = combineLocal(form.startDate, form.startTime);
-    const deadlineAt = combineLocal(form.deadlineDate, form.deadlineTime);
-    if (Date.parse(deadlineAt) <= Date.now()) return '报名截止时间必须晚于当前时间';
-    if (Date.parse(startsAt) <= Date.parse(deadlineAt)) return '活动开始时间必须晚于报名截止时间';
-    if (Date.parse(startsAt) - Date.now() > 7 * 24 * 60 * 60 * 1000) return '活动开始时间不能超过7天';
-    if (this.data.type === 'ride' && new Date(startsAt).getMinutes() % 15 !== 0) return '期望时间请按 15 分钟选择';
-    return '';
+    if (!getRideRoute(form.routeId)) return { field: 'route', message: '请选择固定起点与终点' };
+    if (!form.startDate || !form.startTime) return { field: 'time', message: '请选择出发日期与时间窗' };
+    const now = Date.now();
+    const startsAt = safeRideStartsAt(form.startDate, form.startTime);
+    const startsAtMs = Date.parse(startsAt);
+    if (!Number.isFinite(startsAtMs)) return { field: 'time', message: '出发时间无效，请重新选择' };
+    if (startsAtMs <= now + MIN_SCHEDULE_LEAD_MS) return { field: 'time', message: '出发时间需至少晚于当前时间 5 分钟' };
+    if (startsAtMs - now > MAX_SCHEDULE_MS) return { field: 'time', message: '出发时间最多可选择未来 7 天' };
+    if (new Date(startsAtMs).getMinutes() % 15 !== 0) return { field: 'time', message: '接车时间请按 15 分钟选择' };
+    if (!form.luggageType) return { field: 'luggage', message: '请先选择我的行李' };
+    if (!isPhoneValid(form.phoneRegion, form.phoneNumber)) return { field: 'phone', message: '请输入正确的本人联系电话' };
+    if (!this.data.safetyAgreed) return { field: 'safety', message: '请阅读并同意安全规则' };
+    return null;
   },
 
-  handleNext() {
-    const errorMessage = this.validateStepOne();
-    if (errorMessage) {
-      this.setData({ errorMessage });
-      wx.pageScrollTo({ scrollTop: 0, duration: 200 });
-      return;
-    }
-    this.setData({ step: 2, errorMessage: '' });
-    this.saveDraft();
-    wx.pageScrollTo({ scrollTop: 0, duration: 200 });
-  },
-
-  handleBack() {
-    this.setData({ step: 1, errorMessage: '' });
-    wx.pageScrollTo({ scrollTop: 0, duration: 200 });
+  showValidationError(error) {
+    this.setData({ errorMessage: error.message, errorField: error.field });
+    wx.pageScrollTo({
+      selector: `#field-${error.field}`,
+      offsetTop: -20,
+      duration: 200,
+      fail: () => wx.pageScrollTo({ scrollTop: 0, duration: 200 })
+    });
   },
 
   buildPayload() {
     const form = this.data.form;
+    const route = getRideRoute(form.routeId);
+    const startsAt = safeRideStartsAt(form.startDate, form.startTime);
     const common = {
-      type: this.data.type,
-      title: form.title.trim(),
+      type: 'ride',
+      title: buildRideTitle(route),
       description: form.description.trim(),
       city: form.city,
       district: form.district,
-      placeLabel: form.placeLabel.trim(),
-      startsAt: combineLocal(form.startDate, form.startTime),
-      deadlineAt: combineLocal(form.deadlineDate, form.deadlineTime),
-      targetMembers: this.data.type === 'ride' ? 7 : Number(form.targetMembers),
+      placeLabel: `${route.origin} → ${route.destination}`,
+      startsAt,
+      deadlineAt: rideDeadlineAt(startsAt),
+      targetMembers: 7,
       contactInfo: buildPhone(form.phoneRegion, form.phoneNumber),
-      rules: form.rules.trim()
-    };
-    if (this.data.type === 'ride') {
-      const startsAt = Date.parse(common.startsAt);
-      common.luggageType = form.luggageType;
-      common.minPassengers = 7;
-      common.maxPassengers = 7;
-      common.typeData = {
-        routeId: form.routeId,
-        pickupWindowEnd: new Date(startsAt + 60 * 60 * 1000).toISOString(),
+      rules: form.rules.trim(),
+      luggageType: form.luggageType,
+      typeData: {
+        routeId: route.id,
+        pickupWindowEnd: new Date(Date.parse(startsAt) + PICKUP_WINDOW_MS).toISOString(),
         feeType: form.feeType
-      };
-    }
-    if (this.data.type === 'product') {
-      common.typeData = {
-        productName: form.productName.trim(), targetQuantity: Number(form.targetQuantity),
-        unitPriceRange: form.unitPriceRange.trim(), shoppingChannel: form.shoppingChannel.trim(), deliveryMode: form.deliveryMode
-      };
-    }
-    if (this.data.type === 'buddy') {
-      common.typeData = { category: form.category.trim(), costMode: form.costMode, level: form.level, equipment: form.equipment.trim() };
-    }
+      }
+    };
+    common.minPassengers = 7;
+    common.maxPassengers = 7;
     return common;
   },
 
   async handleSubmit() {
     if (this.data.submitting) return;
-    if (this.data.type === 'ride' && !this.data.form.luggageType) return this.setData({ errorMessage: '请先选择我的行李' });
-    if (!isPhoneValid(this.data.form.phoneRegion, this.data.form.phoneNumber)) return this.setData({ errorMessage: '请输入正确的本人联系电话' });
-    if (!this.data.safetyAgreed) return this.setData({ errorMessage: '请阅读并同意安全规则' });
-    this.setData({ submitting: true, errorMessage: '' });
+    const validationError = this.validateForm();
+    if (validationError) {
+      this.showValidationError(validationError);
+      return;
+    }
+    this.setData({ submitting: true, errorMessage: '', errorField: '', submitReady: false });
     try {
       await subscriptionService.requestStatusUpdates();
       const result = await activityService.create(this.buildPayload(), this.data.submissionKey);
@@ -353,9 +374,9 @@ Page({
     } catch (error) {
       this.setData({
         errorMessage: error.handled ? '账号暂时无法使用' : error.message || '发布失败，请检查后重试',
+        errorField: 'submit',
         submitting: false
-      });
-      wx.pageScrollTo({ scrollTop: 0, duration: 200 });
+      }, () => this.refreshSubmitReady());
       this.saveDraft();
     }
   }

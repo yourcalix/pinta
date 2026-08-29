@@ -1,0 +1,12 @@
+{
+  "id": "implement-publish-page-visual",
+  "title": "落地发布拼车单页长表单视觉",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并推送 GitHub",
+  "createdAt": "2026-08-29T23:15:00+08:00",
+  "branch": "main"
+}

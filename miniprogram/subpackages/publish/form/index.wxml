@@ -1,142 +1,167 @@
-<view class="page form-page safe-bottom">
-  <view class="form-header">
-    <view class="type-mark" style="color: {{typeColor}}; border-color: {{typeColor}}">{{typeLabel}}</view>
-    <view class="step-copy">
-      <view class="step-title">{{step === 1 ? '核心信息' : '规则与安全'}}</view>
-      <view class="step-description">{{step === 1 ? '填写别人决定是否加入所需的信息' : '这些信息会帮助成员安全履约'}}</view>
+<view class="page form-page">
+  <view class="publish-hero surface">
+    <image class="hero-puzzle" src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
+    <view class="hero-copy">
+      <view class="hero-title">发布校园拼车</view>
+      <view class="hero-subtitle">固定路线 · 公益合乘 · 灵活加入</view>
     </view>
-    <text class="step-count">{{step}}/2</text>
+    <view class="hero-scene" aria-hidden="true">
+      <image class="hero-car" src="../../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
+      <image class="hero-campus" src="../../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
+    </view>
   </view>
 
-  <view class="progress-track"><view class="progress-fill" style="width: {{step * 50}}%"></view></view>
+  <view wx:if="{{errorMessage}}" class="error-banner" role="alert">{{errorMessage}}</view>
 
-  <view wx:if="{{errorMessage}}" class="error-banner">{{errorMessage}}</view>
-
-  <view wx:if="{{step === 1}}" class="form-card surface">
-    <view class="field">
-      <text class="field-label required">行程标题</text>
-      <input class="input" maxlength="30" cursor-spacing="120" adjust-position="true" placeholder="例如：周五晚青茂回凼仔" value="{{form.title}}" data-field="title" bindinput="handleInput" />
-      <view class="field-hint">2—30 个字，不要填写联系方式</view>
+  <view id="field-route" class="form-card surface {{errorField === 'route' ? 'form-card--error' : ''}}">
+    <view class="section-heading">
+      <view class="section-mark section-mark--pin" aria-hidden="true"><view class="pin-dot"></view></view>
+      <view class="section-copy">
+        <view class="section-title required">选择起点与终点</view>
+        <view class="section-description">仅支持澳门试点的 8 条校园往返路线</view>
+      </view>
     </view>
 
-    <view class="field">
-      <text class="field-label required">起点与终点</text>
-      <picker mode="multiSelector" range="{{routeColumns}}" value="{{routeIndexes}}" bindcolumnchange="handleRouteColumnChange" bindchange="handleRoute">
-        <view class="picker-field" role="button" aria-label="选择合乘起点和终点，当前为{{routeLabel}}">
-          <text>{{routeLabel}}</text>
-          <text aria-hidden="true">›</text>
+    <picker mode="multiSelector" range="{{routeColumns}}" value="{{routeIndexes}}" bindcolumnchange="handleRouteColumnChange" bindchange="handleRoute">
+      <view class="route-picker-grid" role="button" aria-invalid="{{errorField === 'route'}}" aria-label="选择合乘起点和终点，当前为{{routeSelected ? routeOriginLabel + '到' + routeDestinationLabel : '尚未选择'}}">
+        <view class="route-picker-box">
+          <text class="route-picker-label">{{routeOriginLabel}}</text>
+          <text class="picker-chevron" aria-hidden="true">⌄</text>
+        </view>
+        <text class="route-arrow" aria-hidden="true">→</text>
+        <view class="route-picker-box">
+          <text class="route-picker-label">{{routeDestinationLabel}}</text>
+          <text class="picker-chevron" aria-hidden="true">⌄</text>
+        </view>
+      </view>
+    </picker>
+
+    <view wx:if="{{routeSelected}}" class="route-visual" aria-hidden="true">
+      <image wx:if="{{routeOriginId === 'QINGMAO'}}" class="route-node route-node--start" src="../../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{routeOriginId === 'HENGQIN'}}" class="route-node route-node--start" src="../../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{routeOriginId === 'TAIPA_CAMPUS'}}" class="route-node route-node--start" src="../../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:else class="route-node route-node--start" src="../../../assets/images/discover/node-end-golden-dragon.png" mode="aspectFit" aria-hidden="true" />
+      <view class="route-line"></view>
+      <image class="route-car" src="../../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
+      <view class="route-line"></view>
+      <image wx:if="{{routeDestinationId === 'QINGMAO'}}" class="route-node route-node--end" src="../../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{routeDestinationId === 'HENGQIN'}}" class="route-node route-node--end" src="../../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:elif="{{routeDestinationId === 'TAIPA_CAMPUS'}}" class="route-node route-node--end" src="../../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
+      <image wx:else class="route-node route-node--end" src="../../../assets/images/discover/node-end-golden-dragon.png" mode="aspectFit" aria-hidden="true" />
+    </view>
+    <view wx:else class="route-visual route-visual--empty" aria-hidden="true">
+      <view class="route-placeholder-node"></view><view class="route-line"></view><view class="route-placeholder-car"></view><view class="route-line"></view><view class="route-placeholder-node"></view>
+    </view>
+    <view wx:if="{{errorField === 'route'}}" class="field-error">{{errorMessage}}</view>
+  </view>
+
+  <view id="field-time" class="form-card surface {{errorField === 'time' ? 'form-card--error' : ''}}">
+    <view class="section-heading">
+      <view class="section-mark section-mark--calendar" aria-hidden="true"><view class="calendar-page"></view></view>
+      <view class="section-copy">
+        <view class="section-title required">选择出发时间</view>
+        <view class="section-description">接车时间按 15 分钟选择，自动形成 60 分钟时间窗</view>
+      </view>
+    </view>
+    <view class="time-field-row">
+      <view class="time-icon time-icon--calendar" aria-hidden="true"></view>
+      <picker class="time-picker" mode="date" value="{{form.startDate}}" bindchange="handleDate">
+        <view class="picker-field" role="button" aria-label="选择出发日期，当前为{{form.startDate || '未选择'}}">
+          <text class="{{form.startDate ? '' : 'placeholder'}}">{{form.startDate || '选择出发日期'}}</text><text class="picker-chevron" aria-hidden="true">⌄</text>
         </view>
       </picker>
-      <view class="field-hint">仅支持澳门试点的 8 条校园往返路线</view>
     </view>
-
-    <view class="two-columns">
-      <view class="field column">
-        <text class="field-label required">期望日期</text>
-        <picker mode="date" value="{{form.startDate}}" data-field="startDate" bindchange="handleDate">
-          <view class="picker-field">{{form.startDate}}</view>
-        </picker>
-      </view>
-      <view class="field column">
-        <text class="field-label required">时间窗起点</text>
-        <picker mode="time" value="{{form.startTime}}" data-field="startTime" bindchange="handleDate">
-          <view class="picker-field">{{form.startTime}}</view>
-        </picker>
-      </view>
+    <view class="time-field-row">
+      <view class="time-icon time-icon--clock" aria-hidden="true"></view>
+      <picker class="time-picker" mode="selector" range="{{pickupTimeOptions}}" value="{{pickupTimeIndex}}" bindchange="handlePickupTime">
+        <view class="picker-field" role="button" aria-label="选择接车时间窗，当前为{{form.startTime ? pickupWindowLabel : '未选择'}}">
+          <text class="{{form.startTime ? '' : 'placeholder'}}">{{form.startTime ? pickupWindowLabel : '选择时间窗起点'}}</text><text class="picker-chevron" aria-hidden="true">⌄</text>
+        </view>
+      </picker>
     </view>
-
-    <view class="two-columns">
-      <view class="field column">
-        <text class="field-label required">截止日期</text>
-        <picker mode="date" value="{{form.deadlineDate}}" data-field="deadlineDate" bindchange="handleDate">
-          <view class="picker-field">{{form.deadlineDate}}</view>
-        </picker>
-      </view>
-      <view class="field column">
-        <text class="field-label required">截止时间</text>
-        <picker mode="time" value="{{form.deadlineTime}}" data-field="deadlineTime" bindchange="handleDate">
-          <view class="picker-field">{{form.deadlineTime}}</view>
-        </picker>
-      </view>
-    </view>
-
-    <view class="capacity-info-card" role="region" aria-label="成团与人数规则，固定七名乘客成团，司机不计入乘客人数">
-      <view class="capacity-info-main">
-        <text class="capacity-label">行程容量</text>
-        <text class="capacity-value">固定 7 名乘客成团</text>
-      </view>
-      <view class="capacity-info-sub">司机不计入乘客人数；接车时间前司机可随时确认承接</view>
-    </view>
-
-    <button class="primary-button" bindtap="handleNext">下一步：设置规则</button>
+    <view wx:if="{{errorField === 'time'}}" class="field-error">{{errorMessage}}</view>
   </view>
 
-  <view wx:else class="form-card surface">
-    <view class="field">
-      <text class="field-label">补充说明</text>
-      <textarea class="textarea" maxlength="300" cursor-spacing="120" adjust-position="true" placeholder="说明时间弹性、适合人群或其他必要条件" value="{{form.description}}" data-field="description" bindinput="handleInput" />
-    </view>
-
-    <block wx:if="{{type === 'ride'}}">
-      <view class="field">
-        <text class="field-label required">费用分摊方式</text>
-        <picker mode="selector" range="{{feeOptions}}" range-key="label" value="{{feeIndex}}" data-field="feeType" data-source="feeOptions" data-index-field="feeIndex" bindchange="handleOption">
-          <view class="picker-field">{{feeOptions[feeIndex].label}} <text>›</text></view>
-        </picker>
-        <view class="field-hint">禁止填写司机报价或具体收费金额</view>
+  <view id="field-luggage" class="form-card surface {{errorField === 'luggage' ? 'form-card--error' : ''}}">
+    <view class="capacity-row" role="region" aria-label="行程容量，最多七名乘客，当前包含发起者一人">
+      <view class="capacity-avatars" aria-hidden="true">
+        <image wx:for="{{publisherSlots}}" wx:key="id" class="capacity-avatar {{item.empty ? 'capacity-avatar--empty' : ''}}" src="{{item.src}}" mode="aspectFit" aria-hidden="true" />
       </view>
-      <view class="field luggage-field">
-        <view class="luggage-field-heading">
-          <text class="field-label required">我的行李</text>
-          <button class="luggage-help-button" bindtap="showLuggageHelp" aria-label="查看行李大小说明">?</button>
-        </view>
-        <view class="field-hint">请选择您本次同行携带的行李大小，司机将据此判断后备箱空间</view>
-        <view class="luggage-chip-group" role="radiogroup" aria-label="我的行李，必选">
-          <button
-            wx:for="{{luggageOptions}}"
-            wx:key="value"
-            class="luggage-chip {{form.luggageType === item.value ? 'luggage-chip--active' : ''}}"
-            data-luggage-type="{{item.value}}"
-            bindtap="handleLuggageSelect"
-            role="radio"
-            aria-checked="{{form.luggageType === item.value}}"
-            aria-label="{{item.label}}，{{item.description}}"
-          >{{item.label}}</button>
-        </view>
+      <view class="capacity-copy">
+        <view class="capacity-value">固定 7 名乘客成团</view>
+        <view class="capacity-tip">司机不计入人数，接车时间前可确认承接</view>
       </view>
-    </block>
-
-    <view class="field">
-      <text class="field-label">参与规则</text>
-      <textarea class="textarea textarea--small" maxlength="200" cursor-spacing="120" adjust-position="true" placeholder="例如：请提前10分钟到达公共会合点" value="{{form.rules}}" data-field="rules" bindinput="handleInput" />
     </view>
 
-    <view class="field private-field">
-      <text class="field-label required">本人联系电话</text>
-      <view class="phone-input-row">
-        <picker mode="selector" range="{{phoneRegionOptions}}" range-key="label" value="{{phoneRegionIndex}}" bindchange="handlePhoneRegion">
-          <view class="phone-region-picker" role="button" aria-label="选择电话地区，当前为{{phoneRegionOptions[phoneRegionIndex].label}}">{{phoneRegionOptions[phoneRegionIndex].code}} <text aria-hidden="true">⌄</text></view>
-        </picker>
-        <input class="input phone-number-input" type="number" maxlength="11" cursor-spacing="120" adjust-position="true" placeholder="{{phonePlaceholder}}" value="{{form.phoneNumber}}" bindinput="handlePhoneInput" />
+    <view class="card-divider"></view>
+    <view class="luggage-field-heading">
+      <view>
+        <view class="section-title required">我的行李</view>
+        <view class="section-description">请选择本次同行携带的行李大小</view>
       </view>
-      <view class="field-hint">仅用于本次行程接送联系；司机成功承接后才能查看，不会出现在公开列表和详情中。</view>
+      <button class="luggage-help-button" bindtap="showLuggageHelp" aria-label="查看行李大小说明">?</button>
     </view>
-
-    <view class="risk-note">
-      <view class="risk-title">发布前请确认</view>
-      <view>本功能仅用于澳门校园出行信息撮合。请不要提前向陌生人转账；司机承接仅向已审核的司机与车辆开放。</view>
+    <view class="luggage-chip-group" role="radiogroup" aria-label="我的行李，必选">
+      <button
+        wx:for="{{luggageOptions}}"
+        wx:key="value"
+        class="luggage-chip {{form.luggageType === item.value ? 'luggage-chip--active' : ''}}"
+        data-luggage-type="{{item.value}}"
+        bindtap="handleLuggageSelect"
+        role="radio"
+        aria-checked="{{form.luggageType === item.value}}"
+        aria-label="{{item.label}}，{{item.description}}"
+      >
+        <view class="luggage-radio" aria-hidden="true"></view>
+        <view class="luggage-art luggage-art--{{item.value}}" aria-hidden="true"><view class="luggage-handle"></view><view class="luggage-case"></view></view>
+        <text>{{item.label}}</text>
+      </button>
     </view>
+    <view wx:if="{{errorField === 'luggage'}}" class="field-error">{{errorMessage}}</view>
+  </view>
 
+  <view id="field-phone" class="form-card surface private-card {{errorField === 'phone' ? 'form-card--error' : ''}}">
+    <view class="section-heading">
+      <view class="section-mark section-mark--phone" aria-hidden="true">⌕</view>
+      <view class="section-copy">
+        <view class="section-title required">本人联系电话</view>
+        <view class="section-description">仅在司机确认承接后向该司机展示</view>
+      </view>
+    </view>
+    <view class="phone-input-row">
+      <picker mode="selector" range="{{phoneRegionOptions}}" range-key="label" value="{{phoneRegionIndex}}" bindchange="handlePhoneRegion">
+        <view class="phone-region-picker" role="button" aria-label="选择电话地区，当前为{{phoneRegionOptions[phoneRegionIndex].label}}">{{phoneRegionOptions[phoneRegionIndex].code}} <text aria-hidden="true">⌄</text></view>
+      </picker>
+      <input class="input phone-number-input" type="number" maxlength="11" cursor-spacing="120" adjust-position="true" aria-invalid="{{errorField === 'phone'}}" placeholder="{{phonePlaceholder}}" value="{{form.phoneNumber}}" bindinput="handlePhoneInput" />
+    </view>
+    <view class="privacy-tip"><view class="privacy-lock" aria-hidden="true"></view><text>号码不进入草稿、公开列表、分享内容或日志</text></view>
+    <view wx:if="{{errorField === 'phone'}}" class="field-error">{{errorMessage}}</view>
+  </view>
+
+  <view id="field-safety" class="form-card surface notes-card {{errorField === 'safety' ? 'form-card--error' : ''}}">
+    <view class="section-heading">
+      <view class="section-mark section-mark--note" aria-hidden="true"><view class="note-lines"></view></view>
+      <view class="section-copy">
+        <view class="section-title">补充说明</view>
+        <view class="section-description">可填写时间弹性、会合提示或其他必要条件</view>
+      </view>
+    </view>
+    <textarea class="textarea notes-textarea" maxlength="300" cursor-spacing="120" adjust-position="true" placeholder="选填，请勿填写额外联系方式或具体收费金额" value="{{form.description}}" data-field="description" bindinput="handleInput" />
     <checkbox-group bindchange="handleSafety">
-      <label class="agreement">
+      <label class="agreement {{errorField === 'safety' ? 'agreement--error' : ''}}" aria-invalid="{{errorField === 'safety'}}">
         <checkbox value="agreed" checked="{{safetyAgreed}}" color="#16A36A" />
-        <text>我已阅读并同意安全规则，保证信息真实，理解获批成员将自动占用名额。</text>
+        <text>我已阅读并同意安全规则，保证信息真实；乘客可直接加入并占用名额，司机确认后成员不可自行退出。</text>
       </label>
     </checkbox-group>
+    <view wx:if="{{errorField === 'safety'}}" class="field-error">{{errorMessage}}</view>
+  </view>
 
-    <view class="button-row">
-      <button class="secondary-button" bindtap="handleBack" disabled="{{submitting}}">上一步</button>
-      <button class="primary-button" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{submitting ? '正在发布' : '同意规则并发布'}}</button>
-    </view>
+  <view wx:if="{{errorField === 'submit'}}" class="error-banner error-banner--bottom" role="alert">{{errorMessage}}</view>
+
+  <view class="fixed-submit-bar">
+    <button class="primary-button submit-button" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting || !submitReady}}">
+      <image class="submit-puzzle" src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
+      <text>{{submitting ? '正在发布' : '发布拼车行程'}}</text>
+    </button>
   </view>
 </view>
