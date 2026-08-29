@@ -1,0 +1,12 @@
+{
+  "id": "ride-member-luggage-choice",
+  "title": "将发布页行李规则改为成员入团行李选择",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已通过双模型审查和 197 项全量测试，归档任务",
+  "createdAt": "2026-08-29T00:00:00+08:00",
+  "branch": "main"
+}

@@ -12,6 +12,7 @@ const {
   VEHICLE_REVIEW_STATUS,
   VEHICLE_STATUS,
   RIDE_PICKUP_SLOT_MINUTES,
+  MEMBER_LUGGAGE_TYPES,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { stableEntityId } = require('./ids');
@@ -314,6 +315,9 @@ class CloudStore {
   }
 
   async createActivityWithOwner(activity, ownerMember, rideFulfillment = null) {
+    if (activity.type === 'ride') {
+      invariant(MEMBER_LUGGAGE_TYPES.includes(ownerMember.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
+    }
     return this.db.runTransaction(async (transaction) => {
       const existing = await getTransactionDocument(
         transaction.collection('activities').doc(activity.id)
@@ -807,7 +811,8 @@ class CloudStore {
     });
   }
 
-  async joinRideAtomic({ activityId, actorId, at }) {
+  async joinRideAtomic({ activityId, actorId, luggageType, at }) {
+    invariant(MEMBER_LUGGAGE_TYPES.includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     return this.db.runTransaction(async (transaction) => {
       const activityRef = transaction.collection('activities').doc(activityId);
       const fulfillmentId = stableEntityId('rideFulfillment', activityId);
@@ -830,7 +835,8 @@ class CloudStore {
       const member = {
         ...(existing || { id: memberId, activityId, userId: actorId, role: 'MEMBER' }),
         status: MEMBER_STATUS.ACTIVE,
-        joinedAt: at
+        joinedAt: at,
+        luggageType
       };
       delete member.leftAt;
       delete member.leaveReason;

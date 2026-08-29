@@ -105,7 +105,26 @@
       <view class="block-title">立即加入拼车</view>
       <view class="join-ride-hint">加入即占用名额；司机确认承接前可自由退出。</view>
       <view class="join-ride-subhint">校园互助合乘，拼满 7 人解锁联系方式；能否出行以司机承接为准。</view>
-      <button class="primary-button" loading="{{pending}}" disabled="{{pending}}" bindtap="handleJoinRide" aria-busy="{{pending}}">{{pending ? '正在抢位中…' : '立即加入拼车'}}</button>
+      <view class="join-luggage-heading">
+        <view>
+          <view class="join-luggage-title">请选择您的行李</view>
+          <view class="join-luggage-subtitle">每个人独立申报，便于司机确认行程</view>
+        </view>
+        <button class="luggage-help-button" bindtap="showLuggageHelp" aria-label="查看行李大小说明">?</button>
+      </view>
+      <view class="luggage-chip-group" role="radiogroup" aria-label="请选择您的行李，必选">
+        <button
+          wx:for="{{luggageOptions}}"
+          wx:key="value"
+          class="luggage-chip {{selectedLuggageType === item.value ? 'luggage-chip--active' : ''}}"
+          data-luggage-type="{{item.value}}"
+          bindtap="handleLuggageSelect"
+          role="radio"
+          aria-checked="{{selectedLuggageType === item.value}}"
+          aria-label="{{item.label}}，{{item.description}}"
+        >{{item.label}}</button>
+      </view>
+      <button class="primary-button" loading="{{pending}}" disabled="{{pending || !selectedLuggageType}}" bindtap="handleJoinRide" aria-busy="{{pending}}">{{pending ? '正在抢位中…' : (selectedLuggageType ? '立即加入拼车' : '请先选择行李类型')}}</button>
     </view>
 
     <view wx:if="{{viewMode === 'passenger' && activity.type !== 'ride' && activity.canApply}}" class="apply-card surface">

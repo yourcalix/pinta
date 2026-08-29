@@ -82,6 +82,62 @@
   line-height: 1.45;
 }
 
+.luggage-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.luggage-field-heading .field-label {
+  margin-bottom: 0;
+}
+
+.luggage-help-button {
+  flex: 0 0 auto;
+  min-width: 88rpx;
+  min-height: 88rpx;
+  margin: -18rpx -14rpx -18rpx 0;
+  padding: 0;
+  color: #11784f;
+  background: transparent;
+  font-size: 28rpx;
+  line-height: 88rpx;
+}
+
+.luggage-chip-group {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.luggage-chip {
+  flex: 1;
+  min-width: 0;
+  min-height: 88rpx;
+  margin: 0;
+  padding: 12rpx 8rpx;
+  color: #344139;
+  background: #f0f4f2;
+  border: 2rpx solid transparent;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.luggage-chip::after,
+.luggage-help-button::after {
+  display: none;
+}
+
+.luggage-chip--active {
+  color: #11784f;
+  background: #e8f5ee;
+  border-color: #16a36a;
+  font-weight: 650;
+}
+
 .picker-field {
   justify-content: space-between;
 }

@@ -11,6 +11,7 @@ const {
   VEHICLE_REVIEW_STATUS,
   VEHICLE_STATUS,
   RIDE_PICKUP_SLOT_MINUTES,
+  MEMBER_LUGGAGE_TYPES,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { stableEntityId } = require('./ids');
@@ -212,6 +213,9 @@ class MemoryStore {
   }
 
   async createActivityWithOwner(activity, ownerMember, rideFulfillment = null) {
+    if (activity.type === 'ride') {
+      invariant(MEMBER_LUGGAGE_TYPES.includes(ownerMember.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
+    }
     const existing = this.activities.get(activity.id);
     if (existing) {
       invariant(existing.operationKeyHash === activity.operationKeyHash, 'CONFLICT', '幂等键已用于其他活动');
@@ -568,7 +572,8 @@ class MemoryStore {
     return clone({ activity, member });
   }
 
-  async joinRideAtomic({ activityId, actorId, at }) {
+  async joinRideAtomic({ activityId, actorId, luggageType, at }) {
+    invariant(MEMBER_LUGGAGE_TYPES.includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     const activity = this.activities.get(activityId);
     const fulfillment = this.rideFulfillments.get(activityId);
     invariant(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND');
@@ -582,7 +587,7 @@ class MemoryStore {
     const effectiveActivity = normalizeRideCapacity({ ...activity, rideFulfillment: rideFulfillmentSummary(fulfillment) });
     invariant(isRideJoinable(effectiveActivity, at), activity.memberCount >= rideCapacity(activity) ? 'CAPACITY_FULL' : 'CONFLICT', '该行程当前不可加入');
     const member = existing || { id: memberId, activityId, userId: actorId, role: 'MEMBER' };
-    Object.assign(member, { status: MEMBER_STATUS.ACTIVE, joinedAt: at });
+    Object.assign(member, { status: MEMBER_STATUS.ACTIVE, joinedAt: at, luggageType });
     delete member.leftAt;
     delete member.leaveReason;
     this.members.set(memberId, member);

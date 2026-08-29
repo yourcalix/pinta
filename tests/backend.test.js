@@ -69,13 +69,13 @@ function rideInput(overrides = {}) {
     deadlineAt: '2026-08-23T14:00:00.000Z',
     minPassengers: 7,
     maxPassengers: 7,
+    luggageType: 'SMALL',
     contactInfo: '微信号 pinba_demo',
     rules: '成团后在公共地点会合',
     typeData: {
       routeId: 'QINGMAO_TO_TAIPA',
       pickupWindowEnd: '2026-08-24T03:00:00.000Z',
-      feeType: 'SHARED_COST',
-      luggageRule: 'ONE_SMALL'
+      feeType: 'SHARED_COST'
     },
     ...overrides
   };

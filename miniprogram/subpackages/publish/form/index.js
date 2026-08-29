@@ -4,6 +4,7 @@ const activityService = require('../../../services/activity');
 const subscriptionService = require('../../../services/subscription');
 const { futureLocal, combineLocal } = require('../../../utils/date');
 const { TYPE_META } = require('../../../utils/display');
+const { MEMBER_LUGGAGE_OPTIONS, MEMBER_LUGGAGE_TYPES } = require('../../../config/luggage');
 const {
   PILOT_CITY,
   PILOT_DISTRICTS,
@@ -19,11 +20,6 @@ const RIDE_FEES = [
   { value: 'FREE', label: '免费互助' },
   { value: 'SHARED_COST', label: '合理成本均摊' },
   { value: 'NO_COST', label: '不涉及费用' }
-];
-const LUGGAGE_RULES = [
-  { value: 'NO_LARGE', label: '无大件行李' },
-  { value: 'ONE_SMALL', label: '每人一件小行李' },
-  { value: 'TRUNK_OK', label: '可放后备箱' }
 ];
 const DELIVERY_MODES = [
   { value: 'FACE_TO_FACE', label: '当面验货交付' },
@@ -71,7 +67,7 @@ function initialForm(type) {
     origin: defaultRoute.origin,
     destination: defaultRoute.destination,
     feeType: RIDE_FEES[1].value,
-    luggageRule: LUGGAGE_RULES[1].value,
+    luggageType: '',
     productName: '',
     targetQuantity: 2,
     unitPriceRange: '',
@@ -100,8 +96,7 @@ Page({
     districtIndex: 0,
     feeOptions: RIDE_FEES,
     feeIndex: 1,
-    luggageOptions: LUGGAGE_RULES,
-    luggageIndex: 1,
+    luggageOptions: MEMBER_LUGGAGE_OPTIONS,
     deliveryOptions: DELIVERY_MODES,
     deliveryIndex: 0,
     buddyCostOptions: BUDDY_COSTS,
@@ -162,7 +157,6 @@ Page({
       routeLabel: `${routeState.route.origin} → ${routeState.route.destination}（${routeState.route.code}）`,
       districtIndex: Math.max(PILOT_DISTRICTS.indexOf(form.district), 0),
       feeIndex: Math.max(RIDE_FEES.findIndex((item) => item.value === form.feeType), 0),
-      luggageIndex: Math.max(LUGGAGE_RULES.findIndex((item) => item.value === form.luggageRule), 0),
       deliveryIndex: Math.max(DELIVERY_MODES.findIndex((item) => item.value === form.deliveryMode), 0),
       buddyCostIndex: Math.max(BUDDY_COSTS.findIndex((item) => item.value === form.costMode), 0),
       buddyLevelIndex: Math.max(BUDDY_LEVELS.findIndex((item) => item.value === form.level), 0)
@@ -224,6 +218,21 @@ Page({
     this.setData({ [indexField]: index, [`form.${field}`]: options[index].value });
   },
 
+  handleLuggageSelect(event) {
+    const luggageType = event.currentTarget.dataset.luggageType;
+    if (!MEMBER_LUGGAGE_TYPES.includes(luggageType)) return;
+    this.setData({ 'form.luggageType': luggageType, errorMessage: '' });
+  },
+
+  showLuggageHelp() {
+    wx.showModal({
+      title: '行李大小说明',
+      content: '无行李：仅随身小包或普通双肩书包。\n小行李：20 吋及以下登机箱或手提行李袋。\n大行李：24 吋及以上托运箱、超大乐器等。',
+      showCancel: false,
+      confirmText: '知道了'
+    });
+  },
+
   handleDate(event) {
     this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value });
   },
@@ -281,13 +290,13 @@ Page({
     };
     if (this.data.type === 'ride') {
       const startsAt = Date.parse(common.startsAt);
+      common.luggageType = form.luggageType;
       common.minPassengers = 7;
       common.maxPassengers = 7;
       common.typeData = {
         routeId: form.routeId,
         pickupWindowEnd: new Date(startsAt + 60 * 60 * 1000).toISOString(),
-        feeType: form.feeType,
-        luggageRule: form.luggageRule
+        feeType: form.feeType
       };
     }
     if (this.data.type === 'product') {
@@ -304,6 +313,7 @@ Page({
 
   async handleSubmit() {
     if (this.data.submitting) return;
+    if (this.data.type === 'ride' && !this.data.form.luggageType) return this.setData({ errorMessage: '请先选择我的行李' });
     if (!this.data.form.contactInfo.trim()) return this.setData({ errorMessage: '请填写成团后联系方式' });
     if (!this.data.safetyAgreed) return this.setData({ errorMessage: '请阅读并同意安全规则' });
     this.setData({ submitting: true, errorMessage: '' });

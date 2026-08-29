@@ -85,11 +85,24 @@
         </picker>
         <view class="field-hint">禁止填写司机报价或具体收费金额</view>
       </view>
-      <view class="field">
-        <text class="field-label">行李规则</text>
-        <picker mode="selector" range="{{luggageOptions}}" range-key="label" value="{{luggageIndex}}" data-field="luggageRule" data-source="luggageOptions" data-index-field="luggageIndex" bindchange="handleOption">
-          <view class="picker-field">{{luggageOptions[luggageIndex].label}} <text>›</text></view>
-        </picker>
+      <view class="field luggage-field">
+        <view class="luggage-field-heading">
+          <text class="field-label required">我的行李</text>
+          <button class="luggage-help-button" bindtap="showLuggageHelp" aria-label="查看行李大小说明">?</button>
+        </view>
+        <view class="field-hint">请选择您本次同行携带的行李大小，司机将据此判断后备箱空间</view>
+        <view class="luggage-chip-group" role="radiogroup" aria-label="我的行李，必选">
+          <button
+            wx:for="{{luggageOptions}}"
+            wx:key="value"
+            class="luggage-chip {{form.luggageType === item.value ? 'luggage-chip--active' : ''}}"
+            data-luggage-type="{{item.value}}"
+            bindtap="handleLuggageSelect"
+            role="radio"
+            aria-checked="{{form.luggageType === item.value}}"
+            aria-label="{{item.label}}，{{item.description}}"
+          >{{item.label}}</button>
+        </view>
       </view>
     </block>
 

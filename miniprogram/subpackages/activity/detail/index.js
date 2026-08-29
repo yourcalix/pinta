@@ -6,9 +6,9 @@ const subscriptionService = require('../../../services/subscription');
 const { decorateActivity } = require('../../../utils/display');
 const { resolveDetailError } = require('../../../utils/detail-error');
 const { decodeActivityId } = require('../../../utils/activity-route');
+const { MEMBER_LUGGAGE_OPTIONS, MEMBER_LUGGAGE_TYPES } = require('../../../config/luggage');
 
 const FEE_LABELS = { FREE: '免费互助', SHARED_COST: '合理成本均摊', NO_COST: '不涉及费用' };
-const LUGGAGE_LABELS = { NO_LARGE: '无大件行李', ONE_SMALL: '每人一件小行李', TRUNK_OK: '可放后备箱' };
 const DELIVERY_LABELS = { FACE_TO_FACE: '当面验货交付', PICKUP: '指定商圈自提', ARRANGE_AFTER_FORMED: '成团后协商' };
 const COST_LABELS = { AA: 'AA制', SELF_PAY: '费用自理', HOST_TREATS: '发起者请客' };
 const LEVEL_LABELS = { BEGINNER: '新手友好', INTERMEDIATE: '需一定基础', ADVANCED: '进阶专业' };
@@ -102,8 +102,7 @@ function rowsFor(activity) {
       { label: '路线代号', value: activity.typeData.routeCode || '' },
       { label: '期望时间窗', value: `${startLabel} — ${endLabel}` },
       { label: '乘客容量', value: '固定 7 人' },
-      { label: '费用', value: FEE_LABELS[activity.typeData.feeType] || '不涉及费用' },
-      { label: '行李', value: LUGGAGE_LABELS[activity.typeData.luggageRule] || '请与发起者确认' }
+      { label: '费用', value: FEE_LABELS[activity.typeData.feeType] || '不涉及费用' }
     ];
   }
   if (activity.type === 'product') {
@@ -134,6 +133,8 @@ Page({
     note: '',
     consent: true,
     pending: false,
+    luggageOptions: MEMBER_LUGGAGE_OPTIONS,
+    selectedLuggageType: '',
     qa: initialQaState(),
     qaModal: initialQaModal(),
     viewMode: 'passenger',
@@ -195,7 +196,8 @@ Page({
       driverVehicles: [],
       pickupSlots: [],
       selectedPickupAt: '',
-      driverSheetVisible: false
+      driverSheetVisible: false,
+      selectedLuggageType: ''
     });
     try {
       const result = await activityService.detail(this.data.id);
@@ -207,6 +209,7 @@ Page({
         detailRows: rowsFor(activity),
         pickupSlots,
         selectedPickupAt: pickupSlots[0] ? pickupSlots[0].value : '',
+        selectedLuggageType: activity.viewerMembership && activity.viewerMembership.luggageType || '',
         loading: false
       });
       this.loadQuestions(activity);
@@ -245,6 +248,21 @@ Page({
     if (viewMode === this.data.viewMode) return;
     this.setData({ viewMode, driverSheetVisible: false });
     if (viewMode === 'driver' && this.data.activity && this.data.activity.type === 'ride') this.loadDriverProfile();
+  },
+
+  handleLuggageSelect(event) {
+    const luggageType = event.currentTarget.dataset.luggageType;
+    if (!MEMBER_LUGGAGE_TYPES.includes(luggageType) || this.data.pending) return;
+    this.setData({ selectedLuggageType: luggageType });
+  },
+
+  showLuggageHelp() {
+    wx.showModal({
+      title: '行李大小说明',
+      content: '无行李：仅随身小包或普通双肩书包。\n小行李：20 吋及以下登机箱或手提行李袋。\n大行李：24 吋及以上托运箱、超大乐器等。',
+      showCancel: false,
+      confirmText: '知道了'
+    });
   },
 
   handleVehicleChange(event) {
@@ -466,6 +484,10 @@ Page({
 
   async handleJoinRide() {
     if (this.data.pending) return;
+    if (!this.data.selectedLuggageType) {
+      wx.showToast({ title: '请先选择行李类型', icon: 'none' });
+      return;
+    }
     this.setData({ pending: true });
     try {
       const user = await userService.login();
@@ -474,7 +496,7 @@ Page({
         return;
       }
       await subscriptionService.requestStatusUpdates();
-      await activityService.joinRide(this.data.id);
+      await activityService.joinRide(this.data.id, this.data.selectedLuggageType);
       wx.showToast({ title: '已加入拼车', icon: 'success' });
       await this.loadDetail();
     } catch (error) {

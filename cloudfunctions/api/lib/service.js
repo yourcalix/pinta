@@ -15,6 +15,7 @@ const {
 const {
   validateActivityInput,
   validateActivityListInput,
+  validateRideJoinInput,
   validateRideDriverAcceptInput,
   validateRideDriverCancelInput,
   validateApplicationInput,
@@ -167,7 +168,8 @@ function publicActivity(activity, viewer = {}, at) {
     result.viewerMembership = {
       role: viewer.member.role,
       status: viewer.member.status,
-      joinedAt: viewer.member.joinedAt
+      joinedAt: viewer.member.joinedAt,
+      ...(activity.type === 'ride' ? { luggageType: viewer.member.luggageType || null } : {})
     };
   }
   result.viewerRole = viewer.role || 'guest';
@@ -628,15 +630,16 @@ function createPinbaService(options) {
     if (action === 'activity.create') {
       const user = await requireActiveUser(context);
       const payload = validateActivityInput(input, clock());
-      await moderation.check([payload.title, payload.description, payload.rules], { actorId: user.id, scene: 2 });
+      const { luggageType, ...activityPayload } = payload;
+      await moderation.check([activityPayload.title, activityPayload.description, activityPayload.rules], { actorId: user.id, scene: 2 });
       const activityId = operationId(context, 'activity');
       const activity = {
         id: activityId,
         ownerId: user.id,
         owner: { nickname: user.profile.nickname },
-        ...payload,
+        ...activityPayload,
         memberCount: 1,
-        status: payload.targetMembers === 1 ? ACTIVITY_STATUS.FORMED : ACTIVITY_STATUS.RECRUITING,
+        status: activityPayload.targetMembers === 1 ? ACTIVITY_STATUS.FORMED : ACTIVITY_STATUS.RECRUITING,
         operationKeyHash: operationId(context, 'operation'),
         version: 1,
         createdAt: at,
@@ -648,7 +651,8 @@ function createPinbaService(options) {
         userId: user.id,
         role: 'OWNER',
         status: 'ACTIVE',
-        joinedAt: at
+        joinedAt: at,
+        ...(activity.type === 'ride' ? { luggageType } : {})
       };
       const rideFulfillment = activity.type === 'ride'
         ? {
@@ -671,8 +675,9 @@ function createPinbaService(options) {
 
     if (action === 'ride.join') {
       const user = await requireActiveUser(context);
-      const activityId = validateId(input && input.activityId, '活动ID');
-      const result = await store.joinRideAtomic({ activityId, actorId: user.id, at });
+      const payload = validateRideJoinInput(input);
+      const { activityId, luggageType } = payload;
+      const result = await store.joinRideAtomic({ activityId, actorId: user.id, luggageType, at });
       if (result.joined) {
         await store.addNotification({
           id: operationId(context, 'notification'),

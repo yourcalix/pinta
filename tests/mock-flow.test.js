@@ -48,6 +48,14 @@ test('Mock 模式下举报后记录即时隐藏信号', async () => {
   assert.equal(result.data.hiddenForReporter, true);
 });
 
+test('Mock 拼车直接入团对空参数返回受控校验错误', async () => {
+  mockServer.reset();
+  mockServer.setPersona('u_member');
+  const result = await call('ride.join');
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'VALIDATION_ERROR');
+});
+
 test('Mock 写操作支持同一幂等键回放且取消会关闭待处理申请', async () => {
   mockServer.reset();
   mockServer.setPersona('u_owner');

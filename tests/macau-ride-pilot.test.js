@@ -41,13 +41,13 @@ function rideInput(overrides = {}) {
     deadlineAt: '2026-08-24T08:00:00.000Z',
     minPassengers: 7,
     maxPassengers: 7,
+    luggageType: 'SMALL',
     contactInfo: '微信号 pinba_macau',
     rules: '请按确认时间提前到达上车点',
     typeData: {
       routeId: 'QINGMAO_TO_TAIPA',
       pickupWindowEnd: '2026-08-24T11:00:00.000Z',
-      feeType: 'NO_COST',
-      luggageRule: 'ONE_SMALL'
+      feeType: 'NO_COST'
     },
     ...overrides
   };
@@ -167,9 +167,15 @@ test('拼车发布只接受固定路线、固定七名乘客和整整 60 分钟�
   assert.equal(validated.targetMembers, 7);
   assert.equal(validated.minPassengers, 7);
   assert.equal(validated.maxPassengers, 7);
+  assert.equal(validated.luggageType, 'SMALL');
+  assert.equal(validated.typeData.luggageRule, undefined);
   assert.deepEqual(validated.typeData.origin, { id: 'QINGMAO', label: '青茂口岸' });
   assert.deepEqual(validated.typeData.destination, { id: 'TAIPA_CAMPUS', label: '凼仔校区' });
 
+  assert.throws(
+    () => validateActivityInput(rideInput({ luggageType: undefined }), NOW),
+    (error) => error.code === 'VALIDATION_ERROR' && error.details.field === 'luggageType'
+  );
   assert.throws(
     () => validateActivityInput(rideInput({
       typeData: { ...rideInput().typeData, routeId: 'FREE_TEXT_ROUTE' }
@@ -435,23 +441,44 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   const { call, store } = setup();
   const { activityId } = await createAndFormRide(call, 'direct-join-leave');
 
-  const joined = await call('ride.join', { activityId }, 'member-openid', 'direct-join-001');
+  const ownerMember = [...store.members.values()].find((item) => item.activityId === activityId && item.role === 'OWNER');
+  assert.equal(ownerMember.luggageType, 'SMALL');
+
+  const missingLuggage = await call('ride.join', { activityId }, 'member-openid', 'direct-join-missing-001');
+  assert.equal(missingLuggage.ok, false);
+  assert.equal(missingLuggage.error.code, 'VALIDATION_ERROR');
+
+  await assert.rejects(
+    () => store.joinRideAtomic({
+      activityId,
+      actorId: 'member-openid',
+      luggageType: 'INVALID',
+      at: '2026-08-23T02:05:00.000Z'
+    }),
+    (error) => error.code === 'VALIDATION_ERROR'
+  );
+  assert.equal(store.activities.get(activityId).memberCount, 1);
+
+  const joined = await call('ride.join', { activityId, luggageType: 'SMALL' }, 'member-openid', 'direct-join-001');
   assert.equal(joined.ok, true);
   assert.equal(joined.data.activity.viewerRole, 'member');
+  assert.equal(joined.data.activity.viewerMembership.luggageType, 'SMALL');
   assert.equal(joined.data.activity.canLeaveRide, true);
   assert.equal(store.activities.get(activityId).memberCount, 2);
 
-  const replayed = await call('ride.join', { activityId }, 'member-openid', 'direct-join-001');
+  const replayed = await call('ride.join', { activityId, luggageType: 'LARGE' }, 'member-openid', 'direct-join-active-002');
   assert.equal(replayed.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 2);
+  assert.equal(replayed.data.activity.viewerMembership.luggageType, 'SMALL');
 
   const left = await call('member.leave', { activityId, reason: '计划变化' }, 'member-openid', 'direct-leave-001');
   assert.equal(left.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 1);
 
-  const rejoined = await call('ride.join', { activityId }, 'member-openid', 'direct-rejoin-001');
+  const rejoined = await call('ride.join', { activityId, luggageType: 'LARGE' }, 'member-openid', 'direct-rejoin-001');
   assert.equal(rejoined.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 2);
+  assert.equal(rejoined.data.activity.viewerMembership.luggageType, 'LARGE');
 
   const accepted = await call('ride.driver.accept', {
     activityId,
@@ -465,7 +492,7 @@ test('拼车乘客直接入团且司机承接前可退出，承接后仍可补�
   assert.equal(driverDetail.data.activity.viewerRole, 'driver');
   assert.equal(driverDetail.data.activity.canJoinRide, false);
 
-  const lateJoin = await call('ride.join', { activityId }, 'second-openid', 'direct-late-join-001');
+  const lateJoin = await call('ride.join', { activityId, luggageType: 'NONE' }, 'second-openid', 'direct-late-join-001');
   assert.equal(lateJoin.ok, true);
   assert.equal(store.activities.get(activityId).memberCount, 3);
 

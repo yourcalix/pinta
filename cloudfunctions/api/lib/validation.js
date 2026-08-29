@@ -9,7 +9,7 @@ const {
   MACAU_RIDE_ROUTE_IDS,
   MACAU_RIDE_CAMPUS_IDS,
   RIDE_FEE_TYPES,
-  RIDE_LUGGAGE_RULES,
+  MEMBER_LUGGAGE_TYPES,
   RIDE_MIN_PASSENGERS,
   RIDE_MAX_PASSENGERS,
   RIDE_PICKUP_WINDOW_MINUTES,
@@ -46,6 +46,11 @@ function integerValue(value, field, min, max) {
 
 function enumValue(value, field, allowed) {
   invariant(allowed.includes(value), 'VALIDATION_ERROR', `${field}选项无效`, { field });
+  return value;
+}
+
+function memberLuggageType(value) {
+  invariant(MEMBER_LUGGAGE_TYPES.includes(value), 'VALIDATION_ERROR', '我的行李选项无效', { field: 'luggageType' });
   return value;
 }
 
@@ -120,9 +125,7 @@ function validateActivityInput(input, now = new Date()) {
       '期望接车时间窗必须为60分钟',
       { field: 'pickupWindowEnd' }
     );
-    const luggageRule = typeData.luggageRule
-      ? enumValue(typeData.luggageRule, '行李规则', RIDE_LUGGAGE_RULES)
-      : 'ONE_SMALL';
+    result.luggageType = memberLuggageType(input.luggageType);
     const priceText = [result.title, result.description, result.rules].join(' ');
     invariant(!hasRidePrice(priceText), 'VALIDATION_ERROR', '拼车仅允许合理成本均摊，不能填写具体收费金额', { field: 'description' });
     result.city = PILOT_CITY;
@@ -136,8 +139,7 @@ function validateActivityInput(input, now = new Date()) {
       origin: { id: route.originId, label: route.originLabel },
       destination: { id: route.destinationId, label: route.destinationLabel },
       pickupWindowEnd,
-      feeType,
-      luggageRule
+      feeType
     };
   }
 
@@ -197,6 +199,14 @@ function validateRideDriverAcceptInput(input) {
     activityId: validateId(input.activityId, '活动ID'),
     vehicleId: validateId(input.vehicleId, '车辆ID'),
     pickupAt
+  };
+}
+
+function validateRideJoinInput(input) {
+  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
+  return {
+    activityId: validateId(input.activityId, '活动ID'),
+    luggageType: memberLuggageType(input.luggageType)
   };
 }
 
@@ -338,6 +348,7 @@ module.exports = {
   hasRidePrice,
   validateActivityInput,
   validateActivityListInput,
+  validateRideJoinInput,
   validateRideDriverAcceptInput,
   validateRideDriverCancelInput,
   validateApplicationInput,

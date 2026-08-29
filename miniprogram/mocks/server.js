@@ -428,7 +428,14 @@ function publicActivity(activity, options = {}) {
         : '接车时间已到，暂不可承接';
   }
   if (viewerApplication) result.viewerApplication = publicApplication(viewerApplication);
-  if (viewerMember) result.viewerMembership = clone(viewerMember);
+  if (viewerMember) {
+    result.viewerMembership = {
+      role: viewerMember.role,
+      status: viewerMember.status,
+      joinedAt: viewerMember.joinedAt,
+      ...(activity.type === 'ride' ? { luggageType: viewerMember.luggageType || null } : {})
+    };
+  }
   return result;
 }
 
@@ -629,9 +636,10 @@ function createActivity(input) {
   const user = requireUser();
   assert(user.profile && user.profile.adultConfirmed, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
   const now = new Date().toISOString();
+  const { luggageType, ...activityInput } = clone(input);
   const activity = {
     id: nextId('activity'), ownerId: user.id, owner: { nickname: user.profile.nickname },
-    ...clone(input), memberCount: 1, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
+    ...activityInput, memberCount: 1, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
   };
   if (activity.type === 'ride') {
     const route = getRideRoute(activity.typeData && activity.typeData.routeId);
@@ -649,7 +657,7 @@ function createActivity(input) {
     assert(maxPassengers === 7, 'VALIDATION_ERROR', '最大乘客数固定为 7 名乘客');
     assert(Number.isFinite(pickupWindowEnd) && pickupWindowEnd - startsAt === 60 * 60 * 1000, 'VALIDATION_ERROR', '接车时间窗必须为 60 分钟');
     assert(['FREE', 'SHARED_COST', 'NO_COST'].includes(activity.typeData.feeType), 'VALIDATION_ERROR', '费用方式无效');
-    assert(['NO_LARGE', 'ONE_SMALL', 'TRUNK_OK'].includes(activity.typeData.luggageRule), 'VALIDATION_ERROR', '行李规则无效');
+    assert(['NONE', 'SMALL', 'LARGE'].includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     assert(!hasRidePrice([activity.title, activity.description, activity.rules].join(' ')), 'VALIDATION_ERROR', '拼车仅允许合理成本均摊，不能填写具体收费金额');
     activity.city = PILOT_CITY;
     activity.district = PILOT_DISTRICTS[0];
@@ -657,8 +665,10 @@ function createActivity(input) {
     activity.targetMembers = 7;
     activity.minPassengers = 7;
     activity.maxPassengers = 7;
+    const rideTypeData = { ...activity.typeData };
+    delete rideTypeData.luggageRule;
     activity.typeData = {
-      ...activity.typeData,
+      ...rideTypeData,
       routeCode: route.code,
       origin: { id: route.originId, label: route.origin },
       destination: { id: route.destinationId, label: route.destination }
@@ -666,7 +676,15 @@ function createActivity(input) {
     state.rideFulfillments.push({ activityId: activity.id, status: 'UNASSIGNED', pickupAt: null, driverId: null, vehicleId: null });
   }
   state.activities.unshift(activity);
-  state.members.push({ id: nextId('member'), activityId: activity.id, userId: user.id, role: 'OWNER', status: 'ACTIVE', joinedAt: now });
+  state.members.push({
+    id: nextId('member'),
+    activityId: activity.id,
+    userId: user.id,
+    role: 'OWNER',
+    status: 'ACTIVE',
+    joinedAt: now,
+    ...(activity.type === 'ride' ? { luggageType } : {})
+  });
   return { activity: publicActivity(activity) };
 }
 
@@ -775,6 +793,9 @@ function submitApplication(input) {
 }
 
 function joinRide(input) {
+  assert(input && typeof input === 'object', 'VALIDATION_ERROR', '请求参数无效');
+  assert(typeof input.activityId === 'string' && input.activityId.trim(), 'VALIDATION_ERROR', '活动ID无效');
+  assert(['NONE', 'SMALL', 'LARGE'].includes(input.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
   const user = requireUser();
   const activity = activityById(input.activityId);
   const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
@@ -788,6 +809,7 @@ function joinRide(input) {
   const member = existing || { id: nextId('member'), activityId: activity.id, userId: user.id, role: 'MEMBER' };
   member.status = 'ACTIVE';
   member.joinedAt = now;
+  member.luggageType = input.luggageType;
   delete member.leftAt;
   delete member.leaveReason;
   if (!existing) state.members.push(member);

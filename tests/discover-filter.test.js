@@ -220,13 +220,13 @@ test('Mock 发布拒绝非法容量与非 60 分钟接车窗口', async () => {
     deadlineAt: new Date(start.getTime() - 2 * 60 * 60 * 1000).toISOString(),
     minPassengers: 4,
     maxPassengers: 3,
+    luggageType: 'SMALL',
     contactInfo: '微信号 mock_owner',
     rules: '',
     typeData: {
       routeId: 'QINGMAO_TO_TAIPA',
       pickupWindowEnd: new Date(start.getTime() + 45 * 60 * 1000).toISOString(),
-      feeType: 'NO_COST',
-      luggageRule: 'ONE_SMALL'
+      feeType: 'NO_COST'
     }
   };
   const invalid = await mockServer.call({
@@ -247,8 +247,7 @@ test('Mock 发布拒绝非法容量与非 60 分钟接车窗口', async () => {
       typeData: {
         ...base.typeData,
         pickupWindowEnd: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
-        feeType: 'FREE',
-        luggageRule: 'TRUNK_OK'
+        feeType: 'FREE'
       }
     },
     requestId: 'mock-valid-ride-create',
