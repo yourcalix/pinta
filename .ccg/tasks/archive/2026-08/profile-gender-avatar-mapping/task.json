@@ -1,0 +1,12 @@
+{
+  "id": "profile-gender-avatar-mapping",
+  "title": "用户性别选择与乘客头像自动映射",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并推送 GitHub",
+  "createdAt": "2026-08-29T19:15:00+08:00",
+  "branch": "main"
+}
