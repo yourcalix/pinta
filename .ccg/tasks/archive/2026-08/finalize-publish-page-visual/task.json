@@ -1,0 +1,12 @@
+{
+  "id": "finalize-publish-page-visual",
+  "title": "发布页面视觉稿最终验收",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档设计定稿",
+  "createdAt": "2026-08-29T23:05:00+08:00",
+  "branch": "main"
+}
