@@ -1,0 +1,12 @@
+{
+  "id": "review-publish-entry-first-draft",
+  "title": "审查发布入口页首版视觉稿",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "按综合结论生成第二版视觉稿",
+  "createdAt": "2026-08-30T00:10:00+08:00",
+  "branch": "main"
+}
