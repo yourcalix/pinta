@@ -1,0 +1,12 @@
+{
+  "id": "design-publish-tab-prompt",
+  "title": "整理发布 Tab 入口页 Image 2 视觉提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档设计提示词任务",
+  "createdAt": "2026-08-30T12:00:00+08:00",
+  "branch": "main"
+}
