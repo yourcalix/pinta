@@ -1,0 +1,12 @@
+{
+  "id": "add-campus-student-verification",
+  "title": "新增校园学生认证并限制我的行程展示",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已完成实现、双模型审查、验证与规范沉淀，待归档",
+  "createdAt": "2026-08-30T19:15:00+08:00",
+  "branch": "main"
+}

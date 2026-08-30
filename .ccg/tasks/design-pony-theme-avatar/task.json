@@ -1,0 +1,12 @@
+{
+  "id": "design-pony-theme-avatar",
+  "title": "设计拼吧小马幻想主题用户头像生成提示词",
+  "status": "in_progress",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "implementation",
+  "nextAction": "完成可复用的原创幻想小马头像提示词并归档",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
