@@ -1,0 +1,12 @@
+{
+  "id": "review-publish-tab-prompt",
+  "title": "准备发布 Tab 入口页网页版 Gemini 审核提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待用户贴回 Gemini 3.7 Flash 审核结果",
+  "createdAt": "2026-08-30T12:10:00+08:00",
+  "branch": "main"
+}
