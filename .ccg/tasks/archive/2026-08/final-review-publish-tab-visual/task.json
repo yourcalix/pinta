@@ -1,0 +1,12 @@
+{
+  "id": "final-review-publish-tab-visual",
+  "title": "完成发布 Tab Image 2 修订稿的最终视觉定稿",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待产品负责人确认后进入 WXML/WXSS 实装",
+  "createdAt": "2026-08-30T12:50:00+08:00",
+  "branch": "main"
+}
