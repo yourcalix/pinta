@@ -1,11 +1,13 @@
 <view class="page publish-page" style="padding-top: {{contentTopInset}}px;">
   <view class="publish-content">
     <view class="publish-hero surface">
-      <image class="hero-puzzle" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
-      <view class="hero-copy">
-        <view class="hero-eyebrow">两步即可发起</view>
-        <view class="hero-title">发起澳门校园拼车</view>
-        <view class="hero-description">选择固定路线和 60 分钟时间窗，邀请同路同学一起出发</view>
+      <view class="hero-copy-group">
+        <image class="hero-puzzle" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
+        <view class="hero-copy">
+          <view class="hero-eyebrow">两步即可发起</view>
+          <view class="hero-title">发起澳门校园拼车</view>
+          <view class="hero-description">选择固定路线和 60 分钟时间窗，邀请同路同学一起出发</view>
+        </view>
       </view>
       <view class="hero-scene" aria-hidden="true">
         <image class="hero-start" src="../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
@@ -24,17 +26,25 @@
       disabled="{{pending}}"
       aria-label="发起校园拼车，点击进入发布行程表单"
     >
-      <image class="type-icon" src="../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
+      <view class="type-accent" aria-hidden="true"></view>
+      <image class="type-icon" src="../../assets/images/discover/route-section-pin.png" mode="aspectFit" aria-hidden="true" />
       <view class="type-content">
         <view class="type-title">{{item.title}}</view>
         <view class="type-description">{{item.description}}</view>
       </view>
       <text class="arrow" aria-hidden="true">›</text>
-      <image class="type-watermark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
     </button>
 
-    <view class="safety-note surface" role="note" aria-label="安全边界，拼吧只提供校园行程信息撮合，不提供车辆、在线收款或交通服务。司机承接功能仅向已完成合规审核的账号开放。">
+    <button
+      class="safety-note"
+      role="button"
+      bindtap="handleSafetyNotice"
+      hover-class="safety-note-hover"
+      hover-stay-time="80"
+      aria-label="安全边界，拼吧只提供校园行程信息撮合，点击查看完整安全与免责说明"
+    >
       <view class="safety-icon" aria-hidden="true">
+        <image class="safety-icon-voxel" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
         <view class="safety-lock-shackle"></view>
         <view class="safety-lock-body">
           <view class="safety-lock-keyhole"></view>
@@ -44,7 +54,7 @@
         <view class="safety-title">安全边界</view>
         <view class="safety-description">拼吧只提供校园行程信息撮合，不提供车辆、在线收款或交通服务。司机承接功能仅向已完成合规审核的账号开放。</view>
       </view>
-    </view>
+    </button>
   </view>
 
   <image class="page-watermark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />

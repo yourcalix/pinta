@@ -1,0 +1,12 @@
+{
+  "id": "implement-publish-tab-final-visual",
+  "title": "按定稿视觉重构发布 Tab 入口页",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成实装、审查修复、真机模拟器复核与全量验证",
+  "createdAt": "2026-08-30T13:00:00+08:00",
+  "branch": "main"
+}

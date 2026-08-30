@@ -9,11 +9,12 @@ const { calculateContentTopInset } = require('../miniprogram/utils/navigation-la
 
 const root = path.join(__dirname, '..');
 
-test('三个 Tab 页面统一使用 custom navigation 且不保留原生标题', () => {
+test('四个 Tab 页面统一使用 custom navigation 且不保留原生标题', () => {
   const discover = require('../miniprogram/pages/discover/index.json');
+  const community = require('../miniprogram/pages/community/index.json');
   const publish = require('../miniprogram/pages/publish/index.json');
   const user = require('../miniprogram/pages/user/index.json');
-  for (const page of [discover, publish, user]) {
+  for (const page of [discover, community, publish, user]) {
     assert.equal(page.navigationStyle, 'custom');
     assert.equal(page.navigationBarTitleText, undefined);
     assert.equal(page.navigationBarTextStyle, 'black');

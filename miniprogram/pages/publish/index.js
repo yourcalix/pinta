@@ -49,5 +49,14 @@ Page({
     } finally {
       this.setData({ pending: false });
     }
+  },
+
+  handleSafetyNotice() {
+    wx.showModal({
+      title: '校园公益合乘安全边界',
+      content: '拼吧仅提供澳门校园行程信息撮合，不提供车辆、在线收款或交通服务。请确认同行身份、保持通讯畅通并根据实际情况谨慎出行。司机承接功能仅向已完成合规审核的账号开放。',
+      showCancel: false,
+      confirmText: '我知道了'
+    });
   }
 });
