@@ -1,0 +1,12 @@
+{
+  "id": "restore-wechat-devtools-preview",
+  "title": "恢复微信开发者工具右侧预览调试界面",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-tooling",
+  "currentPhase": "completed",
+  "nextAction": "已通过界面菜单恢复模拟器",
+  "createdAt": "2026-08-30T00:00:00+08:00",
+  "branch": "main"
+}
