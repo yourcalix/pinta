@@ -1,0 +1,12 @@
+{
+  "id": "finalize-publish-tab-image2-prompt",
+  "title": "综合 Gemini 审核并定稿发布 Tab 的 Image 2 提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "用户将最终提示词交给 Image 2",
+  "createdAt": "2026-08-30T12:20:00+08:00",
+  "branch": "main"
+}
