@@ -1,0 +1,12 @@
+{
+  "id": "design-my-little-pony-avatar-set",
+  "title": "整理小马宝莉全角色体素头像 Image 2 提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待 Image 2 输出七张独立透明头像",
+  "createdAt": "2026-08-31T00:55:00+08:00",
+  "branch": "main"
+}
