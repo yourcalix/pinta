@@ -1,14 +1,21 @@
 <view class="page community-page" style="padding-top: {{contentTopInset}}px;">
   <view class="community-header surface">
     <view class="header-copy">
+      <text class="header-eyebrow">PINBA CAMPUS</text>
       <text class="header-title">校园社区</text>
       <text class="header-subtitle">澳门校园互助与交流</text>
     </view>
-    <button class="compose-button" bindtap="handleCompose" aria-label="发起校园讨论">+ 发起讨论</button>
+    <view class="header-action">
+      <image class="header-voxel" src="../../assets/images/discover/tab-community-active.png" mode="aspectFit" aria-hidden="true" />
+      <button class="compose-button" hover-class="compose-button-hover" bindtap="handleCompose" aria-label="发起校园讨论">+ 发起讨论</button>
+    </view>
   </view>
 
   <view class="section-heading">
-    <text class="section-title-text">最新讨论</text>
+    <view class="section-title-group">
+      <view class="section-status-dot" aria-hidden="true"></view>
+      <text class="section-title-text">最新讨论</text>
+    </view>
     <text class="section-count" wx:if="{{!loading}}">{{posts.length}} 条</text>
   </view>
 
@@ -23,6 +30,7 @@
       data-id="{{item.id}}"
       bindtap="handlePost"
     >
+      <view class="post-accent" aria-hidden="true"></view>
       <view class="post-author-row">
         <image class="post-avatar" src="{{item.avatarPath}}" mode="aspectFit" aria-hidden="true" />
         <view class="post-author-meta">
@@ -40,10 +48,12 @@
     <view class="list-footer" wx:if="{{loadingMore || !hasMore}}">{{loadingMore ? '正在加载更多…' : '— 已经到底了 —'}}</view>
   </view>
   <view wx:else class="empty-card surface">
-    <text class="empty-symbol">＋</text>
-    <text class="empty-title">还没有校园讨论</text>
-    <text class="empty-description">分享一个问题或互助信息，和校园同学聊聊。</text>
-    <button wx:if="{{!error}}" class="empty-action" bindtap="handleCompose">发起第一条讨论</button>
-    <button wx:else class="empty-action" bindtap="handleRetry">重新加载</button>
+    <image class="empty-voxel-icon" src="../../assets/images/discover/tab-community-active.png" mode="aspectFit" aria-hidden="true" />
+    <text class="empty-title">{{error ? '社区暂时无法加载' : '还没有校园讨论'}}</text>
+    <text class="empty-description">{{error || '分享一个问题或互助信息，和校园同学聊聊。'}}</text>
+    <button wx:if="{{!error}}" class="empty-action" hover-class="empty-action-hover" bindtap="handleCompose">发起第一条讨论</button>
+    <button wx:else class="empty-action" hover-class="empty-action-hover" bindtap="handleRetry">重新加载</button>
   </view>
+
+  <image class="community-watermark" src="../../assets/images/discover/tab-community-active.png" mode="aspectFit" aria-hidden="true" />
 </view>

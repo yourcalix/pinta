@@ -1,0 +1,12 @@
+{
+  "id": "redesign-community-page",
+  "title": "将社区页升级为体素品牌视觉",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成社区页体素重构、Gemini 复审、模拟器核验与全量回归",
+  "createdAt": "2026-08-30T16:10:00+08:00",
+  "branch": "main"
+}
