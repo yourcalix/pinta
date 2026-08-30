@@ -1,0 +1,12 @@
+{
+  "id": "replace-driver-role-art",
+  "title": "替换基本资料页我是司机图案",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-08-30T18:30:00+08:00",
+  "branch": "main"
+}
