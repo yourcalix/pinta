@@ -1,0 +1,12 @@
+{
+  "id": "revise-publish-tab-image2-draft",
+  "title": "综合 Gemini 复审并生成发布 Tab 首稿修图提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "用户将修订提示词与首稿一并交给 Image 2",
+  "createdAt": "2026-08-30T12:40:00+08:00",
+  "branch": "main"
+}
