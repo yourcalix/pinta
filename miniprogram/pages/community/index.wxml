@@ -1,0 +1,49 @@
+<view class="page community-page" style="padding-top: {{contentTopInset}}px;">
+  <view class="community-header surface">
+    <view class="header-copy">
+      <text class="header-title">校园社区</text>
+      <text class="header-subtitle">澳门校园互助与交流</text>
+    </view>
+    <button class="compose-button" bindtap="handleCompose" aria-label="发起校园讨论">+ 发起讨论</button>
+  </view>
+
+  <view class="section-heading">
+    <text class="section-title-text">最新讨论</text>
+    <text class="section-count" wx:if="{{!loading}}">{{posts.length}} 条</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-card surface">正在加载讨论…</view>
+  <view wx:elif="{{posts.length}}" class="post-list">
+    <view
+      wx:for="{{posts}}"
+      wx:key="id"
+      class="post-card surface"
+      role="button"
+      aria-label="{{item.accessibilityLabel}}"
+      data-id="{{item.id}}"
+      bindtap="handlePost"
+    >
+      <view class="post-author-row">
+        <image class="post-avatar" src="{{item.avatarPath}}" mode="aspectFit" aria-hidden="true" />
+        <view class="post-author-meta">
+          <text class="post-author">{{item.author.nickname || '校园同学'}}</text>
+          <text class="post-time">{{item.timeLabel}}</text>
+        </view>
+        <text class="post-arrow" aria-hidden="true">›</text>
+      </view>
+      <text class="post-preview">{{item.content}}</text>
+      <view class="post-footer">
+        <text class="reply-symbol" aria-hidden="true">◌</text>
+        <text>{{item.replyCount}} 条回复</text>
+      </view>
+    </view>
+    <view class="list-footer" wx:if="{{loadingMore || !hasMore}}">{{loadingMore ? '正在加载更多…' : '— 已经到底了 —'}}</view>
+  </view>
+  <view wx:else class="empty-card surface">
+    <text class="empty-symbol">＋</text>
+    <text class="empty-title">还没有校园讨论</text>
+    <text class="empty-description">分享一个问题或互助信息，和校园同学聊聊。</text>
+    <button wx:if="{{!error}}" class="empty-action" bindtap="handleCompose">发起第一条讨论</button>
+    <button wx:else class="empty-action" bindtap="handleRetry">重新加载</button>
+  </view>
+</view>

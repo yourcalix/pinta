@@ -23,6 +23,8 @@ const EXPECTED_ASSETS = {
   'avatar-passenger-empty.png': [144, 144],
   'tab-discover-active.png': [96, 96],
   'tab-discover-inactive.png': [96, 96],
+  'tab-community-active.png': [96, 96],
+  'tab-community-inactive.png': [96, 96],
   'tab-publish-active.png': [96, 96],
   'tab-publish-inactive.png': [96, 96],
   'tab-user-active.png': [96, 96],
@@ -53,16 +55,16 @@ test('发现页体素素材使用稳定英文文件名、约定尺寸和真实�
   });
 });
 
-test('发现页体素素材总量保持在主包安全预算内', () => {
+test('四个 Tab 与发现页体素素材总量保持在主包安全预算内', () => {
   let totalBytes = 0;
   Object.keys(EXPECTED_ASSETS).forEach((filename) => {
     totalBytes += inspectPng(filename).bytes.length;
   });
-  assert.ok(totalBytes <= 450 * 1024, `发现页体素素材总量为 ${totalBytes} bytes`);
+  assert.ok(totalBytes <= 480 * 1024, `发现页与四个 Tab 体素素材总量为 ${totalBytes} bytes`);
 });
 
 test('Tab 状态图标成对使用同一画布尺寸且内容不重复', () => {
-  ['discover', 'publish', 'user'].forEach((tab) => {
+  ['discover', 'community', 'publish', 'user'].forEach((tab) => {
     const active = inspectPng(`tab-${tab}-active.png`);
     const inactive = inspectPng(`tab-${tab}-inactive.png`);
     assert.deepEqual([active.width, active.height], [inactive.width, inactive.height]);

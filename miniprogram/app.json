@@ -1,10 +1,18 @@
 {
   "pages": [
     "pages/discover/index",
+    "pages/community/index",
     "pages/publish/index",
     "pages/user/index"
   ],
   "subPackages": [
+    {
+      "root": "subpackages/community",
+      "pages": [
+        "detail/index",
+        "compose/index"
+      ]
+    },
     {
       "root": "subpackages/activity",
       "pages": [
@@ -51,6 +59,12 @@
         "text": "发现",
         "iconPath": "assets/images/discover/tab-discover-inactive.png",
         "selectedIconPath": "assets/images/discover/tab-discover-active.png"
+      },
+      {
+        "pagePath": "pages/community/index",
+        "text": "社区",
+        "iconPath": "assets/images/discover/tab-community-inactive.png",
+        "selectedIconPath": "assets/images/discover/tab-community-active.png"
       },
       {
         "pagePath": "pages/publish/index",

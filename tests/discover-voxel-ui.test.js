@@ -12,9 +12,9 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
-test('原生 TabBar 使用三组体素激活与未激活图标', () => {
+test('原生 TabBar 使用四组体素激活与未激活图标', () => {
   const app = JSON.parse(read('app.json'));
-  const expected = ['discover', 'publish', 'user'];
+  const expected = ['discover', 'community', 'publish', 'user'];
   assert.equal(app.tabBar.list.length, expected.length);
   app.tabBar.list.forEach((item, index) => {
     assert.equal(item.iconPath, `assets/images/discover/tab-${expected[index]}-inactive.png`);

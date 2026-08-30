@@ -168,7 +168,7 @@ test('前端电话不会写入发布草稿，联系人名单具备离屏清理�
   assert.match(publishScript, /const \{ phoneNumber, \.\.\.safeForm \} = this\.data\.form/);
   assert.match(publishScript, /form:\s*safeForm/);
   assert.doesNotMatch(publishScript, /form:\s*this\.data\.form/);
-  assert.match(apiScript, /SENSITIVE_MUTATING_ACTIONS = new Set\(\['driver\.application\.submit', 'activity\.create', 'ride\.join'\]\)/);
+  assert.match(apiScript, /SENSITIVE_MUTATING_ACTIONS = new Set\(\[[\s\S]*'driver\.application\.submit'[\s\S]*'activity\.create'[\s\S]*'ride\.join'[\s\S]*'community\.post\.create'[\s\S]*'community\.reply\.create'[\s\S]*\]\)/);
   assert.match(detailScript, /_contactsReqSeq/);
   assert.match(detailScript, /onHide\(\)[\s\S]*clearSensitiveContactState/);
   assert.match(detailTemplate, /viewerRole === 'driver'[\s\S]*rideFulfillment\.status === 'ASSIGNED'/);

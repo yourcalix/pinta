@@ -1,0 +1,12 @@
+{
+  "id": "add-community-discussions",
+  "title": "新增社区 Tab 与讨论帖子功能",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并推送 GitHub",
+  "createdAt": "2026-08-30T02:00:00+08:00",
+  "branch": "main"
+}

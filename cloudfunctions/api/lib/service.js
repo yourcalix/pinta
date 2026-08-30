@@ -27,12 +27,16 @@ const {
   validateReportInput,
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,
+  validateCommunityListInput,
+  validateCommunityPostCreateInput,
+  validateCommunityReplyCreateInput,
   validateId,
   requireIdempotencyKey,
   stringValue
 } = require('./validation');
 const { protectDriverApplication } = require('./driver-credentials');
 const { createLocalModeration } = require('./moderation');
+const { COMMUNITY_POST_STATUS, COMMUNITY_REPLY_STATUS } = require('./community');
 const { resolveNotificationTarget } = require('./notification-target');
 const { parsePublicCursor, normalizeActivityForRead } = require('./public-activity-page');
 const {
@@ -63,6 +67,10 @@ const MUTATING_ACTIONS = new Set([
   'activity.complete',
   'activity.question.ask',
   'activity.question.answer',
+  'community.post.create',
+  'community.reply.create',
+  'community.post.delete',
+  'community.reply.delete',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -76,6 +84,10 @@ const MUTATING_ACTIONS = new Set([
   'admin.activity.suspend'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set(['driver.application.submit', 'admin.driverApplication.review']);
+const PAYLOAD_BOUND_IDEMPOTENT_ACTIONS = new Set([
+  'community.post.create',
+  'community.reply.create'
+]);
 
 function stableSerialize(value) {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -202,6 +214,30 @@ function publicActivity(activity, viewer = {}, at) {
       && activity.rideFulfillment.status !== RIDE_FULFILLMENT_STATUS.UNASSIGNED;
   }
   return result;
+}
+
+function publicCommunityPost(post, viewerId = '') {
+  return {
+    id: post.id,
+    author: post.author ? { nickname: post.author.nickname, avatarKind: post.author.avatarKind } : null,
+    content: post.content,
+    replyCount: Number(post.replyCount || 0),
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+    viewerIsAuthor: Boolean(viewerId && post.authorId === viewerId)
+  };
+}
+
+function publicCommunityReply(reply, viewerId = '') {
+  return {
+    id: reply.id,
+    postId: reply.postId,
+    author: reply.author ? { nickname: reply.author.nickname, avatarKind: reply.author.avatarKind } : null,
+    content: reply.content,
+    createdAt: reply.createdAt,
+    updatedAt: reply.updatedAt,
+    viewerIsAuthor: Boolean(viewerId && reply.authorId === viewerId)
+  };
 }
 
 function publicRideFulfillment(fulfillment) {
@@ -539,6 +575,88 @@ function createPinbaService(options) {
       const actorId = context && context.actorId;
       const viewer = actorId ? await store.getViewerContext(activityId, actorId) : {};
       return { activity: publicActivity(activity, viewer, at) };
+    }
+
+    if (action === 'community.post.list') {
+      const payload = validateCommunityListInput(input);
+      const page = await store.listCommunityPosts(payload);
+      return {
+        items: page.items.map((item) => publicCommunityPost(item, context && context.actorId)),
+        nextCursor: page.nextCursor || null
+      };
+    }
+
+    if (action === 'community.post.detail') {
+      const postId = validateId(input && input.postId, '帖子ID');
+      const post = await store.getCommunityPost(postId);
+      invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, post && post.status === COMMUNITY_POST_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND');
+      const replyInput = validateCommunityListInput({ cursor: input && input.cursor, limit: input && input.limit || 30 });
+      const page = await store.listCommunityReplies(postId, replyInput);
+      return {
+        post: publicCommunityPost(post, context && context.actorId),
+        replies: page.items.map((item) => publicCommunityReply(item, context && context.actorId)),
+        nextCursor: page.nextCursor || null
+      };
+    }
+
+    if (action === 'community.post.create') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateCommunityPostCreateInput(input);
+      await moderation.check([payload.content], { actorId: user.id, scene: 2 });
+      await store.consumeCommunityRateLimit(user.id, 'post', at, 3, 10 * 60 * 1000);
+      const post = {
+        id: operationId(context, 'communityPost'),
+        authorId: user.id,
+        author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
+        content: payload.content,
+        replyCount: 0,
+        status: COMMUNITY_POST_STATUS.ACTIVE,
+        submissionKeyHash: operationId(context, 'submission'),
+        payloadHash: context.payloadHash,
+        createdAt: at,
+        updatedAt: at
+      };
+      const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityPost', targetId: post.id, at };
+      return { post: publicCommunityPost(await store.createCommunityPost(post, audit), user.id) };
+    }
+
+    if (action === 'community.reply.create') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateCommunityReplyCreateInput(input);
+      await moderation.check([payload.content], { actorId: user.id, scene: 2 });
+      await store.consumeCommunityRateLimit(user.id, 'reply', at, 15, 10 * 60 * 1000);
+      const reply = {
+        id: operationId(context, `communityReply:${payload.postId}`),
+        postId: payload.postId,
+        authorId: user.id,
+        author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
+        content: payload.content,
+        status: COMMUNITY_REPLY_STATUS.ACTIVE,
+        submissionKeyHash: operationId(context, 'submission'),
+        payloadHash: context.payloadHash,
+        createdAt: at,
+        updatedAt: at
+      };
+      const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityReply', targetId: reply.id, at };
+      return { reply: publicCommunityReply(await store.createCommunityReply(reply, audit), user.id) };
+    }
+
+    if (action === 'community.post.delete') {
+      const user = await requireActiveUser(context, false);
+      const postId = validateId(input && input.postId, '帖子ID');
+      const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityPost', targetId: postId, at };
+      await store.deleteCommunityPost(postId, user.id, at, audit);
+      return { deleted: true, postId };
+    }
+
+    if (action === 'community.reply.delete') {
+      const user = await requireActiveUser(context, false);
+      const replyId = validateId(input && input.replyId, '回复ID');
+      const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityReply', targetId: replyId, at };
+      await store.deleteCommunityReply(replyId, user.id, at, audit);
+      return { deleted: true, replyId };
     }
 
     if (action === 'activity.question.list') {
@@ -1023,10 +1141,12 @@ function createPinbaService(options) {
         await requireActiveUser(context, false);
         const actorId = requireActor(context);
         const key = requireIdempotencyKey(event.idempotencyKey);
-        const cached = BUSINESS_IDEMPOTENT_ACTIONS.has(action) ? null : await store.getIdempotency(actorId, action, key);
+        const payloadHash = crypto.createHash('sha256').update(stableSerialize(input)).digest('hex');
+        const cacheAction = PAYLOAD_BOUND_IDEMPOTENT_ACTIONS.has(action) ? `${action}:${payloadHash}` : action;
+        const cached = BUSINESS_IDEMPOTENT_ACTIONS.has(action) ? null : await store.getIdempotency(actorId, cacheAction, key);
         if (cached) return { ok: true, data: cached, requestId, idempotentReplay: true };
-        data = await runAction(action, input, { ...context, idempotencyKey: key });
-        if (!BUSINESS_IDEMPOTENT_ACTIONS.has(action)) await store.saveIdempotency(actorId, action, key, data, nowIso());
+        data = await runAction(action, input, { ...context, idempotencyKey: key, payloadHash });
+        if (!BUSINESS_IDEMPOTENT_ACTIONS.has(action)) await store.saveIdempotency(actorId, cacheAction, key, data, nowIso());
       } else {
         data = await runAction(action, input, context);
       }
@@ -1048,6 +1168,8 @@ module.exports = {
   publicActivity,
   publicApplication,
   publicActivityQuestion,
+  publicCommunityPost,
+  publicCommunityReply,
   publicRideFulfillment,
   publicDriverProfile,
   publicNotification,

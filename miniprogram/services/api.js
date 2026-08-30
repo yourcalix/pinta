@@ -16,6 +16,10 @@ const MUTATING_ACTIONS = new Set([
   'activity.complete',
   'activity.question.ask',
   'activity.question.answer',
+  'community.post.create',
+  'community.reply.create',
+  'community.post.delete',
+  'community.reply.delete',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -32,7 +36,13 @@ const MUTATING_ACTIONS = new Set([
 const PENDING_MUTATIONS_STORAGE_KEY = 'pinba_pending_mutations_v1';
 const PENDING_MUTATION_TTL_MS = 15 * 60 * 1000;
 const MAX_PENDING_MUTATIONS = 100;
-const SENSITIVE_MUTATING_ACTIONS = new Set(['driver.application.submit', 'activity.create', 'ride.join']);
+const SENSITIVE_MUTATING_ACTIONS = new Set([
+  'driver.application.submit',
+  'activity.create',
+  'ride.join',
+  'community.post.create',
+  'community.reply.create'
+]);
 const sensitiveFingerprintSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 let authenticatedActorScope = '';
 

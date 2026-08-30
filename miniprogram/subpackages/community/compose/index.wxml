@@ -1,0 +1,28 @@
+<view class="page compose-page">
+  <view class="compose-card surface">
+    <view class="compose-heading">
+      <text class="compose-title">分享校园讨论</text>
+      <text class="compose-counter">{{remaining}} / 500</text>
+    </view>
+    <text class="compose-tip">仅支持纯文字，不要填写电话、微信号、外链或其他隐私信息。</text>
+    <textarea
+      class="discussion-textarea"
+      value="{{content}}"
+      maxlength="500"
+      auto-height="true"
+      placeholder="写下想和澳门校园同学讨论的问题或互助信息…"
+      cursor-spacing="120"
+      adjust-position="true"
+      aria-label="讨论内容，最多500字"
+      bindinput="handleInput"
+    />
+    <text wx:if="{{errorMessage}}" class="error-message" role="alert">{{errorMessage}}</text>
+  </view>
+  <view class="community-rules surface">
+    <text class="rules-title">友善交流</text>
+    <text class="rules-content">请保持真实、尊重与互助。禁止广告导流、联系方式、外链、骚扰及违法内容。</text>
+  </view>
+  <button class="primary-button submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">
+    {{submitting ? '正在提交…' : '发起讨论'}}
+  </button>
+</view>

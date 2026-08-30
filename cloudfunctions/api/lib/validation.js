@@ -2,6 +2,7 @@
 
 const { AppError, invariant } = require('./errors');
 const { normalizeRidePhone } = require('./phone');
+const { decodeCursor, assertCommunityTextSafe } = require('./community');
 const {
   ACTIVITY_TYPES,
   PILOT_CITY,
@@ -313,7 +314,7 @@ function validateDriverDocumentConfirmInput(input) {
 function validateReportInput(input) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   return {
-    targetType: enumValue(input.targetType, '举报对象类型', ['activity', 'user']),
+    targetType: enumValue(input.targetType, '举报对象类型', ['activity', 'user', 'communityPost', 'communityReply']),
     targetId: stringValue(input.targetId, '举报对象', { required: true, max: 80 }),
     reason: enumValue(input.reason, '举报原因', REPORT_REASONS),
     description: stringValue(input.description, '举报说明', { max: 300 })
@@ -334,6 +335,27 @@ function validateActivityQuestionAnswerInput(input) {
     activityId: stringValue(input.activityId, '活动ID', { required: true, max: 80 }),
     questionId: stringValue(input.questionId, '问题ID', { required: true, max: 80 }),
     content: stringValue(input.content, '回答内容', { required: true, min: 1, max: 300 })
+  };
+}
+
+function validateCommunityListInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  return {
+    cursor: decodeCursor(input.cursor),
+    limit: integerValue(input.limit === undefined ? 20 : input.limit, '分页数量', 1, 30)
+  };
+}
+
+function validateCommunityPostCreateInput(input) {
+  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
+  return { content: assertCommunityTextSafe(stringValue(input.content, '讨论内容', { required: true, min: 2, max: 500 })) };
+}
+
+function validateCommunityReplyCreateInput(input) {
+  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
+  return {
+    postId: validateId(input.postId, '帖子ID'),
+    content: assertCommunityTextSafe(stringValue(input.content, '回复内容', { required: true, min: 1, max: 300 }))
   };
 }
 
@@ -365,6 +387,9 @@ module.exports = {
   validateReportInput,
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,
+  validateCommunityListInput,
+  validateCommunityPostCreateInput,
+  validateCommunityReplyCreateInput,
   validateId,
   requireIdempotencyKey,
   stringValue

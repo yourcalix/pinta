@@ -24,6 +24,10 @@ const MUTATING_ACTIONS = new Set([
   'activity.complete',
   'activity.question.ask',
   'activity.question.answer',
+  'community.post.create',
+  'community.reply.create',
+  'community.post.delete',
+  'community.reply.delete',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -37,7 +41,13 @@ const MUTATING_ACTIONS = new Set([
   'ride.driver.cancel'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set(['driver.application.submit', 'admin.driverApplication.review']);
-const PUBLIC_ACTIONS = new Set(['activity.list', 'activity.detail', 'activity.question.list']);
+const PUBLIC_ACTIONS = new Set([
+  'activity.list',
+  'activity.detail',
+  'activity.question.list',
+  'community.post.list',
+  'community.post.detail'
+]);
 const MAX_PUBLIC_SCAN = 500;
 const mockSensitiveHashSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 const PASSENGER_AVATAR_KINDS = Object.freeze(['PASSENGER_A', 'PASSENGER_B']);
@@ -275,6 +285,21 @@ function seedState() {
         submissionKeyHash: 'mock-seed-question', createdAt: now, updatedAt: now
       }
     ],
+    communityPosts: [
+      {
+        id: 'community_welcome', authorId: 'u_member',
+        author: { nickname: '阿同', avatarKind: 'PASSENGER_B' },
+        content: '大家从横琴口岸回校时，通常会提前多久出发？想听听大家的经验。',
+        replyCount: 1, status: 'ACTIVE', createdAt: now, updatedAt: now
+      }
+    ],
+    communityReplies: [
+      {
+        id: 'community_reply_welcome', postId: 'community_welcome', authorId: 'u_owner',
+        author: { nickname: '小拼', avatarKind: 'PASSENGER_A' }, content: '晚高峰建议多预留半小时。',
+        status: 'ACTIVE', createdAt: now, updatedAt: now
+      }
+    ],
     reports: [],
     idempotency: {}
   };
@@ -307,6 +332,97 @@ if (!state.rideFulfillments) state.rideFulfillments = [];
 if (!state.driverApplications) state.driverApplications = [];
 if (!state.driverDocumentUploads) state.driverDocumentUploads = [];
 if (!state.memberContacts) state.memberContacts = [];
+if (!state.communityPosts) state.communityPosts = [];
+if (!state.communityReplies) state.communityReplies = [];
+
+function publicCommunityPost(item) {
+  return {
+    id: item.id,
+    author: clone(item.author),
+    content: item.content,
+    replyCount: Number(item.replyCount || 0),
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    viewerIsAuthor: item.authorId === currentUserId
+  };
+}
+
+function publicCommunityReply(item) {
+  return {
+    id: item.id,
+    postId: item.postId,
+    author: clone(item.author),
+    content: item.content,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    viewerIsAuthor: item.authorId === currentUserId
+  };
+}
+
+function assertCommunityContent(content, max) {
+  const normalized = String(content || '').trim();
+  const compact = normalized.replace(/[\s._\-—:：·（）()]+/g, '');
+  assert(normalized.length >= 1 && normalized.length <= max, 'VALIDATION_ERROR', `内容长度不能超过${max}个字符`);
+  const forbidden = /(?:https?:\/\/|www\.|(?:weixin|wechat|微信|vx|v信|微讯|qq|群号)[A-Za-z0-9]{4,}|(?:\+?\d[\d\s()-]{6,}\d)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i;
+  assert(!forbidden.test(normalized) && !forbidden.test(compact), 'VALIDATION_ERROR', '讨论区不支持外链或联系方式');
+  return normalized;
+}
+
+const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function asciiBase64Encode(value) {
+  let result = '';
+  for (let index = 0; index < value.length; index += 3) {
+    const first = value.charCodeAt(index);
+    const second = index + 1 < value.length ? value.charCodeAt(index + 1) : NaN;
+    const third = index + 2 < value.length ? value.charCodeAt(index + 2) : NaN;
+    result += BASE64_ALPHABET[first >> 2];
+    result += BASE64_ALPHABET[((first & 3) << 4) | (Number.isNaN(second) ? 0 : second >> 4)];
+    result += Number.isNaN(second) ? '=' : BASE64_ALPHABET[((second & 15) << 2) | (Number.isNaN(third) ? 0 : third >> 6)];
+    result += Number.isNaN(third) ? '=' : BASE64_ALPHABET[third & 63];
+  }
+  return result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function asciiBase64Decode(value) {
+  const normalized = String(value).replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+  let result = '';
+  for (let index = 0; index < padded.length; index += 4) {
+    const a = BASE64_ALPHABET.indexOf(padded[index]);
+    const b = BASE64_ALPHABET.indexOf(padded[index + 1]);
+    const c = padded[index + 2] === '=' ? -1 : BASE64_ALPHABET.indexOf(padded[index + 2]);
+    const d = padded[index + 3] === '=' ? -1 : BASE64_ALPHABET.indexOf(padded[index + 3]);
+    if (a < 0 || b < 0 || c < -1 || d < -1) throw new Error('invalid base64');
+    result += String.fromCharCode((a << 2) | (b >> 4));
+    if (c >= 0) result += String.fromCharCode(((b & 15) << 4) | (c >> 2));
+    if (d >= 0) result += String.fromCharCode(((c & 3) << 6) | d);
+  }
+  return result;
+}
+
+function encodeCommunityCursor(item) {
+  return asciiBase64Encode(JSON.stringify({ createdAt: item.createdAt, id: item.id }));
+}
+
+function decodeCommunityCursor(value) {
+  if (value === undefined || value === null || value === '') return null;
+  try {
+    const parsed = JSON.parse(asciiBase64Decode(value));
+    assert(parsed && Number.isFinite(Date.parse(parsed.createdAt)) && typeof parsed.id === 'string' && parsed.id, 'VALIDATION_ERROR', '分页游标无效');
+    return parsed;
+  } catch (error) {
+    if (error && error.ok === false) throw error;
+    throw fail('VALIDATION_ERROR', '分页游标无效');
+  }
+}
+
+function afterDescendingCommunityCursor(item, cursor) {
+  return !cursor || item.createdAt < cursor.createdAt || (item.createdAt === cursor.createdAt && item.id < cursor.id);
+}
+
+function afterAscendingCommunityCursor(item, cursor) {
+  return !cursor || item.createdAt > cursor.createdAt || (item.createdAt === cursor.createdAt && item.id > cursor.id);
+}
 
 function persist() {
   const { memberContacts, ...safeState } = state;
@@ -1095,6 +1211,69 @@ function handle(action, input, idempotencyKey = '') {
   if (action === 'activity.question.list') return listActivityQuestions(input);
   if (action === 'activity.question.ask') return askActivityQuestion(input);
   if (action === 'activity.question.answer') return answerActivityQuestion(input);
+  if (action === 'community.post.list') {
+    const cursor = decodeCommunityCursor(input.cursor);
+    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
+    const items = state.communityPosts.filter((item) => item.status === 'ACTIVE')
+      .filter((item) => afterDescendingCommunityCursor(item, cursor))
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.id).localeCompare(String(a.id)));
+    const page = items.slice(0, limit + 1);
+    return { items: page.slice(0, limit).map(publicCommunityPost), nextCursor: page.length > limit ? encodeCommunityCursor(page[limit - 1]) : null };
+  }
+  if (action === 'community.post.detail') {
+    const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');
+    assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
+    const cursor = decodeCommunityCursor(input.cursor);
+    const limit = Math.min(Math.max(Number(input.limit) || 30, 1), 30);
+    const replies = state.communityReplies.filter((item) => item.postId === post.id && item.status === 'ACTIVE' && afterAscendingCommunityCursor(item, cursor))
+      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) || String(a.id).localeCompare(String(b.id)));
+    const page = replies.slice(0, limit + 1);
+    return { post: publicCommunityPost(post), replies: page.slice(0, limit).map(publicCommunityReply), nextCursor: page.length > limit ? encodeCommunityCursor(page[limit - 1]) : null };
+  }
+  if (action === 'community.post.create') {
+    const user = requireUser();
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const content = assertCommunityContent(input.content, 500);
+    const now = new Date().toISOString();
+    const post = {
+      id: nextId('communityPost'), authorId: user.id,
+      author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
+      content, replyCount: 0, status: 'ACTIVE', createdAt: now, updatedAt: now
+    };
+    state.communityPosts.push(post);
+    return { post: publicCommunityPost(post) };
+  }
+  if (action === 'community.reply.create') {
+    const user = requireUser();
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');
+    assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
+    const now = new Date().toISOString();
+    const reply = {
+      id: nextId('communityReply'), postId: post.id, authorId: user.id,
+      author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
+      content: assertCommunityContent(input.content, 300), status: 'ACTIVE', createdAt: now, updatedAt: now
+    };
+    state.communityReplies.push(reply);
+    post.replyCount = Number(post.replyCount || 0) + 1;
+    return { reply: publicCommunityReply(reply) };
+  }
+  if (action === 'community.post.delete') {
+    const post = state.communityPosts.find((item) => item.id === input.postId && item.status !== 'SUSPENDED');
+    assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
+    assert(post.authorId === currentUserId, 'FORBIDDEN', '只能删除自己发布的讨论');
+    post.status = 'DELETED'; post.deletedAt = new Date().toISOString(); post.updatedAt = post.deletedAt;
+    return { deleted: true, postId: post.id };
+  }
+  if (action === 'community.reply.delete') {
+    const reply = state.communityReplies.find((item) => item.id === input.replyId && item.status !== 'SUSPENDED');
+    assert(reply, 'NOT_FOUND', '回复不存在或已被删除');
+    assert(reply.authorId === currentUserId, 'FORBIDDEN', '只能删除自己的回复');
+    reply.status = 'DELETED'; reply.deletedAt = new Date().toISOString(); reply.updatedAt = reply.deletedAt;
+    const post = state.communityPosts.find((item) => item.id === reply.postId);
+    if (post) post.replyCount = Math.max(0, Number(post.replyCount || 0) - 1);
+    return { deleted: true, replyId: reply.id };
+  }
   if (action === 'activity.mine') {
     const user = requireUser();
     const joinedIds = state.members.filter((item) => item.userId === user.id && item.role === 'MEMBER' && item.status === 'ACTIVE').map((item) => item.activityId);
@@ -1286,15 +1465,24 @@ async function call(event) {
     const idempotencyId = isMutation && event.idempotencyKey
       ? `${currentUserId}:${action}:${event.idempotencyKey}`
       : '';
+    const communityPayloadHash = action === 'community.post.create' || action === 'community.reply.create'
+      ? opaqueSensitiveHash(stableSerialize(event.data || {}))
+      : '';
     if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');
     if (isMutation) requireUser();
+    if (idempotencyId && communityPayloadHash && state.idempotency[`${idempotencyId}:payload`]) {
+      assert(state.idempotency[`${idempotencyId}:payload`] === communityPayloadHash, 'CONFLICT', '幂等键已用于其他社区内容');
+    }
     if (idempotencyId && !BUSINESS_IDEMPOTENT_ACTIONS.has(action) && state.idempotency[idempotencyId]) {
       const replay = ok(clone(state.idempotency[idempotencyId]));
       replay.idempotentReplay = true;
       return replay;
     }
     const data = handle(action, event.data || {}, event.idempotencyKey || '');
-    if (idempotencyId && !BUSINESS_IDEMPOTENT_ACTIONS.has(action)) state.idempotency[idempotencyId] = clone(data);
+    if (idempotencyId && !BUSINESS_IDEMPOTENT_ACTIONS.has(action)) {
+      state.idempotency[idempotencyId] = clone(data);
+      if (communityPayloadHash) state.idempotency[`${idempotencyId}:payload`] = communityPayloadHash;
+    }
     return ok(data);
   } catch (error) {
     if (error && error.ok === false) return error;

@@ -17,6 +17,13 @@ const {
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { stableEntityId } = require('./ids');
+const {
+  COMMUNITY_POST_STATUS,
+  COMMUNITY_REPLY_STATUS,
+  encodeCursor,
+  isAfterDescendingCursor,
+  isAfterAscendingCursor
+} = require('./community');
 const { collectPublicActivityPage } = require('./public-activity-page');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
@@ -590,6 +597,131 @@ class CloudStore {
       });
       if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
       return { ...question, answer, updatedAt: at };
+    });
+  }
+
+  async listCommunityPosts({ cursor, limit }) {
+    const where = cursor
+      ? this.command.or([
+          { status: COMMUNITY_POST_STATUS.ACTIVE, createdAt: this.command.lt(cursor.createdAt) },
+          { status: COMMUNITY_POST_STATUS.ACTIVE, createdAt: cursor.createdAt, _id: this.command.lt(cursor.id) }
+        ])
+      : { status: COMMUNITY_POST_STATUS.ACTIVE };
+    const result = await this.db.collection('communityPosts')
+      .where(where)
+      .orderBy('createdAt', 'desc')
+      .orderBy('_id', 'desc')
+      .limit(limit + 1)
+      .get();
+    const candidates = (result.data || []).map(entity).filter((item) => isAfterDescendingCursor(item, cursor));
+    const items = candidates.slice(0, limit);
+    return { items, nextCursor: candidates.length > limit ? encodeCursor(items[items.length - 1]) : null };
+  }
+
+  async getCommunityPost(postId) {
+    return this.getDocument('communityPosts', postId);
+  }
+
+  async listCommunityReplies(postId, { cursor, limit }) {
+    const where = cursor
+      ? this.command.or([
+          { postId, status: COMMUNITY_REPLY_STATUS.ACTIVE, createdAt: this.command.gt(cursor.createdAt) },
+          { postId, status: COMMUNITY_REPLY_STATUS.ACTIVE, createdAt: cursor.createdAt, _id: this.command.gt(cursor.id) }
+        ])
+      : { postId, status: COMMUNITY_REPLY_STATUS.ACTIVE };
+    const result = await this.db.collection('communityReplies')
+      .where(where)
+      .orderBy('createdAt', 'asc')
+      .orderBy('_id', 'asc')
+      .limit(limit + 1)
+      .get();
+    const candidates = (result.data || []).map(entity).filter((item) => isAfterAscendingCursor(item, cursor));
+    const items = candidates.slice(0, limit);
+    return { items, nextCursor: candidates.length > limit ? encodeCursor(items[items.length - 1]) : null };
+  }
+
+  async createCommunityPost(post, audit) {
+    return this.db.runTransaction(async (transaction) => {
+      const reference = transaction.collection('communityPosts').doc(post.id);
+      const existing = await getTransactionDocument(reference);
+      if (existing) {
+        invariant(existing.submissionKeyHash === post.submissionKeyHash && existing.payloadHash === post.payloadHash, 'CONFLICT', '幂等键已用于其他讨论内容');
+        return existing;
+      }
+      await reference.set({ data: document(post) });
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return post;
+    });
+  }
+
+  async consumeCommunityRateLimit(actorId, scope, at, max, windowMs) {
+    const windowStart = Math.floor(Date.parse(at) / windowMs) * windowMs;
+    const id = stableEntityId('communityRate', actorId, scope, String(windowStart));
+    await this.db.runTransaction(async (transaction) => {
+      const reference = transaction.collection('communityRateLimits').doc(id);
+      const current = await getTransactionDocument(reference);
+      invariant(!current || Number(current.count || 0) < max, 'RATE_LIMITED');
+      await reference.set({
+        data: {
+          actorId,
+          scope,
+          windowStart: new Date(windowStart).toISOString(),
+          expiresAt: new Date(windowStart + windowMs * 2).toISOString(),
+          count: Number(current && current.count || 0) + 1,
+          updatedAt: at
+        }
+      });
+    });
+  }
+
+  async createCommunityReply(reply, audit) {
+    return this.db.runTransaction(async (transaction) => {
+      const postReference = transaction.collection('communityPosts').doc(reply.postId);
+      const replyReference = transaction.collection('communityReplies').doc(reply.id);
+      const post = await getTransactionDocument(postReference);
+      invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
+      const existing = await getTransactionDocument(replyReference);
+      if (existing) {
+        invariant(existing.submissionKeyHash === reply.submissionKeyHash && existing.payloadHash === reply.payloadHash, 'CONFLICT', '幂等键已用于其他回复内容');
+        return existing;
+      }
+      await replyReference.set({ data: document(reply) });
+      await postReference.update({ data: { replyCount: Number(post.replyCount || 0) + 1, updatedAt: reply.createdAt } });
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return reply;
+    });
+  }
+
+  async deleteCommunityPost(postId, authorId, at, audit) {
+    return this.db.runTransaction(async (transaction) => {
+      const reference = transaction.collection('communityPosts').doc(postId);
+      const post = await getTransactionDocument(reference);
+      invariant(post && post.status !== COMMUNITY_POST_STATUS.SUSPENDED, 'NOT_FOUND');
+      invariant(post.authorId === authorId, 'FORBIDDEN');
+      if (post.status !== COMMUNITY_POST_STATUS.DELETED) {
+        await reference.update({ data: { status: COMMUNITY_POST_STATUS.DELETED, deletedAt: at, updatedAt: at } });
+      }
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return { ...post, status: COMMUNITY_POST_STATUS.DELETED, deletedAt: at, updatedAt: at };
+    });
+  }
+
+  async deleteCommunityReply(replyId, authorId, at, audit) {
+    return this.db.runTransaction(async (transaction) => {
+      const replyReference = transaction.collection('communityReplies').doc(replyId);
+      const reply = await getTransactionDocument(replyReference);
+      invariant(reply && reply.status !== COMMUNITY_REPLY_STATUS.SUSPENDED, 'NOT_FOUND');
+      invariant(reply.authorId === authorId, 'FORBIDDEN');
+      if (reply.status !== COMMUNITY_REPLY_STATUS.DELETED) {
+        const postReference = transaction.collection('communityPosts').doc(reply.postId);
+        const post = await getTransactionDocument(postReference);
+        await replyReference.update({ data: { status: COMMUNITY_REPLY_STATUS.DELETED, deletedAt: at, updatedAt: at } });
+        if (post && post.status === COMMUNITY_POST_STATUS.ACTIVE) {
+          await postReference.update({ data: { replyCount: Math.max(0, Number(post.replyCount || 0) - 1), updatedAt: at } });
+        }
+      }
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return { ...reply, status: COMMUNITY_REPLY_STATUS.DELETED, deletedAt: at, updatedAt: at };
     });
   }
 

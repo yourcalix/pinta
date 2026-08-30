@@ -16,6 +16,15 @@ const {
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { stableEntityId } = require('./ids');
+const {
+  COMMUNITY_POST_STATUS,
+  COMMUNITY_REPLY_STATUS,
+  encodeCursor,
+  compareDescending,
+  compareAscending,
+  isAfterDescendingCursor,
+  isAfterAscendingCursor
+} = require('./community');
 const { collectPublicActivityPage } = require('./public-activity-page');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
@@ -60,6 +69,8 @@ class MemoryStore {
     this.memberContacts = new Map((seed.memberContacts || []).map((item) => [item.id, clone(item)]));
     this.notifications = new Map((seed.notifications || []).map((item) => [item.id, clone(item)]));
     this.activityQuestions = new Map((seed.activityQuestions || []).map((item) => [item.id, clone(item)]));
+    this.communityPosts = new Map((seed.communityPosts || []).map((item) => [item.id, clone(item)]));
+    this.communityReplies = new Map((seed.communityReplies || []).map((item) => [item.id, clone(item)]));
     this.drivers = new Map((seed.drivers || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverApplications = new Map((seed.driverApplications || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverSecrets = new Map((seed.driverSecrets || []).map((item) => [item.userId || item.id, clone(item)]));
@@ -69,6 +80,7 @@ class MemoryStore {
     this.reports = new Map((seed.reports || []).map((item) => [item.id, clone(item)]));
     this.auditLogs = new Map((seed.auditLogs || []).map((item) => [item.id, clone(item)]));
     this.idempotency = new Map();
+    this.communityRateLimits = new Map();
   }
 
   async ensureUser(actorId, at) {
@@ -400,6 +412,85 @@ class MemoryStore {
     question.updatedAt = at;
     if (audit) this.auditLogs.set(audit.id, clone(audit));
     return clone(question);
+  }
+
+  async listCommunityPosts({ cursor, limit }) {
+    const candidates = [...this.communityPosts.values()]
+      .filter((item) => item.status === COMMUNITY_POST_STATUS.ACTIVE && isAfterDescendingCursor(item, cursor))
+      .sort(compareDescending);
+    const page = candidates.slice(0, limit + 1);
+    return clone({ items: page.slice(0, limit), nextCursor: page.length > limit ? encodeCursor(page[limit - 1]) : null });
+  }
+
+  async getCommunityPost(postId) {
+    return clone(this.communityPosts.get(postId) || null);
+  }
+
+  async listCommunityReplies(postId, { cursor, limit }) {
+    const candidates = [...this.communityReplies.values()]
+      .filter((item) => item.postId === postId && item.status === COMMUNITY_REPLY_STATUS.ACTIVE && isAfterAscendingCursor(item, cursor))
+      .sort(compareAscending);
+    const page = candidates.slice(0, limit + 1);
+    return clone({ items: page.slice(0, limit), nextCursor: page.length > limit ? encodeCursor(page[limit - 1]) : null });
+  }
+
+  async createCommunityPost(post, audit) {
+    const existing = this.communityPosts.get(post.id);
+    if (existing) {
+      invariant(existing.submissionKeyHash === post.submissionKeyHash && existing.payloadHash === post.payloadHash, 'CONFLICT', '幂等键已用于其他讨论内容');
+      return clone(existing);
+    }
+    this.communityPosts.set(post.id, clone(post));
+    if (audit) this.auditLogs.set(audit.id, clone(audit));
+    return clone(post);
+  }
+
+  async consumeCommunityRateLimit(actorId, scope, at, max, windowMs) {
+    const windowStart = Math.floor(Date.parse(at) / windowMs) * windowMs;
+    const key = `${actorId}:${scope}:${windowStart}`;
+    const current = this.communityRateLimits.get(key) || 0;
+    invariant(current < max, 'RATE_LIMITED');
+    this.communityRateLimits.set(key, current + 1);
+  }
+
+  async createCommunityReply(reply, audit) {
+    const post = this.communityPosts.get(reply.postId);
+    invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
+    const existing = this.communityReplies.get(reply.id);
+    if (existing) {
+      invariant(existing.submissionKeyHash === reply.submissionKeyHash && existing.payloadHash === reply.payloadHash, 'CONFLICT', '幂等键已用于其他回复内容');
+      return clone(existing);
+    }
+    this.communityReplies.set(reply.id, clone(reply));
+    post.replyCount = Number(post.replyCount || 0) + 1;
+    post.updatedAt = reply.createdAt;
+    if (audit) this.auditLogs.set(audit.id, clone(audit));
+    return clone(reply);
+  }
+
+  async deleteCommunityPost(postId, authorId, at, audit) {
+    const post = this.communityPosts.get(postId);
+    invariant(post && post.status !== COMMUNITY_POST_STATUS.SUSPENDED, 'NOT_FOUND');
+    invariant(post.authorId === authorId, 'FORBIDDEN');
+    if (post.status !== COMMUNITY_POST_STATUS.DELETED) Object.assign(post, { status: COMMUNITY_POST_STATUS.DELETED, deletedAt: at, updatedAt: at });
+    if (audit) this.auditLogs.set(audit.id, clone(audit));
+    return clone(post);
+  }
+
+  async deleteCommunityReply(replyId, authorId, at, audit) {
+    const reply = this.communityReplies.get(replyId);
+    invariant(reply && reply.status !== COMMUNITY_REPLY_STATUS.SUSPENDED, 'NOT_FOUND');
+    invariant(reply.authorId === authorId, 'FORBIDDEN');
+    if (reply.status !== COMMUNITY_REPLY_STATUS.DELETED) {
+      Object.assign(reply, { status: COMMUNITY_REPLY_STATUS.DELETED, deletedAt: at, updatedAt: at });
+      const post = this.communityPosts.get(reply.postId);
+      if (post && post.status === COMMUNITY_POST_STATUS.ACTIVE) {
+        post.replyCount = Math.max(0, Number(post.replyCount || 0) - 1);
+        post.updatedAt = at;
+      }
+    }
+    if (audit) this.auditLogs.set(audit.id, clone(audit));
+    return clone(reply);
   }
 
   async createApplication(application) {

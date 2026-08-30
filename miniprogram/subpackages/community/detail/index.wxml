@@ -1,0 +1,41 @@
+<view class="page detail-page">
+  <view wx:if="{{loading}}" class="state-card surface">正在加载讨论…</view>
+  <view wx:elif="{{error}}" class="state-card surface">
+    <text>{{error}}</text>
+    <button class="secondary-button retry-button" bindtap="loadDetail">重新加载</button>
+  </view>
+  <block wx:else>
+    <view class="post-detail surface">
+      <view class="author-row">
+        <image class="avatar" src="{{post.avatarPath}}" mode="aspectFit" aria-hidden="true" />
+        <view class="author-meta"><text class="author-name">{{post.author.nickname || '校园同学'}}</text><text class="post-time">{{post.createdAt}}</text></view>
+        <button class="more-button" bindtap="handlePostMore" aria-label="更多帖子操作">···</button>
+      </view>
+      <text class="post-content">{{post.content}}</text>
+    </view>
+    <view class="reply-heading"><text>全部回复</text><text class="reply-count">{{post.replyCount}}</text></view>
+    <view wx:if="{{replies.length}}" class="reply-list">
+      <view wx:for="{{replies}}" wx:key="id" class="reply-card surface">
+        <image class="reply-avatar" src="{{item.avatarPath}}" mode="aspectFit" aria-hidden="true" />
+        <view class="reply-body"><text class="reply-author">{{item.author.nickname || '校园同学'}}</text><text class="reply-content">{{item.content}}</text></view>
+        <button class="more-button reply-more" data-index="{{index}}" bindtap="handleReplyMore" aria-label="更多回复操作">···</button>
+      </view>
+    </view>
+    <view wx:else class="empty-replies surface">暂时没有回复，来聊聊你的想法。</view>
+  </block>
+  <view class="reply-composer">
+    <input
+      class="reply-input"
+      value="{{replyContent}}"
+      maxlength="300"
+      placeholder="写下你的回复…"
+      confirm-type="send"
+      cursor-spacing="120"
+      adjust-position="true"
+      aria-label="回复内容，最多300字"
+      bindinput="handleReplyInput"
+      bindconfirm="handleSendReply"
+    />
+    <button class="send-button" disabled="{{!replyContent || submitting}}" loading="{{submitting}}" bindtap="handleSendReply">发送</button>
+  </view>
+</view>

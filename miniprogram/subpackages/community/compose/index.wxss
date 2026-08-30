@@ -1,0 +1,12 @@
+.compose-page { min-height: 100vh; padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); }
+.compose-card, .community-rules { padding: 28rpx; }
+.compose-heading { display: flex; align-items: center; justify-content: space-between; }
+.compose-title { font-size: 34rpx; font-weight: 700; }
+.compose-counter { color: #7a857f; font-size: 23rpx; }
+.compose-tip { display: block; margin-top: 12rpx; color: #6d7872; font-size: 23rpx; line-height: 1.55; }
+.discussion-textarea { width: 100%; min-height: 360rpx; margin-top: 24rpx; padding: 24rpx; background: #f8faf9; border: 1rpx solid #e4eae7; border-radius: 18rpx; font-size: 28rpx; line-height: 1.65; }
+.error-message { display: block; margin-top: 16rpx; color: #d33f45; font-size: 24rpx; }
+.community-rules { margin-top: 20rpx; background: #f3faf6; }
+.rules-title { display: block; color: #11784f; font-weight: 680; }
+.rules-content { display: block; margin-top: 8rpx; color: #627068; font-size: 24rpx; line-height: 1.6; }
+.submit-button { margin-top: 28rpx; }
