@@ -1,0 +1,12 @@
+{
+  "id": "remove-macau-visible-copy",
+  "title": "移除小程序界面中的澳门字样",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "在微信开发者工具与真机确认最终可见文案",
+  "createdAt": "2026-08-30T17:20:00+08:00",
+  "branch": "main"
+}
