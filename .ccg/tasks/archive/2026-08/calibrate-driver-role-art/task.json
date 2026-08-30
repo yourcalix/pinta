@@ -1,0 +1,12 @@
+{
+  "id": "calibrate-driver-role-art",
+  "title": "校准基本资料页司机图案尺寸与位置",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-08-30T18:45:00+08:00",
+  "branch": "main"
+}
