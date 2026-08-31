@@ -1,0 +1,12 @@
+{
+  "id": "lock-loading-screen-pixel-layout",
+  "title": "按像素坐标锁定加载页图文排版提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付提示词",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
