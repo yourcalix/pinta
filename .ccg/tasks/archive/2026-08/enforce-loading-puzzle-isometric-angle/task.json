@@ -1,0 +1,12 @@
+{
+  "id": "enforce-loading-puzzle-isometric-angle",
+  "title": "强化加载页拼图45度等距视角提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付镜头强化提示词",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
