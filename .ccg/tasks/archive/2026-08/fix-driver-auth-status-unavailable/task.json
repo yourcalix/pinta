@@ -1,0 +1,12 @@
+{
+  "id": "fix-driver-auth-status-unavailable",
+  "title": "修复我的页面司机认证状态不可用",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
