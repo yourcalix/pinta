@@ -1,0 +1,12 @@
+{
+  "id": "refine-loading-screen-layout-prompt",
+  "title": "优化加载页拼图与文字排版的 Image 2 完整提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付从零生图提示词",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
