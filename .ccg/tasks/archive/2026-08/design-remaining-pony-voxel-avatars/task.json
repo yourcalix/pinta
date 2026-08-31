@@ -1,0 +1,12 @@
+{
+  "id": "design-remaining-pony-voxel-avatars",
+  "title": "基于柔柔母版整理其余六个体素头像提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待 Image 2 依次生成其余六张透明头像",
+  "createdAt": "2026-08-31T01:15:00+08:00",
+  "branch": "main"
+}
