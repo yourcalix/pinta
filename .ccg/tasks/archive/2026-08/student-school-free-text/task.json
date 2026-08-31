@@ -1,0 +1,12 @@
+{
+  "id": "student-school-free-text",
+  "title": "将学生认证所属校区改为所属学校自由输入",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-08-31T10:00:00+08:00",
+  "branch": "main"
+}
