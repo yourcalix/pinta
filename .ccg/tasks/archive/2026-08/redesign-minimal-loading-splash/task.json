@@ -1,0 +1,12 @@
+{
+  "id": "redesign-minimal-loading-splash",
+  "title": "设计简约体素加载动画界面 Image 2 提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待 Image 2 输出加载页视觉稿与关键帧",
+  "createdAt": "2026-08-31T01:25:00+08:00",
+  "branch": "main"
+}
