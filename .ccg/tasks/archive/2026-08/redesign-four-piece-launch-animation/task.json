@@ -1,0 +1,12 @@
+{
+  "id": "redesign-four-piece-launch-animation",
+  "title": "重构四块拼图落下启动动画",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
