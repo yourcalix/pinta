@@ -1,0 +1,12 @@
+{
+  "id": "refine-fluttershy-voxel-avatar",
+  "title": "审查并优化柔柔体素主题头像重绘提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待 Image 2 输出低颗粒体素重绘稿",
+  "createdAt": "2026-08-31T01:05:00+08:00",
+  "branch": "main"
+}
