@@ -1,0 +1,12 @@
+{
+  "id": "refine-loading-interlocking-puzzle",
+  "title": "优化加载页互锁拼图与主文案提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待 Image 2 输出互锁拼图修订稿",
+  "createdAt": "2026-08-31T01:35:00+08:00",
+  "branch": "main"
+}
