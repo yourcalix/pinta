@@ -1,0 +1,12 @@
+{
+  "id": "refine-loading-puzzle-depth",
+  "title": "优化加载页拼图立体感的 Image 2 生成提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付提示词",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
