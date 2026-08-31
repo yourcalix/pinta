@@ -1,0 +1,12 @@
+{
+  "id": "restore-driver-certification-entry",
+  "title": "恢复我的页面原有司机认证状态与入口",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}
