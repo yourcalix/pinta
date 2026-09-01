@@ -1,0 +1,12 @@
+{
+  "id": "redesign-pinba-multi-group-platform",
+  "title": "将拼吧重构为多场景校园拼单平台",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "fullstack-product-design",
+  "currentPhase": "completed",
+  "nextAction": "归档设计任务，等待用户确认后创建实施任务",
+  "createdAt": "2026-09-01T00:00:00+08:00",
+  "branch": "main"
+}
