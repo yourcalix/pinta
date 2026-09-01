@@ -1,0 +1,12 @@
+{
+  "id": "implement-multi-group-platform",
+  "title": "实施拼吧多场景校园拼单平台重构",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-01T00:00:00+08:00",
+  "branch": "main"
+}
