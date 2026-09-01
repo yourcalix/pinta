@@ -1,0 +1,12 @@
+{
+  "id": "research-mini-program-launch-feasibility",
+  "title": "调研拼吧小程序上线资质与服务器可行性",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack-compliance",
+  "currentPhase": "completed",
+  "nextAction": "归档调研任务并向用户交付结论",
+  "createdAt": "2026-09-01T00:00:00+08:00",
+  "branch": "main"
+}
