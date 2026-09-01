@@ -1,0 +1,12 @@
+{
+  "id": "evaluate-student-group-driver-marketplace",
+  "title": "评估学生先成团再自主联系或由认证司机选单方案",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "business-compliance",
+  "currentPhase": "completed",
+  "nextAction": "归档评估并向用户交付产品建议",
+  "createdAt": "2026-09-01T00:00:00+08:00",
+  "branch": "main"
+}
