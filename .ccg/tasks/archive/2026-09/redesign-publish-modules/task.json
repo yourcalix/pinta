@@ -1,0 +1,12 @@
+{
+  "id": "redesign-publish-modules",
+  "title": "重新设计发布页三类拼单模块风格",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-01T00:00:00+08:00",
+  "branch": "main"
+}
