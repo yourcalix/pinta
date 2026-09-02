@@ -1,59 +1,62 @@
 <view class="page community-page" style="padding-top: {{contentTopInset}}px;">
-  <view class="community-header surface">
-    <view class="header-copy">
-      <text class="header-eyebrow">PINBA CAMPUS</text>
-      <text class="header-title">校园社区</text>
-      <text class="header-subtitle">澳门校园互助与交流</text>
-    </view>
-    <view class="header-action">
-      <image class="header-voxel" src="../../assets/images/discover/tab-community-active.png" mode="aspectFit" aria-hidden="true" />
-      <button class="compose-button" hover-class="compose-button-hover" bindtap="handleCompose" aria-label="发起校园讨论">+ 发起讨论</button>
-    </view>
-  </view>
+  <image class="community-paper-background" src="../../assets/images/publish/publish-paper-texture.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="community-background-tint" aria-hidden="true"></view>
 
-  <view class="section-heading">
-    <view class="section-title-group">
-      <view class="section-status-dot" aria-hidden="true"></view>
-      <text class="section-title-text">最新讨论</text>
+  <view class="community-content">
+    <view class="community-header">
+      <view class="header-copy">
+        <text class="header-eyebrow">PINBA COMMUNITY</text>
+        <text class="header-title">拼吧 · 社区</text>
+        <text class="header-subtitle">聊兴趣，也分享互助经验</text>
+      </view>
+      <view class="header-doodle" aria-hidden="true"><view class="header-doodle-line"></view><view class="header-doodle-leaf header-doodle-leaf--left"></view><view class="header-doodle-leaf header-doodle-leaf--right"></view></view>
     </view>
-    <text class="section-count" wx:if="{{!loading}}">{{posts.length}} 条</text>
-  </view>
 
-  <view wx:if="{{loading}}" class="loading-card surface">正在加载讨论…</view>
-  <view wx:elif="{{posts.length}}" class="post-list">
-    <view
-      wx:for="{{posts}}"
-      wx:key="id"
-      class="post-card surface"
-      role="button"
-      aria-label="{{item.accessibilityLabel}}"
-      data-id="{{item.id}}"
-      bindtap="handlePost"
-    >
-      <view class="post-accent" aria-hidden="true"></view>
-      <view class="post-author-row">
-        <image class="post-avatar" src="{{item.avatarPath}}" mode="aspectFit" aria-hidden="true" />
-        <view class="post-author-meta">
-          <text class="post-author">{{item.author.nickname || '校园同学'}}</text>
+    <button class="compose-strip" hover-class="compose-strip--pressed" bindtap="handleCompose" role="button" aria-label="发起新讨论，最近有什么想和大家聊聊，点击进入发帖">
+      <view class="compose-pencil" aria-hidden="true"><view class="compose-pencil-tip"></view></view>
+      <text class="compose-placeholder">最近有什么想和大家聊聊？</text>
+      <view class="compose-action" aria-hidden="true"><text>发起</text><text class="compose-action-mark">✎</text></view>
+    </button>
+
+    <view class="section-heading">
+      <view class="section-title-group"><view class="section-mark" aria-hidden="true"></view><text class="section-title-text">最新讨论</text></view>
+      <text class="section-count" wx:if="{{!loading}}">{{posts.length}} 条</text>
+    </view>
+
+    <view wx:if="{{loading}}" class="skeleton-list">
+      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card">
+        <view class="skeleton-head"><view class="skeleton-avatar"></view><view class="skeleton-author"><view class="skeleton-line skeleton-line--name"></view><view class="skeleton-line skeleton-line--time"></view></view></view>
+        <view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--short"></view>
+      </view>
+    </view>
+
+    <view wx:elif="{{posts.length}}" class="post-list">
+      <view wx:for="{{posts}}" wx:key="id" class="post-card" hover-class="post-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}" data-id="{{item.id}}" bindtap="handlePost">
+        <view class="post-author-row">
+          <view class="post-avatar post-avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
+          <view class="post-author-copy"><text class="post-author">{{item.authorNickname}}</text></view>
           <text class="post-time">{{item.timeLabel}}</text>
         </view>
-        <text class="post-arrow" aria-hidden="true">›</text>
+        <text class="post-preview">{{item.content}}</text>
+        <view class="post-footer">
+          <view class="reply-count"><view class="reply-bubble" aria-hidden="true"></view><text>{{item.replyCount}} 条讨论</text></view>
+          <text class="post-arrow" aria-hidden="true">›</text>
+        </view>
       </view>
-      <text class="post-preview">{{item.content}}</text>
-      <view class="post-footer">
-        <text class="reply-symbol" aria-hidden="true">◌</text>
-        <text>{{item.replyCount}} 条回复</text>
+
+      <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" aria-role="status">
+        <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多…</text></view>
+        <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载更多失败，点击重试</button>
+        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经看完全部讨论啦 —</view>
       </view>
     </view>
-    <view class="list-footer" wx:if="{{loadingMore || !hasMore}}">{{loadingMore ? '正在加载更多…' : '— 已经到底了 —'}}</view>
-  </view>
-  <view wx:else class="empty-card surface">
-    <image class="empty-voxel-icon" src="../../assets/images/discover/tab-community-active.png" mode="aspectFit" aria-hidden="true" />
-    <text class="empty-title">{{error ? '社区暂时无法加载' : '还没有校园讨论'}}</text>
-    <text class="empty-description">{{error || '分享一个问题或互助信息，和校园同学聊聊。'}}</text>
-    <button wx:if="{{!error}}" class="empty-action" hover-class="empty-action-hover" bindtap="handleCompose">发起第一条讨论</button>
-    <button wx:else class="empty-action" hover-class="empty-action-hover" bindtap="handleRetry">重新加载</button>
-  </view>
 
-  <image class="community-watermark" src="../../assets/images/discover/tab-community-active.png" mode="aspectFit" aria-hidden="true" />
+    <view wx:else class="empty-card">
+      <view class="empty-bubble" aria-hidden="true"><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view></view>
+      <text class="empty-title">{{error ? '讨论加载失败' : '暂无社区讨论'}}</text>
+      <text class="empty-description">{{error || '分享一个话题、问题或互助经验，和大家聊聊。'}}</text>
+      <button wx:if="{{!error}}" class="empty-action" hover-class="empty-action--pressed" bindtap="handleCompose">发起第一条讨论</button>
+      <button wx:else class="empty-action empty-action--retry" hover-class="empty-action--pressed" bindtap="handleRetry">点击重试</button>
+    </view>
+  </view>
 </view>

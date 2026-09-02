@@ -1,0 +1,12 @@
+{
+  "id": "fix-launch-puzzle-visual-fit",
+  "title": "修复启动拼图真机拼合与视觉比例",
+  "status": "in_progress",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "review",
+  "nextAction": "验证启动页视觉组下移与短屏适配",
+  "createdAt": "2026-08-31T00:00:00+08:00",
+  "branch": "main"
+}

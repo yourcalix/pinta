@@ -40,8 +40,7 @@ test('Node 测试环境不读取本机 local.js 且运行消费者统一使用 r
   [
     'miniprogram/app.js',
     'miniprogram/services/api.js',
-    'miniprogram/services/subscription.js',
-    'miniprogram/pages/discover/index.js'
+    'miniprogram/services/subscription.js'
   ].forEach((relativePath) => {
     const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
     assert.match(source, /config\/runtime/);

@@ -1,16 +1,16 @@
 'use strict';
 
 const userService = require('../../../services/user');
+const { PILOT_CITY } = require('../../../config/locations');
 
 Page({
   data: {
     form: {
       nickname: '',
       gender: '',
-      city: '澳门',
+      city: PILOT_CITY,
       interestsText: '',
-      adultConfirmed: false,
-      roleIntent: 'PASSENGER'
+      adultConfirmed: false
     },
     saving: false,
     genderError: false,
@@ -25,7 +25,7 @@ Page({
   async loadProfile() {
     try {
       await userService.login();
-      const loginUser = await userService.login();
+      await userService.login();
       const result = await userService.getProfile();
       const profile = result.user && result.user.profile;
       if (profile) {
@@ -33,10 +33,9 @@ Page({
           form: {
             nickname: profile.nickname || '',
             gender: profile.gender || '',
-            city: profile.city || '澳门',
+            city: profile.city || PILOT_CITY,
             interestsText: (profile.interests || []).join('、'),
-            adultConfirmed: profile.adultConfirmed === true,
-            roleIntent: loginUser.onboarding && loginUser.onboarding.roleIntent || 'PASSENGER'
+            adultConfirmed: profile.adultConfirmed === true
           }
         });
       }
@@ -51,10 +50,6 @@ Page({
 
   handleAdult(event) {
     this.setData({ 'form.adultConfirmed': event.detail.value.includes('adult') });
-  },
-
-  handleRole(event) {
-    this.setData({ 'form.roleIntent': event.currentTarget.dataset.role, errorMessage: '' });
   },
 
   handleGender(event) {
@@ -74,16 +69,14 @@ Page({
       const result = await userService.updateProfile({
         nickname: form.nickname.trim(),
         gender: form.gender,
-        city: form.city.trim() || '澳门',
+        city: PILOT_CITY,
         interests: form.interestsText.split(/[、,，\s]+/).map((item) => item.trim()).filter(Boolean).slice(0, 8),
         adultConfirmed: true
       });
-      await userService.selectRole(form.roleIntent);
       getApp().globalData.user = result.user;
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => {
-        if (form.roleIntent === 'DRIVER') wx.redirectTo({ url: '/subpackages/profile/driver/index' });
-        else if (this.nextUrl) wx.redirectTo({ url: this.nextUrl });
+        if (this.nextUrl) wx.redirectTo({ url: this.nextUrl });
         else wx.navigateBack();
       }, 350);
     } catch (error) {

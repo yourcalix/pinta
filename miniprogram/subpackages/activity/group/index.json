@@ -1,8 +1,7 @@
 {
-  "navigationBarTitleText": "成团与履约",
+  "navigationBarTitleText": "成员空间",
   "usingComponents": {
     "status-badge": "/components/status-badge/index",
-    "empty-state": "/components/empty-state/index",
-    "privacy-popup": "/components/privacy-popup/index"
+    "empty-state": "/components/empty-state/index"
   }
 }

@@ -8,15 +8,7 @@ const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { profileAvatarPath } = require('../../utils/passenger-avatar');
-
-async function optionalDriverRequest(request, fallback) {
-  try {
-    return await request();
-  } catch (error) {
-    if (error && error.handled) throw error;
-    return fallback;
-  }
-}
+const { selectTab, refreshUnread } = require('../../utils/tab-bar');
 
 Page({
   data: {
@@ -26,189 +18,99 @@ Page({
     user: null,
     profileAvatarPath: profileAvatarPath(null),
     profileGenderLabel: '性别未设置',
-    needsGenderProfile: true,
+    currentList: 'owned',
+    owned: [], joined: [], formed: [], history: [], currentItems: [], tasks: [],
     isMock: api.isMock(),
     persona: api.getMockPersona(),
     personas: [
       { id: 'u_owner', label: '发起者“小拼”' },
-      { id: 'u_member', label: '乘客“阿同”' },
-      { id: 'u_driver', label: '司机“林师傅”' }
-    ],
-    tasks: [],
-    owned: [],
-    joined: [],
-    currentList: 'owned',
-    dashboardMode: 'rides',
-    driverProfile: null,
-    driverApplication: null,
-    driverRides: []
+      { id: 'u_member', label: '参与者“阿同”' },
+      { id: 'u_student', label: '普通用户“小满”' }
+    ]
   },
 
   onLoad() {
-    this.setData({
-      contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx)
-    });
+    this.setData({ contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx) });
   },
 
   onShow() {
-    this.loadDashboard();
-  },
-
-  onHide() {
-    this._dashboardLoadSeq = (this._dashboardLoadSeq || 0) + 1;
-  },
-
-  onUnload() {
-    this._dashboardLoadSeq = (this._dashboardLoadSeq || 0) + 1;
+    selectTab(this, 4);
+    refreshUnread(this);
+    return this.loadDashboard();
   },
 
   async loadDashboard() {
-    const loadSeq = (this._dashboardLoadSeq = (this._dashboardLoadSeq || 0) + 1);
+    const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
     this.setData({ loading: true, error: '' });
     try {
       const user = await userService.login();
-      const [mine, notifications, driverProfileResult, driverMineResult, driverApplicationResult] = await Promise.all([
+      const [mineResult, notificationResult] = await Promise.allSettled([
         userService.mine(),
-        userService.notifications(),
-        optionalDriverRequest(() => activityService.driverProfile(), { driver: null }),
-        optionalDriverRequest(() => activityService.driverMine(), { items: [] }),
-        optionalDriverRequest(() => userService.getDriverApplication(), { application: null })
+        userService.notifications()
       ]);
-      const tasks = notifications.items
-        .filter((item) => !item.read)
-        .slice(0, 5)
-        .map((item) => notificationRouter.decorateNotification({
-          ...item,
-          displayTime: formatDateTime(item.createdAt)
-        }));
-      if (loadSeq !== this._dashboardLoadSeq) return;
-
+      if (mineResult.status === 'rejected') throw mineResult.reason;
+      const mine = mineResult.value || { owned: [], joined: [] };
+      const notifications = notificationResult.status === 'fulfilled'
+        ? notificationResult.value || { items: [] }
+        : { items: [] };
+      if (seq !== this._loadSeq) return;
+      const owned = (mine.owned || []).map(decorateActivity);
+      const joined = (mine.joined || []).map(decorateActivity);
+      const all = [...owned, ...joined];
+      const formed = all.filter((item) => ['FORMED', 'IN_PROGRESS'].includes(item.status));
+      const history = all.filter((item) => ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(item.status));
+      const lists = { owned, joined, formed, history };
       this.setData({
         user,
         profileAvatarPath: profileAvatarPath(user.profile && user.profile.gender),
-        profileGenderLabel: user.profile && user.profile.gender === 'MALE'
-          ? '男'
-          : user.profile && user.profile.gender === 'FEMALE' ? '女' : '性别未设置',
-        needsGenderProfile: !user.profile || !['MALE', 'FEMALE'].includes(user.profile.gender),
-        tasks,
-        owned: mine.owned.map(decorateActivity),
-        joined: mine.joined.map(decorateActivity),
-        driverProfile: driverProfileResult.driver,
-        driverApplication: driverApplicationResult.application,
-        driverRides: (driverMineResult.items || []).map((item) => ({
-          id: item.activity.id,
-          ...item,
-          activity: decorateActivity(item.activity),
-          pickupLabel: item.rideFulfillment && item.rideFulfillment.pickupAt
-            ? formatDateTime(item.rideFulfillment.pickupAt)
-            : '待确认',
-          vehicleLabel: item.rideFulfillment && item.rideFulfillment.vehicle
-            ? `${item.rideFulfillment.vehicle.type} · ${item.rideFulfillment.vehicle.plateMasked}`
-            : '车辆信息待确认'
-        })),
+        profileGenderLabel: user.profile && user.profile.gender === 'MALE' ? '男' : user.profile && user.profile.gender === 'FEMALE' ? '女' : '性别未设置',
+        owned,
+        joined,
+        formed,
+        history,
+        currentItems: lists[this.data.currentList] || owned,
+        tasks: (notifications.items || []).filter((item) => !item.read).map((item) => ({ ...item, displayTime: formatDateTime(item.createdAt), actionLabel: '去处理' })),
         persona: api.getMockPersona(),
         loading: false
       });
     } catch (error) {
-      if (loadSeq !== this._dashboardLoadSeq) return;
-
-      this.setData({
-        loading: false,
-        error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试',
-        user: null,
-        profileAvatarPath: profileAvatarPath(null),
-        profileGenderLabel: '性别未设置',
-        needsGenderProfile: true,
-        tasks: [],
-        owned: [],
-        joined: [],
-        driverProfile: null,
-        driverRides: []
-      });
+      if (seq !== this._loadSeq) return;
+      this.setData({ loading: false, error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试' });
     }
   },
 
   handleListChange(event) {
-    this.setData({ currentList: event.currentTarget.dataset.value });
-  },
-
-  handleDashboardMode(event) {
-    this.setData({ dashboardMode: event.currentTarget.dataset.value === 'driver' ? 'driver' : 'rides' });
-  },
-
-  handleDriverTask(event) {
-    const item = event.currentTarget.dataset.item;
-    if (!item || !item.activity) return;
-    wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${encodeURIComponent(item.activity.id)}&mode=driver` });
-  },
-
-  handleDriverApplicationInfo() {
-    wx.navigateTo({ url: '/subpackages/profile/driver/index' });
-  },
-
-  handleActivityTap(event) {
-    this.navigateToActivity(event.currentTarget.dataset.item);
+    const currentList = event.currentTarget.dataset.value || 'owned';
+    this.setData({ currentList, currentItems: this.data[currentList] || [] });
   },
 
   handleActivitySelect(event) {
     const id = event.detail && event.detail.id;
     const item = [...this.data.owned, ...this.data.joined].find((activity) => activity.id === id);
-    this.navigateToActivity(item);
-  },
-
-  navigateToActivity(item) {
     if (!item) return;
     const activityId = encodeURIComponent(item.id);
-    if (item.viewerRole === 'owner' && item.status === 'RECRUITING') {
-      wx.navigateTo({ url: `/subpackages/activity/manage/index?id=${activityId}` });
-      return;
-    }
-    if (['FORMED', 'IN_PROGRESS'].includes(item.status) && ['owner', 'member'].includes(item.viewerRole)) {
-      wx.navigateTo({ url: `/subpackages/activity/group/index?id=${activityId}` });
-      return;
-    }
+    if (item.viewerRole === 'owner' && item.status === 'RECRUITING') return wx.navigateTo({ url: `/subpackages/activity/manage/index?id=${activityId}` });
+    if (['FORMED', 'IN_PROGRESS'].includes(item.status) && ['owner', 'member'].includes(item.viewerRole)) return wx.navigateTo({ url: `/subpackages/activity/group/index?id=${activityId}` });
     wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${activityId}` });
   },
 
   async handleTaskTap(event) {
     const task = event.currentTarget.dataset.task;
-    try {
-      await userService.readNotification(task.id);
-    } catch (error) {
-      if (error.handled) return;
-      // Navigation is still useful if marking read fails.
-    }
+    try { await userService.readNotification(task.id); } catch (error) { if (error.handled) return; }
     const url = notificationRouter.resolveNotificationPath(task);
-    if (url === '/pages/discover/index') {
-      wx.switchTab({ url });
-      return;
-    }
+    if (url === '/pages/discover/index') return wx.switchTab({ url });
     wx.navigateTo({ url });
   },
 
-  handleProfile() {
-    wx.navigateTo({ url: '/subpackages/profile/edit/index' });
-  },
+  handleProfile() { wx.navigateTo({ url: '/subpackages/profile/edit/index' }); },
 
   handlePersona(event) {
-    const id = event.currentTarget.dataset.id;
-    if (api.setMockPersona(id)) {
-      getApp().globalData.user = null;
-      this.loadDashboard();
-    }
+    if (!api.setMockPersona(event.currentTarget.dataset.id)) return;
+    getApp().globalData.user = null;
+    this.loadDashboard();
   },
 
   handleResetDemo() {
-    wx.showModal({
-      title: '重置演示数据？',
-      content: '会恢复三条示例活动和初始申请，不影响任何真实云端数据。',
-      confirmText: '重置',
-      success: (result) => {
-        if (!result.confirm) return;
-        api.resetMock();
-        getApp().globalData.user = null;
-        this.loadDashboard();
-      }
-    });
+    wx.showModal({ title: '重置演示数据？', content: '会恢复示例活动和初始申请。', confirmText: '重置', success: (result) => { if (result.confirm) { api.resetMock(); getApp().globalData.user = null; this.loadDashboard(); } } });
   }
 });

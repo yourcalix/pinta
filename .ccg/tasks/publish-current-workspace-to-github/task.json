@@ -1,0 +1,12 @@
+{
+  "id": "publish-current-workspace-to-github",
+  "title": "提交并推送当前代码与全部视觉资产到 GitHub",
+  "status": "in_progress",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "repository",
+  "currentPhase": "analysis",
+  "nextAction": "审计未提交文件、敏感配置、资源体积与远程分支状态",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}

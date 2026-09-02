@@ -46,13 +46,13 @@ test('游客可浏览社区，公开 DTO 不泄露内部身份字段', async () 
   const { call } = setup({
     communityPosts: [{
       id: 'post-1', authorId: 'author-id', author: { nickname: '阿明', avatarKind: 'PASSENGER_A' },
-      content: '澳门校园互助讨论', replyCount: 0, status: 'ACTIVE',
+      content: '校园互助讨论', replyCount: 0, status: 'ACTIVE',
       submissionKeyHash: 'private-hash', moderation: { provider: 'private' }, createdAt: NOW, updatedAt: NOW
     }]
   });
   const page = await call('community.post.list');
   assert.equal(page.ok, true);
-  assert.equal(page.data.items[0].content, '澳门校园互助讨论');
+  assert.equal(page.data.items[0].content, '校园互助讨论');
   assert.equal(JSON.stringify(page.data).includes('author-id'), false);
   assert.equal(JSON.stringify(page.data).includes('private-'), false);
 });

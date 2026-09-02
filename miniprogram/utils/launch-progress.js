@@ -1,20 +1,20 @@
 'use strict';
 
-const TOTAL_BLOCKS = 12;
-const PRELOAD_BLOCKS = 10;
-const STEP_INTERVAL_MS = 320;
-const FINISH_GATE_MS = 3800;
-const FINISH_INTERVAL_MS = 220;
-const DROP_DURATION_MS = 360;
-const HOLD_MS = 120;
-const FADE_MS = 500;
+const TOTAL_BLOCKS = 4;
+const PRELOAD_BLOCKS = 3;
+const STEP_INTERVAL_MS = 350;
+const FINISH_GATE_MS = 1200;
+const FINISH_INTERVAL_MS = 0;
+const DROP_DURATION_MS = 350;
+const HOLD_MS = 300;
+const FADE_MS = 300;
+const MAX_SPLASH_WAIT_MS = 4500;
 
 function createProgressBlocks() {
   return Array.from({ length: TOTAL_BLOCKS }, (_, index) => ({
     id: index + 1,
-    x: 24 + index * 34,
-    y: 108 - index * 8,
-    scale: Number((1 - index * 0.012).toFixed(3)),
+    key: ['top-left', 'bottom-left', 'bottom-right', 'top-right'][index],
+    color: ['#16A36A', '#2EBD85', '#5CD19E', '#8EE3B8'][index],
     zIndex: TOTAL_BLOCKS - index
   }));
 }
@@ -28,5 +28,6 @@ module.exports = {
   DROP_DURATION_MS,
   HOLD_MS,
   FADE_MS,
+  MAX_SPLASH_WAIT_MS,
   createProgressBlocks
 };

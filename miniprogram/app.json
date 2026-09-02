@@ -3,6 +3,7 @@
     "pages/discover/index",
     "pages/community/index",
     "pages/publish/index",
+    "pages/messages/index",
     "pages/user/index"
   ],
   "subPackages": [
@@ -11,6 +12,12 @@
       "pages": [
         "detail/index",
         "compose/index"
+      ]
+    },
+    {
+      "root": "subpackages/message",
+      "pages": [
+        "chat/index"
       ]
     },
     {
@@ -36,8 +43,7 @@
     {
       "root": "subpackages/profile",
       "pages": [
-        "edit/index",
-        "driver/index"
+        "edit/index"
       ]
     }
   ],
@@ -49,6 +55,7 @@
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
+    "custom": true,
     "color": "#6B756F",
     "selectedColor": "#16A36A",
     "backgroundColor": "#FFFFFF",
@@ -57,14 +64,14 @@
       {
         "pagePath": "pages/discover/index",
         "text": "发现",
-        "iconPath": "assets/images/discover/tab-discover-inactive.png",
-        "selectedIconPath": "assets/images/discover/tab-discover-active.png"
+        "iconPath": "custom-tab-bar/assets/tab-discover-painted.png",
+        "selectedIconPath": "custom-tab-bar/assets/tab-discover-painted.png"
       },
       {
         "pagePath": "pages/community/index",
         "text": "社区",
-        "iconPath": "assets/images/discover/tab-community-inactive.png",
-        "selectedIconPath": "assets/images/discover/tab-community-active.png"
+        "iconPath": "custom-tab-bar/assets/tab-community-painted.png",
+        "selectedIconPath": "custom-tab-bar/assets/tab-community-painted.png"
       },
       {
         "pagePath": "pages/publish/index",
@@ -73,10 +80,14 @@
         "selectedIconPath": "assets/images/discover/tab-publish-active.png"
       },
       {
+        "pagePath": "pages/messages/index",
+        "text": "消息"
+      },
+      {
         "pagePath": "pages/user/index",
         "text": "我的",
-        "iconPath": "assets/images/discover/tab-user-inactive.png",
-        "selectedIconPath": "assets/images/discover/tab-user-active.png"
+        "iconPath": "custom-tab-bar/assets/tab-user-painted.png",
+        "selectedIconPath": "custom-tab-bar/assets/tab-user-painted.png"
       }
     ]
   },

@@ -1,188 +1,150 @@
 .activity-card {
-  margin-bottom: 22rpx;
-  padding: 26rpx 26rpx 22rpx;
+  position: relative;
+  margin-bottom: 20rpx;
+  padding: 24rpx 26rpx 22rpx 30rpx;
   overflow: hidden;
-  background: #fff;
-  border: 1rpx solid #e6ebe8;
-  border-radius: 26rpx;
-  box-shadow: 0 10rpx 30rpx rgba(25, 54, 40, 0.07);
+  background: #fff8ee;
+  border: 3rpx solid rgba(255, 240, 201, 0.92);
+  border-radius: 29rpx 25rpx 31rpx 27rpx;
+  box-shadow: 0 10rpx 0 rgba(4, 48, 104, 0.2), 0 18rpx 32rpx rgba(3, 41, 91, 0.18);
+  transform: translateZ(0);
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-.route-heading,
-.route-line,
-.trip-meta,
+.activity-card--pressed {
+  box-shadow: 0 5rpx 0 rgba(4, 48, 104, 0.22), 0 10rpx 18rpx rgba(3, 41, 91, 0.16);
+  transform: translateY(4rpx) scale(0.993);
+}
+
+.activity-card::before {
+  content: '';
+  position: absolute;
+  top: 24rpx;
+  bottom: 24rpx;
+  left: 0;
+  width: 8rpx;
+  background: #129b69;
+  border-radius: 0 7rpx 7rpx 0;
+}
+
+.activity-card--companion::before { background: #167fb1; }
+.activity-card--sport::before { background: #6655b4; }
+.activity-card--food::before { background: #d8662e; }
+
+.card-head,
+.card-tags,
+.type-tag,
 .meta-item,
-.card-badges,
-.card-visual-band,
-.passenger-avatars,
-.route-voxel-scene {
+.card-footer,
+.owner-line,
+.capacity-link {
   display: flex;
   align-items: center;
 }
 
-.route-heading {
-  flex-wrap: wrap;
-  gap: 12rpx;
-  min-width: 0;
-}
+.card-head { justify-content: space-between; flex-wrap: wrap; gap: 10rpx 16rpx; }
+.card-tags { min-width: 0; flex-wrap: wrap; gap: 8rpx; }
 
-.route-code {
-  flex: 0 0 auto;
-  padding: 7rpx 13rpx;
-  color: #118557;
-  background: #edf8f2;
-  border: 1rpx solid #d8ede2;
-  border-radius: 12rpx;
+.type-tag {
+  gap: 8rpx;
+  padding: 7rpx 14rpx;
+  border: 2rpx solid currentColor;
+  border-radius: 15rpx 13rpx 16rpx 12rpx;
   font-size: 23rpx;
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 720;
 }
 
-.route-line {
-  flex: 1;
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: 2rpx 10rpx;
-  color: #18201c;
+.type-tag--companion { color: #176c97; background: #dff3ef; }
+.type-tag--sport { color: #55439f; background: #ece7f7; }
+.type-tag--food { color: #b45123; background: #ffead8; }
+.type-symbol { font-size: 23rpx; }
+
+.legacy-tag {
+  padding: 7rpx 13rpx;
+  color: #65675f;
+  background: #eee7dc;
+  border-radius: 14rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.activity-title {
+  margin-top: 16rpx;
+  color: #102a43;
   font-size: 31rpx;
-  font-weight: 700;
+  font-weight: 760;
   line-height: 1.35;
   word-break: break-all;
 }
 
-.route-arrow {
-  flex: 0 0 auto;
-  color: #16a36a;
-  font-size: 34rpx;
-}
-
-.card-chevron {
-  flex: 0 0 auto;
-  color: #96a19b;
-  font-size: 40rpx;
-  line-height: 1;
-}
-
-.trip-meta {
-  margin-top: 16rpx;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 9rpx;
-}
+.meta-list { margin-top: 14rpx; }
 
 .meta-item {
   gap: 10rpx;
-  color: #66736c;
-  font-size: 24rpx;
+  min-width: 0;
+  margin-top: 8rpx;
+  color: #596975;
+  font-size: 23rpx;
   line-height: 1.4;
 }
 
-.meta-icon {
-  width: 30rpx;
-  color: #7b8781;
-  text-align: center;
+.meta-item:first-child { margin-top: 0; }
+.meta-icon { flex: 0 0 30rpx; width: 30rpx; color: #187c69; text-align: center; }
+.meta-text { min-width: 0; word-break: break-all; }
+
+.member-progress {
+  height: 8rpx;
+  margin-top: 17rpx;
+  overflow: hidden;
+  background: #e5d9ca;
+  border-radius: 8rpx;
 }
 
-.card-badges {
+.member-progress-fill { height: 100%; background: #129b69; border-radius: inherit; }
+.member-progress-fill--companion { background: #167fb1; }
+.member-progress-fill--sport { background: #6655b4; }
+.member-progress-fill--food { background: #d8662e; }
+
+.card-footer {
   margin-top: 16rpx;
-  flex-wrap: wrap;
-  gap: 8rpx;
-}
-
-.card-badges status-badge {
-  flex-shrink: 0;
-}
-
-.card-visual-band {
-  min-height: 92rpx;
-  margin-top: 18rpx;
-  padding-top: 16rpx;
+  padding-top: 14rpx;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 16rpx;
-  border-top: 1rpx solid #eef1ef;
+  border-top: 2rpx dashed #dfd1c0;
 }
 
-.passenger-avatars {
-  flex: 1 1 260rpx;
-  min-width: 0;
-  padding-left: 4rpx;
+.owner-line { min-width: 0; gap: 10rpx; color: #56646d; font-size: 22rpx; }
+
+.owner-avatar {
+  display: flex;
+  flex: 0 0 42rpx;
+  align-items: center;
+  justify-content: center;
+  width: 42rpx;
+  height: 42rpx;
+  overflow: hidden;
+  color: #fff8ee;
+  background: #16835c;
+  border: 2rpx solid #0e6949;
+  border-radius: 48% 52% 46% 54%;
+  font-size: 21rpx;
+  font-weight: 700;
 }
 
-.passenger-avatar {
-  position: relative;
-  width: 52rpx;
-  height: 52rpx;
-  margin-left: -8rpx;
-  background: #fff;
-  border: 2rpx solid #fff;
-  border-radius: 15rpx;
+.owner-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.capacity-link {
+  flex-shrink: 0;
+  gap: 8rpx;
+  color: #137d58;
+  font-size: 23rpx;
+  font-weight: 700;
 }
 
-.passenger-avatar:first-child {
-  margin-left: 0;
-}
-
-.passenger-avatar--empty {
-  opacity: 0.72;
-}
-
-.route-voxel-scene {
-  position: relative;
-  flex: 0 0 238rpx;
-  width: 238rpx;
-  height: 86rpx;
-  justify-content: space-between;
-}
-
-.route-node {
-  position: relative;
-  z-index: 2;
-  width: 66rpx;
-  height: 66rpx;
-}
-
-.route-node--end {
-  width: 74rpx;
-  height: 74rpx;
-}
-
-.route-dotted-line {
-  position: absolute;
-  z-index: 0;
-  left: 52rpx;
-  right: 58rpx;
-  top: 54rpx;
-  height: 0;
-  border-top: 4rpx dotted #7e9187;
-}
-
-.route-car {
-  position: absolute;
-  z-index: 3;
-  top: -14rpx;
-  right: 60rpx;
-  width: 78rpx;
-  height: 78rpx;
-}
+.capacity-arrow { font-size: 34rpx; line-height: 1; }
 
 @media (max-width: 340px) {
-  .activity-card {
-    padding: 24rpx 22rpx 20rpx;
-  }
-
-  .route-line {
-    font-size: 29rpx;
-  }
-
-  .passenger-avatar {
-    width: 54rpx;
-    height: 54rpx;
-  }
-
-  .route-voxel-scene {
-    flex: 0 0 220rpx;
-    width: 220rpx;
-    margin-left: auto;
-  }
+  .activity-card { padding-right: 22rpx; padding-left: 26rpx; }
+  .activity-title { font-size: 29rpx; }
+  .owner-name { max-width: 180rpx; }
 }

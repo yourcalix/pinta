@@ -1,44 +1,41 @@
 <view
   class="launch-splash {{exiting ? 'launch-splash--exiting' : ''}}"
-  aria-role="progressbar"
+  aria-role="alert"
   aria-label="拼吧正在加载，请稍候"
   catchtouchmove="preventTouchMove"
 >
-  <image
-    class="launch-cover"
-    src="../../assets/images/launch-cover.jpg"
-    mode="aspectFill"
-    data-asset="cover"
-    aria-hidden="true"
-    binderror="handleAssetError"
-  />
-
-  <view class="launch-progress-card" aria-hidden="true">
-    <text class="launch-progress-copy">正在拼合活动…</text>
-    <view class="launch-track-container">
-      <image
-        class="launch-groove"
-        src="../../assets/images/launch-groove.png"
-        mode="scaleToFill"
-        data-asset="groove"
-        aria-hidden="true"
-        binderror="handleAssetError"
-      />
-      <view
-        wx:for="{{blocks}}"
-        wx:key="id"
-        class="launch-cube-slot"
-        style="left: {{item.x}}rpx; top: {{item.y}}rpx; transform: scale({{item.scale}}); z-index: {{item.zIndex}};"
-      >
-        <image
-          class="launch-cube {{item.id <= progress ? 'launch-cube--active' : ''}}"
-          src="../../assets/images/launch-cube.png"
-          mode="scaleToFill"
-          data-asset="cube"
-          aria-hidden="true"
-          binderror="handleAssetError"
-        />
+  <view class="launch-content" aria-hidden="true">
+    <view class="launch-puzzle-scene {{progress >= 4 ? 'launch-puzzle-scene--complete' : ''}}">
+      <view class="launch-piece-drop launch-piece-drop--top-left {{progress >= 1 ? 'launch-piece-drop--active' : ''}}">
+        <view class="launch-piece-static launch-piece-static--top-left">
+          <image class="launch-piece-image" src="../../assets/images/launch-puzzle/piece-top-left.png" mode="aspectFit" data-asset="piece-top-left" aria-hidden="true" binderror="handleAssetError" />
+        </view>
       </view>
+      <view class="launch-piece-drop launch-piece-drop--bottom-left {{progress >= 2 ? 'launch-piece-drop--active' : ''}}">
+        <view class="launch-piece-static launch-piece-static--bottom-left">
+          <image class="launch-piece-image" src="../../assets/images/launch-puzzle/piece-bottom-left.png" mode="aspectFit" data-asset="piece-bottom-left" aria-hidden="true" binderror="handleAssetError" />
+        </view>
+      </view>
+      <view class="launch-piece-drop launch-piece-drop--bottom-right {{progress >= 3 ? 'launch-piece-drop--active' : ''}}">
+        <view class="launch-piece-static launch-piece-static--bottom-right">
+          <image class="launch-piece-image" src="../../assets/images/launch-puzzle/piece-bottom-right.png" mode="aspectFit" data-asset="piece-bottom-right" aria-hidden="true" binderror="handleAssetError" />
+        </view>
+      </view>
+      <view class="launch-piece-drop launch-piece-drop--top-right {{progress >= 4 ? 'launch-piece-drop--active' : progress >= 3 ? 'launch-piece-drop--waiting' : ''}}">
+        <view class="launch-piece-static launch-piece-static--top-right">
+          <image class="launch-piece-image" src="../../assets/images/launch-puzzle/piece-top-right.png" mode="aspectFit" data-asset="piece-top-right" aria-hidden="true" binderror="handleAssetError" />
+        </view>
+      </view>
+    </view>
+
+    <text class="launch-title">正在为您拼吧</text>
+    <text class="launch-subtitle">一起组队，马上出发</text>
+
+    <view class="launch-progress-segments">
+      <view class="launch-progress-segment launch-progress-segment--1 {{progress >= 1 ? 'launch-progress-segment--active' : ''}}"></view>
+      <view class="launch-progress-segment launch-progress-segment--2 {{progress >= 2 ? 'launch-progress-segment--active' : ''}}"></view>
+      <view class="launch-progress-segment launch-progress-segment--3 {{progress >= 3 ? 'launch-progress-segment--active' : ''}}"></view>
+      <view class="launch-progress-segment launch-progress-segment--4 {{progress >= 4 ? 'launch-progress-segment--active' : progress >= 3 ? 'launch-progress-segment--waiting' : ''}}"></view>
     </view>
   </view>
 </view>

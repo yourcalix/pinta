@@ -108,11 +108,98 @@
   word-break: break-all;
 }
 
+.member-actions {
+  flex: 0 0 auto;
+  max-width: 250rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.message-member {
+  min-width: 88rpx;
+  min-height: 64rpx;
+  margin: 0;
+  padding: 0 20rpx;
+  border: 2rpx solid #9fd4b4;
+  border-radius: 32rpx;
+  background: #e8f6ef;
+  color: #11784f;
+  font-size: 23rpx;
+  line-height: 64rpx;
+  font-weight: 700;
+}
+
+.message-member::after { display: none; }
+.message-member--pressed { opacity: 0.8; transform: scale(0.97); }
+
 .contact-help {
   margin-top: 8rpx;
   color: #6b786f;
   font-size: 24rpx;
   line-height: 1.5;
+}
+
+.member-list {
+  margin-top: 22rpx;
+  border-top: 1rpx solid #edf1ef;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  min-height: 92rpx;
+  border-bottom: 1rpx solid #edf1ef;
+}
+
+.member-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  color: #16794f;
+  background: #e8f6ef;
+  border-radius: 18rpx;
+  font-weight: 650;
+}
+
+.member-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  color: #1c2a23;
+  font-size: 26rpx;
+  font-weight: 650;
+}
+
+.member-role,
+.contact-muted {
+  margin-top: 4rpx;
+  color: #839088;
+  font-size: 22rpx;
+}
+
+.contact-value {
+  max-width: 230rpx;
+  color: #16794f;
+  font-size: 23rpx;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.contact-action {
+  width: 100%;
+  min-height: 82rpx;
+  margin: 24rpx 0 0;
+}
+
+.contact-action::after {
+  display: none;
 }
 
 .copy-button {

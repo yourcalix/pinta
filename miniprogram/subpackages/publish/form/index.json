@@ -1,3 +1,8 @@
 {
-  "navigationBarTitleText": "发布拼车"
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#075AA7",
+  "backgroundColorTop": "#075AA7",
+  "backgroundColorBottom": "#075AA7",
+  "backgroundTextStyle": "light"
 }

@@ -1,29 +1,19 @@
 'use strict';
 
 const { AppError, invariant } = require('./errors');
-const { normalizeRidePhone } = require('./phone');
 const { decodeCursor, assertCommunityTextSafe } = require('./community');
+const { decodeDirectCursor, assertDirectMessageTextSafe } = require('./direct-message');
 const {
   ACTIVITY_TYPES,
   PILOT_CITY,
   PILOT_DISTRICTS,
-  MACAU_RIDE_ROUTES,
-  MACAU_RIDE_ROUTE_IDS,
-  MACAU_RIDE_CAMPUS_IDS,
-  RIDE_FEE_TYPES,
   MEMBER_LUGGAGE_TYPES,
-  RIDE_MIN_PASSENGERS,
-  RIDE_MAX_PASSENGERS,
-  RIDE_PICKUP_WINDOW_MINUTES,
-  RIDE_PICKUP_SLOT_MINUTES,
-  PRODUCT_DELIVERY_MODES,
-  BUDDY_COST_MODES,
-  BUDDY_LEVELS,
+  COMPANION_TIME_FLEXIBILITY,
+  COMPANION_TRANSPORT_PREFERENCES,
+  SPORT_LEVELS,
+  SPORT_INTENSITIES,
   REPORT_REASONS,
-  ONBOARDING_ROLE_INTENTS,
-  USER_GENDERS,
-  DRIVER_IDENTITY_TYPES,
-  DRIVER_DOCUMENT_KINDS
+  USER_GENDERS
 } = require('./constants');
 
 function optionalFilterString(value, field, max) {
@@ -64,23 +54,6 @@ function isoDateValue(value, field) {
   return new Date(timestamp).toISOString();
 }
 
-function hasRidePrice(text) {
-  if (!text) return false;
-  return /(?:[¥￥$]\s*\d)|(?:\d+(?:\.\d+)?\s*(?:元|块|rmb|RMB))/.test(text);
-}
-
-function rideRoute(routeId) {
-  const normalized = enumValue(routeId, '固定路线', MACAU_RIDE_ROUTE_IDS);
-  return MACAU_RIDE_ROUTES.find((route) => route.id === normalized);
-}
-
-function isPickupSlotAligned(isoValue) {
-  const date = new Date(isoValue);
-  return date.getUTCSeconds() === 0
-    && date.getUTCMilliseconds() === 0
-    && date.getUTCMinutes() % RIDE_PICKUP_SLOT_MINUTES === 0;
-}
-
 function validateActivityInput(input, now = new Date()) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   const type = enumValue(input.type, '活动类型', ACTIVITY_TYPES);
@@ -90,16 +63,9 @@ function validateActivityInput(input, now = new Date()) {
   invariant(Date.parse(startsAt) > Date.parse(deadlineAt), 'VALIDATION_ERROR', '开始时间必须晚于报名截止时间', { field: 'startsAt' });
   invariant(Date.parse(startsAt) - now.getTime() <= 7 * 24 * 60 * 60 * 1000, 'VALIDATION_ERROR', '活动开始时间不能超过7天', { field: 'startsAt' });
 
-  const rideMinPassengers = type === 'ride'
-    ? integerValue(input.minPassengers === undefined ? input.targetMembers : input.minPassengers, '最低成团人数', RIDE_MIN_PASSENGERS, RIDE_MAX_PASSENGERS)
-    : null;
-  const rideMaxPassengers = type === 'ride'
-    ? integerValue(input.maxPassengers === undefined ? RIDE_MAX_PASSENGERS : input.maxPassengers, '最大乘客数', RIDE_MIN_PASSENGERS, RIDE_MAX_PASSENGERS)
-    : null;
-  if (type === 'ride') {
-    invariant(rideMaxPassengers >= rideMinPassengers, 'VALIDATION_ERROR', '最大乘客数不能小于最低成团人数', { field: 'maxPassengers' });
-    invariant(isPickupSlotAligned(startsAt), 'VALIDATION_ERROR', '期望出发时间必须按15分钟选择', { field: 'startsAt' });
-  }
+  const minMembers = integerValue(input.minMembers === undefined ? 2 : input.minMembers, '最低成团人数', 2, 20);
+  const maxMembers = integerValue(input.maxMembers === undefined ? input.targetMembers : input.maxMembers, '最多人数', 2, 20);
+  invariant(maxMembers >= minMembers, 'VALIDATION_ERROR', '最多人数不能小于最低成团人数', { field: 'maxMembers' });
 
   const result = {
     type,
@@ -110,59 +76,42 @@ function validateActivityInput(input, now = new Date()) {
     placeLabel: stringValue(input.placeLabel, '商圈或地标', { required: true, max: 40 }),
     startsAt,
     deadlineAt,
-    targetMembers: type === 'ride'
-      ? rideMinPassengers
-      : integerValue(input.targetMembers, '目标人数', 2, 20),
-    contactInfo: stringValue(input.contactInfo, '成团后联系方式', { required: true, min: 2, max: 80 }),
+    targetMembers: maxMembers,
+    minMembers,
+    maxMembers,
     rules: stringValue(input.rules, '参与规则', { max: 200 })
   };
 
   const typeData = input.typeData || {};
-  if (type === 'ride') {
-    const route = rideRoute(typeData.routeId);
-    const feeType = enumValue(typeData.feeType, '费用分摊模式', RIDE_FEE_TYPES);
-    const pickupWindowEnd = isoDateValue(typeData.pickupWindowEnd, '期望时间窗结束时间');
-    invariant(
-      Date.parse(pickupWindowEnd) - Date.parse(startsAt) === RIDE_PICKUP_WINDOW_MINUTES * 60 * 1000,
-      'VALIDATION_ERROR',
-      '期望接车时间窗必须为60分钟',
-      { field: 'pickupWindowEnd' }
-    );
-    result.luggageType = memberLuggageType(input.luggageType);
-    result.contactInfo = normalizeRidePhone(input.contactInfo, 'contactInfo');
-    const priceText = [result.title, result.description, result.rules].join(' ');
-    invariant(!hasRidePrice(priceText), 'VALIDATION_ERROR', '拼车仅允许合理成本均摊，不能填写具体收费金额', { field: 'description' });
-    result.city = PILOT_CITY;
-    result.district = PILOT_DISTRICTS[0];
-    result.placeLabel = `${route.originLabel} → ${route.destinationLabel}`;
-    result.minPassengers = rideMinPassengers;
-    result.maxPassengers = rideMaxPassengers;
+  if (type === 'companion') {
+    const originLabel = stringValue(typeData.originLabel, '出发地', { required: true, max: 40 });
+    const destinationLabel = stringValue(typeData.destinationLabel, '目的地', { required: true, max: 40 });
+    result.placeLabel = `${originLabel} → ${destinationLabel}`;
     result.typeData = {
-      routeId: route.id,
-      routeCode: route.code,
-      origin: { id: route.originId, label: route.originLabel },
-      destination: { id: route.destinationId, label: route.destinationLabel },
-      pickupWindowEnd,
-      feeType
+      originLabel,
+      destinationLabel,
+      timeFlexibility: enumValue(typeData.timeFlexibility, '时间弹性', COMPANION_TIME_FLEXIBILITY),
+      transportPreference: enumValue(typeData.transportPreference, '出行方式倾向', COMPANION_TRANSPORT_PREFERENCES),
+      luggageType: memberLuggageType(typeData.luggageType || 'NONE')
     };
   }
 
-  if (type === 'product') {
+  if (type === 'sport') {
     result.typeData = {
-      productName: stringValue(typeData.productName, '商品名称', { required: true, max: 40 }),
-      targetQuantity: integerValue(typeData.targetQuantity, '目标数量', 2, 999),
-      unitPriceRange: stringValue(typeData.unitPriceRange, '预估单价区间', { required: true, max: 30 }),
-      shoppingChannel: stringValue(typeData.shoppingChannel, '购买渠道', { required: true, max: 50 }),
-      deliveryMode: enumValue(typeData.deliveryMode, '交付方式', PRODUCT_DELIVERY_MODES)
-    };
-  }
-
-  if (type === 'buddy') {
-    result.typeData = {
-      category: stringValue(typeData.category, '活动类别', { required: true, max: 20 }),
-      costMode: enumValue(typeData.costMode, '费用方式', BUDDY_COST_MODES),
-      level: enumValue(typeData.level, '活动强度', BUDDY_LEVELS),
+      sportType: stringValue(typeData.sportType, '运动项目', { required: true, max: 30 }),
+      venue: stringValue(typeData.venue, '活动场地', { required: true, max: 50 }),
+      level: enumValue(typeData.level, '参与水平', SPORT_LEVELS),
+      intensity: enumValue(typeData.intensity, '活动强度', SPORT_INTENSITIES),
       equipment: stringValue(typeData.equipment, '装备要求', { max: 100 })
+    };
+  }
+
+  if (type === 'food') {
+    result.typeData = {
+      venue: stringValue(typeData.venue, '餐厅或食堂', { required: true, max: 50 }),
+      cuisine: stringValue(typeData.cuisine, '口味或菜系', { required: true, max: 30 }),
+      budgetRange: stringValue(typeData.budgetRange, '人均预算', { required: true, max: 30 }),
+      dietaryNotes: stringValue(typeData.dietaryNotes, '饮食偏好', { max: 100 })
     };
   }
 
@@ -175,51 +124,14 @@ function validateActivityListInput(input) {
   const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
   const district = optionalFilterString(input.district, '行政区', 30);
   const keyword = optionalFilterString(input.keyword, '搜索词', 30);
-  const routeId = optionalFilterString(input.routeId, '固定路线', 40);
-  const campusId = optionalFilterString(input.campusId, '校区', 40);
-  const viewMode = optionalFilterString(input.viewMode, '浏览视角', 20) || 'passenger';
   if (type) enumValue(type, '活动类型', ACTIVITY_TYPES);
-  invariant(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持澳门试点', { field: 'city' });
+  invariant(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
   if (district) enumValue(district, '行政区', PILOT_DISTRICTS);
-  if (routeId) enumValue(routeId, '固定路线', MACAU_RIDE_ROUTE_IDS);
-  if (campusId) enumValue(campusId, '校区', MACAU_RIDE_CAMPUS_IDS);
-  enumValue(viewMode, '浏览视角', ['passenger', 'driver']);
   return {
     type: type || undefined,
     city,
     district: district || undefined,
-    keyword: keyword || undefined,
-    routeId: routeId || undefined,
-    campusId: campusId || undefined,
-    viewMode
-  };
-}
-
-function validateRideDriverAcceptInput(input) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
-  const pickupAt = isoDateValue(input.pickupAt, '接车时间');
-  invariant(isPickupSlotAligned(pickupAt), 'INVALID_PICKUP_SLOT');
-  return {
-    activityId: validateId(input.activityId, '活动ID'),
-    vehicleId: validateId(input.vehicleId, '车辆ID'),
-    pickupAt
-  };
-}
-
-function validateRideJoinInput(input) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
-  return {
-    activityId: validateId(input.activityId, '活动ID'),
-    luggageType: memberLuggageType(input.luggageType),
-    phone: normalizeRidePhone(input.phone, 'phone')
-  };
-}
-
-function validateRideDriverCancelInput(input) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
-  return {
-    activityId: validateId(input.activityId, '活动ID'),
-    reason: stringValue(input.reason, '取消原因', { required: true, max: 120 })
+    keyword: keyword || undefined
   };
 }
 
@@ -248,73 +160,10 @@ function validateProfileInput(input) {
   };
 }
 
-function validateOnboardingRoleInput(input) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
-  return { roleIntent: enumValue(input.roleIntent, '注册身份', ONBOARDING_ROLE_INTENTS) };
-}
-
-function validateDriverApplicationInput(input, now = new Date()) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
-  invariant(input.consent && input.consent.driverVerify === true && input.consent.sensitiveDocuments === true, 'DRIVER_CONSENT_REQUIRED');
-  const documents = input.documents && typeof input.documents === 'object' ? input.documents : {};
-  const requiredDocuments = DRIVER_DOCUMENT_KINDS;
-  requiredDocuments.forEach((kind) => invariant(
-    documents[kind] && typeof documents[kind] === 'object',
-    'DRIVER_DOCUMENT_REQUIRED',
-    '请补齐司机认证所需资料',
-    { field: `documents.${kind}` }
-  ));
-  const identityExpiresAt = isoDateValue(input.identityExpiresAt, '身份证件有效期');
-  const driverLicenseExpiresAt = isoDateValue(input.driverLicenseExpiresAt, '驾驶证有效期');
-  invariant(Date.parse(identityExpiresAt) > now.getTime(), 'VALIDATION_ERROR', '身份证件必须在有效期内', { field: 'identityExpiresAt' });
-  invariant(Date.parse(driverLicenseExpiresAt) > now.getTime(), 'VALIDATION_ERROR', '驾驶证必须在有效期内', { field: 'driverLicenseExpiresAt' });
-  const cleanNumber = (value, field) => {
-    const normalized = stringValue(value, field, { required: true, min: 5, max: 32 }).replace(/[\s-]+/g, '');
-    invariant(/^[A-Za-z0-9()]+$/.test(normalized), 'VALIDATION_ERROR', `${field}格式无效`, { field });
-    return normalized;
-  };
-  return {
-    legalName: stringValue(input.legalName, '真实姓名', { required: true, min: 2, max: 40 }),
-    identityType: enumValue(input.identityType, '证件类型', DRIVER_IDENTITY_TYPES),
-    identityNumber: cleanNumber(input.identityNumber, '证件号码'),
-    identityExpiresAt,
-    driverLicenseNumber: cleanNumber(input.driverLicenseNumber, '驾驶证号码'),
-    driverLicenseExpiresAt,
-    vehicleType: stringValue(input.vehicleType, '车辆类型', { required: true, max: 30 }),
-    passengerCapacity: integerValue(input.passengerCapacity, '核定乘客数', 2, 7),
-    plateNumber: cleanNumber(input.plateNumber, '车牌号码'),
-    documents: Object.fromEntries(Object.entries(documents).map(([kind, reference]) => {
-      enumValue(kind, '文件类型', DRIVER_DOCUMENT_KINDS);
-      return [kind, {
-        uploadId: validateId(reference.uploadId, '上传凭据')
-      }];
-    })),
-    consent: {
-      privacyVersion: stringValue(input.consent.privacyVersion, '隐私说明版本', { required: true, max: 30 }),
-      driverVerify: true,
-      sensitiveDocuments: true
-    }
-  };
-}
-
-function validateDriverDocumentPrepareInput(input) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
-  return { kind: enumValue(input.kind, '文件类型', DRIVER_DOCUMENT_KINDS) };
-}
-
-function validateDriverDocumentConfirmInput(input) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
-  return {
-    kind: enumValue(input.kind, '文件类型', DRIVER_DOCUMENT_KINDS),
-    uploadId: validateId(input.uploadId, '上传凭据'),
-    fileID: stringValue(input.fileID, '私有文件引用', { required: true, max: 300 })
-  };
-}
-
 function validateReportInput(input) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   return {
-    targetType: enumValue(input.targetType, '举报对象类型', ['activity', 'user', 'communityPost', 'communityReply']),
+    targetType: enumValue(input.targetType, '举报对象类型', ['activity', 'user', 'communityPost', 'communityReply', 'directConversation']),
     targetId: stringValue(input.targetId, '举报对象', { required: true, max: 80 }),
     reason: enumValue(input.reason, '举报原因', REPORT_REASONS),
     description: stringValue(input.description, '举报说明', { max: 300 })
@@ -359,6 +208,33 @@ function validateCommunityReplyCreateInput(input) {
   };
 }
 
+function validateDirectMessageListInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  return {
+    cursor: decodeDirectCursor(input.cursor),
+    limit: integerValue(input.limit === undefined ? 20 : input.limit, '分页数量', 1, 30)
+  };
+}
+
+function validateDirectConversationCreateInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  return {
+    activityId: validateId(input.activityId, '活动ID'),
+    memberId: validateId(input.memberId, '成员ID')
+  };
+}
+
+function validateDirectMessageCreateInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  const clientMessageId = stringValue(input.clientMessageId, '客户端消息ID', { required: true, min: 8, max: 80 });
+  invariant(/^[A-Za-z0-9:_-]+$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID格式无效');
+  return {
+    conversationId: validateId(input.conversationId, '会话ID'),
+    clientMessageId,
+    text: assertDirectMessageTextSafe(stringValue(input.text, '消息内容', { required: true, min: 1, max: 500 }))
+  };
+}
+
 function validateId(value, field = 'ID') {
   return stringValue(value, field, { required: true, max: 80 });
 }
@@ -372,24 +248,19 @@ function requireIdempotencyKey(value) {
 }
 
 module.exports = {
-  hasRidePrice,
   validateActivityInput,
   validateActivityListInput,
-  validateRideJoinInput,
-  validateRideDriverAcceptInput,
-  validateRideDriverCancelInput,
   validateApplicationInput,
   validateProfileInput,
-  validateOnboardingRoleInput,
-  validateDriverApplicationInput,
-  validateDriverDocumentPrepareInput,
-  validateDriverDocumentConfirmInput,
   validateReportInput,
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
+  validateDirectMessageListInput,
+  validateDirectConversationCreateInput,
+  validateDirectMessageCreateInput,
   validateId,
   requireIdempotencyKey,
   stringValue

@@ -1,0 +1,30 @@
+<view class="tab-shell" role="tablist" aria-label="主导航">
+  <view class="tab-paper"></view>
+  <view class="tab-row">
+    <view
+      wx:for="{{items}}"
+      wx:key="pagePath"
+      class="tab-item {{item.publish ? 'tab-item--publish' : ''}} {{selected === index ? 'tab-item--selected' : ''}}"
+      data-path="{{item.pagePath}}"
+      bindtap="switchTab"
+      hover-class="tab-item--pressed"
+      hover-stay-time="80"
+      role="tab"
+      aria-selected="{{selected === index}}"
+      aria-label="{{item.message && unread ? item.text + '，' + unreadLabel + '条未读' : item.publish ? '发布活动' : item.text}}"
+    >
+      <block wx:if="{{item.publish}}">
+        <image class="publish-puzzle" src="/custom-tab-bar/assets/tab-publish-puzzle.png" mode="aspectFit" aria-hidden="true" />
+      </block>
+      <block wx:elif="{{item.message}}">
+        <view class="message-icon" aria-hidden="true"><view class="message-icon__back"></view><view class="message-icon__front"></view></view>
+        <view wx:if="{{unread}}" class="unread-badge" aria-hidden="true">{{unreadLabel}}</view>
+        <text class="tab-label">消息</text>
+      </block>
+      <block wx:else>
+        <image class="tab-icon" src="{{item.icon}}" mode="aspectFit" aria-hidden="true" />
+        <text class="tab-label">{{item.text}}</text>
+      </block>
+    </view>
+  </view>
+</view>

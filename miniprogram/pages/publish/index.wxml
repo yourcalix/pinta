@@ -1,61 +1,38 @@
 <view class="page publish-page" style="padding-top: {{contentTopInset}}px;">
+  <image class="paper-background" src="../../assets/images/publish/publish-paper-texture.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="paper-tint" aria-hidden="true"></view>
+
   <view class="publish-content">
-    <view class="publish-hero surface">
-      <view class="hero-copy-group">
-        <image class="hero-puzzle" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
-        <view class="hero-copy">
-          <view class="hero-eyebrow">两步即可发起</view>
-          <view class="hero-title">发起澳门校园拼车</view>
-          <view class="hero-description">选择固定路线和 60 分钟时间窗，邀请同路同学一起出发</view>
-        </view>
-      </view>
-      <view class="hero-scene" aria-hidden="true">
-        <image class="hero-start" src="../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
-        <view class="hero-route-dots" aria-hidden="true"></view>
-        <image class="hero-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
-        <image class="hero-campus" src="../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
-      </view>
+    <view class="publish-hero">
+      <view class="hero-brand">拼吧 · 发起拼单</view>
+      <view class="hero-title">今天准备拼什么？</view>
+      <view class="hero-description">选个搭子类型，马上摇人</view>
+      <view class="hero-scribble" aria-hidden="true"><view></view><view></view></view>
     </view>
 
-    <button
-      wx:for="{{types}}"
-      wx:key="value"
-      class="type-card surface"
-      data-type="{{item.value}}"
-      bindtap="handleSelect"
-      disabled="{{pending}}"
-      aria-label="发起校园拼车，点击进入发布行程表单"
-    >
-      <view class="type-accent" aria-hidden="true"></view>
-      <image class="type-icon" src="../../assets/images/discover/route-section-pin.png" mode="aspectFit" aria-hidden="true" />
-      <view class="type-content">
-        <view class="type-title">{{item.title}}</view>
-        <view class="type-description">{{item.description}}</view>
+    <view class="type-grid" role="list" aria-label="选择要发布的拼单类型">
+      <button wx:for="{{types}}" wx:key="value" class="type-card type-card--{{item.tone}}" hover-class="type-card--pressed" hover-stay-time="120" data-type="{{item.value}}" bindtap="handleSelect" disabled="{{pending}}" role="button" aria-label="{{item.ariaLabel}}">
+        <view class="type-card-kicker">发起拼单</view>
+        <view class="type-card-title">{{item.title}}</view>
+        <view class="type-card-description">{{item.description}}</view>
+        <image class="type-card-art type-card-art--{{item.tone}}" src="{{item.image}}" mode="aspectFit" aria-hidden="true" />
+        <view class="type-card-action" aria-hidden="true"><text>发起</text><text class="type-card-plus">＋</text></view>
+      </button>
+    </view>
+
+    <button wx:if="{{draft}}" class="draft-strip" hover-class="draft-strip--pressed" bindtap="handleContinueDraft" disabled="{{pending}}" role="button" aria-label="继续填写{{draft.typeTitle}}草稿，{{draft.title}}">
+      <image class="draft-art" src="../../assets/images/publish/publish-draft-avatar.webp" mode="aspectFit" aria-hidden="true" />
+      <view class="draft-copy">
+        <view class="draft-heading"><text class="draft-badge">草稿</text><text class="draft-type">{{draft.typeTitle}}</text></view>
+        <view class="draft-title">{{draft.title}}</view>
       </view>
-      <text class="arrow" aria-hidden="true">›</text>
+      <view class="draft-action"><text class="draft-action-label">继续填写</text><text aria-hidden="true">›</text></view>
     </button>
 
-    <button
-      class="safety-note"
-      role="button"
-      bindtap="handleSafetyNotice"
-      hover-class="safety-note-hover"
-      hover-stay-time="80"
-      aria-label="安全边界，拼吧只提供校园行程信息撮合，点击查看完整安全与免责说明"
-    >
-      <view class="safety-icon" aria-hidden="true">
-        <image class="safety-icon-voxel" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
-        <view class="safety-lock-shackle"></view>
-        <view class="safety-lock-body">
-          <view class="safety-lock-keyhole"></view>
-        </view>
-      </view>
-      <view class="safety-copy">
-        <view class="safety-title">安全边界</view>
-        <view class="safety-description">拼吧只提供校园行程信息撮合，不提供车辆、在线收款或交通服务。司机承接功能仅向已完成合规审核的账号开放。</view>
-      </view>
+    <button class="safety-note" role="button" bindtap="handleSafetyNotice" hover-class="safety-note--pressed" aria-label="安全边界，点击查看拼单安全说明">
+      <view class="safety-shield" aria-hidden="true"><view class="safety-check">✓</view></view>
+      <text class="safety-copy">平台仅提供信息发布，不提供运输、配送、资金担保或场地预订服务</text>
+      <text class="safety-more" aria-hidden="true">›</text>
     </button>
   </view>
-
-  <image class="page-watermark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
 </view>

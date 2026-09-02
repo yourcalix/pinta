@@ -73,9 +73,7 @@ Page({
     });
     try {
       const detail = await activityService.detail(this.data.id);
-      const result = detail.activity.type === 'ride'
-        ? { items: [] }
-        : await activityService.applications(this.data.id);
+      const result = await activityService.applications(this.data.id);
       if (loadSeq !== this._loadSeq) return;
       this.setData({
         activity: decorateActivity(detail.activity),

@@ -1,114 +1,32 @@
 <view class="page user-page" style="padding-top: {{contentTopInset}}px;">
-  <view wx:if="{{loading}}" class="loading-block surface">正在整理你的拼车行程…</view>
-
-  <empty-state
-    wx:elif="{{error}}"
-    symbol="!"
-    title="{{error}}"
-    description="检查网络后重试。"
-    action-text="重新加载"
-    bindaction="loadDashboard"
-  />
+  <view wx:if="{{loading}}" class="loading-block surface">正在整理你的拼单…</view>
+  <empty-state wx:elif="{{error}}" symbol="!" title="{{error}}" description="检查网络后重试。" action-text="重新加载" bindaction="loadDashboard" />
 
   <block wx:else>
-    <view
-      class="profile-card surface"
-      bindtap="handleProfile"
-      role="button"
-      aria-label="编辑个人资料，{{user.profile.nickname}}，{{user.profile.city}}，{{profileGenderLabel}}，已确认年满18岁"
-    >
-      <view class="profile-avatar-shell" aria-hidden="true">
-        <image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" />
-      </view>
-      <view class="profile-main">
-        <view class="profile-name">{{user.profile.nickname}}</view>
-        <view class="profile-meta">{{user.profile.city}} · {{profileGenderLabel}} · 已确认年满18岁</view>
-        <view wx:if="{{needsGenderProfile}}" class="profile-gender-reminder">请补充性别</view>
-        <view class="profile-status">{{driverProfile && driverProfile.canAcceptRide ? '认证合乘司机' : '校园公益合乘用户'}}</view>
-      </view>
-      <image class="profile-brand-mark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
-      <text class="profile-arrow" aria-hidden="true">›</text>
+    <view class="profile-card surface" bindtap="handleProfile" role="button" aria-label="编辑个人资料，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
+      <view class="profile-avatar-shell" aria-hidden="true"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" /></view>
+      <view class="profile-main"><view class="profile-name">{{user.profile.nickname}}</view><view class="profile-meta">{{profileGenderLabel}} · 已确认年满18岁</view></view>
+      <image class="profile-brand-mark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" /><text class="profile-arrow" aria-hidden="true">›</text>
     </view>
 
-    <view class="dashboard-tabs" role="tablist" aria-label="切换我的页面视图">
-      <button class="dashboard-tab {{dashboardMode === 'rides' ? 'dashboard-tab--active' : ''}}" data-value="rides" bindtap="handleDashboardMode" role="tab" aria-selected="{{dashboardMode === 'rides'}}">我的拼车</button>
-      <button class="dashboard-tab dashboard-tab--driver {{dashboardMode === 'driver' ? 'dashboard-tab--active-driver' : ''}}" data-value="driver" bindtap="handleDashboardMode" role="tab" aria-selected="{{dashboardMode === 'driver'}}">司机任务</button>
+    <view class="profile-metrics surface" role="group" aria-label="我的活动概览">
+      <view class="metric-item"><text class="metric-value">{{owned.length}}</text><text class="metric-label">我发起的</text></view><view class="metric-divider"></view>
+      <view class="metric-item"><text class="metric-value">{{joined.length}}</text><text class="metric-label">我加入的</text></view><view class="metric-divider"></view>
+      <view class="metric-item"><text class="metric-value">{{formed.length}}</text><text class="metric-label">已成团</text></view>
     </view>
 
-    <view class="profile-metrics surface" role="group" aria-label="我的行程概览">
-      <view class="metric-item"><text class="metric-value">{{tasks.length}}</text><text class="metric-label">待处理</text></view>
-      <view class="metric-divider" aria-hidden="true"></view>
-      <view class="metric-item"><text class="metric-value">{{owned.length}}</text><text class="metric-label">我的发布</text></view>
-      <view class="metric-divider" aria-hidden="true"></view>
-      <view class="metric-item"><text class="metric-value">{{joined.length}}</text><text class="metric-label">我的参与</text></view>
-      <image class="metrics-watermark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
+    <view wx:if="{{tasks.length}}" class="pending-section"><view class="section-heading"><text>待处理</text><text class="count">{{tasks.length}}</text></view><view class="task-list"><view wx:for="{{tasks}}" wx:key="id" class="task-card surface" data-task="{{item}}" bindtap="handleTaskTap" role="button"><view class="task-dot"></view><view class="task-main"><view class="task-title">{{item.title}}</view><view class="task-time">{{item.displayTime}}</view></view><view class="task-action">{{item.actionLabel}} ›</view></view></view></view>
+
+    <view class="rides-heading"><view><view class="rides-title">我的拼单</view><view class="rides-subtitle">管理你发起和加入的活动</view></view></view>
+    <view class="list-tabs" role="tablist" aria-label="切换我的拼单列表">
+      <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'owned'}}">我发起的</button>
+      <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'joined'}}">我加入的</button>
+      <button class="list-tab {{currentList === 'formed' ? 'list-tab--active' : ''}}" data-value="formed" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'formed'}}">已成团</button>
+      <button class="list-tab {{currentList === 'history' ? 'list-tab--active' : ''}}" data-value="history" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'history'}}">历史</button>
     </view>
+    <block wx:for="{{currentItems}}" wx:key="id"><activity-card item="{{item}}" bindselect="handleActivitySelect" /></block>
+    <empty-state wx:if="{{!currentItems.length}}" title="还没有相关拼单" description="去发现页看看正在发生什么。" />
 
-    <block wx:if="{{dashboardMode === 'rides'}}">
-      <view wx:if="{{tasks.length}}" class="pending-section">
-        <view class="section-heading"><text>待处理</text><text class="count">{{tasks.length}}</text></view>
-        <view class="task-list">
-          <view wx:for="{{tasks}}" wx:key="id" class="task-card surface" data-task="{{item}}" bindtap="handleTaskTap" role="button" aria-label="{{item.title}}，{{item.actionLabel}}">
-            <view class="task-dot" aria-hidden="true"></view>
-            <view class="task-puzzle-shell" aria-hidden="true"><image class="task-puzzle" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" /></view>
-            <view class="task-main"><view class="task-title">{{item.title}}</view><view class="task-time">{{item.displayTime}}</view></view>
-            <view class="task-action"><text>{{item.actionLabel}}</text><text class="task-arrow" aria-hidden="true">›</text></view>
-          </view>
-        </view>
-      </view>
-
-      <view class="rides-heading"><view><view class="rides-title">我的行程</view><view class="rides-subtitle">查看已发布和已参与的校园合乘</view></view></view>
-
-      <view class="list-tabs" role="tablist" aria-label="切换我的行程列表">
-        <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'owned'}}">我的发布</button>
-        <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'joined'}}">我的参与</button>
-      </view>
-
-      <block wx:if="{{currentList === 'owned'}}">
-        <view wx:for="{{owned}}" wx:key="id" class="card-visual-shell"><activity-card item="{{item}}" bindselect="handleActivitySelect" /></view>
-        <empty-state wx:if="{{!owned.length}}" title="还没有发布行程" description="从发布页选择固定路线，两步即可创建。" />
-      </block>
-
-      <block wx:else>
-        <view wx:for="{{joined}}" wx:key="id" class="card-visual-shell"><activity-card item="{{item}}" bindselect="handleActivitySelect" /></view>
-        <empty-state wx:if="{{!joined.length}}" title="还没有参与行程" description="去发现页看看澳门校园正在拼的行程。" />
-      </block>
-    </block>
-
-    <block wx:else>
-      <view wx:if="{{!driverProfile || !driverProfile.canAcceptRide}}" class="driver-onboarding surface">
-        <image class="driver-onboarding-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
-        <view class="driver-onboarding-main">
-          <view class="driver-onboarding-title">{{driverApplication && driverApplication.status === 'SUBMITTED' ? '司机认证审核中' : driverApplication && driverApplication.status === 'NEEDS_MORE_INFO' ? '司机认证需要补充资料' : '成为澳门校园认证合乘司机'}}</view>
-          <view class="driver-onboarding-copy">{{driverApplication && driverApplication.status === 'SUBMITTED' ? '审核通过前仍可正常使用乘客功能，暂不能确认承接。' : driverApplication && driverApplication.status === 'NEEDS_MORE_INFO' ? '查看补充原因并更新资料，乘客功能不受影响。' : '仅向已核验身份、驾驶资格及车辆的司机开放确认承接。'}}</view>
-        </view>
-        <button class="driver-info-button" bindtap="handleDriverApplicationInfo">{{driverApplication ? '查看认证状态' : '开始司机认证'}}</button>
-      </view>
-
-      <block wx:else>
-        <view class="driver-profile-card surface">
-          <image class="driver-profile-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
-          <view class="driver-profile-main"><view class="driver-profile-title">司机资格已通过</view><view class="driver-profile-copy">已审核车辆 {{driverProfile.vehicles.length}} 辆，接车时间前可确认承接校园合乘行程。</view></view>
-          <status-badge label="已认证" tone="info" />
-        </view>
-
-        <view class="section-heading driver-section-heading"><text>已承接任务</text><text class="count count--driver">{{driverRides.length}}</text></view>
-        <view wx:for="{{driverRides}}" wx:key="id" class="driver-task-card surface" data-item="{{item}}" bindtap="handleDriverTask" role="button" aria-label="{{item.activity.title}}，接送时间{{item.pickupLabel}}">
-          <view class="driver-task-copy"><view class="driver-task-route">{{item.activity.originLabel}} → {{item.activity.destinationLabel}}</view><view class="driver-task-title">{{item.activity.title}}</view><view class="driver-task-meta"><text>{{item.pickupLabel}}</text><text>{{item.vehicleLabel}}</text></view></view>
-          <image class="driver-task-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
-          <text class="driver-task-arrow" aria-hidden="true">›</text>
-        </view>
-        <view wx:if="{{!driverRides.length}}" class="driver-empty" role="status" aria-label="暂无已承接任务。去发现页切换到我是司机，查看接车时间前可承接的行程。">
-          <image class="driver-empty-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
-          <view class="driver-empty-title">暂无已承接任务</view>
-          <view class="driver-empty-description">去发现页切换到“我是司机”，查看接车时间前可承接的行程。</view>
-        </view>
-      </block>
-    </block>
-
-    <view wx:if="{{isMock}}" class="demo-panel surface">
-      <view class="demo-heading"><view><view class="demo-title">演示身份</view><view class="demo-description">仅用于本地体验申请、审批与司机承接闭环</view></view><button class="reset-button" bindtap="handleResetDemo">重置</button></view>
-      <view class="persona-row"><button wx:for="{{personas}}" wx:key="id" class="persona-button {{persona === item.id ? 'persona-button--active' : ''}}" data-id="{{item.id}}" bindtap="handlePersona">{{item.label}}</button></view>
-    </view>
+    <view wx:if="{{isMock}}" class="demo-panel surface"><view class="demo-heading"><view><view class="demo-title">演示身份</view><view class="demo-description">仅用于本地体验拼单流程</view></view><button class="reset-button" bindtap="handleResetDemo">重置</button></view><view class="persona-row"><button wx:for="{{personas}}" wx:key="id" class="persona-button {{persona === item.id ? 'persona-button--active' : ''}}" data-id="{{item.id}}" bindtap="handlePersona">{{item.label}}</button></view></view>
   </block>
 </view>

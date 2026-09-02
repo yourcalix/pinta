@@ -1,7 +1,7 @@
 'use strict';
 
 const PHONE_REGION_OPTIONS = Object.freeze([
-  { code: '+853', label: '澳门 +853', pattern: /^6\d{7}$/, placeholder: '请输入 8 位澳门手机号' },
+  { code: '+853', label: '+853', pattern: /^6\d{7}$/, placeholder: '请输入 8 位手机号' },
   { code: '+86', label: '中国内地 +86', pattern: /^1\d{10}$/, placeholder: '请输入 11 位手机号' },
   { code: '+852', label: '香港 +852', pattern: /^[569]\d{7}$/, placeholder: '请输入 8 位香港手机号' }
 ]);

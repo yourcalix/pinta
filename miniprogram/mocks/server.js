@@ -7,9 +7,19 @@ const {
   getRideRoute
 } = require('../config/locations');
 
-const ACTIVITY_TYPES = Object.freeze(['ride', 'product', 'buddy']);
+const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
+const LEGACY_ACTIVITY_TYPE_MAP = Object.freeze({ ride: 'companion', buddy: 'sport', product: 'food' });
+const REMOVED_ACTIONS = new Set([
+  'student.verification.get', 'student.verification.submit', 'student.document.prepare',
+  'student.document.confirm', 'admin.studentVerification.review',
+  'onboarding.selectRole',
+  'driver.application.get', 'driver.application.submit', 'driver.document.prepare',
+  'driver.document.confirm', 'driver.application.withdraw', 'admin.driverApplication.review',
+  'ride.join', 'ride.driver.profile', 'ride.driver.mine', 'ride.driver.memberContacts',
+  'ride.driver.accept', 'ride.driver.cancel'
+]);
 
-const STATE_KEY = 'pinba_mock_state_v2';
+const STATE_KEY = 'pinba_mock_state_v3';
 const PERSONA_KEY = 'pinba_mock_persona_v1';
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -34,13 +44,20 @@ const MUTATING_ACTIONS = new Set([
   'application.withdraw',
   'ride.join',
   'member.leave',
+  'group.contact.share',
+  'group.contact.revoke',
+  'dm.conversation.create',
+  'dm.message.send',
+  'dm.conversation.read',
   'notification.read',
   'report.create',
   'admin.activity.suspend',
   'ride.driver.accept',
   'ride.driver.cancel'
 ]);
-const BUSINESS_IDEMPOTENT_ACTIONS = new Set(['driver.application.submit', 'admin.driverApplication.review']);
+const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
+  'driver.application.submit', 'admin.driverApplication.review'
+]);
 const PUBLIC_ACTIONS = new Set([
   'activity.list',
   'activity.detail',
@@ -172,52 +189,52 @@ function seedState() {
   const rideStartsAt = rideStartDate.toISOString();
   const rideWindowEnd = new Date(rideStartDate.getTime() + 60 * 60 * 1000).toISOString();
   return {
-    schemaVersion: 5,
+    schemaVersion: 9,
     sequence: 100,
     users: [
-      { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['校园出行'], adultConfirmed: true } },
-      { id: 'u_member', role: 'user', status: 'ACTIVE', profile: { nickname: '阿同', gender: 'FEMALE', city: '澳门', interests: ['校园出行'], adultConfirmed: true } },
-      { id: 'u_driver', role: 'user', status: 'ACTIVE', onboarding: { roleIntent: 'DRIVER', completedAt: now }, profile: { nickname: '林师傅', gender: 'MALE', city: '澳门', interests: ['校园互助'], adultConfirmed: true } },
+      { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
+      { id: 'u_member', role: 'user', status: 'ACTIVE', profile: { nickname: '阿同', gender: 'FEMALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
+      { id: 'u_driver', role: 'user', status: 'ACTIVE', onboarding: { roleIntent: 'DRIVER', completedAt: now }, profile: { nickname: '林师傅', gender: 'MALE', city: '澳门', interests: ['邻里互助'], adultConfirmed: true } },
+      { id: 'u_student', role: 'user', status: 'ACTIVE', profile: { nickname: '小满', gender: 'FEMALE', city: '澳门', interests: ['城市活动'], adultConfirmed: true } },
       { id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', gender: 'FEMALE', city: '澳门', interests: ['凑单'], adultConfirmed: true } },
       { id: 'u_admin', role: 'admin', status: 'ACTIVE', profile: { nickname: '运营', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } },
       { id: 'u_disabled', role: 'user', status: 'DISABLED', profile: { nickname: '受限账号', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } }
     ],
     activities: [
       {
-        id: 'a_ride', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'ride',
-        title: '青茂口岸到凼仔校区', description: '周五晚从青茂口岸回校，寻找同路同学。',
-        city: '澳门', district: '澳门校园', placeLabel: '青茂口岸 → 凼仔校区',
-        startsAt: rideStartsAt, deadlineAt: isoAfter(18), targetMembers: 7, minPassengers: 7, maxPassengers: 7, memberCount: 1,
-        contactInfo: '微信号 pinba_xiaopin', rules: '成团后在青茂口岸附近公共区域确认具体上车点。',
+        id: 'a_ride', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'companion',
+        title: '周五晚一起去凼仔', description: '寻找同路伙伴，成团后共同商量合规出行方式。',
+        city: '澳门', district: '澳门城区', placeLabel: '青茂口岸 → 凼仔',
+        startsAt: rideStartsAt, deadlineAt: isoAfter(18), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
+        rules: '成团后在公共区域集合，自主选择合法出行方式。',
         typeData: {
-          routeId: 'QINGMAO_TO_TAIPA', routeCode: '青城',
-          origin: { id: 'QINGMAO', label: '青茂口岸' }, destination: { id: 'TAIPA_CAMPUS', label: '凼仔校区' },
-          pickupWindowEnd: rideWindowEnd, feeType: 'SHARED_COST', luggageRule: 'ONE_SMALL'
+          originLabel: '青茂口岸', destinationLabel: '凼仔',
+          timeFlexibility: 'WITHIN_60_MIN', transportPreference: 'DISCUSS_AFTER_FORMED', luggageType: 'NONE'
         },
         status: 'RECRUITING', avatarRoster: [{ memberId: 'm_ride_owner', avatarKind: 'PASSENGER_A' }], version: 1, createdAt: now, updatedAt: now
       },
       {
-        id: 'a_product', ownerId: 'u_merchant', owner: { nickname: '邻里团长' }, type: 'product',
-        title: '精品咖啡豆四袋凑单', description: '官方旗舰店满减，成团后线下验货自提，不提前收款。',
-        city: '澳门', district: '澳门校园', placeLabel: '校园公共区域',
-        startsAt: isoAfter(40), deadlineAt: isoAfter(28), targetMembers: 3, memberCount: 1,
-        contactInfo: '微信号 coffee_pin_01', rules: '到货后在商场公共区域当面验货交付。',
-        typeData: { productName: '中度烘焙咖啡豆', targetQuantity: 4, unitPriceRange: '58—68元/袋', shoppingChannel: '品牌官方旗舰店', deliveryMode: 'FACE_TO_FACE' },
+        id: 'a_product', ownerId: 'u_merchant', owner: { nickname: '邻里团长' }, type: 'food',
+        title: '今晚一起吃火锅', description: '想找几位伙伴一起拼桌，口味和时间成团后商量。',
+        city: '澳门', district: '澳门城区', placeLabel: '附近餐厅',
+        startsAt: isoAfter(40), deadlineAt: isoAfter(28), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
+        rules: '各自到店消费，不代收款、不提供配送。',
+        typeData: { venue: '附近餐厅', cuisine: '火锅', budget: '人均约 80', dietaryNotes: '可选清汤锅' },
         status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
       },
       {
-        id: 'a_buddy', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'buddy',
+        id: 'a_buddy', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'sport',
         title: '周末新手羽毛球双打', description: '新手友好，轻松运动一小时，场地费AA。',
-        city: '澳门', district: '澳门校园', placeLabel: '校园体育馆',
-        startsAt: isoAfter(10), deadlineAt: isoAfter(5), targetMembers: 2, memberCount: 2,
-        contactInfo: '微信号 pinba_xiaopin', rules: '体育馆一楼前台旁会合，请自带球拍。',
-        typeData: { category: '运动', costMode: 'AA', level: 'BEGINNER', equipment: '自带球拍' },
+        city: '澳门', district: '澳门城区', placeLabel: '附近体育馆',
+        startsAt: isoAfter(10), deadlineAt: isoAfter(5), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 2,
+        rules: '体育馆一楼前台旁会合，请自带球拍。',
+        typeData: { sportType: '羽毛球', venue: '附近体育馆', level: 'BEGINNER', intensity: 'RELAXED', equipment: '自带球拍' },
         status: 'FORMED', version: 2, formedAt: now, createdAt: now, updatedAt: now
       },
       {
         id: 'a_suspended', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'buddy',
         title: '已下架活动测试数据', description: '仅用于验证下架状态，不应出现在公开列表或详情中。',
-        city: '澳门', district: '澳门校园', placeLabel: '测试地点',
+        city: '澳门', district: '澳门城区', placeLabel: '测试地点',
         startsAt: isoAfter(12), deadlineAt: isoAfter(6), targetMembers: 2, memberCount: 1,
         contactInfo: '微信号 pinba_suspended', rules: '内部测试规则',
         typeData: { category: '测试', costMode: 'AA', level: 'BEGINNER', equipment: '' },
@@ -269,7 +286,7 @@ function seedState() {
     notifications: [
       {
         id: 'n_owner_apply', userId: 'u_owner', type: 'NEW_APPLICATION', activityId: 'a_ride',
-        title: '“青茂口岸到凼仔校区同行”有新的加入申请', read: false, createdAt: now,
+        title: '“青茂口岸到凼仔同行”有新的加入申请', read: false, createdAt: now,
         url: 'https://untrusted.example/should-not-leak', page: 'untrusted/free-form/path'
       },
       { id: 'n_member_formed', userId: 'u_member', type: 'GROUP_FORMED', activityId: 'a_buddy', title: '“周末新手羽毛球双打”已成团', read: false, createdAt: now }
@@ -289,7 +306,7 @@ function seedState() {
       {
         id: 'community_welcome', authorId: 'u_member',
         author: { nickname: '阿同', avatarKind: 'PASSENGER_B' },
-        content: '大家从横琴口岸回校时，通常会提前多久出发？想听听大家的经验。',
+        content: '大家从横琴口岸去凼仔时，通常会提前多久出发？想听听大家的经验。',
         replyCount: 1, status: 'ACTIVE', createdAt: now, updatedAt: now
       }
     ],
@@ -300,6 +317,8 @@ function seedState() {
         status: 'ACTIVE', createdAt: now, updatedAt: now
       }
     ],
+    directConversations: [],
+    directMessages: [],
     reports: [],
     idempotency: {}
   };
@@ -322,7 +341,7 @@ function writeStorage(key, value) {
 }
 
 let state = readStorage(STATE_KEY) || seedState();
-if (!state || state.schemaVersion !== 5) state = seedState();
+if (!state || state.schemaVersion !== 9) state = seedState();
 let currentUserId = readStorage(PERSONA_KEY) || 'u_owner';
 if (!state.idempotency) state.idempotency = {};
 if (!state.activityQuestions) state.activityQuestions = [];
@@ -334,6 +353,8 @@ if (!state.driverDocumentUploads) state.driverDocumentUploads = [];
 if (!state.memberContacts) state.memberContacts = [];
 if (!state.communityPosts) state.communityPosts = [];
 if (!state.communityReplies) state.communityReplies = [];
+if (!state.directConversations) state.directConversations = [];
+if (!state.directMessages) state.directMessages = [];
 
 function publicCommunityPost(item) {
   return {
@@ -365,6 +386,15 @@ function assertCommunityContent(content, max) {
   assert(normalized.length >= 1 && normalized.length <= max, 'VALIDATION_ERROR', `内容长度不能超过${max}个字符`);
   const forbidden = /(?:https?:\/\/|www\.|(?:weixin|wechat|微信|vx|v信|微讯|qq|群号)[A-Za-z0-9]{4,}|(?:\+?\d[\d\s()-]{6,}\d)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i;
   assert(!forbidden.test(normalized) && !forbidden.test(compact), 'VALIDATION_ERROR', '讨论区不支持外链或联系方式');
+  return normalized;
+}
+
+function assertDirectMessageContent(content) {
+  const normalized = String(content || '').trim();
+  assert(normalized.length >= 1 && normalized.length <= 500, 'VALIDATION_ERROR', '消息内容长度不符合要求');
+  const compact = normalized.replace(/[\s._\-—:：·（）()]+/g, '');
+  const forbidden = /(?:https?:\/\/|www\.|(?:weixin|wechat|微信|vx|v信|微讯|qq|群号)[A-Za-z0-9]{4,}|(?:\+?\d[\d\s()-]{6,}\d)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i;
+  assert(!forbidden.test(normalized) && !forbidden.test(compact), 'VALIDATION_ERROR', '私信暂不支持外链或联系方式');
   return normalized;
 }
 
@@ -404,6 +434,18 @@ function encodeCommunityCursor(item) {
   return asciiBase64Encode(JSON.stringify({ createdAt: item.createdAt, id: item.id }));
 }
 
+function encodeDirectCursor(item, timeField) {
+  return asciiBase64Encode(JSON.stringify({ createdAt: item[timeField], id: item.id }));
+}
+
+function decodeDirectCursor(value) {
+  return decodeCommunityCursor(value);
+}
+
+function afterDirectCursor(item, cursor, timeField) {
+  return !cursor || item[timeField] < cursor.createdAt || (item[timeField] === cursor.createdAt && item.id < cursor.id);
+}
+
 function decodeCommunityCursor(value) {
   if (value === undefined || value === null || value === '') return null;
   try {
@@ -425,7 +467,7 @@ function afterAscendingCommunityCursor(item, cursor) {
 }
 
 function persist() {
-  const { memberContacts, ...safeState } = state;
+  const { memberContacts, directMessages, directConversations, ...safeState } = state;
   writeStorage(STATE_KEY, safeState);
   writeStorage(PERSONA_KEY, currentUserId);
 }
@@ -445,6 +487,40 @@ function activityById(id) {
 
 function activeMember(activityId, userId) {
   return state.members.find((item) => item.activityId === activityId && item.userId === userId && item.status === 'ACTIVE');
+}
+
+function directConversationDto(conversation) {
+  const peerId = conversation.participantAId === currentUserId ? conversation.participantBId : conversation.participantAId;
+  const peer = userById(peerId);
+  const sourceActivity = conversation.source && activityById(conversation.source.id);
+  return {
+    id: conversation.id,
+    peer: {
+      nickname: peer && peer.profile && peer.profile.nickname || '拼吧用户',
+      avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
+    },
+    source: clone(conversation.source),
+    lastMessage: conversation.lastMessageId ? {
+      id: conversation.lastMessageId,
+      preview: conversation.lastMessagePreview || '',
+      isMine: conversation.lastSenderId === currentUserId,
+      createdAt: conversation.lastMessageAt
+    } : null,
+    unreadCount: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0),
+    messagingAvailable: Boolean(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)),
+    updatedAt: conversation.updatedAt
+  };
+}
+
+function directMessageDto(message) {
+  return {
+    id: message.id,
+    conversationId: message.conversationId,
+    text: message.text,
+    isMine: message.senderId === currentUserId,
+    status: message.status || 'SENT',
+    createdAt: message.createdAt
+  };
 }
 
 function isMockRideJoinable(activity, at) {
@@ -553,73 +629,33 @@ function publicActivity(activity, options = {}) {
       .filter((item) => item.activityId === activity.id && item.applicantId === currentUserId)
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
   const viewerMember = anonymous ? null : activeMember(activity.id, currentUserId);
-  const viewerFulfillment = activity.type === 'ride'
-    ? (state.rideFulfillments || []).find((item) => item.activityId === activity.id)
-    : null;
+  const storedType = activity.type;
   const viewerRole = anonymous
     ? 'guest'
     : activity.ownerId === currentUserId
       ? 'owner'
       : viewerMember
         ? 'member'
-        : viewerFulfillment && viewerFulfillment.status === 'ASSIGNED' && viewerFulfillment.driverId === currentUserId
-          ? 'driver'
-          : viewerApplication ? 'applicant' : 'guest';
+        : viewerApplication ? 'applicant' : 'guest';
   const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, ...safe } = activity;
-  const rideCapacity = activity.type === 'ride' ? 7 : (activity.maxPassengers || activity.targetMembers);
+  const capacity = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
   const result = {
     ...clone(safe),
-    targetMembers: activity.type === 'ride' ? 7 : activity.targetMembers,
-    minPassengers: activity.type === 'ride' ? 7 : (activity.minPassengers || activity.targetMembers),
-    maxPassengers: rideCapacity,
-    remainingCapacity: Math.max(0, Number(rideCapacity) - Number(activity.memberCount || 0)),
-    status: activity.type === 'ride' && ['RECRUITING', 'FORMED'].includes(activity.status)
-      ? (activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING')
-      : activity.status,
+    type: LEGACY_ACTIVITY_TYPE_MAP[storedType] || storedType,
+    minMembers: activity.minMembers || activity.minPassengers || Math.min(2, capacity),
+    maxMembers: capacity,
+    remainingCapacity: Math.max(0, Number(capacity) - Number(activity.memberCount || 0)),
+    status: activity.status,
     viewerRole
   };
-  if (activity.type === 'ride') {
-    result.avatarSlots = publicAvatarSlots(avatarRoster);
-    const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
-    result.rideFulfillment = fulfillment ? {
-      status: fulfillment.status,
-      pickupAt: fulfillment.pickupAt || null,
-      assignedAt: fulfillment.assignedAt || null
-    } : null;
-    if (fulfillment) {
-      const driver = fulfillment.driverId && userById(fulfillment.driverId);
-      const vehicle = fulfillment.vehicleId && (state.vehicles || []).find((item) => item.id === fulfillment.vehicleId);
-      if (driver) result.rideFulfillment.driver = { nickname: driver.profile.nickname };
-      if (vehicle) result.rideFulfillment.vehicle = { type: vehicle.type, plateMasked: vehicle.plateMasked };
-    }
-    const at = new Date().toISOString();
-    result.rideJoinable = isMockRideJoinable(activity, at);
-    result.canJoinRide = result.rideJoinable && (viewerRole === 'guest' || viewerRole === 'applicant');
-    result.joinUnavailableReason = result.canJoinRide
-      ? ''
-      : viewerRole === 'owner'
-        ? '这是你发布的行程'
-        : viewerRole === 'member'
-          ? '你已加入该行程'
-          : viewerRole === 'driver'
-            ? '你已承接该行程，不能同时作为乘客'
-            : mockRideJoinUnavailableReason(activity, at);
-    result.canLeaveRide = viewerRole === 'member' && Boolean(fulfillment && fulfillment.status === 'UNASSIGNED');
-    result.rideExitLocked = viewerRole === 'member' && Boolean(fulfillment && fulfillment.status !== 'UNASSIGNED');
-    result.driverAcceptable = isMockRideAcceptable(activity, new Date().toISOString());
-    result.driverUnacceptableReason = result.driverAcceptable
-      ? ''
-      : fulfillment && fulfillment.status === 'ASSIGNED'
-        ? '该行程已有司机确认'
-        : '接车时间已到，暂不可承接';
-  }
+  if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) result.legacy = { sourceType: storedType, readOnly: true };
   if (viewerApplication) result.viewerApplication = publicApplication(viewerApplication);
   if (viewerMember) {
     result.viewerMembership = {
       role: viewerMember.role,
       status: viewerMember.status,
       joinedAt: viewerMember.joinedAt,
-      ...(activity.type === 'ride' ? { luggageType: viewerMember.luggageType || null } : {})
+      ...(storedType === 'ride' ? { luggageType: viewerMember.luggageType || null } : {})
     };
   }
   return result;
@@ -638,6 +674,24 @@ function requireUser() {
   const user = userById(currentUserId);
   if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
   if (user.status !== 'ACTIVE') throw fail('ACCOUNT_DISABLED', '账号已被限制，请联系平台处理');
+  return user;
+}
+
+function requireActiveUser(requireProfile = false) {
+  const user = requireUser();
+  if (requireProfile) {
+    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
+  }
+  return user;
+}
+
+function requireApprovedDriver(requireProfile = false) {
+  const user = requireUser();
+  if (requireProfile) {
+    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
+  }
+  const profile = driverProfile();
+  assert(profile && profile.canAcceptRide === true, 'DRIVER_NOT_APPROVED', '司机资格尚未通过审核');
   return user;
 }
 
@@ -671,23 +725,14 @@ function validateActivityListFilters(input) {
   const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
   const district = optionalFilterString(input.district, '行政区', 30);
   const keyword = optionalFilterString(input.keyword, '搜索词', 30);
-  const routeId = optionalFilterString(input.routeId, '固定路线', 40);
-  const campusId = optionalFilterString(input.campusId, '校区', 40);
-  const viewMode = optionalFilterString(input.viewMode, '浏览视角', 20) || 'passenger';
   assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效', { field: '活动类型' });
-  assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持澳门试点', { field: 'city' });
+  assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
   assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效', { field: '行政区' });
-  assert(!routeId || getRideRoute(routeId), 'VALIDATION_ERROR', '固定路线选项无效', { field: '固定路线' });
-  assert(!campusId || ['TAIPA_CAMPUS', 'GOLDEN_DRAGON_CAMPUS'].includes(campusId), 'VALIDATION_ERROR', '校区选项无效', { field: '校区' });
-  assert(['passenger', 'driver'].includes(viewMode), 'VALIDATION_ERROR', '浏览视角选项无效');
   return {
     type: type || undefined,
     city,
     district: district || undefined,
-    keyword: keyword || undefined,
-    routeId: routeId || undefined,
-    campusId: campusId || undefined,
-    viewMode
+    keyword: keyword || undefined
   };
 }
 
@@ -769,20 +814,9 @@ function listActivities(input) {
   const filters = validateActivityListFilters(input);
   const now = new Date().toISOString();
   let candidates = state.activities.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status));
-  if (filters.type) candidates = candidates.filter((item) => item.type === filters.type);
+  if (filters.type) candidates = candidates.filter((item) => (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type);
   candidates = candidates.filter((item) => item.city === filters.city);
   if (filters.district) candidates = candidates.filter((item) => item.district === filters.district);
-  if (filters.routeId) candidates = candidates.filter(
-    (item) => item.type === 'ride' && item.typeData && item.typeData.routeId === filters.routeId
-  );
-  if (filters.campusId) {
-    const campusRouteIds = RIDE_ROUTES
-      .filter((route) => route.originId === filters.campusId || route.destinationId === filters.campusId)
-      .map((route) => route.id);
-    candidates = candidates.filter(
-      (item) => item.type === 'ride' && item.typeData && campusRouteIds.includes(item.typeData.routeId)
-    );
-  }
   candidates.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
 
   const offset = parsePublicCursor(input.cursor);
@@ -798,10 +832,7 @@ function listActivities(input) {
     rawOffset += 1;
     scanned += 1;
     const keywordMatch = !keyword || `${activity.title} ${activity.description}`.toLowerCase().includes(keyword);
-    const viewMatch = filters.viewMode === 'driver'
-      ? isMockRideAcceptable(activity, now)
-      : activity.type !== 'ride' || isMockRideJoinable(activity, now);
-    if (['RECRUITING', 'FORMED'].includes(activity.status) && keywordMatch && viewMatch) {
+    if (['RECRUITING', 'FORMED'].includes(activity.status) && keywordMatch) {
       if (items.length === limit) {
         return {
           items: items.map((item) => publicActivity(item, { anonymous: true })),
@@ -822,47 +853,25 @@ function createActivity(input) {
   const user = requireUser();
   assert(user.profile && user.profile.adultConfirmed, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
   const now = new Date().toISOString();
-  const { luggageType, contactInfo, ...activityInput } = clone(input);
+  const activityInput = clone(input);
+  assert(ACTIVITY_TYPES.includes(activityInput.type), 'VALIDATION_ERROR', '活动类型选项无效');
+  assert(normalizedContent(activityInput.title, '标题', 2, 40), 'VALIDATION_ERROR', '标题格式无效');
+  assert(normalizedContent(activityInput.description, '活动说明', 2, 500), 'VALIDATION_ERROR', '活动说明格式无效');
+  const startsAt = Date.parse(activityInput.startsAt);
+  const deadlineAt = Date.parse(activityInput.deadlineAt);
+  assert(Number.isFinite(startsAt) && startsAt > Date.parse(now), 'VALIDATION_ERROR', '活动时间必须晚于当前时间');
+  assert(Number.isFinite(deadlineAt) && deadlineAt > Date.parse(now) && deadlineAt < startsAt, 'VALIDATION_ERROR', '报名截止时间无效');
+  const minMembers = Number(activityInput.minMembers);
+  const maxMembers = Number(activityInput.maxMembers);
+  assert(Number.isInteger(minMembers) && Number.isInteger(maxMembers) && minMembers >= 2 && maxMembers <= 20 && minMembers <= maxMembers, 'VALIDATION_ERROR', '人数设置无效');
+  assert(activityInput.typeData && typeof activityInput.typeData === 'object', 'VALIDATION_ERROR', '请补齐活动信息');
+  delete activityInput.driverId;
+  delete activityInput.vehicleId;
+  delete activityInput.contactInfo;
   const activity = {
     id: nextId('activity'), ownerId: user.id, owner: { nickname: user.profile.nickname },
     ...activityInput, memberCount: 1, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
   };
-  if (activity.type === 'ride') {
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
-    const route = getRideRoute(activity.typeData && activity.typeData.routeId);
-    assert(route, 'VALIDATION_ERROR', '请选择固定路线');
-    const startsAt = Date.parse(activity.startsAt);
-    const deadlineAt = Date.parse(activity.deadlineAt);
-    const pickupWindowEnd = Date.parse(activity.typeData && activity.typeData.pickupWindowEnd);
-    const minPassengers = Number(activity.minPassengers);
-    const maxPassengers = Number(activity.maxPassengers);
-    assert(Number.isFinite(startsAt) && startsAt > Date.parse(now), 'VALIDATION_ERROR', '出发时间必须晚于当前时间');
-    assert(startsAt <= Date.parse(now) + 7 * 24 * 60 * 60 * 1000, 'VALIDATION_ERROR', '出发时间最多可选择未来 7 天');
-    assert(new Date(startsAt).getMinutes() % 15 === 0, 'VALIDATION_ERROR', '出发时间需按 15 分钟选择');
-    assert(Number.isFinite(deadlineAt) && deadlineAt > Date.parse(now) && deadlineAt < startsAt, 'VALIDATION_ERROR', '报名截止时间无效');
-    assert(minPassengers === 7, 'VALIDATION_ERROR', '成团人数固定为 7 名乘客');
-    assert(maxPassengers === 7, 'VALIDATION_ERROR', '最大乘客数固定为 7 名乘客');
-    assert(Number.isFinite(pickupWindowEnd) && pickupWindowEnd - startsAt === 60 * 60 * 1000, 'VALIDATION_ERROR', '接车时间窗必须为 60 分钟');
-    assert(['FREE', 'SHARED_COST', 'NO_COST'].includes(activity.typeData.feeType), 'VALIDATION_ERROR', '费用方式无效');
-    assert(['NONE', 'SMALL', 'LARGE'].includes(luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
-    assert(validRidePhone(contactInfo), 'VALIDATION_ERROR', '请输入正确的联系电话');
-    assert(!hasRidePrice([activity.title, activity.description, activity.rules].join(' ')), 'VALIDATION_ERROR', '拼车仅允许合理成本均摊，不能填写具体收费金额');
-    activity.city = PILOT_CITY;
-    activity.district = PILOT_DISTRICTS[0];
-    activity.placeLabel = `${route.origin} → ${route.destination}`;
-    activity.targetMembers = 7;
-    activity.minPassengers = 7;
-    activity.maxPassengers = 7;
-    const rideTypeData = { ...activity.typeData };
-    delete rideTypeData.luggageRule;
-    activity.typeData = {
-      ...rideTypeData,
-      routeCode: route.code,
-      origin: { id: route.originId, label: route.origin },
-      destination: { id: route.destinationId, label: route.destination }
-    };
-    state.rideFulfillments.push({ activityId: activity.id, status: 'UNASSIGNED', pickupAt: null, driverId: null, vehicleId: null });
-  }
   state.activities.unshift(activity);
   const ownerMember = {
     id: nextId('member'),
@@ -870,19 +879,9 @@ function createActivity(input) {
     userId: user.id,
     role: 'OWNER',
     status: 'ACTIVE',
-    joinedAt: now,
-    ...(activity.type === 'ride' ? { luggageType, avatarKind: avatarKindFromGender(user.profile.gender) } : {})
+    joinedAt: now
   };
   state.members.push(ownerMember);
-  if (activity.type === 'ride') {
-    activity.avatarRoster = upsertAvatarRoster([], ownerMember.id, ownerMember.avatarKind);
-    state.memberContacts.push({
-      id: nextId('memberContact'), activityId: activity.id, memberId: ownerMember.id, userId: user.id,
-      phone: contactInfo.replace(/[\s()-]+/g, ''), status: 'ACTIVE', createdAt: now, updatedAt: now
-    });
-  } else {
-    activity.contactInfo = contactInfo;
-  }
   return { activity: publicActivity(activity) };
 }
 
@@ -966,7 +965,7 @@ function cancelRideAssignment(input) {
 }
 
 function submitApplication(input) {
-  const user = requireUser();
+  const user = requireActiveUser(true);
   const activity = activityById(input.activityId);
   assert(activity, 'NOT_FOUND', '活动不存在或已失效');
   const now = new Date().toISOString();
@@ -1081,16 +1080,14 @@ function approveApplication(input) {
 }
 
 function handle(action, input, idempotencyKey = '') {
+  if (REMOVED_ACTIONS.has(action)) throw fail('NOT_FOUND', '接口动作不存在');
   if (!PUBLIC_ACTIONS.has(action)) requireUser();
   if (action === 'auth.login') {
     const user = requireUser();
-    const application = state.driverApplications.find((item) => item.userId === user.id);
     return {
       user: selfUser(user),
       onboarding: {
-        profileComplete: completeRideProfile(user.profile),
-        roleIntent: user.onboarding && user.onboarding.roleIntent || null,
-        driverApplication: publicDriverApplication(application)
+        profileComplete: completeRideProfile(user.profile)
       },
       sessionScope: `mock-session-${currentUserId}`
     };
@@ -1119,10 +1116,13 @@ function handle(action, input, idempotencyKey = '') {
     return { user: selfUser(user) };
   }
   if (action === 'driver.application.get') {
+    requireUser();
     const application = state.driverApplications.find((item) => item.userId === currentUserId);
     return { application: publicDriverApplication(application) };
   }
   if (action === 'driver.document.prepare') {
+    const user = requireUser();
+    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
     assert(['identityFront', 'driverLicense', 'vehicleExterior'].includes(input.kind), 'VALIDATION_ERROR', '文件类型无效');
     const upload = {
       id: nextId('driver_upload'), userId: currentUserId, kind: input.kind,
@@ -1133,6 +1133,8 @@ function handle(action, input, idempotencyKey = '') {
     return { upload: { id: upload.id, kind: upload.kind, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt } };
   }
   if (action === 'driver.document.confirm') {
+    const user = requireUser();
+    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
     const upload = state.driverDocumentUploads.find((item) => item.id === input.uploadId);
     assert(upload && upload.userId === currentUserId && upload.kind === input.kind && ['PREPARED', 'INSPECTED'].includes(upload.status), 'DRIVER_DOCUMENT_REQUIRED', '认证图片无效');
     assert(input.fileID === upload.cloudPath, 'DRIVER_DOCUMENT_REQUIRED', '文件与上传凭据不匹配');
@@ -1143,6 +1145,8 @@ function handle(action, input, idempotencyKey = '') {
     return { document: { uploadId: upload.id, kind: upload.kind, inspectedAt: upload.inspectedAt } };
   }
   if (action === 'driver.application.submit') {
+    const user = requireUser();
+    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
     const current = state.driverApplications.find((item) => item.userId === currentUserId);
     const payloadHash = opaqueSensitiveHash(stableSerialize(input));
     if (current && current.operationKeyHash === idempotencyKey) {
@@ -1188,6 +1192,7 @@ function handle(action, input, idempotencyKey = '') {
     return { application: publicDriverApplication(application) };
   }
   if (action === 'driver.application.withdraw') {
+    requireUser();
     const application = state.driverApplications.find((item) => item.userId === currentUserId);
     assert(application && ['SUBMITTED', 'NEEDS_MORE_INFO'].includes(application.status), 'DRIVER_APPLICATION_LOCKED', '当前认证状态不能撤回');
     application.status = 'WITHDRAWN';
@@ -1275,17 +1280,178 @@ function handle(action, input, idempotencyKey = '') {
     return { deleted: true, replyId: reply.id };
   }
   if (action === 'activity.mine') {
-    const user = requireUser();
+    const user = requireActiveUser();
     const joinedIds = state.members.filter((item) => item.userId === user.id && item.role === 'MEMBER' && item.status === 'ACTIVE').map((item) => item.activityId);
     return {
       owned: state.activities.filter((item) => item.ownerId === user.id).map(publicActivity),
       joined: state.activities.filter((item) => joinedIds.includes(item.id)).map(publicActivity)
     };
   }
-  if (action === 'activity.create') return createActivity(input);
-  if (action === 'ride.driver.profile') return { driver: driverProfile() };
+  if (action === 'activity.create') { requireActiveUser(true); return createActivity(input); }
+  if (action === 'group.space' || action === 'group.contact.share' || action === 'group.contact.revoke') {
+    const user = requireActiveUser();
+    const activity = activityById(input.activityId);
+    assert(activity && ['FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '仅成团中的活动可使用成员空间');
+    const selfMember = state.members.find((item) => item.activityId === activity.id && item.userId === user.id && item.status === 'ACTIVE');
+    assert(selfMember, 'FORBIDDEN', '你不是该活动的有效成员');
+    if (action === 'group.contact.share') {
+      assert(['WECHAT', 'MOBILE'].includes(input.type), 'VALIDATION_ERROR', '联系方式类型无效');
+      const value = String(input.value || '').trim();
+      assert(input.type === 'WECHAT' ? /^[A-Za-z][-_A-Za-z0-9]{5,19}$/.test(value) : /^\+?\d{8,15}$/.test(value), 'VALIDATION_ERROR', '联系方式格式无效');
+      const id = `memberContact:${activity.id}:${selfMember.id}`;
+      const existing = state.memberContacts.find((item) => item.id === id);
+      const contact = { id, activityId: activity.id, memberId: selfMember.id, userId: user.id, type: input.type, value, shared: true, status: 'ACTIVE', updatedAt: new Date().toISOString() };
+      if (existing) Object.assign(existing, contact); else state.memberContacts.push({ ...contact, createdAt: contact.updatedAt });
+    }
+    if (action === 'group.contact.revoke') {
+      const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === selfMember.id);
+      if (contact) Object.assign(contact, { shared: false, status: 'INACTIVE', value: null, updatedAt: new Date().toISOString() });
+    }
+    const members = state.members.filter((item) => item.activityId === activity.id && item.status === 'ACTIVE').map((item) => {
+      const memberUser = userById(item.userId);
+      const contact = state.memberContacts.find((entry) => entry.activityId === activity.id && entry.memberId === item.id && entry.status === 'ACTIVE' && entry.shared === true);
+      return { memberId: item.id, role: item.role, nickname: memberUser && memberUser.profile.nickname || '拼吧用户', isSelf: item.userId === user.id, sharedContact: contact ? { type: contact.type, value: contact.value } : null };
+    });
+    return { activityId: activity.id, meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules || '' }, members };
+  }
+  if (action === 'dm.unread') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const conversations = state.directConversations.filter((item) => [item.participantAId, item.participantBId].includes(currentUserId));
+    return {
+      totalUnread: conversations.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[currentUserId]) || 0), 0),
+      conversationsWithUnread: conversations.filter((item) => Number(item.unreadByUser && item.unreadByUser[currentUserId]) > 0).length
+    };
+  }
+  if (action === 'dm.conversation.list') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
+    const cursor = decodeDirectCursor(input.cursor);
+    const candidates = state.directConversations
+      .filter((item) => [item.participantAId, item.participantBId].includes(currentUserId))
+      .filter((item) => afterDirectCursor(item, cursor, 'updatedAt'))
+      .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
+    const page = candidates.slice(0, limit + 1);
+    const items = page.slice(0, limit);
+    return {
+      items: items.map(directConversationDto),
+      nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'updatedAt') : null
+    };
+  }
+  if (action === 'dm.conversation.create') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const activity = activityById(input.activityId);
+    const actorMember = activeMember(input.activityId, currentUserId);
+    const targetMember = state.members.find((item) => item.id === input.memberId);
+    assert(
+      activity
+        && ['FORMED', 'IN_PROGRESS'].includes(activity.status)
+        && actorMember
+        && targetMember
+        && targetMember.activityId === activity.id
+        && targetMember.status === 'ACTIVE'
+        && targetMember.userId !== currentUserId,
+      'NOT_FOUND_OR_NOT_ALLOWED',
+      '目标不存在或当前不可联系'
+    );
+    const peer = userById(targetMember.userId);
+    assert(peer && peer.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    const participants = [currentUserId, peer.id].sort();
+    const conversationId = `conversation_${opaqueSensitiveHash(`${activity.id}:${participants.join(':')}`)}`;
+    let conversation = state.directConversations.find((item) => item.id === conversationId);
+    if (!conversation) {
+      const now = new Date().toISOString();
+      conversation = {
+        id: conversationId,
+        participantAId: participants[0],
+        participantBId: participants[1],
+        source: { type: 'activity', id: activity.id, title: activity.title },
+        lastMessageId: null,
+        lastMessagePreview: '',
+        lastMessageAt: null,
+        lastSenderId: null,
+        unreadByUser: { [participants[0]]: 0, [participants[1]]: 0 },
+        createdAt: now,
+        updatedAt: now
+      };
+      state.directConversations.push(conversation);
+    }
+    return { conversation: directConversationDto(conversation) };
+  }
+  if (action === 'dm.message.list') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const conversation = state.directConversations.find((item) => item.id === input.conversationId);
+    assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
+    const cursor = decodeDirectCursor(input.cursor);
+    const candidates = state.directMessages
+      .filter((item) => item.conversationId === conversation.id)
+      .filter((item) => afterDirectCursor(item, cursor, 'createdAt'))
+      .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)) || String(right.id).localeCompare(String(left.id)));
+    const page = candidates.slice(0, limit + 1);
+    const items = page.slice(0, limit);
+    return {
+      conversation: directConversationDto(conversation),
+      items: items.map(directMessageDto),
+      nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'createdAt') : null
+    };
+  }
+  if (action === 'dm.message.send') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const conversation = state.directConversations.find((item) => item.id === input.conversationId);
+    assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    const sourceActivity = conversation.source && activityById(conversation.source.id);
+    const firstMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantAId);
+    const secondMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantBId);
+    assert(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status) && firstMember && secondMember, 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
+    const clientMessageId = String(input.clientMessageId || '').trim();
+    assert(/^[A-Za-z0-9:_-]{8,80}$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID格式无效');
+    const text = assertDirectMessageContent(input.text);
+    const id = `directMessage_${opaqueSensitiveHash(`${conversation.id}:${currentUserId}:${clientMessageId}`)}`;
+    const existing = state.directMessages.find((item) => item.id === id);
+    const payloadHash = opaqueSensitiveHash(text);
+    if (existing) {
+      assert(existing.conversationId === conversation.id && existing.senderId === currentUserId, 'CONFLICT', '客户端消息ID已用于其他会话');
+      assert(existing.payloadHash === payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+      return { message: directMessageDto(existing) };
+    }
+    const now = new Date().toISOString();
+    const message = { id, conversationId: conversation.id, senderId: currentUserId, text, payloadHash, status: 'SENT', createdAt: now, updatedAt: now };
+    state.directMessages.push(message);
+    const recipientId = conversation.participantAId === currentUserId ? conversation.participantBId : conversation.participantAId;
+    conversation.lastMessageId = message.id;
+    conversation.lastMessagePreview = text.slice(0, 80);
+    conversation.lastMessageAt = now;
+    conversation.lastSenderId = currentUserId;
+    conversation.updatedAt = now;
+    conversation.unreadByUser = {
+      ...(conversation.unreadByUser || {}),
+      [currentUserId]: Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0,
+      [recipientId]: (Number(conversation.unreadByUser && conversation.unreadByUser[recipientId]) || 0) + 1
+    };
+    return { message: directMessageDto(message) };
+  }
+  if (action === 'dm.conversation.read') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const conversation = state.directConversations.find((item) => item.id === input.conversationId);
+    assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    assert(typeof input.lastMessageId === 'string' && input.lastMessageId.length > 0 && input.lastMessageId.length <= 80, 'VALIDATION_ERROR', '已读消息ID无效');
+    const now = new Date().toISOString();
+    if (!conversation.lastMessageId || conversation.lastMessageId !== input.lastMessageId) {
+      return { conversation: directConversationDto(conversation), unread: Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0, readAt: now };
+    }
+    conversation.unreadByUser = { ...(conversation.unreadByUser || {}), [currentUserId]: 0 };
+    conversation.readAtByUser = { ...(conversation.readAtByUser || {}), [currentUserId]: now };
+    return { conversation: directConversationDto(conversation), unread: 0, readAt: now };
+  }
+  if (action === 'ride.driver.profile') { requireUser(); return { driver: driverProfile() }; }
   if (action === 'ride.driver.mine') {
-    requireUser();
+    requireApprovedDriver();
     return {
       items: (state.rideFulfillments || [])
         .filter((item) => item.driverId === currentUserId && item.status === 'ASSIGNED')
@@ -1296,7 +1462,7 @@ function handle(action, input, idempotencyKey = '') {
     };
   }
   if (action === 'ride.driver.memberContacts') {
-    requireUser();
+    requireApprovedDriver();
     const activity = activityById(input.activityId);
     const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
     assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
@@ -1319,10 +1485,10 @@ function handle(action, input, idempotencyKey = '') {
       });
     return { activityId: activity.id, items };
   }
-  if (action === 'ride.driver.accept') return acceptRide(input);
-  if (action === 'ride.driver.cancel') return cancelRideAssignment(input);
+  if (action === 'ride.driver.accept') { requireApprovedDriver(true); return acceptRide(input); }
+  if (action === 'ride.driver.cancel') { requireApprovedDriver(true); return cancelRideAssignment(input); }
   if (action === 'application.submit') return submitApplication(input);
-  if (action === 'ride.join') return joinRide(input);
+  if (action === 'ride.join') { requireActiveUser(true); return joinRide(input); }
   if (action === 'application.listForOwner') {
     const activity = activityById(input.activityId);
     assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限查看申请');
@@ -1416,6 +1582,7 @@ function handle(action, input, idempotencyKey = '') {
     return { activityId: activity.id, contactInfo: activity.contactInfo, meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules } };
   }
   if (action === 'notification.list') {
+    requireActiveUser();
     return {
       items: state.notifications
         .filter((item) => item.userId === currentUserId)
@@ -1424,12 +1591,23 @@ function handle(action, input, idempotencyKey = '') {
     };
   }
   if (action === 'notification.read') {
+    requireActiveUser();
     const item = state.notifications.find((notification) => notification.id === input.notificationId);
     assert(item && item.userId === currentUserId, 'FORBIDDEN', '你没有权限处理该通知');
     item.read = true;
     return { notification: publicNotification(item) };
   }
   if (action === 'report.create') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    assert(['activity', 'user', 'communityPost', 'communityReply', 'directConversation'].includes(input.targetType), 'VALIDATION_ERROR', '举报对象类型无效');
+    assert(typeof input.targetId === 'string' && input.targetId.length > 0 && input.targetId.length <= 80, 'VALIDATION_ERROR', '举报对象无效');
+    assert(['FALSE_INFORMATION', 'ILLEGAL_SERVICE_SOLICITATION', 'FRAUD_OR_DIVERSION', 'HARASSMENT', 'OTHER'].includes(input.reason), 'VALIDATION_ERROR', '举报原因无效');
+    assert(String(input.description || '').length <= 300, 'VALIDATION_ERROR', '举报说明过长');
+    if (input.targetType === 'directConversation') {
+      const conversation = state.directConversations.find((item) => item.id === input.targetId);
+      assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    }
     const duplicate = state.reports.find((item) => item.reporterId === currentUserId && item.targetType === input.targetType && item.targetId === input.targetId);
     assert(!duplicate, 'CONFLICT', '你已经举报过该内容');
     const report = { id: nextId('report'), reporterId: currentUserId, ...clone(input), status: 'NEW', createdAt: new Date().toISOString() };
@@ -1465,7 +1643,7 @@ async function call(event) {
     const idempotencyId = isMutation && event.idempotencyKey
       ? `${currentUserId}:${action}:${event.idempotencyKey}`
       : '';
-    const communityPayloadHash = action === 'community.post.create' || action === 'community.reply.create'
+    const communityPayloadHash = action === 'community.post.create' || action === 'community.reply.create' || action === 'dm.message.send'
       ? opaqueSensitiveHash(stableSerialize(event.data || {}))
       : '';
     if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');

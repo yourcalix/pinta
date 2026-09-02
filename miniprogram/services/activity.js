@@ -13,23 +13,12 @@ module.exports = {
   askQuestion: (activityId, content) => api.invoke('activity.question.ask', { activityId, content }, { mutating: true }),
   answerQuestion: (activityId, questionId, content) => api.invoke('activity.question.answer', { activityId, questionId, content }, { mutating: true }),
   apply: (activityId, note) => api.invoke('application.submit', { activityId, note, autoJoinConsent: true }, { mutating: true }),
-  joinRide: (activityId, luggageType, phone) => api.invoke('ride.join', { activityId, luggageType, phone }, { mutating: true }),
   withdraw: (applicationId) => api.invoke('application.withdraw', { applicationId }, { mutating: true }),
   leave: (activityId, reason) => api.invoke('member.leave', { activityId, reason }, { mutating: true }),
   applications: (activityId) => api.invoke('application.listForOwner', { activityId }),
   approve: (activityId, applicationId) => api.invoke('application.approve', { activityId, applicationId }, { mutating: true }),
   reject: (applicationId) => api.invoke('application.reject', { applicationId }, { mutating: true }),
-  contact: (activityId) => api.invoke('group.contact', { activityId }),
-  driverProfile: () => api.invoke('ride.driver.profile'),
-  driverMine: () => api.invoke('ride.driver.mine'),
-  driverMemberContacts: (activityId) => api.invoke('ride.driver.memberContacts', { activityId }),
-  acceptRide: (activityId, vehicleId, pickupAt) => api.invoke('ride.driver.accept', {
-    activityId,
-    vehicleId,
-    pickupAt
-  }, { mutating: true }),
-  cancelRideAssignment: (activityId, reason) => api.invoke('ride.driver.cancel', {
-    activityId,
-    reason
-  }, { mutating: true })
+  groupSpace: (activityId) => api.invoke('group.space', { activityId }),
+  shareContact: (activityId, type, value) => api.invoke('group.contact.share', { activityId, type, value }, { mutating: true }),
+  revokeContact: (activityId) => api.invoke('group.contact.revoke', { activityId }, { mutating: true })
 };

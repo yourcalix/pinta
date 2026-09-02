@@ -1,75 +1,45 @@
 <view class="page group-page safe-bottom">
   <view wx:if="{{loading}}" class="loading-block surface">正在核验成员权限…</view>
-  <empty-state
-    wx:elif="{{error}}"
-    symbol="!"
-    title="{{error}}"
-    action-text="{{errorActionText}}"
-    bindaction="handleErrorAction"
-  />
-
+  <empty-state wx:elif="{{error}}" symbol="!" title="{{error}}" action-text="{{errorActionText}}" bindaction="handleErrorAction" />
   <block wx:elif="{{activity}}">
     <view class="formed-hero surface">
       <view class="celebrate">✓</view>
-      <view class="formed-title">{{activity.status === 'COMPLETED' ? '活动已完成' : '组团成功'}}</view>
+      <view class="formed-title">{{activity.status === 'COMPLETED' ? '活动已完成' : '成员空间'}}</view>
       <view class="formed-description">{{activity.title}}</view>
-      <view class="formed-meta">{{activity.displayTime}} · {{activity.memberCount}}/{{activity.targetMembers}} 人</view>
+      <view class="formed-meta">{{activity.displayTime}} · {{activity.memberCount}}/{{activity.maxMembers}} 人</view>
     </view>
 
-    <view wx:if="{{activity.type === 'ride'}}" class="contact-card surface">
+    <view wx:if="{{space}}" class="contact-card surface">
       <view class="card-heading">
-        <view>
-          <view class="card-title">行程联系说明</view>
-          <view class="card-description">司机承接后将按成员填写的电话逐一联系</view>
+        <view><view class="card-title">成员与联系方式</view><view class="card-description">仅当前有效成员可见</view></view>
+        <status-badge label="成员可见" tone="info" />
+      </view>
+      <view class="member-list">
+        <view wx:for="{{members}}" wx:key="memberId" class="member-row">
+          <view class="member-avatar" aria-hidden="true">{{item.avatarLetter}}</view>
+          <view class="member-main">
+            <view class="member-name">{{item.nickname}}{{item.isSelf ? '（我）' : ''}}</view>
+            <view class="member-role">{{item.role === 'OWNER' ? '发起人' : '参与成员'}}</view>
+          </view>
+          <view class="member-actions">
+            <text wx:if="{{item.sharedContact}}" class="contact-value" selectable="true" user-select="true">{{item.sharedContact.type === 'WECHAT' ? '微信 ' : '电话 '}}{{item.sharedContact.value}}</text>
+            <view wx:elif="{{item.isSelf}}" class="contact-muted">未共享</view>
+            <button wx:if="{{!item.isSelf}}" class="message-member" data-member-id="{{item.memberId}}" bindtap="handleMessageMember" disabled="{{pendingMemberId}}" hover-class="message-member--pressed" aria-label="给{{item.nickname}}发私信">{{pendingMemberId === item.memberId ? '打开中' : '私信'}}</button>
+          </view>
         </view>
-        <status-badge label="隐私保护" tone="info" />
       </view>
-      <view class="contact-locked">
-        <view class="lock-symbol">⌁</view>
-        <view class="lock-copy">成员电话不会向其他乘客公开，仅当前成功承接的司机可在行程详情中查看。</view>
-      </view>
+      <button wx:if="{{!selfShared}}" class="primary-button contact-action" bindtap="handleShareContact" disabled="{{pending}}">主动共享我的联系方式</button>
+      <button wx:else class="secondary-button contact-action" bindtap="handleRevokeContact" disabled="{{pending}}">停止共享</button>
+      <view class="contact-help">共享完全自愿；也可以使用平台内私信沟通。退出、取消、完成、过期或下架后，联系方式访问权限立即失效。</view>
     </view>
 
     <view wx:else class="contact-card surface">
-      <view class="card-heading">
-        <view>
-          <view class="card-title">成员联系信息</view>
-          <view class="card-description">仅有效成员可以按需获取</view>
-        </view>
-        <status-badge label="成员可见" tone="info" />
-      </view>
-
-      <view wx:if="{{!contact}}" class="contact-locked">
-        <view class="lock-symbol">⌁</view>
-        <view class="lock-copy">查看前会显示一次安全提醒，并记录访问审计。</view>
-        <button class="primary-button" loading="{{revealing}}" disabled="{{revealing}}" bindtap="handleReveal">查看联系信息</button>
-      </view>
-
-      <view wx:else class="contact-open">
-        <view class="contact-label">发起者联系方式</view>
-        <text user-select="true" class="contact-value">{{contact.contactInfo}}</text>
-        <view class="contact-help">长按上方文本也可手动复制</view>
-        <button class="secondary-button copy-button" loading="{{copying}}" disabled="{{copying}}" bindtap="handleCopy">复制联系信息</button>
-        <view class="meeting-block">
-          <view class="meeting-title">会合说明</view>
-          <view>{{contact.meeting.city}} · {{contact.meeting.district}} · {{contact.meeting.placeLabel}}</view>
-          <view wx:if="{{contact.meeting.note}}" class="meeting-note">{{contact.meeting.note}}</view>
-        </view>
-      </view>
+      <view class="card-title">成员共享已结束</view>
+      <view class="contact-help">活动完成后不再展示任何成员联系方式。</view>
     </view>
-
-    <view class="safety-card">
-      <view class="safety-title">线下安全提醒</view>
-      <view>选择公共场所；不提前转账；发现收费载客、诈骗或骚扰时立即退出并举报。</view>
-    </view>
-
+    <view class="safety-card"><view class="safety-title">线下安全提醒</view><view>请选择公共场所，不要提前转账；遇到商业拉客、诈骗或骚扰请立即退出并举报。</view></view>
     <button wx:if="{{activity.viewerRole === 'owner' && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="primary-button bottom-action" bindtap="handleComplete" disabled="{{pending}}">标记活动已完成</button>
-    <button wx:if="{{activity.viewerRole === 'member' && (activity.type !== 'ride' || activity.canLeaveRide)}}" class="danger-button bottom-action" bindtap="handleLeave" disabled="{{pending}}">{{activity.type === 'ride' ? '退出拼车' : '退出活动'}}</button>
-    <view wx:if="{{activity.type === 'ride' && activity.rideExitLocked}}" class="safety-card" role="status" aria-label="提示：司机已确认承接，退出权限已锁定，当前不可自行退出">
-      <view class="safety-title">退出权限已锁定</view>
-      <view>司机已确认承接，当前不可退出；如无法出行，请联系发起者或司机。</view>
-    </view>
+    <button wx:if="{{activity.viewerRole === 'member' && (activity.status === 'FORMED' || activity.status === 'IN_PROGRESS')}}" class="danger-button bottom-action" bindtap="handleLeave" disabled="{{pending}}">退出活动</button>
     <button class="report-link" bindtap="handleReport">举报活动</button>
   </block>
-  <privacy-popup id="privacy-popup" />
 </view>

@@ -1,0 +1,12 @@
+{
+  "id": "redesign-painted-discover-page",
+  "title": "将发现页统一为深蓝油画棒手绘风格",
+  "status": "superseded",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "因产品用户画像调整而暂停，待新权限模型完成后重新设计",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}

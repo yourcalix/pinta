@@ -9,17 +9,29 @@ const { calculateContentTopInset } = require('../miniprogram/utils/navigation-la
 
 const root = path.join(__dirname, '..');
 
-test('四个 Tab 页面统一使用 custom navigation 且不保留原生标题', () => {
+test('四个 Tab 页面统一使用 custom navigation，发现、社区与发布页使用深色沉浸状态栏', () => {
   const discover = require('../miniprogram/pages/discover/index.json');
   const community = require('../miniprogram/pages/community/index.json');
   const publish = require('../miniprogram/pages/publish/index.json');
   const user = require('../miniprogram/pages/user/index.json');
-  for (const page of [discover, community, publish, user]) {
-    assert.equal(page.navigationStyle, 'custom');
-    assert.equal(page.navigationBarTitleText, undefined);
-    assert.equal(page.navigationBarTextStyle, 'black');
-    assert.equal(page.backgroundColorTop, '#F5F7F6');
-  }
+  assert.equal(user.navigationStyle, 'custom');
+  assert.equal(user.navigationBarTitleText, undefined);
+  assert.equal(user.navigationBarTextStyle, 'black');
+  assert.equal(user.backgroundColorTop, '#F5F7F6');
+  assert.equal(discover.navigationStyle, 'custom');
+  assert.equal(discover.navigationBarTitleText, undefined);
+  assert.equal(discover.navigationBarTextStyle, 'white');
+  assert.equal(discover.backgroundColorTop, '#075AA7');
+  assert.equal(discover.backgroundTextStyle, 'light');
+  assert.equal(community.navigationStyle, 'custom');
+  assert.equal(community.navigationBarTitleText, undefined);
+  assert.equal(community.navigationBarTextStyle, 'white');
+  assert.equal(community.backgroundColorTop, '#075AA7');
+  assert.equal(community.backgroundTextStyle, 'light');
+  assert.equal(publish.navigationStyle, 'custom');
+  assert.equal(publish.navigationBarTitleText, undefined);
+  assert.equal(publish.navigationBarTextStyle, 'white');
+  assert.equal(publish.backgroundColorTop, '#075AA7');
 });
 
 test('顶部安全区使用胶囊底边、对称间距和 8px 呼吸区', () => {

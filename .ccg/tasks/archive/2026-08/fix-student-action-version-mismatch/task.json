@@ -1,0 +1,12 @@
+{
+  "id": "fix-student-action-version-mismatch",
+  "title": "修复学生认证接口动作不存在导致我的页整页错误",
+  "status": "cancelled",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "用户切换到头像设计需求；已定位为云函数部署版本落后，暂未继续改动",
+  "createdAt": "2026-08-31T00:35:00+08:00",
+  "branch": "main"
+}

@@ -2,8 +2,6 @@
 
 const activityService = require('../../services/activity');
 const safetyService = require('../../services/safety');
-const config = require('../../config/runtime');
-const { RIDE_CAMPUS_OPTIONS } = require('../../config/locations');
 const { decorateActivity } = require('../../utils/display');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {
@@ -19,25 +17,26 @@ const {
   FINISH_INTERVAL_MS,
   DROP_DURATION_MS,
   HOLD_MS,
-  FADE_MS
+  FADE_MS,
+  MAX_SPLASH_WAIT_MS
 } = require('../../utils/launch-progress');
+const { selectTab } = require('../../utils/tab-bar');
 
 const PAGE_SIZE = 10;
 
 function hasActiveFilters(filters) {
-  return Boolean(filters.campusId || filters.appliedKeyword);
+  return Boolean(filters.type || filters.appliedKeyword);
 }
 
 Page({
   data: {
-    city: config.demoCity,
-    viewModes: [
-      { value: 'passenger', label: '我要拼车' },
-      { value: 'driver', label: '我是司机' }
+    typeOptions: [
+      { value: '', label: '全部' },
+      { value: 'companion', label: '拼同行' },
+      { value: 'sport', label: '拼运动' },
+      { value: 'food', label: '拼饭桌' }
     ],
-    viewMode: 'passenger',
-    campusOptions: RIDE_CAMPUS_OPTIONS,
-    campusId: '',
+    type: '',
     keyword: '',
     appliedKeyword: '',
     hasActiveFilters: false,
@@ -66,6 +65,7 @@ Page({
   },
 
   onShow() {
+    selectTab(this, 0);
     if (this._skipFirstShow) {
       this._skipFirstShow = false;
       return;
@@ -138,10 +138,7 @@ Page({
 
     try {
       const result = await activityService.list({
-        city: this.data.city,
-        type: 'ride',
-        campusId: this.data.campusId || undefined,
-        viewMode: this.data.viewMode,
+        type: this.data.type || undefined,
         keyword: this.data.appliedKeyword || undefined,
         limit: PAGE_SIZE,
         cursor: isAppend ? cursor : undefined
@@ -249,6 +246,10 @@ Page({
       this._launchSplashMinimumReached = true;
       this.completeLaunchSplashWhenReady();
     }, FINISH_GATE_MS);
+    this.queueLaunchTimer(() => {
+      if (!this._launchSplashActive || this._launchSplashReady) return;
+      this.teardownLaunchSplash(true);
+    }, MAX_SPLASH_WAIT_MS);
     return true;
   },
 
@@ -344,22 +345,12 @@ Page({
     this.restoreLaunchTabBar();
   },
 
-  handleViewModeChange(event) {
-    const viewMode = event.currentTarget.dataset.value === 'driver' ? 'driver' : 'passenger';
-    if (viewMode === this.data.viewMode) return false;
+  handleTypeChange(event) {
+    const type = event.currentTarget.dataset.value || '';
+    if (type === this.data.type) return false;
     this.setData({
-      viewMode,
-      hasActiveFilters: hasActiveFilters(this.data)
-    });
-    return this.fetchActivities({ mode: 'replace' });
-  },
-
-  handleCampusChange(event) {
-    const campusId = event.currentTarget.dataset.value || '';
-    if (campusId === this.data.campusId) return false;
-    this.setData({
-      campusId,
-      hasActiveFilters: hasActiveFilters({ ...this.data, campusId })
+      type,
+      hasActiveFilters: hasActiveFilters({ ...this.data, type })
     });
     return this.fetchActivities({ mode: 'replace' });
   },
@@ -377,9 +368,19 @@ Page({
     return this.fetchActivities({ mode: 'replace' });
   },
 
+  handleClearKeyword() {
+    const shouldReload = Boolean(this.data.appliedKeyword);
+    this.setData({
+      keyword: '',
+      appliedKeyword: '',
+      hasActiveFilters: Boolean(this.data.type)
+    });
+    return shouldReload ? this.fetchActivities({ mode: 'replace' }) : false;
+  },
+
   handleClearFilters() {
     this.setData({
-      campusId: '',
+      type: '',
       keyword: '',
       appliedKeyword: '',
       hasActiveFilters: false
@@ -389,7 +390,7 @@ Page({
 
   handleCardSelect(event) {
     wx.navigateTo({
-      url: `/subpackages/activity/detail/index?id=${encodeURIComponent(event.detail.id)}&mode=${this.data.viewMode}`
+      url: `/subpackages/activity/detail/index?id=${encodeURIComponent(event.detail.id)}`
     });
   },
 

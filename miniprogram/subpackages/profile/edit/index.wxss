@@ -1,56 +1,389 @@
 .profile-page {
-  padding-top: 42rpx;
+  box-sizing: border-box;
+  padding: 20rpx 24rpx calc(32rpx + env(safe-area-inset-bottom));
 }
 
-.role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx; }
-.gender-options { display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx; }
-.gender-option { min-height: 152rpx; margin: 0; padding: 18rpx; display: flex; align-items: center; justify-content: center; gap: 18rpx; border: 2rpx solid #dfe5e1; border-radius: 20rpx; background: #fff; font-size: 30rpx; font-weight: 650; }
-.gender-option::after { display: none; }
-.gender-option--active { border-color: #16a36a; background: #eef9f3; box-shadow: 0 4rpx 12rpx rgba(22, 163, 106, 0.14); }
-.gender-options--error .gender-option { border-color: #e53935; background: #fff1f2; }
-.gender-error-tip { margin-top: 10rpx; color: #c92d36; font-size: 24rpx; line-height: 1.4; }
-.gender-avatar { width: 88rpx; height: 88rpx; flex: 0 0 auto; }
-.role-option { min-height: 132rpx; padding: 20rpx; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; border: 2rpx solid #dfe5e1; border-radius: 20rpx; background: #fff; text-align: left; }
-.role-option--active { border-color: #16a36a; background: #eef9f3; }
-.role-option--active-driver { border-color: #3478f6; background: #eef4ff; }
-.role-title { font-size: 30rpx; font-weight: 700; }
-.role-copy { margin-top: 8rpx; font-size: 24rpx; color: #6b756f; line-height: 1.45; }
-@media (max-width: 340px) { .role-options { grid-template-columns: 1fr; } .gender-option { padding: 12rpx; gap: 8rpx; } .gender-avatar { width: 72rpx; height: 72rpx; } }
-
-.intro-title {
-  font-size: 40rpx;
-  font-weight: 720;
+.profile-form-card {
+  box-sizing: border-box;
+  padding: 0 32rpx 48rpx;
+  overflow: hidden;
+  border-radius: 28rpx;
+  background: #ffffff;
+  box-shadow: 0 12rpx 36rpx rgba(34, 64, 49, 0.08);
 }
 
-.intro-description {
-  margin-top: 12rpx;
-  color: #68746d;
-  font-size: 25rpx;
-  line-height: 1.55;
+.profile-hero {
+  position: relative;
+  min-height: 196rpx;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-bottom: 1rpx solid #e8eeeb;
+}
+
+.profile-hero-copy {
+  position: relative;
+  z-index: 1;
+  width: 58%;
+  min-width: 0;
+  padding: 30rpx 0 28rpx;
+}
+
+.profile-hero-title {
+  color: #111916;
+  font-size: 42rpx;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.profile-hero-description {
+  margin-top: 14rpx;
+  color: #657169;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.profile-hero-art {
+  position: absolute;
+  right: -24rpx;
+  bottom: -18rpx;
+  width: 310rpx;
+  height: 230rpx;
 }
 
 .error-banner {
   margin-top: 24rpx;
   padding: 20rpx 22rpx;
   color: #a72a30;
+  font-size: 24rpx;
+  line-height: 1.5;
   background: #fff0f0;
   border-radius: 16rpx;
 }
 
-.form-card {
-  margin-top: 28rpx;
-  padding: 30rpx 26rpx;
+.form-section {
+  margin-top: 32rpx;
 }
 
-.adult-check {
+.role-section {
+  margin-top: 30rpx;
+}
+
+.section-title-row {
   display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-bottom: 16rpx;
+}
+
+.section-title-icon {
+  width: 42rpx;
+  height: 42rpx;
+  margin-right: 12rpx;
+  flex: 0 0 auto;
+}
+
+.section-title {
+  color: #17201b;
+  font-size: 29rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.required-mark {
+  margin-left: 6rpx;
+  color: #e23e3e;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.optional-label {
+  color: #7b8780;
+  font-size: 23rpx;
+}
+
+.role-options,
+.gender-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.role-option,
+.gender-option {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 2rpx solid #dce4df;
+  border-radius: 22rpx;
+  background: #ffffff;
+  text-align: left;
+}
+
+.role-option::after,
+.gender-option::after {
+  display: none;
+}
+
+.role-option {
+  min-height: 224rpx;
+  padding: 28rpx 22rpx 102rpx;
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 12rpx;
-  color: #57635c;
-  font-size: 25rpx;
+}
+
+.role-option--active {
+  border-color: #16a36a;
+  background: linear-gradient(145deg, #ffffff 25%, #edf9f3 100%);
+  box-shadow: 0 6rpx 18rpx rgba(22, 163, 106, 0.13);
+}
+
+.role-option--active-driver {
+  border-color: #1e70bf;
+  background: linear-gradient(145deg, #ffffff 25%, #eef5fc 100%);
+  box-shadow: 0 6rpx 18rpx rgba(30, 112, 191, 0.12);
+}
+
+.role-title {
+  position: relative;
+  z-index: 1;
+  color: #17201b;
+  font-size: 31rpx;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.role-option--active .role-title {
+  color: #087547;
+}
+
+.role-option--active-driver .role-title {
+  color: #155b9c;
+}
+
+.role-copy {
+  position: relative;
+  z-index: 1;
+  margin-top: 8rpx;
+  color: #68746d;
+  font-size: 22rpx;
   line-height: 1.5;
 }
 
-.save-button {
+.role-art {
+  position: absolute;
+  right: 12rpx;
+  bottom: 8rpx;
+  pointer-events: none;
+}
+
+.role-art--car {
+  width: 134rpx;
+  height: 104rpx;
+}
+
+.role-art--driver {
+  right: 12rpx;
+  bottom: 6rpx;
+  width: 116rpx;
+  height: 152rpx;
+}
+
+.selection-check {
+  position: absolute;
+  top: 14rpx;
+  right: 14rpx;
+  z-index: 2;
+  width: 38rpx;
+  height: 38rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 1;
+  background: #16a36a;
+  border-radius: 50%;
+  box-shadow: 0 4rpx 10rpx rgba(22, 163, 106, 0.2);
+}
+
+.selection-check--driver {
+  background: #1e70bf;
+  box-shadow: 0 4rpx 10rpx rgba(30, 112, 191, 0.2);
+}
+
+.field-hint {
+  margin-top: 12rpx;
+  color: #7a867f;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.form-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 88rpx;
+  padding: 20rpx 24rpx;
+  color: #18211c;
+  font-size: 28rpx;
+  line-height: 1.5;
+  background: #f2f5f3;
+  border: 1rpx solid #dce4df;
+  border-radius: 18rpx;
+}
+
+.gender-option {
+  min-height: 176rpx;
+  padding: 18rpx 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22rpx;
+}
+
+.gender-option--active {
+  border-color: #16a36a;
+  background: linear-gradient(145deg, #ffffff 25%, #edf9f3 100%);
+  box-shadow: 0 6rpx 18rpx rgba(22, 163, 106, 0.13);
+}
+
+.gender-options--error .gender-option {
+  border-color: #e25555;
+  background: #fff5f5;
+}
+
+.gender-avatar {
+  width: 108rpx;
+  height: 108rpx;
+  flex: 0 0 auto;
+}
+
+.gender-label {
+  color: #57615b;
+  font-size: 34rpx;
+  font-weight: 750;
+}
+
+.gender-option--active .gender-label {
+  color: #087547;
+}
+
+.gender-error-tip {
+  margin-top: 10rpx;
+  color: #c92d36;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.adult-check {
+  min-height: 72rpx;
   margin-top: 34rpx;
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  color: #58635c;
+  font-size: 24rpx;
+  line-height: 1.55;
+}
+
+.agreement-link {
+  color: #0d8b58;
+  font-weight: 650;
+}
+
+.save-button {
+  min-height: 96rpx;
+  margin-top: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 750;
+  background: linear-gradient(135deg, #16a36a 0%, #07945a 100%);
+  border-radius: 18rpx;
+  box-shadow: 0 10rpx 24rpx rgba(22, 163, 106, 0.22);
+}
+
+.save-button::after {
+  display: none;
+}
+
+.profile-decoration {
+  position: relative;
+  min-height: 86rpx;
+  margin-top: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 16rpx;
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.decoration-line {
+  position: absolute;
+  left: 12rpx;
+  right: 12rpx;
+  top: 50%;
+  border-top: 3rpx dashed #d8e9e0;
+}
+
+.profile-decoration image {
+  position: relative;
+  z-index: 1;
+  width: 54rpx;
+  height: 54rpx;
+  padding: 4rpx;
+  background: #ffffff;
+}
+
+.profile-decoration .decoration-car {
+  width: 76rpx;
+  height: 64rpx;
+}
+
+@media (max-width: 340px) {
+  .profile-page {
+    padding-right: 18rpx;
+    padding-left: 18rpx;
+  }
+
+  .profile-form-card {
+    padding-right: 24rpx;
+    padding-left: 24rpx;
+  }
+
+  .profile-hero-copy {
+    width: 64%;
+  }
+
+  .profile-hero-art {
+    right: -54rpx;
+    width: 270rpx;
+  }
+
+  .role-options {
+    grid-template-columns: 1fr;
+  }
+
+  .role-option {
+    min-height: 194rpx;
+  }
+
+  .gender-option {
+    min-height: 154rpx;
+    padding: 12rpx;
+    gap: 8rpx;
+  }
+
+  .gender-avatar {
+    width: 82rpx;
+    height: 82rpx;
+  }
 }

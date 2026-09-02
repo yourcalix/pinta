@@ -7,6 +7,7 @@ const ERROR_MESSAGES = Object.freeze({
   FORBIDDEN: '你没有权限执行此操作',
   VALIDATION_ERROR: '提交信息有误，请检查后重试',
   NOT_FOUND: '目标不存在或已失效',
+  NOT_FOUND_OR_NOT_ALLOWED: '目标不存在或当前不可联系',
   TAKEDOWN: '该活动已被平台处理，暂不可查看',
   CONFLICT: '当前状态已变化，请刷新后重试',
   CAPACITY_FULL: '名额已满，请选择其他活动',

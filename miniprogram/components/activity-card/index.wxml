@@ -1,61 +1,19 @@
-<view
-  wx:if="{{item}}"
-  class="activity-card"
-  bindtap="handleTap"
-  role="button"
-  aria-label="{{item.accessibilityLabel}}"
->
-  <view class="route-heading">
-    <text class="route-code">{{item.routeCode}}</text>
-    <view class="route-line">
-      <text>{{item.originLabel}}</text>
-      <text class="route-arrow">→</text>
-      <text>{{item.destinationLabel}}</text>
+<view wx:if="{{item}}" class="activity-card activity-card--{{item.typeTone}}" bindtap="handleTap" hover-class="activity-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}">
+  <view class="card-head">
+    <view class="card-tags">
+      <view class="type-tag type-tag--{{item.typeTone}}"><text class="type-symbol" aria-hidden="true">{{item.typeIcon}}</text><text>{{item.typeLabel}}</text></view>
+      <view wx:if="{{item.legacy && item.legacy.readOnly}}" class="legacy-tag">历史归档</view>
     </view>
-    <text class="card-chevron" aria-hidden="true">›</text>
-  </view>
-
-  <view class="trip-meta">
-    <view class="meta-item">
-      <text class="meta-icon" aria-hidden="true">◷</text>
-      <text>{{item.timeWindowLabel}}</text>
-    </view>
-    <view class="meta-item">
-      <text class="meta-icon" aria-hidden="true">♙</text>
-      <text>{{item.capacityLabel}}</text>
-    </view>
-  </view>
-
-  <view class="card-badges">
     <status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" />
-    <status-badge wx:if="{{item.driverStatusLabel}}" label="{{item.driverStatusLabel}}" tone="{{item.driverStatusTone}}" />
   </view>
-
-  <view class="card-visual-band" aria-hidden="true">
-    <view class="passenger-avatars">
-      <block wx:for="{{item.avatarSlots}}" wx:key="id" wx:for-item="slot">
-        <image
-          class="passenger-avatar {{slot.empty ? 'passenger-avatar--empty' : ''}}"
-          src="{{slot.src}}"
-          mode="aspectFit"
-          aria-hidden="true"
-        />
-      </block>
-    </view>
-
-    <view class="route-voxel-scene">
-      <image wx:if="{{item.originLocationId === 'QINGMAO'}}" class="route-node route-node--start" src="../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
-      <image wx:elif="{{item.originLocationId === 'HENGQIN'}}" class="route-node route-node--start" src="../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
-      <image wx:elif="{{item.originLocationId === 'TAIPA_CAMPUS'}}" class="route-node route-node--start" src="../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
-      <image wx:else class="route-node route-node--start" src="../../assets/images/discover/node-end-golden-dragon.png" mode="aspectFit" aria-hidden="true" />
-
-      <view class="route-dotted-line"></view>
-      <image class="route-car" src="../../assets/images/discover/ride-car-green.png" mode="aspectFit" aria-hidden="true" />
-
-      <image wx:if="{{item.destinationLocationId === 'QINGMAO'}}" class="route-node route-node--end" src="../../assets/images/discover/node-start-green.png" mode="aspectFit" aria-hidden="true" />
-      <image wx:elif="{{item.destinationLocationId === 'HENGQIN'}}" class="route-node route-node--end" src="../../assets/images/discover/node-start-blue.png" mode="aspectFit" aria-hidden="true" />
-      <image wx:elif="{{item.destinationLocationId === 'TAIPA_CAMPUS'}}" class="route-node route-node--end" src="../../assets/images/discover/node-end-taipa.png" mode="aspectFit" aria-hidden="true" />
-      <image wx:else class="route-node route-node--end" src="../../assets/images/discover/node-end-golden-dragon.png" mode="aspectFit" aria-hidden="true" />
-    </view>
+  <view class="activity-title">{{item.title}}</view>
+  <view class="meta-list">
+    <view class="meta-item"><text class="meta-icon" aria-hidden="true">◷</text><text class="meta-text">{{item.displayTime}}</text></view>
+    <view class="meta-item"><text class="meta-icon" aria-hidden="true">⌖</text><text class="meta-text">{{item.sceneLine}}</text></view>
+  </view>
+  <view class="member-progress" aria-hidden="true"><view class="member-progress-fill member-progress-fill--{{item.typeTone}}" style="width: {{item.progressPercent}}%;"></view></view>
+  <view class="card-footer">
+    <view class="owner-line"><view class="owner-avatar" aria-hidden="true">{{item.ownerInitial}}</view><text class="owner-name">{{item.ownerNickname}}</text></view>
+    <view class="capacity-link"><text>{{item.capacityLabel}}</text><text class="capacity-arrow" aria-hidden="true">›</text></view>
   </view>
 </view>

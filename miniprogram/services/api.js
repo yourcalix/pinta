@@ -6,11 +6,6 @@ const accountDisabledFeedback = require('./account-disabled-feedback');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
-  'onboarding.selectRole',
-  'driver.application.submit',
-  'driver.document.prepare',
-  'driver.document.confirm',
-  'driver.application.withdraw',
   'activity.create',
   'activity.cancel',
   'activity.complete',
@@ -24,24 +19,22 @@ const MUTATING_ACTIONS = new Set([
   'application.approve',
   'application.reject',
   'application.withdraw',
-  'ride.join',
   'member.leave',
-  'ride.driver.accept',
-  'ride.driver.cancel',
+  'dm.conversation.create',
+  'dm.message.send',
+  'dm.conversation.read',
   'notification.read',
   'report.create',
-  'admin.activity.suspend',
-  'admin.driverApplication.review'
+  'admin.activity.suspend'
 ]);
 const PENDING_MUTATIONS_STORAGE_KEY = 'pinba_pending_mutations_v1';
 const PENDING_MUTATION_TTL_MS = 15 * 60 * 1000;
 const MAX_PENDING_MUTATIONS = 100;
 const SENSITIVE_MUTATING_ACTIONS = new Set([
-  'driver.application.submit',
   'activity.create',
-  'ride.join',
   'community.post.create',
-  'community.reply.create'
+  'community.reply.create',
+  'dm.message.send'
 ]);
 const sensitiveFingerprintSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 let authenticatedActorScope = '';
@@ -166,9 +159,20 @@ function timeout(promise, timeoutMs) {
   });
 }
 
+function sanitizeUserFacingMessage(value) {
+  if (typeof value !== 'string') return value;
+  return value
+    .replace(/当前仅支持(?:澳门|澳門)试点/g, '当前仅支持试点区域')
+    .replace(/(?:澳门|澳門)校园/g, '试点区域')
+    .replace(/澳门|澳門/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function unwrap(response) {
   if (response && response.ok) return response.data;
-  const error = new Error(response && response.error && response.error.message || '服务暂时不可用，请稍后重试');
+  const rawMessage = response && response.error && response.error.message || '服务暂时不可用，请稍后重试';
+  const error = new Error(sanitizeUserFacingMessage(rawMessage));
   error.code = response && response.error && response.error.code || 'INTERNAL';
   error.details = response && response.error && response.error.details;
   throw error;
@@ -222,6 +226,7 @@ module.exports = {
   isMutatingAction: (action) => MUTATING_ACTIONS.has(action),
   stableSerialize,
   makeMutationFingerprint,
+  sanitizeUserFacingMessage,
   setActorScope,
   isMock: () => config.useMock,
   setMockPersona: mockServer.setPersona,

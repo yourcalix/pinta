@@ -24,6 +24,11 @@ const {
   isAfterDescendingCursor,
   isAfterAscendingCursor
 } = require('./community');
+const {
+  encodeDirectCursor,
+  compareDirectDescending,
+  isAfterDirectCursor
+} = require('./direct-message');
 const { collectPublicActivityPage } = require('./public-activity-page');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
@@ -741,7 +746,7 @@ class CloudStore {
         'CONFLICT',
         '该活动当前不可申请'
       );
-      if (activity.memberCount >= (activity.type === 'ride' ? rideCapacity(activity) : (activity.maxPassengers || activity.targetMembers))) throw new AppError('CAPACITY_FULL');
+      if (activity.memberCount >= (activity.type === 'ride' ? rideCapacity(activity) : (activity.maxMembers || activity.maxPassengers || activity.targetMembers))) throw new AppError('CAPACITY_FULL');
       invariant(activity.ownerId !== application.applicantId, 'CONFLICT', '不能申请自己发布的活动');
       invariant(Date.parse(activity.deadlineAt) > Date.parse(application.createdAt), 'CONFLICT', '该活动报名已截止');
 
@@ -778,7 +783,7 @@ class CloudStore {
         const existingMember = first(await transaction.collection('members').doc(stableMemberId).get());
         const capacity = effectiveActivity.type === 'ride'
           ? rideCapacity(effectiveActivity)
-          : (effectiveActivity.maxPassengers || effectiveActivity.targetMembers);
+          : (effectiveActivity.maxMembers || effectiveActivity.maxPassengers || effectiveActivity.targetMembers);
         return {
           activity: effectiveActivity,
           application,
@@ -804,7 +809,7 @@ class CloudStore {
       invariant(application.status === APPLICATION_STATUS.PENDING, 'CONFLICT', '该申请已处理');
       const capacity = effectiveActivity.type === 'ride'
         ? rideCapacity(effectiveActivity)
-        : (effectiveActivity.maxPassengers || effectiveActivity.targetMembers);
+        : (effectiveActivity.maxMembers || effectiveActivity.maxPassengers || effectiveActivity.targetMembers);
       if (effectiveActivity.memberCount >= capacity) throw new AppError('CAPACITY_FULL');
 
       const duplicateMember = first(await transaction.collection('members').doc(stableMemberId).get());
@@ -813,7 +818,7 @@ class CloudStore {
       const nextCount = effectiveActivity.memberCount + 1;
       const threshold = effectiveActivity.type === 'ride'
         ? rideThreshold(effectiveActivity)
-        : (effectiveActivity.minPassengers || effectiveActivity.targetMembers);
+        : (effectiveActivity.minMembers || effectiveActivity.minPassengers || effectiveActivity.targetMembers);
       const formed = nextCount >= threshold;
       const reachedCapacity = nextCount >= capacity;
       const nextActivity = {
@@ -942,18 +947,14 @@ class CloudStore {
       const nextCount = Math.max(1, activity.memberCount - 1);
       const threshold = activity.type === 'ride'
         ? rideThreshold(activity)
-        : (activity.minPassengers || activity.targetMembers);
+        : (activity.minMembers || activity.minPassengers || activity.targetMembers);
       const nextStatus = activity.status === ACTIVITY_STATUS.FORMED && nextCount < threshold
         ? ACTIVITY_STATUS.RECRUITING
         : activity.status;
       const nextActivity = { ...effectiveActivity, memberCount: nextCount, status: nextStatus };
       const rideJoinable = activity.type === 'ride' && isRideJoinable(nextActivity, at);
-      const contactId = activity.type === 'ride'
-        ? stableEntityId('memberContact', activityId, member.id)
-        : null;
-      const contact = contactId
-        ? await getTransactionDocument(transaction.collection('memberContacts').doc(contactId))
-        : null;
+      const contactId = stableEntityId('memberContact', activityId, member.id);
+      const contact = await getTransactionDocument(transaction.collection('memberContacts').doc(contactId));
       const applicationId = stableEntityId('application', activityId, actorId);
       const application = await getTransactionDocument(
         transaction.collection('applications').doc(applicationId)
@@ -1120,26 +1121,51 @@ class CloudStore {
     });
   }
 
-  async getGroupContact(activityId, actorId) {
+  async getGroupSpace(activityId, actorId) {
     const activity = await this.getActivity(activityId);
     invariant(activity, 'NOT_FOUND');
-    invariant([ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS, ACTIVITY_STATUS.COMPLETED].includes(activity.status), 'CONFLICT', '活动成团后才能查看联系信息');
+    invariant([ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'CONFLICT', '仅成团中的活动可使用成员空间');
     const member = await this.findOne('members', { activityId, userId: actorId, status: MEMBER_STATUS.ACTIVE });
     invariant(member, 'FORBIDDEN');
-    const activeMemberResult = await this.db.collection('members').where({
-      activityId,
-      status: MEMBER_STATUS.ACTIVE
-    }).count();
-    invariant(
-      isRideContactUnlocked(activity, Number(activeMemberResult.total || 0)),
-      'CONFLICT',
-      '拼车满7名有效乘客后才能查看联系信息'
-    );
+    const memberResult = await this.db.collection('members').where({ activityId, status: MEMBER_STATUS.ACTIVE }).limit(20).get();
+    const members = [];
+    for (const item of memberResult.data || []) {
+      const user = await this.getUser(item.userId);
+      const contact = await this.getDocument('memberContacts', stableEntityId('memberContact', activityId, item.id));
+      members.push({
+        memberId: item.id,
+        role: item.role,
+        nickname: user && user.profile && user.profile.nickname || '拼吧用户',
+        isSelf: item.userId === actorId,
+        sharedContact: contact && contact.status === 'ACTIVE' && contact.shared === true
+          ? { type: contact.type, value: contact.value }
+          : null
+      });
+    }
     return {
       activityId,
-      contactInfo: activity.contactInfo,
-      meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules || '' }
+      meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules || '' },
+      members
     };
+  }
+
+  async setGroupContact({ activityId, actorId, type, value, shared, at }) {
+    const activity = await this.getActivity(activityId);
+    invariant(activity, 'NOT_FOUND');
+    invariant([ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'CONFLICT', '仅成团中的活动可共享联系方式');
+    const member = await this.findOne('members', { activityId, userId: actorId, status: MEMBER_STATUS.ACTIVE });
+    invariant(member, 'FORBIDDEN');
+    const id = stableEntityId('memberContact', activityId, member.id);
+    const current = await this.getDocument('memberContacts', id);
+    await this.db.collection('memberContacts').doc(id).set({ data: document({
+      ...(current || { id, activityId, memberId: member.id, userId: actorId, createdAt: at }),
+      type: shared ? type : null,
+      value: shared ? value : null,
+      shared: shared === true,
+      status: shared ? 'ACTIVE' : 'INACTIVE',
+      updatedAt: at
+    }) });
+    return this.getGroupSpace(activityId, actorId);
   }
 
   async getDriver(userId) {
@@ -1341,6 +1367,199 @@ class CloudStore {
     invariant(activity.ownerId === ownerId, 'FORBIDDEN');
     const result = await this.db.collection('applications').where({ activityId }).orderBy('createdAt', 'desc').limit(100).get();
     return (result.data || []).map(entity);
+  }
+
+  async resolveDirectMessagePeer(activityId, actorId, memberId) {
+    const activity = await this.getActivity(activityId);
+    invariant(activity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'NOT_FOUND_OR_NOT_ALLOWED');
+    const actorMember = await this.findOne('members', {
+      activityId,
+      userId: actorId,
+      status: MEMBER_STATUS.ACTIVE
+    });
+    const targetMember = await this.getDocument('members', memberId);
+    invariant(
+      actorMember
+        && targetMember
+        && targetMember.activityId === activityId
+        && targetMember.status === MEMBER_STATUS.ACTIVE
+        && targetMember.userId !== actorId,
+      'NOT_FOUND_OR_NOT_ALLOWED'
+    );
+    const peer = await this.getUser(targetMember.userId);
+    invariant(peer && peer.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED');
+    return { activity, peerUserId: peer.id };
+  }
+
+  async upsertDirectConversation(conversation) {
+    return this.db.runTransaction(async (transaction) => {
+      const reference = transaction.collection('directConversations').doc(conversation.id);
+      const sourceActivityReference = transaction.collection('activities').doc(conversation.source.id);
+      const firstMemberReference = transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantAId));
+      const secondMemberReference = transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantBId));
+      const sourceActivity = await getTransactionDocument(sourceActivityReference);
+      const firstMember = await getTransactionDocument(firstMemberReference);
+      const secondMember = await getTransactionDocument(secondMemberReference);
+      invariant(
+        sourceActivity
+          && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
+          && firstMember
+          && firstMember.activityId === conversation.source.id
+          && firstMember.userId === conversation.participantAId
+          && firstMember.status === MEMBER_STATUS.ACTIVE
+          && secondMember
+          && secondMember.activityId === conversation.source.id
+          && secondMember.userId === conversation.participantBId
+          && secondMember.status === MEMBER_STATUS.ACTIVE,
+        'NOT_FOUND_OR_NOT_ALLOWED'
+      );
+      const existing = await getTransactionDocument(reference);
+      if (existing) return existing;
+      await reference.set({ data: document(conversation) });
+      return conversation;
+    });
+  }
+
+  async getDirectConversation(conversationId) {
+    return this.getDocument('directConversations', conversationId);
+  }
+
+  async listDirectConversations(actorId, { cursor, limit }) {
+    const queryByParticipant = async (field) => {
+      const where = cursor
+        ? this.command.or([
+            { [field]: actorId, updatedAt: this.command.lt(cursor.at) },
+            { [field]: actorId, updatedAt: cursor.at, _id: this.command.lt(cursor.id) }
+          ])
+        : { [field]: actorId };
+      const result = await this.db.collection('directConversations')
+        .where(where)
+        .orderBy('updatedAt', 'desc')
+        .orderBy('_id', 'desc')
+        .limit(limit + 1)
+        .get();
+      return (result.data || []).map(entity);
+    };
+    const [asFirst, asSecond] = await Promise.all([
+      queryByParticipant('participantAId'),
+      queryByParticipant('participantBId')
+    ]);
+    const unique = new Map([...asFirst, ...asSecond].map((item) => [item.id, item]));
+    const candidates = [...unique.values()]
+      .filter((item) => isAfterDirectCursor(item, cursor, 'updatedAt'))
+      .sort((left, right) => compareDirectDescending(left, right, 'updatedAt'));
+    const items = candidates.slice(0, limit);
+    return {
+      items,
+      nextCursor: candidates.length > limit ? encodeDirectCursor(items[items.length - 1], 'updatedAt') : null
+    };
+  }
+
+  async listDirectMessages(conversationId, actorId, { cursor, limit }) {
+    const conversation = await this.getDirectConversation(conversationId);
+    invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+    const where = cursor
+      ? this.command.or([
+          { conversationId, createdAt: this.command.lt(cursor.at) },
+          { conversationId, createdAt: cursor.at, _id: this.command.lt(cursor.id) }
+        ])
+      : { conversationId };
+    const result = await this.db.collection('directMessages')
+      .where(where)
+      .orderBy('createdAt', 'desc')
+      .orderBy('_id', 'desc')
+      .limit(limit + 1)
+      .get();
+    const candidates = (result.data || [])
+      .map(entity)
+      .filter((item) => isAfterDirectCursor(item, cursor, 'createdAt'));
+    const items = candidates.slice(0, limit);
+    return {
+      items,
+      nextCursor: candidates.length > limit ? encodeDirectCursor(items[items.length - 1], 'createdAt') : null
+    };
+  }
+
+  async addDirectMessage(message) {
+    return this.db.runTransaction(async (transaction) => {
+      const conversationReference = transaction.collection('directConversations').doc(message.conversationId);
+      const messageReference = transaction.collection('directMessages').doc(message.id);
+      const conversation = await getTransactionDocument(conversationReference);
+      invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(message.senderId), 'NOT_FOUND_OR_NOT_ALLOWED');
+      const existing = await getTransactionDocument(messageReference);
+      if (existing) {
+        invariant(existing.conversationId === message.conversationId && existing.senderId === message.senderId, 'CONFLICT', '客户端消息ID已用于其他会话');
+        invariant(existing.payloadHash === message.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+        return existing;
+      }
+      const sourceActivity = conversation.source && await getTransactionDocument(
+        transaction.collection('activities').doc(conversation.source.id)
+      );
+      const firstMember = conversation.source && await getTransactionDocument(
+        transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantAId))
+      );
+      const secondMember = conversation.source && await getTransactionDocument(
+        transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantBId))
+      );
+      invariant(
+        sourceActivity
+          && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
+          && firstMember
+          && firstMember.activityId === conversation.source.id
+          && firstMember.userId === conversation.participantAId
+          && firstMember.status === MEMBER_STATUS.ACTIVE
+          && secondMember
+          && secondMember.activityId === conversation.source.id
+          && secondMember.userId === conversation.participantBId
+          && secondMember.status === MEMBER_STATUS.ACTIVE,
+        'CONFLICT',
+        '共同活动或成员关系已失效，这段私信现为只读'
+      );
+      const recipientId = conversation.participantAId === message.senderId
+        ? conversation.participantBId
+        : conversation.participantAId;
+      const unreadByUser = {
+        ...(conversation.unreadByUser || {}),
+        [message.senderId]: Number(conversation.unreadByUser && conversation.unreadByUser[message.senderId]) || 0,
+        [recipientId]: (Number(conversation.unreadByUser && conversation.unreadByUser[recipientId]) || 0) + 1
+      };
+      await messageReference.set({ data: document(message) });
+      await conversationReference.update({ data: {
+        lastMessageId: message.id,
+        lastMessagePreview: message.text.slice(0, 80),
+        lastMessageAt: message.createdAt,
+        lastSenderId: message.senderId,
+        unreadByUser,
+        updatedAt: message.createdAt
+      } });
+      return message;
+    });
+  }
+
+  async markDirectConversationRead(conversationId, actorId, lastMessageId, at) {
+    return this.db.runTransaction(async (transaction) => {
+      const reference = transaction.collection('directConversations').doc(conversationId);
+      const conversation = await getTransactionDocument(reference);
+      invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+      if (!conversation.lastMessageId || conversation.lastMessageId !== lastMessageId) return conversation;
+      const unreadByUser = { ...(conversation.unreadByUser || {}), [actorId]: 0 };
+      const readAtByUser = { ...(conversation.readAtByUser || {}), [actorId]: at };
+      await reference.update({ data: { unreadByUser, readAtByUser } });
+      return { ...conversation, unreadByUser, readAtByUser };
+    });
+  }
+
+  async getDirectUnreadSummary(actorId) {
+    const collect = async (field) => {
+      const result = await this.db.collection('directConversations').where({ [field]: actorId }).limit(100).get();
+      return (result.data || []).map(entity);
+    };
+    const [asFirst, asSecond] = await Promise.all([collect('participantAId'), collect('participantBId')]);
+    const items = [...new Map([...asFirst, ...asSecond].map((item) => [item.id, item])).values()];
+    return {
+      totalUnread: items.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[actorId]) || 0), 0),
+      conversationsWithUnread: items.filter((item) => Number(item.unreadByUser && item.unreadByUser[actorId]) > 0).length
+    };
   }
 
   async addNotification(notification) {

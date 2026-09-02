@@ -6,62 +6,40 @@ const { stableEntityId } = require('./ids');
 const {
   ACTIVITY_STATUS,
   APPLICATION_STATUS,
-  RIDE_FULFILLMENT_STATUS,
-  DRIVER_REVIEW_STATUS,
-  DRIVER_STATUS,
-  VEHICLE_REVIEW_STATUS,
-  VEHICLE_STATUS
+  LEGACY_ACTIVITY_TYPE_MAP
 } = require('./constants');
 const {
   validateActivityInput,
   validateActivityListInput,
-  validateRideJoinInput,
-  validateRideDriverAcceptInput,
-  validateRideDriverCancelInput,
   validateApplicationInput,
   validateProfileInput,
-  validateOnboardingRoleInput,
-  validateDriverApplicationInput,
-  validateDriverDocumentPrepareInput,
-  validateDriverDocumentConfirmInput,
   validateReportInput,
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
+  validateDirectMessageListInput,
+  validateDirectConversationCreateInput,
+  validateDirectMessageCreateInput,
   validateId,
   requireIdempotencyKey,
   stringValue
 } = require('./validation');
-const { protectDriverApplication } = require('./driver-credentials');
 const { createLocalModeration } = require('./moderation');
 const { COMMUNITY_POST_STATUS, COMMUNITY_REPLY_STATUS } = require('./community');
 const { resolveNotificationTarget } = require('./notification-target');
 const { parsePublicCursor, normalizeActivityForRead } = require('./public-activity-page');
 const {
-  rideCapacity,
-  isRidePassengerJoinable,
-  ridePassengerJoinUnavailableReason,
-  isRidePassengerLeaveable,
-  rideDriverAvailability,
   normalizeRideCapacity
 } = require('./ride-policy');
 const {
   avatarKindFromGender,
-  isCompleteRideProfile,
-  publicAvatarSlots,
-  upsertAvatarRoster
+  isCompleteRideProfile
 } = require('./passenger-avatar');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
-  'onboarding.selectRole',
-  'driver.application.submit',
-  'driver.document.prepare',
-  'driver.document.confirm',
-  'driver.application.withdraw',
-  'admin.driverApplication.review',
   'activity.create',
   'activity.cancel',
   'activity.complete',
@@ -75,18 +53,41 @@ const MUTATING_ACTIONS = new Set([
   'application.approve',
   'application.reject',
   'application.withdraw',
-  'ride.join',
   'member.leave',
-  'ride.driver.accept',
-  'ride.driver.cancel',
+  'group.contact.share',
+  'group.contact.revoke',
+  'dm.conversation.create',
+  'dm.message.send',
+  'dm.conversation.read',
   'notification.read',
   'report.create',
   'admin.activity.suspend'
 ]);
-const BUSINESS_IDEMPOTENT_ACTIONS = new Set(['driver.application.submit', 'admin.driverApplication.review']);
+const BUSINESS_IDEMPOTENT_ACTIONS = new Set();
+const REMOVED_ACTIONS = new Set([
+  'student.verification.get',
+  'student.verification.submit',
+  'student.document.prepare',
+  'student.document.confirm',
+  'admin.studentVerification.review',
+  'onboarding.selectRole',
+  'driver.application.get',
+  'driver.application.submit',
+  'driver.document.prepare',
+  'driver.document.confirm',
+  'driver.application.withdraw',
+  'admin.driverApplication.review',
+  'ride.join',
+  'ride.driver.profile',
+  'ride.driver.mine',
+  'ride.driver.memberContacts',
+  'ride.driver.accept',
+  'ride.driver.cancel'
+]);
 const PAYLOAD_BOUND_IDEMPOTENT_ACTIONS = new Set([
   'community.post.create',
-  'community.reply.create'
+  'community.reply.create',
+  'dm.message.send'
 ]);
 
 function stableSerialize(value) {
@@ -117,39 +118,14 @@ function selfUser(user) {
   };
 }
 
-function publicDriverApplication(application) {
-  if (!application) return null;
-  return {
-    status: application.status,
-    revision: application.revision,
-    summary: application.summary ? {
-      legalNameMasked: application.summary.legalNameMasked,
-      identityType: application.summary.identityType,
-      identityLast4: application.summary.identityLast4,
-      identityExpiresAt: application.summary.identityExpiresAt,
-      driverLicenseLast4: application.summary.driverLicenseLast4,
-      driverLicenseExpiresAt: application.summary.driverLicenseExpiresAt,
-      vehicleType: application.summary.vehicleType,
-      passengerCapacity: application.summary.passengerCapacity,
-      plateMasked: application.summary.plateMasked,
-      documentKinds: application.summary.documentKinds || []
-    } : null,
-    review: application.review ? {
-      reasonCode: application.review.reasonCode || '',
-      reviewedAt: application.review.reviewedAt || null
-    } : null,
-    submittedAt: application.submittedAt || null,
-    updatedAt: application.updatedAt
-  };
-}
-
 function publicActivity(activity, viewer = {}, at) {
+  const storedType = activity.type;
   activity = normalizeRideCapacity(activity);
-  const maxPassengers = activity.maxPassengers || activity.targetMembers;
-  const minPassengers = activity.minPassengers || activity.targetMembers;
+  const maxPassengers = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
+  const minPassengers = activity.minMembers || activity.minPassengers || activity.targetMembers;
   const result = {
     id: activity.id,
-    type: activity.type,
+    type: LEGACY_ACTIVITY_TYPE_MAP[storedType] || storedType,
     title: activity.title,
     description: activity.description,
     city: activity.city,
@@ -158,26 +134,46 @@ function publicActivity(activity, viewer = {}, at) {
     startsAt: activity.startsAt,
     deadlineAt: activity.deadlineAt,
     targetMembers: activity.targetMembers,
+    minMembers: activity.minMembers || minPassengers,
+    maxMembers: activity.maxMembers || maxPassengers,
     minPassengers,
     maxPassengers,
     memberCount: activity.memberCount,
     remainingCapacity: Math.max(0, Number(maxPassengers) - Number(activity.memberCount || 0)),
     status: activity.status,
     rules: activity.rules,
-    typeData: activity.typeData,
+    typeData: storedType === 'ride'
+      ? {
+          originLabel: activity.typeData && activity.typeData.origin && activity.typeData.origin.label || activity.placeLabel || '',
+          destinationLabel: activity.typeData && activity.typeData.destination && activity.typeData.destination.label || '',
+          timeFlexibility: 'WITHIN_60_MIN',
+          transportPreference: 'DISCUSS_AFTER_FORMED',
+          luggageType: 'NONE'
+        }
+      : storedType === 'buddy'
+        ? {
+            sportType: activity.typeData && (activity.typeData.sportType || activity.typeData.buddyType) || '运动活动',
+            venue: activity.placeLabel || '',
+            level: 'ANY',
+            intensity: 'RELAXED',
+            equipment: ''
+          }
+        : storedType === 'product'
+          ? {
+              venue: activity.placeLabel || '',
+              cuisine: activity.typeData && activity.typeData.productName || '一起吃饭',
+              budget: activity.typeData && activity.typeData.unitPriceRange || '',
+              dietaryNotes: ''
+            }
+          : activity.typeData,
     owner: activity.owner && activity.owner.nickname
       ? { nickname: activity.owner.nickname }
       : null,
     createdAt: activity.createdAt,
     updatedAt: activity.updatedAt
   };
-  if (activity.type === 'ride') {
-    result.avatarSlots = publicAvatarSlots(activity.avatarRoster, maxPassengers);
-    result.rideFulfillment = publicRideFulfillment(activity.rideFulfillment);
-    const availability = rideDriverAvailability(activity, at);
-    result.rideJoinable = isRidePassengerJoinable(activity, at);
-    result.driverAcceptable = availability.acceptable;
-    result.driverUnacceptableReason = availability.reason;
+  if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) {
+    result.legacy = { sourceType: storedType, readOnly: true };
   }
   if (viewer.application) {
     result.viewerApplication = {
@@ -192,27 +188,10 @@ function publicActivity(activity, viewer = {}, at) {
       role: viewer.member.role,
       status: viewer.member.status,
       joinedAt: viewer.member.joinedAt,
-      ...(activity.type === 'ride' ? { luggageType: viewer.member.luggageType || null } : {})
+      ...(storedType === 'ride' ? { luggageType: viewer.member.luggageType || null } : {})
     };
   }
   result.viewerRole = viewer.role || 'guest';
-  if (activity.type === 'ride') {
-    result.canJoinRide = result.rideJoinable === true
-      && (result.viewerRole === 'guest' || result.viewerRole === 'applicant');
-    result.joinUnavailableReason = result.canJoinRide
-      ? ''
-      : result.viewerRole === 'owner'
-        ? '这是你发布的行程'
-        : result.viewerRole === 'member'
-          ? '你已加入该行程'
-          : result.viewerRole === 'driver'
-            ? '你已承接该行程，不能同时作为乘客'
-            : ridePassengerJoinUnavailableReason(activity, at);
-    result.canLeaveRide = result.viewerRole === 'member' && isRidePassengerLeaveable(activity);
-    result.rideExitLocked = result.viewerRole === 'member'
-      && activity.rideFulfillment
-      && activity.rideFulfillment.status !== RIDE_FULFILLMENT_STATUS.UNASSIGNED;
-  }
   return result;
 }
 
@@ -237,41 +216,6 @@ function publicCommunityReply(reply, viewerId = '') {
     createdAt: reply.createdAt,
     updatedAt: reply.updatedAt,
     viewerIsAuthor: Boolean(viewerId && reply.authorId === viewerId)
-  };
-}
-
-function publicRideFulfillment(fulfillment) {
-  if (!fulfillment) return null;
-  const result = {
-    status: fulfillment.status,
-    pickupAt: fulfillment.pickupAt || null,
-    assignedAt: fulfillment.assignedAt || null
-  };
-  if (fulfillment.driver && fulfillment.driver.nickname) {
-    result.driver = { nickname: fulfillment.driver.nickname };
-  }
-  if (fulfillment.vehicle) {
-    result.vehicle = {
-      type: fulfillment.vehicle.type,
-      plateMasked: fulfillment.vehicle.plateMasked
-    };
-  }
-  return result;
-}
-
-function publicDriverProfile(driver, vehicles = []) {
-  if (!driver) return { canAcceptRide: false, vehicles: [] };
-  return {
-    canAcceptRide: driver.status === DRIVER_STATUS.ACTIVE
-      && driver.reviewStatus === DRIVER_REVIEW_STATUS.APPROVED,
-    vehicles: vehicles.map((vehicle) => ({
-      id: vehicle.id,
-      canUseForRide: vehicle.status === VEHICLE_STATUS.ACTIVE
-        && vehicle.reviewStatus === VEHICLE_REVIEW_STATUS.APPROVED,
-      type: vehicle.type,
-      plateMasked: vehicle.plateMasked,
-      passengerCapacity: vehicle.passengerCapacity
-    }))
   };
 }
 
@@ -331,14 +275,51 @@ function createPinbaService(options) {
   const moderation = options.moderation || createLocalModeration();
   const clock = options.clock || (() => new Date());
   const idGenerator = options.idGenerator || (() => crypto.randomUUID());
-  const rideDriverAcceptanceEnabled = options.rideDriverAcceptanceEnabled === true;
-  const driverCredentialSecret = options.driverCredentialSecret || '';
-  const driverReviewEnabled = options.driverReviewEnabled === true;
-  const driverApplicationAutoApprove = options.driverApplicationAutoApprove === true;
-  const driverAutoApprovalEnvironment = options.driverAutoApprovalEnvironment || '';
 
   function nowIso() {
     return clock().toISOString();
+  }
+
+  async function publicDirectConversation(conversation, actorId) {
+    const peerId = conversation.participantAId === actorId
+      ? conversation.participantBId
+      : conversation.participantAId;
+    const peer = await store.getUser(peerId);
+    const sourceActivity = conversation.source && conversation.source.id
+      ? await store.getActivity(conversation.source.id)
+      : null;
+    return {
+      id: conversation.id,
+      peer: {
+        nickname: peer && peer.profile && peer.profile.nickname || '拼吧用户',
+        avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
+      },
+      source: conversation.source
+        ? { type: conversation.source.type, id: conversation.source.id, title: conversation.source.title || '' }
+        : null,
+      lastMessage: conversation.lastMessageId
+        ? {
+            id: conversation.lastMessageId,
+            preview: conversation.lastMessagePreview || '',
+            isMine: conversation.lastSenderId === actorId,
+            createdAt: conversation.lastMessageAt
+          }
+        : null,
+      unreadCount: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[actorId]) || 0),
+      messagingAvailable: Boolean(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)),
+      updatedAt: conversation.updatedAt
+    };
+  }
+
+  function publicDirectMessage(message, actorId) {
+    return {
+      id: message.id,
+      conversationId: message.conversationId,
+      text: message.text,
+      isMine: message.senderId === actorId,
+      status: message.status || 'SENT',
+      createdAt: message.createdAt
+    };
   }
 
   function operationId(context, scope) {
@@ -373,19 +354,15 @@ function createPinbaService(options) {
 
   async function runAction(action, input, context) {
     const at = nowIso();
+    if (REMOVED_ACTIONS.has(action)) throw new AppError('NOT_FOUND', '接口动作不存在');
 
     if (action === 'auth.login') {
       const actorId = requireActor(context);
       const user = assertActiveAccount(await store.ensureUser(actorId, at));
-      const driverApplication = typeof store.getDriverApplication === 'function'
-        ? await store.getDriverApplication(actorId)
-        : null;
       return {
         user: selfUser(user),
         onboarding: {
-          profileComplete: isCompleteRideProfile(user.profile),
-          roleIntent: user.onboarding && user.onboarding.roleIntent || null,
-          driverApplication: publicDriverApplication(driverApplication)
+          profileComplete: isCompleteRideProfile(user.profile)
         },
         sessionScope: stableEntityId('session', actorId)
       };
@@ -411,145 +388,6 @@ function createPinbaService(options) {
       }
       await store.addAudit({ id: operationId(context, 'audit'), actorId, action, targetType: 'user', targetId: actorId, at });
       return { user: selfUser(user) };
-    }
-
-    if (action === 'onboarding.selectRole') {
-      const actorId = requireActor(context);
-      assertActiveAccount(await store.ensureUser(actorId, at));
-      const payload = validateOnboardingRoleInput(input);
-      const user = await store.updateOnboardingRole(actorId, payload.roleIntent, at);
-      await store.addAudit({ id: operationId(context, 'audit'), actorId, action, targetType: 'user', targetId: actorId, at });
-      return { user: selfUser(user) };
-    }
-
-    if (action === 'driver.application.get') {
-      const user = await requireActiveUser(context, false);
-      return { application: publicDriverApplication(await store.getDriverApplication(user.id)) };
-    }
-
-    if (action === 'driver.document.prepare') {
-      const user = await requireActiveUser(context);
-      const payload = validateDriverDocumentPrepareInput(input);
-      const uploadId = operationId(context, `driver-upload:${payload.kind}`);
-      const ownerScope = stableEntityId('driver-upload-owner', user.id);
-      const cloudPath = `private-driver/${ownerScope}/${uploadId}-${payload.kind}.jpg`;
-      const upload = {
-        id: uploadId, userId: user.id, kind: payload.kind, cloudPath,
-        status: 'PREPARED', expiresAt: new Date(Date.parse(at) + 30 * 60 * 1000).toISOString(),
-        createdAt: at, updatedAt: at
-      };
-      await store.registerDriverDocumentUpload(upload);
-      return { upload: { id: upload.id, kind: upload.kind, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt } };
-    }
-
-    if (action === 'driver.document.confirm') {
-      const user = await requireActiveUser(context);
-      const payload = validateDriverDocumentConfirmInput(input);
-      const upload = await store.confirmDriverDocumentUpload({
-        userId: user.id,
-        ...payload,
-        at
-      });
-      return {
-        document: {
-          uploadId: upload.id,
-          kind: upload.kind,
-          inspectedAt: upload.inspectedAt
-        }
-      };
-    }
-
-    if (action === 'driver.application.submit') {
-      const user = await requireActiveUser(context);
-      const payload = validateDriverApplicationInput(input, clock());
-      const current = await store.getDriverApplication(user.id);
-      const payloadHash = crypto.createHash('sha256').update(stableSerialize(payload)).digest('hex');
-      const operationKeyHash = operationId(context, 'driver-application-operation');
-      if (current && current.operationKeyHash === operationKeyHash) {
-        invariant(current.payloadHash === payloadHash, 'CONFLICT', '幂等键已用于其他司机认证资料');
-        if (driverApplicationAutoApprove && current.status === 'APPROVED') {
-          await store.ensureApprovedDriverFacts(user.id, current, current.updatedAt);
-        }
-        return { application: publicDriverApplication(current) };
-      }
-      invariant(
-        !current || !['SUBMITTED', 'APPROVED'].includes(current.status),
-        current && current.status === 'SUBMITTED' ? 'DRIVER_APPLICATION_PENDING' : 'DRIVER_APPLICATION_LOCKED'
-      );
-      const documentRefs = await store.resolveDriverDocumentReferences(user.id, payload.documents, at);
-      const protectedInput = { ...payload, documents: documentRefs };
-      const protectedPayload = protectDriverApplication(protectedInput, driverCredentialSecret, { userId: user.id, keyVersion: 1 });
-      const application = {
-        id: user.id,
-        userId: user.id,
-        status: driverApplicationAutoApprove ? 'APPROVED' : 'SUBMITTED',
-        revision: Number(current && current.revision || 0) + 1,
-        operationKeyHash,
-        payloadHash,
-        documentUploadIds: Object.fromEntries(Object.entries(documentRefs).map(([kind, reference]) => [kind, reference.uploadId])),
-        documentFileHashes: Object.fromEntries(Object.entries(documentRefs).map(([kind, reference]) => [kind, crypto.createHash('sha256').update(reference.fileID).digest('hex')])),
-        summary: protectedPayload.summary,
-        consent: { ...payload.consent, at },
-        submittedAt: at,
-        createdAt: current && current.createdAt || at,
-        updatedAt: at
-      };
-      if (driverApplicationAutoApprove) {
-        application.review = {
-          reviewerId: 'system:dev-auto-approval',
-          reasonCode: 'DEV_AUTO_APPROVED',
-          reviewedAt: at
-        };
-      }
-      const stored = await store.submitDriverApplication({
-        userId: user.id,
-        application,
-        secrets: protectedPayload.secrets,
-        documentRefs,
-        autoApprove: driverApplicationAutoApprove,
-        audit: {
-          id: operationId(context, 'audit'),
-          actorId: user.id,
-          action,
-          targetType: 'driverApplication',
-          targetId: user.id,
-          ...(driverApplicationAutoApprove ? {
-            decision: 'APPROVED',
-            reasonCode: 'DEV_AUTO_APPROVED',
-            reviewActor: 'system:dev-auto-approval',
-            autoApprovalEnvironment: driverAutoApprovalEnvironment,
-            autoApprovalGateEnabled: true
-          } : {}),
-          at
-        }
-      });
-      return { application: publicDriverApplication(stored) };
-    }
-
-    if (action === 'driver.application.withdraw') {
-      const user = await requireActiveUser(context, false);
-      const application = await store.withdrawDriverApplication(user.id, at, {
-        id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'driverApplication', targetId: user.id, at
-      });
-      return { application: publicDriverApplication(application) };
-    }
-
-    if (action === 'admin.driverApplication.review') {
-      const reviewer = await requireActiveUser(context, false);
-      invariant(driverReviewEnabled && reviewer.role === 'admin', 'DRIVER_REVIEW_FORBIDDEN');
-      const userId = validateId(input && input.userId, '申请人ID');
-      const decision = stringValue(input && input.decision, '审核决定', { required: true, max: 30 });
-      invariant(['APPROVED', 'REJECTED', 'NEEDS_MORE_INFO'].includes(decision), 'VALIDATION_ERROR', '审核决定无效');
-      const reasonCode = stringValue(input && input.reasonCode, '原因代码', { max: 40 });
-      const reviewPayloadHash = crypto.createHash('sha256').update(stableSerialize({ userId, decision, reasonCode })).digest('hex');
-      const application = await store.reviewDriverApplication({
-        userId, reviewerId: reviewer.id, decision, reasonCode, reviewPayloadHash, at,
-        audit: {
-          id: operationId(context, `audit:${userId}`), operationKeyHash: operationId(context, `driver-review-operation:${userId}`),
-          actorId: reviewer.id, action, targetType: 'driverApplication', targetId: userId, at
-        }
-      });
-      return { application: publicDriverApplication(application) };
     }
 
     if (action === 'activity.list') {
@@ -756,36 +594,10 @@ function createPinbaService(options) {
       };
     }
 
-    if (action === 'ride.driver.profile') {
-      const user = await requireActiveUser(context, false);
-      const driver = await store.getDriver(user.id);
-      const vehicles = driver ? await store.listVehiclesForDriver(user.id) : [];
-      return { driver: publicDriverProfile(driver, vehicles) };
-    }
-
-    if (action === 'ride.driver.mine') {
-      const user = await requireActiveUser(context, false);
-      const items = await store.listDriverRides(user.id);
-      return {
-        items: items.map((item) => ({
-          activity: publicActivity(item.activity, { role: 'driver' }, at),
-          rideFulfillment: publicRideFulfillment(item.fulfillment)
-        }))
-      };
-    }
-
-    if (action === 'ride.driver.memberContacts') {
-      const user = await requireActiveUser(context, false);
-      const activityId = validateId(input && input.activityId, '活动ID');
-      const items = await store.listRideMemberContactsForAssignedDriver(activityId, user.id);
-      return { activityId, items };
-    }
-
     if (action === 'activity.create') {
-      const user = await requireActiveUser(context);
+      const user = await requireActiveUser(context, true);
       const payload = validateActivityInput(input, clock());
-      if (payload.type === 'ride') invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
-      const { luggageType, contactInfo, ...activityPayload } = payload;
+      const activityPayload = payload;
       await moderation.check([activityPayload.title, activityPayload.description, activityPayload.rules], { actorId: user.id, scene: 2 });
       const activityId = operationId(context, 'activity');
       const activity = {
@@ -793,9 +605,8 @@ function createPinbaService(options) {
         ownerId: user.id,
         owner: { nickname: user.profile.nickname },
         ...activityPayload,
-        ...(payload.type === 'ride' ? {} : { contactInfo }),
         memberCount: 1,
-        status: activityPayload.targetMembers === 1 ? ACTIVITY_STATUS.FORMED : ACTIVITY_STATUS.RECRUITING,
+        status: ACTIVITY_STATUS.RECRUITING,
         operationKeyHash: operationId(context, 'operation'),
         version: 1,
         createdAt: at,
@@ -808,84 +619,22 @@ function createPinbaService(options) {
         role: 'OWNER',
         status: 'ACTIVE',
         joinedAt: at,
-        ...(activity.type === 'ride' ? {
-          luggageType,
-          avatarKind: avatarKindFromGender(user.profile.gender)
-        } : {})
+        avatarKind: avatarKindFromGender(user.profile.gender)
       };
-      if (activity.type === 'ride') {
-        activity.avatarRoster = upsertAvatarRoster([], ownerMember.id, ownerMember.avatarKind);
-      }
-      const rideFulfillment = activity.type === 'ride'
-        ? {
-            id: stableEntityId('rideFulfillment', activityId),
-            activityId,
-            status: RIDE_FULFILLMENT_STATUS.UNASSIGNED,
-            version: 1,
-            createdAt: at,
-            updatedAt: at
-          }
-        : null;
-      const ownerContact = activity.type === 'ride'
-        ? {
-            id: stableEntityId('memberContact', activityId, ownerMember.id),
-            activityId,
-            memberId: ownerMember.id,
-            userId: user.id,
-            phone: contactInfo,
-            status: 'ACTIVE',
-            createdAt: at,
-            updatedAt: at
-          }
-        : null;
-      if (rideFulfillment) {
-        activity.rideFulfillment = { status: RIDE_FULFILLMENT_STATUS.UNASSIGNED };
-        activity.rideJoinable = true;
-      }
-      const storedActivity = await store.createActivityWithOwner(activity, ownerMember, rideFulfillment, ownerContact);
+      const storedActivity = await store.createActivityWithOwner(activity, ownerMember, null, null);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
       return { activity: publicActivity(storedActivity, { role: 'owner' }, at) };
     }
 
-    if (action === 'ride.join') {
-      const user = await requireActiveUser(context);
-      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
-      const payload = validateRideJoinInput(input);
-      const { activityId, luggageType, phone } = payload;
-      const result = await store.joinRideAtomic({
-        activityId,
-        actorId: user.id,
-        luggageType,
-        phone,
-        avatarKind: avatarKindFromGender(user.profile.gender),
-        at
-      });
-      if (result.joined) {
-        await store.addNotification({
-          id: operationId(context, 'notification'),
-          userId: result.activity.ownerId,
-          type: 'RIDE_MEMBER_JOINED',
-          activityId,
-          title: `有新乘客加入“${result.activity.title}”`,
-          read: false,
-          createdAt: at
-        });
-      }
-      if (result.joined) {
-        await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
-      }
-      return { activity: publicActivity(result.activity, { role: 'member', member: result.member }, at) };
-    }
-
     if (action === 'application.submit') {
-      const user = await requireActiveUser(context);
+      const user = await requireActiveUser(context, true);
       const payload = validateApplicationInput(input);
       await moderation.check([payload.note], { actorId: user.id, scene: 2 });
       const activity = await store.getActivity(payload.activityId);
       invariant(activity, 'NOT_FOUND');
-      if (activity.memberCount >= (activity.type === 'ride' ? rideCapacity(activity) : (activity.maxPassengers || activity.targetMembers))) throw new AppError('CAPACITY_FULL');
-      const rideJoinable = activity.type === 'ride' && isRidePassengerJoinable(normalizeRideCapacity(activity), at);
-      invariant(rideJoinable || activity.status === ACTIVITY_STATUS.RECRUITING, 'CONFLICT', '该活动当前不可申请');
+      invariant(!LEGACY_ACTIVITY_TYPE_MAP[activity.type], 'CONFLICT', '历史活动仅供查看');
+      if (activity.memberCount >= (activity.maxMembers || activity.maxPassengers || activity.targetMembers)) throw new AppError('CAPACITY_FULL');
+      invariant(activity.status === ACTIVITY_STATUS.RECRUITING, 'CONFLICT', '该活动当前不可申请');
       invariant(activity.ownerId !== user.id, 'CONFLICT', '不能申请自己发布的活动');
       invariant(Date.parse(activity.deadlineAt) > clock().getTime(), 'CONFLICT', '该活动报名已截止');
       const application = {
@@ -924,9 +673,7 @@ function createPinbaService(options) {
         ownerId: owner.id,
         at
       });
-      const justFormed = result.activity.type === 'ride'
-        ? result.activity.memberCount === rideCapacity(result.activity)
-        : result.activity.status === ACTIVITY_STATUS.FORMED;
+      const justFormed = result.activity.status === ACTIVITY_STATUS.FORMED;
       await store.addNotification({
         id: operationId(context, 'notification'),
         userId: result.application.applicantId,
@@ -992,55 +739,6 @@ function createPinbaService(options) {
       return { activity: publicActivity(result.activity, { role: 'member' }, at) };
     }
 
-    if (action === 'ride.driver.accept') {
-      const driverUser = await requireActiveUser(context);
-      invariant(rideDriverAcceptanceEnabled, 'DRIVER_ACCEPTANCE_CLOSED');
-      const payload = validateRideDriverAcceptInput(input);
-      const result = await store.acceptRideAtomic({
-        ...payload,
-        driverId: driverUser.id,
-        operationKeyHash: operationId(context, `rideAssignment:${payload.activityId}`),
-        at
-      });
-      await store.addAudit({
-        id: operationId(context, 'audit'),
-        actorId: driverUser.id,
-        action,
-        targetType: 'rideFulfillment',
-        targetId: payload.activityId,
-        at
-      });
-      return {
-        activity: publicActivity(result.activity, { role: 'driver' }, at),
-        fulfillment: publicRideFulfillment(result.fulfillment)
-      };
-    }
-
-    if (action === 'ride.driver.cancel') {
-      const driverUser = await requireActiveUser(context);
-      invariant(rideDriverAcceptanceEnabled, 'DRIVER_ACCEPTANCE_CLOSED');
-      const payload = validateRideDriverCancelInput(input);
-      await moderation.check([payload.reason], { actorId: driverUser.id, scene: 2 });
-      const result = await store.cancelRideAssignmentAtomic({
-        activityId: payload.activityId,
-        driverId: driverUser.id,
-        reason: payload.reason,
-        at
-      });
-      await store.addAudit({
-        id: operationId(context, 'audit'),
-        actorId: driverUser.id,
-        action,
-        targetType: 'rideFulfillment',
-        targetId: payload.activityId,
-        at
-      });
-      return {
-        activity: publicActivity(result.activity, { role: 'driver' }, at),
-        fulfillment: publicRideFulfillment(result.fulfillment)
-      };
-    }
-
     if (action === 'activity.cancel') {
       const owner = await requireActiveUser(context);
       const activityId = validateId(input && input.activityId, '活动ID');
@@ -1059,12 +757,125 @@ function createPinbaService(options) {
       return { activity: publicActivity(activity, { role: 'owner' }, at) };
     }
 
-    if (action === 'group.contact') {
-      const user = await requireActiveUser(context);
+    if (action === 'group.space') {
+      const user = await requireActiveUser(context, false);
       const activityId = validateId(input && input.activityId, '活动ID');
-      const contact = await store.getGroupContact(activityId, user.id);
-      await store.addAudit({ id: idGenerator(), actorId: user.id, action: 'group.contact.view', targetType: 'activity', targetId: activityId, at });
-      return contact;
+      return store.getGroupSpace(activityId, user.id);
+    }
+
+    if (action === 'group.contact.share') {
+      const user = await requireActiveUser(context, false);
+      const activityId = validateId(input && input.activityId, '活动ID');
+      const type = stringValue(input && input.type, '联系方式类型', { required: true, max: 20 });
+      invariant(['WECHAT', 'MOBILE'].includes(type), 'VALIDATION_ERROR', '联系方式类型无效');
+      const value = stringValue(input && input.value, '联系方式', { required: true, max: 40 });
+      invariant(type === 'WECHAT' ? /^[A-Za-z][-_A-Za-z0-9]{5,19}$/.test(value) : /^\+?\d{8,15}$/.test(value), 'VALIDATION_ERROR', '联系方式格式无效');
+      const space = await store.setGroupContact({ activityId, actorId: user.id, type, value, shared: true, at });
+      await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
+      return space;
+    }
+
+    if (action === 'group.contact.revoke') {
+      const user = await requireActiveUser(context, false);
+      const activityId = validateId(input && input.activityId, '活动ID');
+      const space = await store.setGroupContact({ activityId, actorId: user.id, type: null, value: null, shared: false, at });
+      await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
+      return space;
+    }
+
+    if (action === 'dm.unread') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      return store.getDirectUnreadSummary(user.id);
+    }
+
+    if (action === 'dm.conversation.list') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateDirectMessageListInput(input);
+      const page = await store.listDirectConversations(user.id, payload);
+      return {
+        items: await Promise.all(page.items.map((item) => publicDirectConversation(item, user.id))),
+        nextCursor: page.nextCursor || null
+      };
+    }
+
+    if (action === 'dm.conversation.create') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateDirectConversationCreateInput(input);
+      const relationship = await store.resolveDirectMessagePeer(payload.activityId, user.id, payload.memberId);
+      const participantIds = [user.id, relationship.peerUserId].sort();
+      const conversation = await store.upsertDirectConversation({
+        id: stableEntityId('conversation', relationship.activity.id, ...participantIds),
+        participantAId: participantIds[0],
+        participantBId: participantIds[1],
+        source: { type: 'activity', id: relationship.activity.id, title: relationship.activity.title || '' },
+        lastMessageId: null,
+        lastMessagePreview: '',
+        lastMessageAt: null,
+        lastSenderId: null,
+        unreadByUser: { [participantIds[0]]: 0, [participantIds[1]]: 0 },
+        createdAt: at,
+        updatedAt: at
+      });
+      return { conversation: await publicDirectConversation(conversation, user.id) };
+    }
+
+    if (action === 'dm.message.list') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const conversationId = validateId(input && input.conversationId, '会话ID');
+      const payload = validateDirectMessageListInput(input);
+      const conversation = await store.getDirectConversation(conversationId);
+      invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(user.id), 'NOT_FOUND_OR_NOT_ALLOWED');
+      const page = await store.listDirectMessages(conversationId, user.id, payload);
+      return {
+        conversation: await publicDirectConversation(conversation, user.id),
+        items: page.items.map((item) => publicDirectMessage(item, user.id)),
+        nextCursor: page.nextCursor || null
+      };
+    }
+
+    if (action === 'dm.message.send') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateDirectMessageCreateInput(input);
+      const conversation = await store.getDirectConversation(payload.conversationId);
+      invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(user.id), 'NOT_FOUND_OR_NOT_ALLOWED');
+      const sourceActivity = conversation.source && conversation.source.id
+        ? await store.getActivity(conversation.source.id)
+        : null;
+      invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status), 'CONFLICT', '共同活动已结束，这段私信现为只读');
+      await moderation.check([payload.text], { actorId: user.id, scene: 2 });
+      await store.consumeCommunityRateLimit(user.id, 'directMessage', at, 30, 10 * 60 * 1000);
+      const message = await store.addDirectMessage({
+        id: stableEntityId('directMessage', conversation.id, user.id, payload.clientMessageId),
+        conversationId: conversation.id,
+        senderId: user.id,
+        text: payload.text,
+        clientMessageId: payload.clientMessageId,
+        payloadHash: context.payloadHash,
+        status: 'SENT',
+        createdAt: at,
+        updatedAt: at
+      });
+      return { message: publicDirectMessage(message, user.id) };
+    }
+
+    if (action === 'dm.conversation.read') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const conversationId = validateId(input && input.conversationId, '会话ID');
+      const lastMessageId = validateId(input && input.lastMessageId, '已读消息ID');
+      const existing = await store.getDirectConversation(conversationId);
+      invariant(existing && [existing.participantAId, existing.participantBId].includes(user.id), 'NOT_FOUND_OR_NOT_ALLOWED');
+      const conversation = await store.markDirectConversationRead(conversationId, user.id, lastMessageId, at);
+      return {
+        conversation: await publicDirectConversation(conversation, user.id),
+        unread: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[user.id]) || 0),
+        readAt: at
+      };
     }
 
     if (action === 'application.listForOwner') {
@@ -1090,6 +901,10 @@ function createPinbaService(options) {
     if (action === 'report.create') {
       const user = await requireActiveUser(context);
       const payload = validateReportInput(input);
+      if (payload.targetType === 'directConversation') {
+        const conversation = await store.getDirectConversation(payload.targetId);
+        invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(user.id), 'NOT_FOUND_OR_NOT_ALLOWED');
+      }
       await moderation.check([payload.description], { actorId: user.id, scene: 2 });
       const report = {
         id: stableEntityId('report', user.id, payload.targetType, payload.targetId),
@@ -1170,9 +985,6 @@ module.exports = {
   publicActivityQuestion,
   publicCommunityPost,
   publicCommunityReply,
-  publicRideFulfillment,
-  publicDriverProfile,
   publicNotification,
-  selfUser,
-  publicDriverApplication
+  selfUser
 };

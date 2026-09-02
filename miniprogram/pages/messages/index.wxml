@@ -1,0 +1,65 @@
+<view class="messages-page" style="padding-top: {{contentTopInset}}px;">
+  <image class="paper-texture" src="../../assets/images/publish/publish-paper-texture.webp" mode="aspectFill" aria-hidden="true" />
+
+  <view class="messages-header">
+    <text class="eyebrow">PINBA MESSAGES</text>
+    <text class="title">拼吧 · 消息</text>
+    <text class="subtitle">和搭子保持联系</text>
+    <view class="header-doodle" aria-hidden="true"><view></view><view></view><view></view></view>
+  </view>
+
+  <view class="messages-content">
+    <view class="system-card" bindtap="handleSystemNotification" hover-class="paper-card--pressed" role="button" aria-label="系统通知，{{systemUnread}}条未读">
+      <view class="system-icon" aria-hidden="true">!</view>
+      <view class="system-copy">
+        <view class="system-title-row"><text class="system-title">系统通知</text><text wx:if="{{systemUnread}}" class="system-count">{{systemUnread > 99 ? '99+' : systemUnread}}</text></view>
+        <text class="system-preview">{{systemNotification ? systemNotification.title : '活动进度和平台提醒会显示在这里'}}</text>
+      </view>
+      <text class="chevron" aria-hidden="true">›</text>
+    </view>
+
+    <view class="section-heading"><text>全部私信</text><text class="section-count">{{conversations.length}}</text></view>
+
+    <block wx:if="{{loading}}">
+      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="conversation-card skeleton-card"><view class="skeleton-avatar"></view><view class="skeleton-lines"><view></view><view></view></view></view>
+    </block>
+
+    <view wx:elif="{{error}}" class="state-paper" role="alert">
+      <view class="state-bubble" aria-hidden="true">…</view>
+      <text class="state-title">消息暂时走丢了</text>
+      <text class="state-desc">{{error}}</text>
+      <button class="state-action" hover-class="paper-card--pressed" bindtap="handleRetry">重新加载</button>
+    </view>
+
+    <view wx:elif="{{!conversations.length}}" class="state-paper">
+      <view class="state-bubble" aria-hidden="true">♡</view>
+      <text class="state-title">暂无私信</text>
+      <text class="state-desc">加入并成团后，可在成员空间与搭子开始一对一沟通。</text>
+    </view>
+
+    <view wx:else class="conversation-list">
+      <view
+        wx:for="{{conversations}}"
+        wx:key="id"
+        class="conversation-card"
+        data-id="{{item.id}}"
+        bindtap="handleConversation"
+        hover-class="paper-card--pressed"
+        role="button"
+        aria-label="{{item.accessibilityLabel}}"
+      >
+        <view class="conversation-avatar avatar--{{item.tone}}" aria-hidden="true">{{item.initial}}</view>
+        <view class="conversation-copy">
+          <view class="conversation-top"><text class="conversation-name">{{item.nickname}}</text><text class="conversation-time">{{item.displayTime}}</text></view>
+          <view class="conversation-bottom"><text class="conversation-preview">{{item.preview}}</text><text wx:if="{{item.unreadCount}}" class="conversation-unread">{{item.unreadCount > 99 ? '99+' : item.unreadCount}}</text></view>
+          <text wx:if="{{item.source && item.source.title}}" class="source-label">来自活动：{{item.source.title}}</text>
+        </view>
+      </view>
+      <view class="list-footer" role="status">
+        <text wx:if="{{loadingMore}}">正在加载更多…</text>
+        <button wx:elif="{{loadMoreError}}" class="footer-retry" bindtap="handleRetryLoadMore">{{loadMoreError}}</button>
+        <text wx:elif="{{!hasMore}}">已经到底啦</text>
+      </view>
+    </view>
+  </view>
+</view>

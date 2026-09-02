@@ -8,7 +8,7 @@
     <view class="post-detail surface">
       <view class="author-row">
         <image class="avatar" src="{{post.avatarPath}}" mode="aspectFit" aria-hidden="true" />
-        <view class="author-meta"><text class="author-name">{{post.author.nickname || '校园同学'}}</text><text class="post-time">{{post.createdAt}}</text></view>
+        <view class="author-meta"><text class="author-name">{{post.author.nickname || '拼吧用户'}}</text><text class="post-time">{{post.createdAt}}</text></view>
         <button class="more-button" bindtap="handlePostMore" aria-label="更多帖子操作">···</button>
       </view>
       <text class="post-content">{{post.content}}</text>
@@ -17,7 +17,7 @@
     <view wx:if="{{replies.length}}" class="reply-list">
       <view wx:for="{{replies}}" wx:key="id" class="reply-card surface">
         <image class="reply-avatar" src="{{item.avatarPath}}" mode="aspectFit" aria-hidden="true" />
-        <view class="reply-body"><text class="reply-author">{{item.author.nickname || '校园同学'}}</text><text class="reply-content">{{item.content}}</text></view>
+        <view class="reply-body"><text class="reply-author">{{item.author.nickname || '拼吧用户'}}</text><text class="reply-content">{{item.content}}</text></view>
         <button class="more-button reply-more" data-index="{{index}}" bindtap="handleReplyMore" aria-label="更多回复操作">···</button>
       </view>
     </view>

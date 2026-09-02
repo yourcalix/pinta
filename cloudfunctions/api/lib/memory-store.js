@@ -25,6 +25,11 @@ const {
   isAfterDescendingCursor,
   isAfterAscendingCursor
 } = require('./community');
+const {
+  encodeDirectCursor,
+  compareDirectDescending,
+  isAfterDirectCursor
+} = require('./direct-message');
 const { collectPublicActivityPage } = require('./public-activity-page');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
@@ -71,6 +76,8 @@ class MemoryStore {
     this.activityQuestions = new Map((seed.activityQuestions || []).map((item) => [item.id, clone(item)]));
     this.communityPosts = new Map((seed.communityPosts || []).map((item) => [item.id, clone(item)]));
     this.communityReplies = new Map((seed.communityReplies || []).map((item) => [item.id, clone(item)]));
+    this.directConversations = new Map((seed.directConversations || []).map((item) => [item.id, clone(item)]));
+    this.directMessages = new Map((seed.directMessages || []).map((item) => [item.id, clone(item)]));
     this.drivers = new Map((seed.drivers || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverApplications = new Map((seed.driverApplications || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverSecrets = new Map((seed.driverSecrets || []).map((item) => [item.userId || item.id, clone(item)]));
@@ -508,7 +515,7 @@ class MemoryStore {
     );
     if (effectiveActivity.memberCount >= (effectiveActivity.type === 'ride'
       ? rideCapacity(effectiveActivity)
-      : (effectiveActivity.maxPassengers || effectiveActivity.targetMembers))) {
+      : (effectiveActivity.maxMembers || effectiveActivity.maxPassengers || effectiveActivity.targetMembers))) {
       throw new AppError('CAPACITY_FULL');
     }
     invariant(effectiveActivity.ownerId !== application.applicantId, 'CONFLICT', '不能申请自己发布的活动');
@@ -565,7 +572,7 @@ class MemoryStore {
     invariant(application.status === APPLICATION_STATUS.PENDING, 'CONFLICT', '该申请已处理');
     const capacity = activity.type === 'ride'
       ? rideCapacity(activity)
-      : (activity.maxPassengers || activity.targetMembers);
+      : (activity.maxMembers || activity.maxPassengers || activity.targetMembers);
     if (activity.memberCount >= capacity) throw new AppError('CAPACITY_FULL');
 
     const duplicateMember = [...this.members.values()].find(
@@ -593,7 +600,7 @@ class MemoryStore {
     const cancelledApplicantIds = [];
     const threshold = activity.type === 'ride'
       ? rideThreshold(activity)
-      : (activity.minPassengers || activity.targetMembers);
+      : (activity.minMembers || activity.minPassengers || activity.targetMembers);
     if (activity.memberCount >= threshold) {
       activity.status = ACTIVITY_STATUS.FORMED;
       activity.formedAt = activity.formedAt || at;
@@ -668,7 +675,7 @@ class MemoryStore {
     activity.updatedAt = at;
     const threshold = activity.type === 'ride'
       ? rideThreshold(activity)
-      : (activity.minPassengers || activity.targetMembers);
+      : (activity.minMembers || activity.minPassengers || activity.targetMembers);
     if (activity.status === ACTIVITY_STATUS.FORMED && activity.memberCount < threshold) {
       activity.status = ACTIVITY_STATUS.RECRUITING;
       delete activity.formedAt;
@@ -771,32 +778,61 @@ class MemoryStore {
     return clone(activity);
   }
 
-  async getGroupContact(activityId, actorId) {
+  async getGroupSpace(activityId, actorId) {
     const activity = this.activities.get(activityId);
     invariant(activity, 'NOT_FOUND');
-    invariant([ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS, ACTIVITY_STATUS.COMPLETED].includes(activity.status), 'CONFLICT', '活动成团后才能查看联系信息');
+    invariant([ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'CONFLICT', '仅成团中的活动可使用成员空间');
     const member = [...this.members.values()].find(
       (item) => item.activityId === activityId && item.userId === actorId && item.status === MEMBER_STATUS.ACTIVE
     );
     invariant(member, 'FORBIDDEN');
-    const activeMemberCount = [...this.members.values()].filter(
-      (item) => item.activityId === activityId && item.status === MEMBER_STATUS.ACTIVE
-    ).length;
-    invariant(
-      isRideContactUnlocked(activity, activeMemberCount),
-      'CONFLICT',
-      '拼车满7名有效乘客后才能查看联系信息'
-    );
+    const members = [...this.members.values()]
+      .filter((item) => item.activityId === activityId && item.status === MEMBER_STATUS.ACTIVE)
+      .sort((left, right) => String(left.joinedAt).localeCompare(String(right.joinedAt)))
+      .map((item) => {
+        const user = this.users.get(item.userId);
+        const contact = this.memberContacts.get(stableEntityId('memberContact', activityId, item.id));
+        return {
+          memberId: item.id,
+          role: item.role,
+          nickname: user && user.profile && user.profile.nickname || '拼吧用户',
+          isSelf: item.userId === actorId,
+          sharedContact: contact && contact.status === 'ACTIVE' && contact.shared === true
+            ? { type: contact.type, value: contact.value }
+            : null
+        };
+      });
     return clone({
       activityId,
-      contactInfo: activity.contactInfo,
       meeting: {
         city: activity.city,
         district: activity.district,
         placeLabel: activity.placeLabel,
         note: activity.rules || ''
-      }
+      },
+      members
     });
+  }
+
+  async setGroupContact({ activityId, actorId, type, value, shared, at }) {
+    const activity = this.activities.get(activityId);
+    invariant(activity, 'NOT_FOUND');
+    invariant([ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'CONFLICT', '仅成团中的活动可共享联系方式');
+    const member = [...this.members.values()].find(
+      (item) => item.activityId === activityId && item.userId === actorId && item.status === MEMBER_STATUS.ACTIVE
+    );
+    invariant(member, 'FORBIDDEN');
+    const id = stableEntityId('memberContact', activityId, member.id);
+    const previous = this.memberContacts.get(id);
+    this.memberContacts.set(id, {
+      ...(previous || { id, activityId, memberId: member.id, userId: actorId, createdAt: at }),
+      type: shared ? type : null,
+      value: shared ? value : null,
+      shared: shared === true,
+      status: shared ? 'ACTIVE' : 'INACTIVE',
+      updatedAt: at
+    });
+    return this.getGroupSpace(activityId, actorId);
   }
 
   async getDriver(userId) {
@@ -952,6 +988,124 @@ class MemoryStore {
         .filter((item) => item.activityId === activityId)
         .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     );
+  }
+
+  async resolveDirectMessagePeer(activityId, actorId, memberId) {
+    const activity = this.activities.get(activityId);
+    invariant(activity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'NOT_FOUND_OR_NOT_ALLOWED');
+    const actorMember = [...this.members.values()].find(
+      (item) => item.activityId === activityId && item.userId === actorId && item.status === MEMBER_STATUS.ACTIVE
+    );
+    const targetMember = this.members.get(memberId);
+    invariant(
+      actorMember
+        && targetMember
+        && targetMember.activityId === activityId
+        && targetMember.status === MEMBER_STATUS.ACTIVE
+        && targetMember.userId !== actorId,
+      'NOT_FOUND_OR_NOT_ALLOWED'
+    );
+    const peer = this.users.get(targetMember.userId);
+    invariant(peer && peer.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED');
+    return clone({ activity, peerUserId: peer.id });
+  }
+
+  async upsertDirectConversation(conversation) {
+    const sourceActivity = conversation.source && this.activities.get(conversation.source.id);
+    const activeParticipants = [...this.members.values()].filter(
+      (item) => item.activityId === (conversation.source && conversation.source.id)
+        && [conversation.participantAId, conversation.participantBId].includes(item.userId)
+        && item.status === MEMBER_STATUS.ACTIVE
+    );
+    invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status) && activeParticipants.length === 2, 'NOT_FOUND_OR_NOT_ALLOWED');
+    const existing = this.directConversations.get(conversation.id);
+    if (existing) return clone(existing);
+    this.directConversations.set(conversation.id, clone(conversation));
+    return clone(conversation);
+  }
+
+  async getDirectConversation(conversationId) {
+    return clone(this.directConversations.get(conversationId) || null);
+  }
+
+  async listDirectConversations(actorId, { cursor, limit }) {
+    const candidates = [...this.directConversations.values()]
+      .filter((item) => [item.participantAId, item.participantBId].includes(actorId))
+      .filter((item) => isAfterDirectCursor(item, cursor, 'updatedAt'))
+      .sort((left, right) => compareDirectDescending(left, right, 'updatedAt'));
+    const page = candidates.slice(0, limit + 1);
+    const items = page.slice(0, limit);
+    return clone({
+      items,
+      nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'updatedAt') : null
+    });
+  }
+
+  async listDirectMessages(conversationId, actorId, { cursor, limit }) {
+    const conversation = this.directConversations.get(conversationId);
+    invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+    const candidates = [...this.directMessages.values()]
+      .filter((item) => item.conversationId === conversationId)
+      .filter((item) => isAfterDirectCursor(item, cursor, 'createdAt'))
+      .sort((left, right) => compareDirectDescending(left, right, 'createdAt'));
+    const page = candidates.slice(0, limit + 1);
+    const items = page.slice(0, limit);
+    return clone({
+      items,
+      nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'createdAt') : null
+    });
+  }
+
+  async addDirectMessage(message) {
+    const conversation = this.directConversations.get(message.conversationId);
+    invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(message.senderId), 'NOT_FOUND_OR_NOT_ALLOWED');
+    const existing = this.directMessages.get(message.id);
+    if (existing) {
+      invariant(existing.conversationId === message.conversationId && existing.senderId === message.senderId, 'CONFLICT', '客户端消息ID已用于其他会话');
+      invariant(existing.payloadHash === message.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+      return clone(existing);
+    }
+    const sourceActivity = conversation.source && this.activities.get(conversation.source.id);
+    const activeParticipants = [...this.members.values()].filter(
+      (item) => item.activityId === (conversation.source && conversation.source.id)
+        && [conversation.participantAId, conversation.participantBId].includes(item.userId)
+        && item.status === MEMBER_STATUS.ACTIVE
+    );
+    invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status) && activeParticipants.length === 2, 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
+    const recipientId = conversation.participantAId === message.senderId
+      ? conversation.participantBId
+      : conversation.participantAId;
+    this.directMessages.set(message.id, clone(message));
+    conversation.lastMessageId = message.id;
+    conversation.lastMessagePreview = message.text.slice(0, 80);
+    conversation.lastMessageAt = message.createdAt;
+    conversation.lastSenderId = message.senderId;
+    conversation.updatedAt = message.createdAt;
+    conversation.unreadByUser = {
+      ...(conversation.unreadByUser || {}),
+      [message.senderId]: Number(conversation.unreadByUser && conversation.unreadByUser[message.senderId]) || 0,
+      [recipientId]: (Number(conversation.unreadByUser && conversation.unreadByUser[recipientId]) || 0) + 1
+    };
+    return clone(message);
+  }
+
+  async markDirectConversationRead(conversationId, actorId, lastMessageId, at) {
+    const conversation = this.directConversations.get(conversationId);
+    invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+    if (!conversation.lastMessageId || conversation.lastMessageId !== lastMessageId) return clone(conversation);
+    conversation.unreadByUser = { ...(conversation.unreadByUser || {}), [actorId]: 0 };
+    conversation.readAtByUser = { ...(conversation.readAtByUser || {}), [actorId]: at };
+    return clone(conversation);
+  }
+
+  async getDirectUnreadSummary(actorId) {
+    const items = [...this.directConversations.values()].filter(
+      (item) => [item.participantAId, item.participantBId].includes(actorId)
+    );
+    return {
+      totalUnread: items.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[actorId]) || 0), 0),
+      conversationsWithUnread: items.filter((item) => Number(item.unreadByUser && item.unreadByUser[actorId]) > 0).length
+    };
   }
 
   async addNotification(notification) {

@@ -134,58 +134,15 @@ test('隐私组件对曝光、同意、拒绝和销毁都结算微信回调', ()
   delete require.cache[componentPath];
 });
 
-test('成团页按需挂载隐私组件并提供可选中文本兜底', () => {
+test('成员空间不依赖剪贴板权限并以可选中文本展示成员自愿共享信息', () => {
   const groupWxml = fs.readFileSync(path.join(root, 'miniprogram/subpackages/activity/group/index.wxml'), 'utf8');
-  const groupJson = JSON.parse(fs.readFileSync(path.join(root, 'miniprogram/subpackages/activity/group/index.json'), 'utf8'));
-  const popupWxml = fs.readFileSync(path.join(root, 'miniprogram/components/privacy-popup/index.wxml'), 'utf8');
-
-  assert.equal(groupJson.usingComponents['privacy-popup'], '/components/privacy-popup/index');
-  assert.match(groupWxml, /<privacy-popup[^>]*id="privacy-popup"/);
-  assert.match(groupWxml, /<text[^>]*user-select="true"[^>]*class="contact-value"/);
-  assert.match(popupWxml, /open-type="agreePrivacyAuthorization"/);
-  assert.match(popupWxml, /id="agree-btn"/);
+  assert.match(groupWxml, /class="contact-value" selectable="true"/);
+  assert.match(groupWxml, /主动共享我的联系方式/);
 
   const groupJs = fs.readFileSync(path.join(root, 'miniprogram/subpackages/activity/group/index.js'), 'utf8');
-  assert.doesNotMatch(groupJs, /setClipboardData\([\s\S]*success:\s*\(\)\s*=>\s*wx\.showToast/);
-  assert.match(groupJs, /fail:\s*\(error\)\s*=>\s*wx\.showToast/);
-});
-
-test('剪贴板 API 同步抛错时复制按钮恢复且给出降级提示', () => {
-  let pageDefinition;
-  const toasts = [];
-  global.Page = (value) => {
-    pageDefinition = value;
-  };
-  global.wx = {
-    setClipboardData() {
-      throw new Error('native bridge unavailable');
-    },
-    showToast(options) {
-      toasts.push(options);
-    }
-  };
-  const groupPath = require.resolve('../miniprogram/subpackages/activity/group/index');
-  delete require.cache[groupPath];
-  require(groupPath);
-
-  const page = {
-    ...pageDefinition,
-    data: {
-      ...pageDefinition.data,
-      contact: { contactInfo: 'wxid_demo' },
-      copying: false
-    },
-    setData(value) {
-      Object.assign(this.data, value);
-    }
-  };
-  assert.doesNotThrow(() => page.handleCopy());
-  assert.equal(page.data.copying, false);
-  assert.match(toasts.at(-1).title, /复制失败/);
-
-  delete global.Page;
-  delete global.wx;
-  delete require.cache[groupPath];
+  assert.doesNotMatch(groupJs, /setClipboardData|privacy-popup/);
+  assert.match(groupJs, /shareContact/);
+  assert.match(groupJs, /revokeContact/);
 });
 
 test('仓库配置保持游客模式且为私有 AppID 提供忽略模板', () => {

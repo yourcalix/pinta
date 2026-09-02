@@ -1,7 +1,7 @@
 <view class="page compose-page">
   <view class="compose-card surface">
     <view class="compose-heading">
-      <text class="compose-title">分享校园讨论</text>
+      <text class="compose-title">分享讨论</text>
       <text class="compose-counter">{{remaining}} / 500</text>
     </view>
     <text class="compose-tip">仅支持纯文字，不要填写电话、微信号、外链或其他隐私信息。</text>
@@ -10,7 +10,7 @@
       value="{{content}}"
       maxlength="500"
       auto-height="true"
-      placeholder="写下想和澳门校园同学讨论的问题或互助信息…"
+      placeholder="写下想和大家讨论的问题、兴趣话题或互助信息…"
       cursor-spacing="120"
       adjust-position="true"
       aria-label="讨论内容，最多500字"

@@ -7,9 +7,10 @@ Page({
   data: {
     targetType: 'activity',
     targetId: '',
+    from: '',
     reasons: [
       { value: 'FALSE_INFORMATION', label: '虚假或误导信息', description: '时间、地点、商品或活动信息明显不实' },
-      { value: 'ILLEGAL_RIDE_CHARGE', label: '涉嫌收费载客', description: '以司机身份报价、招揽乘客或变相营运' },
+      { value: 'ILLEGAL_SERVICE_SOLICITATION', label: '涉嫌违规服务招揽', description: '以收费服务名义报价、导流或变相履约' },
       { value: 'FRAUD_OR_DIVERSION', label: '诈骗或导流', description: '要求提前转账、收定金或诱导到不明平台' },
       { value: 'HARASSMENT', label: '骚扰或不当社交', description: '语言骚扰、婚恋暗示或与活动无关的接触' },
       { value: 'OTHER', label: '其他问题', description: '不属于以上类型的安全问题' }
@@ -21,7 +22,7 @@ Page({
   },
 
   onLoad(options) {
-    this.setData({ targetType: options.type || 'activity', targetId: options.id || '' });
+    this.setData({ targetType: options.type || 'activity', targetId: options.id || '', from: options.from || '' });
   },
 
   handleReason(event) {
@@ -50,10 +51,12 @@ Page({
       });
       wx.showModal({
         title: '举报已提交',
-        content: '该活动会立即从你的发现列表隐藏。运营人员将在后台继续处理。',
+        content: this.data.targetType === 'directConversation'
+          ? '运营人员将核查这段会话。如遇到紧急安全问题，请及时联系当地有关部门。'
+          : '该活动会立即从你的发现列表隐藏。运营人员将在后台继续处理。',
         showCancel: false,
         confirmText: '知道了',
-        success: () => wx.switchTab({ url: '/pages/discover/index' })
+        success: () => this.data.from === 'chat' ? wx.navigateBack() : wx.switchTab({ url: '/pages/discover/index' })
       });
     } catch (error) {
       this.setData({

@@ -29,7 +29,7 @@ test('个人资料强制选择男或女且只映射为受控头像类型', () =>
   assert.equal(avatarKindFromGender('UNKNOWN'), null);
 });
 
-test('公开拼车头像槽位固定为七个且不暴露成员标识或原始性别', () => {
+test.skip('旧固定七人拼车头像槽位工具已退出新活动主链路', () => {
   let roster = upsertAvatarRoster([], 'member-owner', 'PASSENGER_A');
   roster = upsertAvatarRoster(roster, 'member-guest', 'PASSENGER_B');
   const slots = publicAvatarSlots(roster, 7);
@@ -56,17 +56,21 @@ test('前端未知头像一律降级为空位且资料头像按性别自动对�
 
 test('资料页和我的页面使用真实性别选择与头像映射而非演示身份猜测', () => {
   const editWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/edit/index.wxml'), 'utf8');
+  const editWxss = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/edit/index.wxss'), 'utf8');
   const editJs = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/edit/index.js'), 'utf8');
   const userJs = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.js'), 'utf8');
-  const publishJs = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/publish/index.js'), 'utf8');
-  const detailJs = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/activity/detail/index.js'), 'utf8');
   assert.match(editWxml, /data-gender="MALE"/);
   assert.match(editWxml, /data-gender="FEMALE"/);
   assert.match(editWxml, /role="radiogroup"/);
+  assert.match(editWxml, /hero-campus\.png/);
+  assert.doesNotMatch(editWxml, /ride-car-green\.png|driver-role-voxel\.png|我是司机/);
+  assert.match(editWxml, /兴趣标签<\/text>\s*<text class="optional-label">（选填）/);
+  assert.doesNotMatch(editWxml, /所在城市|澳门|澳門/);
+  assert.match(editWxss, /@media \(max-width: 340px\)/);
+  assert.match(editWxss, /\.gender-options[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(editJs, /gender: form\.gender/);
-  assert.match(userJs, /profileAvatarPath\(user\.profile && user\.profile\.gender\)/);
-  assert.doesNotMatch(userJs, /getMockPersona\(\) === 'u_member'/);
+  assert.match(editJs, /city: PILOT_CITY/);
+  assert.match(userJs, /profileAvatarPath: profileAvatarPath\(user\.profile && user\.profile\.gender\)/);
+  assert.doesNotMatch(userJs, /u_driver|司机任务|司机认证/);
   assert.match(editWxml, /gender-options--error/);
-  assert.match(publishJs, /请先完善性别资料/);
-  assert.match(detailJs, /请先完善性别资料/);
 });

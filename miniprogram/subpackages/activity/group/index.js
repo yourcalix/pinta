@@ -1,189 +1,144 @@
 'use strict';
 
 const activityService = require('../../../services/activity');
-const { clipboardFailureMessage } = require('../../../services/privacy');
+const directMessageService = require('../../../services/direct-message');
 const { decorateActivity } = require('../../../utils/display');
 const { buildActivityPath, decodeActivityId } = require('../../../utils/activity-route');
 const { resolveProtectedPageError } = require('../../../utils/protected-page-error');
 
 Page({
-  data: {
-    id: '',
-    loading: true,
-    error: '',
-    errorCode: '',
-    errorAction: '',
-    errorActionText: '',
-    activity: null,
-    contact: null,
-    revealing: false,
-    copying: false,
-    pending: false
-  },
+  data: { id: '', loading: true, error: '', errorCode: '', errorAction: '', errorActionText: '', activity: null, space: null, members: [], selfShared: false, pending: false, pendingMemberId: '' },
 
-  onLoad(options = {}) {
-    this.setData({ id: decodeActivityId(options.id) });
-  },
-
-  onShow() {
-    return this.loadDetail();
-  },
-
-  onUnload() {
-    this._loadSeq = (this._loadSeq || 0) + 1;
-  },
+  onLoad(options = {}) { this.setData({ id: decodeActivityId(options.id) }); },
+  onShow() { return this.loadDetail(); },
+  onUnload() { this._loadSeq = (this._loadSeq || 0) + 1; },
 
   async loadDetail() {
     const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
     if (!this.data.id) {
-      this.setData({
-        loading: false,
-        activity: null,
-        contact: null,
-        ...resolveProtectedPageError({ code: 'NOT_FOUND' }, 'group')
-      });
+      this.setData({ loading: false, activity: null, ...resolveProtectedPageError({ code: 'NOT_FOUND' }, 'group') });
       return;
     }
-    this.setData({
-      loading: true,
-      error: '',
-      errorCode: '',
-      errorAction: '',
-      errorActionText: '',
-      activity: null
-    });
+    this.setData({ loading: true, error: '', errorCode: '', errorAction: '', errorActionText: '' });
     try {
-      const result = await activityService.detail(this.data.id);
-      if (loadSeq !== this._loadSeq) return;
-      const activity = decorateActivity(result.activity);
-      if (!['owner', 'member'].includes(activity.viewerRole)) {
-        this.setData({
-          loading: false,
-          activity: null,
-          contact: null,
-          ...resolveProtectedPageError({ code: 'FORBIDDEN' }, 'group')
-        });
-        return;
+      const detail = await activityService.detail(this.data.id);
+      const activity = decorateActivity(detail.activity);
+      if (!['owner', 'member'].includes(activity.viewerRole) || !['FORMED', 'IN_PROGRESS', 'COMPLETED'].includes(activity.status)) {
+        const conflict = new Error('成员空间仅对成团成员开放');
+        conflict.code = 'CONFLICT';
+        throw conflict;
       }
-      if (!['FORMED', 'IN_PROGRESS', 'COMPLETED'].includes(activity.status)) {
-        this.setData({
-          loading: false,
-          activity: null,
-          contact: null,
-          ...resolveProtectedPageError({ code: 'CONFLICT' }, 'group')
-        });
-        return;
-      }
-      this.setData({ activity, loading: false });
-    } catch (error) {
+      const space = activity.status === 'COMPLETED' ? null : await activityService.groupSpace(this.data.id);
+      const members = (space && space.members || []).map((item) => ({
+        ...item,
+        avatarLetter: item.nickname ? item.nickname.slice(0, 1) : '拼'
+      }));
       if (loadSeq !== this._loadSeq) return;
       this.setData({
-        loading: false,
-        activity: null,
-        contact: null,
-        ...resolveProtectedPageError(error, 'group')
+        activity,
+        space,
+        members,
+        selfShared: members.some((item) => item.isSelf && item.sharedContact),
+        loading: false
       });
+    } catch (error) {
+      if (loadSeq !== this._loadSeq) return;
+      this.setData({ loading: false, activity: null, ...resolveProtectedPageError(error, 'group') });
     }
   },
 
+  handleRetry() { this.loadDetail(); },
   handleErrorAction() {
-    if (this.data.errorAction === 'RETRY') {
-      this.loadDetail();
-      return;
-    }
-    if (this.data.errorAction === 'DETAIL') {
-      wx.redirectTo({ url: buildActivityPath('DETAIL', this.data.id) });
-      return;
-    }
-    wx.switchTab({ url: '/pages/discover/index' });
+    if (this.data.errorAction === 'RETRY') return this.loadDetail();
+    if (this.data.errorAction === 'DETAIL') return wx.redirectTo({ url: buildActivityPath('DETAIL', this.data.id) });
+    return wx.switchTab({ url: '/pages/discover/index' });
   },
 
-  handleReveal() {
-    if (this.data.revealing || this.data.contact || (this.data.activity && this.data.activity.type === 'ride')) return;
-    wx.showModal({
-      title: '查看联系信息前请确认',
-      content: '拼吧不提供资金担保。不要向陌生人提前转账；线下见面请选择公共场所并告知亲友。',
-      confirmText: '我已了解',
-      success: async (result) => {
-        if (!result.confirm) return;
-        this.setData({ revealing: true });
-        try {
-          const contact = await activityService.contact(this.data.id);
-          this.setData({ contact });
-        } catch (error) {
-          if (!error.handled) wx.showToast({ title: error.message || '暂时无法查看', icon: 'none' });
-        } finally {
-          this.setData({ revealing: false });
-        }
+  handleShareContact() {
+    wx.showActionSheet({
+      itemList: ['共享微信号', '共享手机号'],
+      success: ({ tapIndex }) => {
+        const type = tapIndex === 0 ? 'WECHAT' : 'MOBILE';
+        wx.showModal({
+          title: tapIndex === 0 ? '共享微信号' : '共享手机号',
+          content: '仅当前有效成员可见；退出、取消或活动结束后将自动失效。',
+          editable: true,
+          placeholderText: tapIndex === 0 ? '请输入微信号' : '请输入手机号（可含国家区号）',
+          confirmText: '确认共享',
+          success: async (result) => {
+            if (!result.confirm) return;
+            this.setData({ pending: true });
+            try {
+              await activityService.shareContact(this.data.id, type, String(result.content || '').trim());
+              await this.loadDetail();
+              wx.showToast({ title: '已共享', icon: 'success' });
+            } catch (error) {
+              if (!error.handled) wx.showToast({ title: error.message || '共享失败', icon: 'none' });
+            } finally {
+              this.setData({ pending: false });
+            }
+          }
+        });
       }
     });
   },
 
-  handleCopy() {
-    if (!this.data.contact || this.data.copying) return;
-    if (typeof wx.setClipboardData !== 'function') {
-      wx.showToast({ title: '当前微信版本不支持一键复制，可长按文本手动复制', icon: 'none' });
-      return;
-    }
-    this.setData({ copying: true });
+  async handleRevokeContact() {
+    if (this.data.pending) return;
+    this.setData({ pending: true });
     try {
-      wx.setClipboardData({
-        data: this.data.contact.contactInfo,
-        fail: (error) => wx.showToast({ title: clipboardFailureMessage(error), icon: 'none' }),
-        complete: () => this.setData({ copying: false })
-      });
+      await activityService.revokeContact(this.data.id);
+      await this.loadDetail();
+      wx.showToast({ title: '已停止共享', icon: 'success' });
     } catch (error) {
-      this.setData({ copying: false });
-      wx.showToast({ title: clipboardFailureMessage(error), icon: 'none' });
+      if (!error.handled) wx.showToast({ title: error.message || '操作失败', icon: 'none' });
+    } finally {
+      this.setData({ pending: false });
+    }
+  },
+
+  async handleMessageMember(event) {
+    const memberId = event.currentTarget.dataset.memberId;
+    if (!memberId || this.data.pendingMemberId) return;
+    this.setData({ pendingMemberId: memberId });
+    try {
+      const result = await directMessageService.createConversation(this.data.id, memberId);
+      wx.navigateTo({ url: `/subpackages/message/chat/index?id=${encodeURIComponent(result.conversation.id)}` });
+    } catch (error) {
+      if (!error.handled) wx.showToast({ title: error.message || '暂时无法发起私信', icon: 'none' });
+    } finally {
+      this.setData({ pendingMemberId: '' });
     }
   },
 
   handleComplete() {
     wx.showModal({
       title: '标记活动已完成？',
-      content: '完成后活动进入历史记录，不再接受成员变更。',
-      confirmText: '确认完成',
+      content: '完成后成员共享信息立即失效，活动进入历史记录。',
       success: async (result) => {
         if (!result.confirm) return;
         this.setData({ pending: true });
-        try {
-          await activityService.complete(this.data.id);
-          wx.showToast({ title: '活动已完成', icon: 'success' });
-          await this.loadDetail();
-        } catch (error) {
-          if (!error.handled) wx.showToast({ title: error.message || '操作失败', icon: 'none' });
-        } finally {
-          this.setData({ pending: false });
-        }
+        try { await activityService.complete(this.data.id); await this.loadDetail(); }
+        finally { this.setData({ pending: false }); }
       }
     });
   },
 
   handleLeave() {
     wx.showModal({
-      title: this.data.activity && this.data.activity.type === 'ride' ? '退出拼车？' : '退出活动？',
-      content: '退出后名额会释放，联系方式也将无法继续查看。',
-      confirmText: '确认退出',
+      title: '退出活动？',
+      content: '退出后将立即失去成员空间与共享信息访问权限。',
       confirmColor: '#E5484D',
       success: async (result) => {
         if (!result.confirm) return;
         this.setData({ pending: true });
-        try {
-          await activityService.leave(this.data.id, '参与者计划变化，主动退出活动');
-          wx.showToast({ title: this.data.activity.type === 'ride' ? '已退出拼车' : '已退出活动', icon: 'success' });
-          setTimeout(() => wx.navigateBack(), 400);
-        } catch (error) {
-          if (error.code === 'RIDE_MEMBER_LOCKED') {
-            wx.showModal({ title: '暂不可退出', content: error.message, showCancel: false, complete: () => this.loadDetail() });
-          } else if (!error.handled) wx.showToast({ title: error.message || '退出失败', icon: 'none' });
-        } finally {
-          this.setData({ pending: false });
-        }
+        try { await activityService.leave(this.data.id, '成员主动退出活动'); wx.navigateBack(); }
+        finally { this.setData({ pending: false }); }
       }
     });
   },
 
   handleReport() {
-    wx.navigateTo({ url: `/subpackages/safety/report/index?type=activity&id=${this.data.id}` });
+    wx.navigateTo({ url: `/subpackages/safety/report/index?type=activity&id=${encodeURIComponent(this.data.id)}` });
   }
 });
