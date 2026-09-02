@@ -1,0 +1,12 @@
+{
+  "id": "fix-tabbar-icon-size",
+  "title": "修复 app.json TabBar 图标超过 40KB 导致模拟器启动失败",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "重新编译微信开发者工具确认模拟器启动",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
