@@ -1,0 +1,12 @@
+{
+  "id": "redesign-publish-two-column",
+  "title": "将发布页模块改为每行两个的双列网格",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已通过网页版 Gemini 视觉终审，可交付",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
