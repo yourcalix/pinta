@@ -1,0 +1,12 @@
+{
+  "id": "restore-publish-card-proportions",
+  "title": "保持双列排列并恢复发布模块原始画面比例",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "在微信开发者工具重新编译并核对完整画面比例",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
