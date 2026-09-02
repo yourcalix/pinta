@@ -1,0 +1,12 @@
+{
+  "id": "simplify-publish-form-header",
+  "title": "移除发布表单顶部标题与返回键外框",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "重新编译确认三类表单顶部只显示返回箭头",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
