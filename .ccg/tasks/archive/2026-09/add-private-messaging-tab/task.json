@@ -1,0 +1,12 @@
+{
+  "id": "add-private-messaging-tab",
+  "title": "新增私信消息中心并将发布入口调整到五栏 TabBar 正中央",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "发版前在 iOS 与 Android 真机验证聊天键盘顶升和消息 99+ 徽标边界",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
