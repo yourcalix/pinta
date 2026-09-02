@@ -1,0 +1,12 @@
+{
+  "id": "unify-publish-form-fullscreen",
+  "title": "统一三类发布表单的沉浸式无刘海视觉",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "重新编译并在三种类型及真机键盘场景下验收",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
