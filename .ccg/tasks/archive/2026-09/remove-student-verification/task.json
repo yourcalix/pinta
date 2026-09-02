@@ -1,0 +1,12 @@
+{
+  "id": "remove-student-verification",
+  "title": "移除校园学生认证及相关权限门禁",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "full-stack-auth",
+  "currentPhase": "completed",
+  "nextAction": "已完成并归档",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
