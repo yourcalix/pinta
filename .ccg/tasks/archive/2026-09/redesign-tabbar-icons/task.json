@@ -1,0 +1,12 @@
+{
+  "id": "redesign-tabbar-icons",
+  "title": "重绘发现社区我的 Tab 图标并移除发布文字",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已通过网页版 Gemini 视觉终审，可进入真机发版检查",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
