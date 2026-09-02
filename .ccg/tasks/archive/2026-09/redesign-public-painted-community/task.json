@@ -1,0 +1,12 @@
+{
+  "id": "redesign-public-painted-community",
+  "title": "将面向成年用户的社区页重构为深蓝油画棒手绘风格",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-02T00:00:00+08:00",
+  "branch": "main"
+}
