@@ -1,0 +1,12 @@
+{
+  "id": "review-neutral-puzzle-avatar",
+  "title": "验收默认中性拼图头像资产",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档评审结论",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}
