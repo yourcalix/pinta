@@ -1,0 +1,12 @@
+{
+  "id": "design-direct-message-page",
+  "title": "设计油画棒手绘风一对一私信页面",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交已验证的私信页面实现",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}

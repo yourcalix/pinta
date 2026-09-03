@@ -1,44 +1,91 @@
-<view class="chat-page global-background-host">
+<view class="chat-page global-background-host" style="padding-top: {{contentTopInset}}px;">
   <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
   <view class="global-page-background-tint" aria-hidden="true"></view>
 
-  <view wx:if="{{loading}}" class="chat-state">正在打开私信…</view>
-  <view wx:elif="{{error}}" class="chat-state" role="alert"><text>{{error}}</text><button bindtap="handleRetry">重新加载</button></view>
-  <block wx:else>
-    <view class="peer-strip">
-      <view class="peer-avatar" aria-hidden="true">{{peerInitial}}</view>
-      <view class="peer-copy"><text class="peer-name">{{conversation.peer.nickname}}</text><text class="peer-source">{{conversation.source ? '共同活动：' + conversation.source.title : '一对一私信'}}</text></view>
-      <button class="peer-report" bindtap="handleReport" aria-label="举报这段私信">举报</button>
+  <view class="chat-navigation" style="height: {{contentTopInset}}px;">
+    <view class="chat-navigation-row">
+      <button class="chat-back-button" bindtap="handleBack" hover-class="chat-nav-button--pressed" aria-label="返回消息列表"><view class="chat-back-chevron" aria-hidden="true"></view></button>
+      <view class="chat-navigation-title" aria-label="正在和{{peerName}}私信">{{peerName}}</view>
+    </view>
+  </view>
+
+  <view class="chat-shell">
+    <view wx:if="{{loading}}" class="chat-state chat-state--loading" role="status" aria-label="正在打开私信">
+      <view class="state-source-skeleton skeleton-shimmer"></view>
+      <view class="state-bubble-skeleton state-bubble-skeleton--left skeleton-shimmer"></view>
+      <view class="state-bubble-skeleton state-bubble-skeleton--right skeleton-shimmer"></view>
+      <view class="state-bubble-skeleton state-bubble-skeleton--short skeleton-shimmer"></view>
+    </view>
+    <view wx:elif="{{error}}" class="chat-state" role="alert">
+      <view class="state-chat-icon" aria-hidden="true"><view></view></view>
+      <text class="state-title">私信加载失败</text>
+      <text class="state-copy">{{error}}</text>
+      <button class="state-action" bindtap="handleRetry" hover-class="paper-button--pressed">重新加载</button>
     </view>
 
-    <scroll-view class="message-scroll" scroll-y="true" scroll-into-view="{{scrollIntoView}}" enhanced="true" show-scrollbar="false">
-      <view class="older-area">
-        <button wx:if="{{hasMore && !loadingOlder}}" bindtap="handleLoadOlder">加载更早消息</button>
-        <text wx:elif="{{loadingOlder}}">正在加载…</text>
-        <button wx:elif="{{olderError}}" bindtap="handleLoadOlder">{{olderError}}</button>
+    <block wx:else>
+      <view class="source-strip">
+        <button class="source-main" bindtap="handleSource" disabled="{{!conversation.source}}" hover-class="source-main--pressed" aria-label="来自{{sourceTypeLabel}}，{{conversation.source ? conversation.source.title : '一对一私信'}}，点击查看活动详情">
+          <text class="source-tag source-tag--{{sourceTone}}">{{sourceTypeLabel}}</text>
+          <text class="source-title">{{conversation.source ? conversation.source.title : '一对一私信'}}</text>
+          <text class="source-arrow" aria-hidden="true">›</text>
+        </button>
+        <view class="source-divider" aria-hidden="true"></view>
+        <button class="source-report" bindtap="handleReport" hover-class="source-report--pressed" aria-label="举报此私信会话"><text aria-hidden="true">!</text> 举报</button>
       </view>
-      <view wx:if="{{!messages.length}}" class="chat-empty">还没有消息，说声你好吧</view>
-      <view wx:for="{{messages}}" wx:key="id" id="{{item.anchorId}}" class="message-row {{item.isMine ? 'message-row--mine' : ''}}">
-        <view class="message-bubble"><text user-select="true">{{item.text}}</text><text class="message-time">{{item.displayTime}}</text></view>
-      </view>
-      <view class="scroll-spacer"></view>
-    </scroll-view>
 
-    <view class="composer">
-      <text wx:if="{{!messagingAvailable}}" class="composer-closed">共同活动已结束，历史私信仅供查看</text>
-      <textarea
-        wx:else
-        class="composer-input"
-        value="{{text}}"
-        maxlength="500"
-        auto-height="true"
-        adjust-position="true"
-        cursor-spacing="20"
-        placeholder="输入消息（暂不支持联系方式或外链）"
-        bindinput="handleInput"
-        aria-label="私信内容"
-      />
-      <button wx:if="{{messagingAvailable}}" class="send-button" bindtap="handleSend" disabled="{{sending || !canSend}}" hover-class="send-button--pressed">{{sending ? '发送中' : '发送'}}</button>
-    </view>
-  </block>
+      <scroll-view class="message-scroll" scroll-y="true" scroll-into-view="{{scrollIntoView}}" scroll-with-animation="{{scrollWithAnimation}}" enhanced="true" show-scrollbar="false">
+        <view class="older-area">
+          <button wx:if="{{hasMore && !loadingOlder && !olderError}}" bindtap="handleLoadOlder" hover-class="older-button--pressed">加载更早消息</button>
+          <text wx:elif="{{loadingOlder}}">正在加载…</text>
+          <button wx:elif="{{olderError}}" bindtap="handleLoadOlder" hover-class="older-button--pressed">{{olderError}} ↻</button>
+        </view>
+
+        <view wx:if="{{!messages.length}}" class="chat-empty">
+          <view class="empty-bubble" aria-hidden="true"><view class="empty-dot"></view><view class="empty-dot"></view><view class="empty-dot"></view></view>
+          <view class="empty-title">还没有消息</view>
+          <view class="empty-copy">打个招呼，开始商量这次拼单吧～</view>
+          <view class="quick-prompts" aria-label="快捷破冰语">
+            <button wx:for="{{quickPrompts}}" wx:key="*this" class="quick-prompt" data-text="{{item}}" bindtap="handleQuickPrompt" hover-class="quick-prompt--pressed">{{item}}</button>
+          </view>
+          <view class="empty-safety">请注意个人安全，不要发送联系方式或外部链接</view>
+        </view>
+
+        <block wx:for="{{messages}}" wx:key="id">
+          <view wx:if="{{item.showTime}}" class="message-time-pill">{{item.displayTime}}</view>
+          <view id="{{item.anchorId}}" class="message-row {{item.isMine ? 'message-row--mine' : ''}} {{item.compact ? 'message-row--compact' : ''}}">
+            <view wx:if="{{!item.isMine}}" class="message-avatar-slot" aria-hidden="true"><view wx:if="{{item.showPeerAvatar}}" class="message-avatar message-avatar--{{peerTone}}">{{peerInitial}}</view></view>
+            <view class="message-bubble" role="text" aria-label="{{item.accessibilityLabel}}"><text class="message-text" user-select="true">{{item.text}}</text></view>
+          </view>
+        </block>
+        <view class="scroll-spacer"></view>
+      </scroll-view>
+
+      <view class="composer">
+        <view wx:if="{{!messagingAvailable}}" class="composer-closed" role="status"><text class="closed-lock" aria-hidden="true">⌁</text><text>共同拼单已结束，历史私信仅供查看</text></view>
+        <block wx:else>
+          <view wx:if="{{sendError}}" class="composer-error" role="alert">{{sendError}}</view>
+          <view class="composer-row">
+            <textarea
+              class="composer-input"
+              value="{{text}}"
+              maxlength="500"
+              auto-height="true"
+              adjust-position="true"
+              cursor-spacing="24"
+              confirm-type="send"
+              placeholder="输入消息"
+              placeholder-class="composer-placeholder"
+              bindinput="handleInput"
+              bindfocus="handleComposerFocus"
+              bindconfirm="handleSend"
+              aria-label="私信内容"
+            />
+            <button class="send-button" bindtap="handleSend" disabled="{{sending || !canSend}}" hover-class="send-button--pressed">{{sending ? '发送中' : '发送'}}</button>
+          </view>
+          <view class="composer-hint">仅支持文字沟通，请勿发送联系方式或外部链接</view>
+        </block>
+      </view>
+    </block>
+  </view>
 </view>

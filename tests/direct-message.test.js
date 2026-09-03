@@ -19,7 +19,7 @@ function user(id, nickname) {
 function setup() {
   let now = new Date('2026-09-02T07:00:00.000Z');
   let request = 0;
-  const activity = { id: 'activity-formed', ownerId: 'owner', title: '周末羽毛球', status: 'FORMED' };
+  const activity = { id: 'activity-formed', ownerId: 'owner', type: 'sport', title: '周末羽毛球', status: 'FORMED' };
   const store = new MemoryStore({
     users: [user('owner', '发起人'), user('member', '搭子'), user('outsider', '路人')],
     activities: [activity],
@@ -42,6 +42,24 @@ function setup() {
   };
 }
 
+test('没有私信会话时列表成功返回空数组而不是错误态', async () => {
+  const { call } = setup();
+  const result = await call('dm.conversation.list', {}, 'owner');
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data.items, []);
+  assert.equal(result.data.nextCursor, null);
+});
+
+test('私信来源活动类型经过白名单与历史类型归一化', async () => {
+  const { call, store } = setup();
+  store.activities.get('activity-formed').type = 'buddy';
+  const created = await call('dm.conversation.create', {
+    activityId: 'activity-formed', memberId: 'member-peer'
+  }, 'owner', 'dm-create-legacy-type');
+  assert.equal(created.ok, true);
+  assert.equal(created.data.conversation.source.activityType, 'sport');
+});
+
 test('私信会话只能通过已成团活动的有效成员关系创建', async () => {
   const { call, store } = setup();
   const created = await call('dm.conversation.create', {
@@ -50,6 +68,7 @@ test('私信会话只能通过已成团活动的有效成员关系创建', async
   assert.equal(created.ok, true);
   assert.equal(created.data.conversation.peer.nickname, '搭子');
   assert.equal(created.data.conversation.source.title, '周末羽毛球');
+  assert.equal(created.data.conversation.source.activityType, 'sport');
   assert.equal(JSON.stringify(created.data).includes('member'), false, '公开 DTO 不应暴露对方用户 ID');
 
   const outsider = await call('dm.conversation.create', {

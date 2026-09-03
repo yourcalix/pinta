@@ -85,15 +85,39 @@ test('消息页区分系统通知与私信，聊天页具备键盘避让与举�
   const listScript = read('pages/messages/index.js');
   const chatTemplate = read('subpackages/message/chat/index.wxml');
   const chatScript = read('subpackages/message/chat/index.js');
+  const chatStyle = read('subpackages/message/chat/index.wxss');
+  const chatConfig = JSON.parse(read('subpackages/message/chat/index.json'));
   assert.match(listTemplate, /系统通知/);
   assert.match(listTemplate, /全部私信/);
   assert.match(listScript, /Promise\.allSettled/);
   assert.match(listScript, /网络连接较慢或服务开小差了，请重试/);
   assert.doesNotMatch(listScript, /error\.message\s*\|\|\s*'消息加载/);
+  assert.equal(chatConfig.navigationStyle, 'custom');
+  assert.match(chatTemplate, /class="chat-navigation"/);
+  assert.match(chatTemplate, /bindtap="handleBack"/);
+  assert.match(chatTemplate, /class="source-strip"/);
+  assert.match(chatTemplate, /bindtap="handleSource"/);
   assert.match(chatTemplate, /adjust-position="true"/);
-  assert.match(chatTemplate, /cursor-spacing="20"/);
+  assert.match(chatTemplate, /cursor-spacing="24"/);
+  assert.match(chatTemplate, /bindfocus="handleComposerFocus"/);
+  assert.match(chatTemplate, /scroll-with-animation="\{\{scrollWithAnimation\}\}"/);
   assert.match(chatTemplate, /bindtap="handleReport"/);
   assert.match(chatScript, /type=directConversation/);
+  assert.match(chatScript, /wx\.hideKeyboard/);
+  assert.match(chatScript, /setTimeout\(\(\) => \{[\s\S]*scrollToLatest\(true\);[\s\S]*\}, 50\)/);
+  assert.match(chatStyle, /word-break:\s*break-all/);
+  assert.match(chatStyle, /overflow-wrap:\s*anywhere/);
+  assert.match(chatStyle, /user-select:\s*text/);
+});
+
+test('私信空状态提供轻量破冰词且只读态不保留输入框', () => {
+  const chatTemplate = read('subpackages/message/chat/index.wxml');
+  const chatScript = read('subpackages/message/chat/index.js');
+  assert.match(chatTemplate, /wx:for="\{\{quickPrompts\}\}"/);
+  assert.match(chatTemplate, /bindtap="handleQuickPrompt"/);
+  assert.match(chatTemplate, /历史私信仅供查看/);
+  assert.match(chatScript, /quickPrompts:/);
+  assert.match(chatScript, /handleQuickPrompt/);
 });
 
 test('未读 Badge 只由未读摘要刷新，打开消息 Tab 不直接清零', () => {

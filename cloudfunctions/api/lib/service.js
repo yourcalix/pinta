@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { AppError, invariant, toPublicError } = require('./errors');
 const { stableEntityId } = require('./ids');
 const {
+  ACTIVITY_TYPES,
   ACTIVITY_STATUS,
   APPLICATION_STATUS,
   LEGACY_ACTIVITY_TYPE_MAP
@@ -288,6 +289,9 @@ function createPinbaService(options) {
     const sourceActivity = conversation.source && conversation.source.id
       ? await store.getActivity(conversation.source.id)
       : null;
+    const sourceActivityType = sourceActivity
+      ? LEGACY_ACTIVITY_TYPE_MAP[sourceActivity.type] || sourceActivity.type
+      : null;
     return {
       id: conversation.id,
       peer: {
@@ -295,7 +299,12 @@ function createPinbaService(options) {
         avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
       },
       source: conversation.source
-        ? { type: conversation.source.type, id: conversation.source.id, title: conversation.source.title || '' }
+        ? {
+            type: conversation.source.type,
+            activityType: ACTIVITY_TYPES.includes(sourceActivityType) ? sourceActivityType : null,
+            id: conversation.source.id,
+            title: conversation.source.title || ''
+          }
         : null,
       lastMessage: conversation.lastMessageId
         ? {

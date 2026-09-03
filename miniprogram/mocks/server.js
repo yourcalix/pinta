@@ -182,8 +182,38 @@ function validRidePhone(value) {
   return /^(?:\+8536\d{7}|\+861\d{10}|\+852[569]\d{7})$/.test(String(value || '').replace(/[\s()-]+/g, ''));
 }
 
+function directMessagePreviewSeed(referenceTime = new Date().toISOString()) {
+  const baseTime = Number.isFinite(Date.parse(referenceTime)) ? Date.parse(referenceTime) : Date.now();
+  const at = (minutesAgo) => new Date(baseTime - minutesAgo * 60 * 1000).toISOString();
+  const conversationId = 'conversation_demo_buddy_owner_member';
+  const messages = [
+    { id: 'directMessage_demo_1', conversationId, senderId: 'u_owner', text: '你好，想确认一下明天下午的集合地点。', status: 'SENT', createdAt: at(12), updatedAt: at(12) },
+    { id: 'directMessage_demo_2', conversationId, senderId: 'u_member', text: '可以呀，我们在体育馆一楼前台旁见。', status: 'SENT', createdAt: at(10), updatedAt: at(10) },
+    { id: 'directMessage_demo_3', conversationId, senderId: 'u_member', text: '我会提前十分钟到，也会带一筒球。', status: 'SENT', createdAt: at(9), updatedAt: at(9) },
+    { id: 'directMessage_demo_4', conversationId, senderId: 'u_owner', text: '没问题，我带球拍，明天见。', status: 'SENT', createdAt: at(5), updatedAt: at(5) },
+    { id: 'directMessage_demo_5', conversationId, senderId: 'u_member', text: '好的，明天见～', status: 'SENT', createdAt: at(2), updatedAt: at(2) }
+  ];
+  return {
+    conversations: [{
+      id: conversationId,
+      participantAId: 'u_member',
+      participantBId: 'u_owner',
+      source: { type: 'activity', id: 'a_buddy', title: '周末新手羽毛球双打' },
+      lastMessageId: messages[messages.length - 1].id,
+      lastMessagePreview: messages[messages.length - 1].text,
+      lastMessageAt: messages[messages.length - 1].createdAt,
+      lastSenderId: messages[messages.length - 1].senderId,
+      unreadByUser: { u_owner: 1, u_member: 0 },
+      createdAt: messages[0].createdAt,
+      updatedAt: messages[messages.length - 1].createdAt
+    }],
+    messages
+  };
+}
+
 function seedState() {
   const now = new Date().toISOString();
+  const directPreview = directMessagePreviewSeed(now);
   const rideStartDate = new Date(Date.now() + 26 * 60 * 60 * 1000);
   rideStartDate.setMinutes(Math.ceil(rideStartDate.getMinutes() / 15) * 15, 0, 0);
   const rideStartsAt = rideStartDate.toISOString();
@@ -317,8 +347,8 @@ function seedState() {
         status: 'ACTIVE', createdAt: now, updatedAt: now
       }
     ],
-    directConversations: [],
-    directMessages: [],
+    directConversations: directPreview.conversations,
+    directMessages: directPreview.messages,
     reports: [],
     idempotency: {}
   };
@@ -353,8 +383,13 @@ if (!state.driverDocumentUploads) state.driverDocumentUploads = [];
 if (!state.memberContacts) state.memberContacts = [];
 if (!state.communityPosts) state.communityPosts = [];
 if (!state.communityReplies) state.communityReplies = [];
-if (!state.directConversations) state.directConversations = [];
-if (!state.directMessages) state.directMessages = [];
+if (!Array.isArray(state.directConversations)
+  || !Array.isArray(state.directMessages)
+  || (!state.directConversations.length && !state.directMessages.length)) {
+  const directPreview = directMessagePreviewSeed();
+  state.directConversations = directPreview.conversations;
+  state.directMessages = directPreview.messages;
+}
 
 function publicCommunityPost(item) {
   return {
@@ -493,13 +528,19 @@ function directConversationDto(conversation) {
   const peerId = conversation.participantAId === currentUserId ? conversation.participantBId : conversation.participantAId;
   const peer = userById(peerId);
   const sourceActivity = conversation.source && activityById(conversation.source.id);
+  const sourceActivityType = sourceActivity
+    ? LEGACY_ACTIVITY_TYPE_MAP[sourceActivity.type] || sourceActivity.type
+    : null;
   return {
     id: conversation.id,
     peer: {
       nickname: peer && peer.profile && peer.profile.nickname || '拼吧用户',
       avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
     },
-    source: clone(conversation.source),
+    source: conversation.source ? {
+      ...clone(conversation.source),
+      activityType: ACTIVITY_TYPES.includes(sourceActivityType) ? sourceActivityType : null
+    } : null,
     lastMessage: conversation.lastMessageId ? {
       id: conversation.lastMessageId,
       preview: conversation.lastMessagePreview || '',
