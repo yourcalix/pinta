@@ -9,15 +9,16 @@ const { calculateContentTopInset } = require('../miniprogram/utils/navigation-la
 
 const root = path.join(__dirname, '..');
 
-test('四个 Tab 页面统一使用 custom navigation，发现、社区与发布页使用深色沉浸状态栏', () => {
+test('四个 Tab 页面统一使用 custom navigation 与深色沉浸状态栏', () => {
   const discover = require('../miniprogram/pages/discover/index.json');
   const community = require('../miniprogram/pages/community/index.json');
   const publish = require('../miniprogram/pages/publish/index.json');
   const user = require('../miniprogram/pages/user/index.json');
   assert.equal(user.navigationStyle, 'custom');
   assert.equal(user.navigationBarTitleText, undefined);
-  assert.equal(user.navigationBarTextStyle, 'black');
-  assert.equal(user.backgroundColorTop, '#F5F7F6');
+  assert.equal(user.navigationBarTextStyle, 'white');
+  assert.equal(user.backgroundColorTop, '#075AA7');
+  assert.equal(user.backgroundTextStyle, 'light');
   assert.equal(discover.navigationStyle, 'custom');
   assert.equal(discover.navigationBarTitleText, undefined);
   assert.equal(discover.navigationBarTextStyle, 'white');
@@ -82,4 +83,17 @@ test('发布与我的页面正文动态避让顶部并使用完整视口盒模�
     assert.match(rootRule[1], /min-height:\s*100vh/);
     assert.doesNotMatch(rootRule[1], /padding-top:\s*(?:42|28)rpx/);
   }
+});
+
+test('我的页面滚动时用固定遮罩保护状态栏与微信胶囊区域', () => {
+  const template = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxml'), 'utf8');
+  const pageStyle = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxss'), 'utf8');
+  const maskRule = pageStyle.match(/\.profile-status-mask\s*\{([^}]*)\}/);
+
+  assert.match(template, /class="profile-status-mask"[^>]*height: \{\{contentTopInset\}\}px;[^>]*aria-hidden="true"/);
+  assert.ok(maskRule);
+  assert.match(maskRule[1], /position:\s*fixed/);
+  assert.match(maskRule[1], /top:\s*0/);
+  assert.match(maskRule[1], /pointer-events:\s*none/);
+  assert.match(maskRule[1], /will-change:\s*opacity/);
 });

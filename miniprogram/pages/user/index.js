@@ -84,6 +84,15 @@ Page({
     this.setData({ currentList, currentItems: this.data[currentList] || [] });
   },
 
+  handleMetricTap(event) {
+    const currentList = event.currentTarget.dataset.value || 'owned';
+    this.setData({ currentList, currentItems: this.data[currentList] || [] }, () => {
+      if (typeof wx !== 'undefined' && typeof wx.pageScrollTo === 'function') {
+        wx.pageScrollTo({ selector: '#my-activities', duration: 260 });
+      }
+    });
+  },
+
   handleActivitySelect(event) {
     const id = event.detail && event.detail.id;
     const item = [...this.data.owned, ...this.data.joined].find((activity) => activity.id === id);
@@ -104,6 +113,8 @@ Page({
 
   handleProfile() { wx.navigateTo({ url: '/subpackages/profile/edit/index' }); },
 
+  handleGoDiscover() { wx.switchTab({ url: '/pages/discover/index' }); },
+
   handlePersona(event) {
     if (!api.setMockPersona(event.currentTarget.dataset.id)) return;
     getApp().globalData.user = null;
@@ -112,5 +123,13 @@ Page({
 
   handleResetDemo() {
     wx.showModal({ title: '重置演示数据？', content: '会恢复示例活动和初始申请。', confirmText: '重置', success: (result) => { if (result.confirm) { api.resetMock(); getApp().globalData.user = null; this.loadDashboard(); } } });
+  },
+
+  onHide() {
+    this._loadSeq = (this._loadSeq || 0) + 1;
+  },
+
+  onUnload() {
+    this._loadSeq = (this._loadSeq || 0) + 1;
   }
 });

@@ -6,6 +6,12 @@ const AVATAR_PATHS = Object.freeze({
   EMPTY: '/assets/images/discover/avatar-passenger-empty.png'
 });
 
+const PROFILE_AVATAR_PATHS = Object.freeze({
+  MALE: '/assets/images/profile/profile-avatar-male-painted.webp',
+  FEMALE: '/assets/images/profile/profile-avatar-female-painted.webp',
+  EMPTY: '/assets/images/profile/profile-avatar-neutral-painted.webp'
+});
+
 function avatarKindFromGender(gender) {
   if (gender === 'MALE') return 'PASSENGER_A';
   if (gender === 'FEMALE') return 'PASSENGER_B';
@@ -17,7 +23,9 @@ function avatarPathFromKind(kind) {
 }
 
 function profileAvatarPath(gender) {
-  return avatarPathFromKind(avatarKindFromGender(gender));
+  if (gender === 'MALE') return PROFILE_AVATAR_PATHS.MALE;
+  if (gender === 'FEMALE') return PROFILE_AVATAR_PATHS.FEMALE;
+  return PROFILE_AVATAR_PATHS.EMPTY;
 }
 
 function normalizeAvatarSlots(slots, total = 7) {
@@ -37,6 +45,7 @@ function normalizeAvatarSlots(slots, total = 7) {
 
 module.exports = {
   AVATAR_PATHS,
+  PROFILE_AVATAR_PATHS,
   avatarKindFromGender,
   avatarPathFromKind,
   profileAvatarPath,

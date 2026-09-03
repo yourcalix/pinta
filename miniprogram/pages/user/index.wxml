@@ -1,34 +1,84 @@
 <view class="page user-page global-background-host" style="padding-top: {{contentTopInset}}px;">
   <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
   <view class="global-page-background-tint" aria-hidden="true"></view>
-  <view wx:if="{{loading}}" class="loading-block surface">正在整理你的拼单…</view>
-  <empty-state wx:elif="{{error}}" symbol="!" title="{{error}}" description="检查网络后重试。" action-text="重新加载" bindaction="loadDashboard" />
+  <view class="profile-status-mask" style="height: {{contentTopInset}}px;" aria-hidden="true"></view>
 
-  <block wx:else>
-    <view class="profile-card surface" bindtap="handleProfile" role="button" aria-label="编辑个人资料，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
-      <view class="profile-avatar-shell" aria-hidden="true"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" /></view>
-      <view class="profile-main"><view class="profile-name">{{user.profile.nickname}}</view><view class="profile-meta">{{profileGenderLabel}} · 已确认年满18岁</view></view>
-      <image class="profile-brand-mark" src="../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" /><text class="profile-arrow" aria-hidden="true">›</text>
+  <view class="page-content">
+    <view class="profile-header" aria-label="拼吧，我的">
+      <view class="profile-eyebrow">拼吧 · 我的</view>
+      <view class="profile-title">我的拼单小天地</view>
+      <view class="profile-sprout" aria-hidden="true"><view class="sprout-leaf sprout-leaf--left"></view><view class="sprout-leaf sprout-leaf--right"></view><view class="sprout-dot"></view></view>
     </view>
 
-    <view class="profile-metrics surface" role="group" aria-label="我的活动概览">
-      <view class="metric-item"><text class="metric-value">{{owned.length}}</text><text class="metric-label">我发起的</text></view><view class="metric-divider"></view>
-      <view class="metric-item"><text class="metric-value">{{joined.length}}</text><text class="metric-label">我加入的</text></view><view class="metric-divider"></view>
-      <view class="metric-item"><text class="metric-value">{{formed.length}}</text><text class="metric-label">已成团</text></view>
+    <view wx:if="{{loading}}" class="loading-card paper-card" role="status" aria-label="正在整理你的拼单">
+      <view class="loading-avatar skeleton-shimmer"></view>
+      <view class="loading-lines"><view class="loading-line loading-line--strong skeleton-shimmer"></view><view class="loading-line skeleton-shimmer"></view></view>
     </view>
 
-    <view wx:if="{{tasks.length}}" class="pending-section"><view class="section-heading"><text>待处理</text><text class="count">{{tasks.length}}</text></view><view class="task-list"><view wx:for="{{tasks}}" wx:key="id" class="task-card surface" data-task="{{item}}" bindtap="handleTaskTap" role="button"><view class="task-dot"></view><view class="task-main"><view class="task-title">{{item.title}}</view><view class="task-time">{{item.displayTime}}</view></view><view class="task-action">{{item.actionLabel}} ›</view></view></view></view>
-
-    <view class="rides-heading"><view><view class="rides-title">我的拼单</view><view class="rides-subtitle">管理你发起和加入的活动</view></view></view>
-    <view class="list-tabs" role="tablist" aria-label="切换我的拼单列表">
-      <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'owned'}}">我发起的</button>
-      <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'joined'}}">我加入的</button>
-      <button class="list-tab {{currentList === 'formed' ? 'list-tab--active' : ''}}" data-value="formed" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'formed'}}">已成团</button>
-      <button class="list-tab {{currentList === 'history' ? 'list-tab--active' : ''}}" data-value="history" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'history'}}">历史</button>
+    <view wx:elif="{{error}}" class="state-card paper-card">
+      <view class="state-symbol" aria-hidden="true">!</view>
+      <view class="state-title">{{error}}</view>
+      <view class="state-copy">消息或活动暂时没有加载出来，请稍后重试。</view>
+      <button class="state-action" bindtap="loadDashboard" hover-class="paper-button--pressed">重新加载</button>
     </view>
-    <block wx:for="{{currentItems}}" wx:key="id"><activity-card item="{{item}}" bindselect="handleActivitySelect" /></block>
-    <empty-state wx:if="{{!currentItems.length}}" title="还没有相关拼单" description="去发现页看看正在发生什么。" />
 
-    <view wx:if="{{isMock}}" class="demo-panel surface"><view class="demo-heading"><view><view class="demo-title">演示身份</view><view class="demo-description">仅用于本地体验拼单流程</view></view><button class="reset-button" bindtap="handleResetDemo">重置</button></view><view class="persona-row"><button wx:for="{{personas}}" wx:key="id" class="persona-button {{persona === item.id ? 'persona-button--active' : ''}}" data-id="{{item.id}}" bindtap="handlePersona">{{item.label}}</button></view></view>
-  </block>
+    <block wx:else>
+      <view class="profile-card paper-card">
+        <view class="profile-summary" bindtap="handleProfile" hover-class="profile-summary--pressed" hover-stay-time="80" role="button" aria-label="编辑个人资料，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
+          <view class="profile-avatar-shell" aria-hidden="true"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" /></view>
+          <view class="profile-main">
+            <view class="profile-name">{{user.profile.nickname}}</view>
+            <view class="profile-meta">{{profileGenderLabel}} · 已确认年满18岁</view>
+          </view>
+          <view class="profile-edit"><text class="profile-edit-pencil" aria-hidden="true">✎</text><text>编辑资料</text><text class="profile-arrow" aria-hidden="true">›</text></view>
+        </view>
+
+        <view class="profile-metrics" role="group" aria-label="我的活动概览">
+          <button class="metric-item" data-value="owned" bindtap="handleMetricTap" hover-class="metric-item--pressed" hover-stay-time="80" role="button" aria-label="我发起的拼单，当前{{owned.length}}个，点击切换查看">
+            <text class="metric-label">我发起的</text><text class="metric-value">{{owned.length}}</text>
+          </button>
+          <view class="metric-divider" aria-hidden="true"></view>
+          <button class="metric-item" data-value="joined" bindtap="handleMetricTap" hover-class="metric-item--pressed" hover-stay-time="80" role="button" aria-label="我加入的拼单，当前{{joined.length}}个，点击切换查看">
+            <text class="metric-label">我加入的</text><text class="metric-value">{{joined.length}}</text>
+          </button>
+          <view class="metric-divider" aria-hidden="true"></view>
+          <button class="metric-item" data-value="formed" bindtap="handleMetricTap" hover-class="metric-item--pressed" hover-stay-time="80" role="button" aria-label="已成团拼单，当前{{formed.length}}个，点击切换查看">
+            <text class="metric-label">已成团</text><text class="metric-value">{{formed.length}}</text>
+          </button>
+        </view>
+      </view>
+
+      <view wx:if="{{tasks.length}}" class="pending-list" aria-label="待处理事项">
+        <view wx:for="{{tasks}}" wx:key="id" class="task-card paper-card" data-task="{{item}}" bindtap="handleTaskTap" hover-class="paper-card--pressed" hover-stay-time="80" role="button" aria-label="待处理事项，{{item.title}}，点击处理">
+          <view class="task-dot" aria-hidden="true"></view>
+          <view class="task-main"><view class="task-kicker">你有 {{tasks.length}} 个待处理事项</view><view class="task-title">{{item.title}}</view></view>
+          <view class="task-action">去处理 <text aria-hidden="true">›</text></view>
+        </view>
+      </view>
+
+      <view id="my-activities" class="activities-panel paper-card">
+        <view class="activities-heading"><view class="activities-title">我的拼单</view><view class="activities-subtitle">管理你发起和加入的活动</view></view>
+        <view class="list-tabs" role="tablist" aria-label="切换我的拼单列表">
+          <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'owned'}}">我发起的</button>
+          <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'joined'}}">我加入的</button>
+          <button class="list-tab {{currentList === 'formed' ? 'list-tab--active' : ''}}" data-value="formed" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'formed'}}">已成团</button>
+          <button class="list-tab {{currentList === 'history' ? 'list-tab--active' : ''}}" data-value="history" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'history'}}">历史</button>
+        </view>
+        <view class="activity-list">
+          <block wx:for="{{currentItems}}" wx:key="id"><activity-card item="{{item}}" bindselect="handleActivitySelect" /></block>
+          <view wx:if="{{!currentItems.length}}" class="list-empty">
+            <view class="empty-puzzle" aria-hidden="true"><view class="empty-puzzle-eye empty-puzzle-eye--left"></view><view class="empty-puzzle-eye empty-puzzle-eye--right"></view><view class="empty-puzzle-smile"></view></view>
+            <view class="empty-title">暂无相关拼单记录</view>
+            <view class="empty-copy">去发现页看看正在发生什么吧。</view>
+            <button class="empty-action" bindtap="handleGoDiscover" hover-class="paper-button--pressed">去发现页看看</button>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{isMock}}" class="demo-panel paper-card">
+        <view class="demo-heading"><view><view class="demo-title">演示身份</view><view class="demo-description">仅用于本地体验拼单流程</view></view><button class="reset-button" bindtap="handleResetDemo">重置</button></view>
+        <view class="persona-row"><button wx:for="{{personas}}" wx:key="id" class="persona-button {{persona === item.id ? 'persona-button--active' : ''}}" data-id="{{item.id}}" bindtap="handlePersona">{{item.label}}</button></view>
+      </view>
+    </block>
+  </view>
 </view>

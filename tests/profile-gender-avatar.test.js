@@ -44,9 +44,9 @@ test.skip('旧固定七人拼车头像槽位工具已退出新活动主链路', 
 });
 
 test('前端未知头像一律降级为空位且资料头像按性别自动对应', () => {
-  assert.match(profileAvatarPath('MALE'), /avatar-passenger-a\.png$/);
-  assert.match(profileAvatarPath('FEMALE'), /avatar-passenger-b\.png$/);
-  assert.match(profileAvatarPath(null), /avatar-passenger-empty\.png$/);
+  assert.match(profileAvatarPath('MALE'), /profile-avatar-male-painted\.webp$/);
+  assert.match(profileAvatarPath('FEMALE'), /profile-avatar-female-painted\.webp$/);
+  assert.match(profileAvatarPath(null), /profile-avatar-neutral-painted\.webp$/);
   const slots = normalizeAvatarSlots([{ kind: 'PASSENGER_A' }, { kind: 'UNTRUSTED' }], 7);
   assert.equal(slots.length, 7);
   assert.equal(slots[0].empty, false);
@@ -59,6 +59,8 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   const editWxss = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/edit/index.wxss'), 'utf8');
   const editJs = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/edit/index.js'), 'utf8');
   const userJs = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.js'), 'utf8');
+  const userWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.wxml'), 'utf8');
+  const userWxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.wxss'), 'utf8');
   assert.match(editWxml, /data-gender="MALE"/);
   assert.match(editWxml, /data-gender="FEMALE"/);
   assert.match(editWxml, /role="radiogroup"/);
@@ -71,6 +73,23 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   assert.match(editJs, /gender: form\.gender/);
   assert.match(editJs, /city: PILOT_CITY/);
   assert.match(userJs, /profileAvatarPath: profileAvatarPath\(user\.profile && user\.profile\.gender\)/);
+  assert.match(userWxml, /shared-paper-bg\.webp/);
+  assert.match(userWxml, /data-value="owned"[^>]*bindtap="handleMetricTap"/);
+  assert.match(userWxml, /data-value="joined"[^>]*bindtap="handleMetricTap"/);
+  assert.match(userWxml, /data-value="formed"[^>]*bindtap="handleMetricTap"/);
+  assert.match(userWxss, /background:\s*#075aa7/);
+  assert.match(userWxss, /padding-bottom:\s*calc\(140rpx \+ env\(safe-area-inset-bottom\)\)/);
+  assert.doesNotMatch(userWxml, /喜欢散步|个人简介|个人签名/);
   assert.doesNotMatch(userJs, /u_driver|司机任务|司机认证/);
   assert.match(editWxml, /gender-options--error/);
+});
+
+test('我的页面统计项具备按压反馈且点击后联动活动列表', () => {
+  const userWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.wxml'), 'utf8');
+  const userWxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.wxss'), 'utf8');
+  const userJs = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.js'), 'utf8');
+
+  assert.equal((userWxml.match(/hover-class="metric-item--pressed"/g) || []).length, 3);
+  assert.match(userWxss, /\.metric-item--pressed\s*{[\s\S]*transform:\s*scale\(0\.96\)/);
+  assert.match(userJs, /handleMetricTap\(event\)[\s\S]*wx\.pageScrollTo\(\{ selector: '#my-activities', duration: 260 \}\)/);
 });
