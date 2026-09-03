@@ -1,0 +1,12 @@
+{
+  "id": "review-painted-user-page",
+  "title": "审查油画棒手绘风我的页面首稿",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待用户确认后生成三张油画棒头像并进入页面实装",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}
