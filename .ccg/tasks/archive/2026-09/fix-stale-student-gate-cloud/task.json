@@ -1,0 +1,12 @@
+{
+  "id": "fix-stale-student-gate-cloud",
+  "title": "修复真实环境残留的校园学生认证门禁",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交部署工具与验证记录",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}
