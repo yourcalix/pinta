@@ -1,0 +1,12 @@
+{
+  "id": "align-user-header-background",
+  "title": "移除我的页面顶部独立遮罩并统一清晰纸纹背景",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交顶部背景一致性修复",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}

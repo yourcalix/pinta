@@ -85,15 +85,12 @@ test('发布与我的页面正文动态避让顶部并使用完整视口盒模�
   }
 });
 
-test('我的页面滚动时用固定遮罩保护状态栏与微信胶囊区域', () => {
+test('我的页面顶部与其他一级页面共用清晰纸纹背景且不叠加独立遮罩', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxml'), 'utf8');
   const pageStyle = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxss'), 'utf8');
-  const maskRule = pageStyle.match(/\.profile-status-mask\s*\{([^}]*)\}/);
 
-  assert.match(template, /class="profile-status-mask"[^>]*height: \{\{contentTopInset\}\}px;[^>]*aria-hidden="true"/);
-  assert.ok(maskRule);
-  assert.match(maskRule[1], /position:\s*fixed/);
-  assert.match(maskRule[1], /top:\s*0/);
-  assert.match(maskRule[1], /pointer-events:\s*none/);
-  assert.match(maskRule[1], /will-change:\s*opacity/);
+  assert.match(template, /class="global-page-background"[^>]*shared-paper-bg\.webp/);
+  assert.match(template, /class="global-page-background-tint"/);
+  assert.doesNotMatch(template, /profile-status-mask/);
+  assert.doesNotMatch(pageStyle, /\.profile-status-mask/);
 });

@@ -14,18 +14,6 @@
   z-index: 1;
 }
 
-.profile-status-mask {
-  position: fixed;
-  z-index: 2;
-  top: 0;
-  right: 0;
-  left: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(7, 64, 132, 0.98) 0%, rgba(7, 90, 167, 0.94) 82%, rgba(7, 90, 167, 0) 100%);
-  transform: translateZ(0);
-  will-change: opacity;
-}
-
 .profile-header {
   position: relative;
   min-height: 108rpx;
