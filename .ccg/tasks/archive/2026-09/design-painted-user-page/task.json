@@ -1,0 +1,12 @@
+{
+  "id": "design-painted-user-page",
+  "title": "设计油画棒手绘风我的页面生成提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待用户生成第一版视觉稿后进行 Gemini 评审",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}
