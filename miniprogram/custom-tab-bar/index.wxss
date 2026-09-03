@@ -8,6 +8,10 @@
   overflow: visible;
 }
 
+.tab-shell--hidden {
+  display: none !important;
+}
+
 .tab-paper {
   position: absolute;
   inset: 0;

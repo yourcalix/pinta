@@ -300,25 +300,24 @@ Page({
     this.teardownLaunchSplash(true);
   },
 
-  hideLaunchTabBar() {
-    if (typeof wx === 'undefined' || typeof wx.hideTabBar !== 'function') return;
+  setCustomTabBarHidden(hidden) {
+    if (typeof this.getTabBar !== 'function') return false;
     try {
-      wx.hideTabBar({ animation: false });
-      this._launchTabBarHidden = true;
+      const tabBar = this.getTabBar();
+      if (!tabBar || typeof tabBar.setHidden !== 'function') return false;
+      tabBar.setHidden(hidden);
+      return true;
     } catch (error) {
-      this._launchTabBarHidden = false;
+      return false;
     }
   },
 
+  hideLaunchTabBar() {
+    this.setCustomTabBarHidden(true);
+  },
+
   restoreLaunchTabBar() {
-    if (!this._launchTabBarHidden) return;
-    this._launchTabBarHidden = false;
-    if (typeof wx === 'undefined' || typeof wx.showTabBar !== 'function') return;
-    try {
-      wx.showTabBar({ animation: false });
-    } catch (error) {
-      // The page may already be leaving; the next Tab page restores native UI.
-    }
+    this.setCustomTabBarHidden(false);
   },
 
   finishLaunchSplash() {

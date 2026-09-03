@@ -1,4 +1,4 @@
-<view class="tab-shell" role="tablist" aria-label="主导航">
+<view class="tab-shell {{hidden ? 'tab-shell--hidden' : ''}}" role="tablist" aria-label="主导航">
   <view class="tab-paper"></view>
   <view class="tab-row">
     <view

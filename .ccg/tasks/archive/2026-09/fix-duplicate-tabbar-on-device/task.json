@@ -1,0 +1,12 @@
+{
+  "id": "fix-duplicate-tabbar-on-device",
+  "title": "修复真机预览出现两层 TabBar",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "修复已通过全量测试与网页版 Gemini 3.7 Flash 终审",
+  "createdAt": "2026-09-02T23:30:00+08:00",
+  "branch": "main"
+}

@@ -12,7 +12,15 @@ const root = path.join(__dirname, '..');
 function loadDiscoverPage(appGlobalData = { launchSplashShown: false }) {
   let definition;
   const timers = [];
-  const tabBar = { hidden: 0, shown: 0 };
+  const nativeTabBar = { hidden: 0, shown: 0 };
+  const tabBar = {
+    hidden: false,
+    transitions: [],
+    setHidden(hidden) {
+      this.hidden = Boolean(hidden);
+      this.transitions.push(this.hidden);
+    }
+  };
   const originalSetTimeout = global.setTimeout;
   const originalClearTimeout = global.clearTimeout;
   const originalGetApp = global.getApp;
@@ -24,8 +32,8 @@ function loadDiscoverPage(appGlobalData = { launchSplashShown: false }) {
     navigateTo() {},
     switchTab() {},
     showToast() {},
-    hideTabBar() { tabBar.hidden += 1; },
-    showTabBar() { tabBar.shown += 1; }
+    hideTabBar() { nativeTabBar.hidden += 1; },
+    showTabBar() { nativeTabBar.shown += 1; }
   };
   global.setTimeout = (handler, delay) => {
     const timer = { handler, delay, cleared: false, ran: false };
@@ -42,6 +50,7 @@ function loadDiscoverPage(appGlobalData = { launchSplashShown: false }) {
     pagePath,
     timers,
     tabBar,
+    nativeTabBar,
     appGlobalData,
     originalSetTimeout,
     originalClearTimeout,
@@ -49,7 +58,8 @@ function loadDiscoverPage(appGlobalData = { launchSplashShown: false }) {
     page: {
       ...definition,
       data: JSON.parse(JSON.stringify(definition.data)),
-      setData(value) { Object.assign(this.data, value); }
+      setData(value) { Object.assign(this.data, value); },
+      getTabBar() { return tabBar; }
     }
   };
 }
@@ -99,8 +109,9 @@ test('快速首屏请求也等待前三块落下，再补齐第四块并恢复 T
     assert.equal(context.page.data.launchSplashVisible, true);
     assert.equal(context.page.data.launchProgress, 0);
     assert.equal(context.appGlobalData.launchSplashShown, true);
-    assert.equal(context.tabBar.hidden, 1);
-    assert.equal(context.tabBar.shown, 0);
+    assert.equal(context.tabBar.hidden, true);
+    assert.deepEqual(context.tabBar.transitions, [true]);
+    assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
 
     context.timers.filter((timer) => timer.delay < 1200).forEach(runTimer);
     assert.equal(context.page.data.launchProgress, 3);
@@ -113,7 +124,9 @@ test('快速首屏请求也等待前三块落下，再补齐第四块并恢复 T
     finishTimers.forEach(runTimer);
     assert.equal(context.page.data.launchProgress, 4);
     assert.equal(context.page.data.launchSplashVisible, false);
-    assert.equal(context.tabBar.shown, 1);
+    assert.equal(context.tabBar.hidden, false);
+    assert.deepEqual(context.tabBar.transitions, [true, false]);
+    assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
     assert.equal(context.page.startLaunchSplash(), false);
   } finally {
     activityService.list = originalList;
@@ -156,7 +169,8 @@ test('首屏请求超过 4.5 秒时安全退出，但不伪造第四块完成', 
     runTimer(context.timers.find((timer) => timer.delay === 4500));
     assert.equal(context.page.data.launchSplashVisible, false);
     assert.equal(context.page.data.launchProgress, 3);
-    assert.equal(context.tabBar.shown, 1);
+    assert.equal(context.tabBar.hidden, false);
+    assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
 
     resolveList({ items: [], nextCursor: null });
     await loading;
@@ -176,7 +190,8 @@ test('页面卸载会清理启动计时器并恢复 TabBar，当前会话不重�
     const loading = context.page.onLoad();
     context.page.onUnload();
     assert.equal(context.timers.slice(0, 5).every((timer) => timer.cleared), true);
-    assert.equal(context.tabBar.shown, 1);
+    assert.equal(context.tabBar.hidden, false);
+    assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
     resolveList({ items: [], nextCursor: null });
     await loading;
     assert.equal(context.page.data.launchProgress, 0);
@@ -196,7 +211,8 @@ test('任一拼图图片加载失败会立即退出蒙层、清理计时器并�
     context.page.handleLaunchAssetError();
     assert.equal(context.page.data.launchSplashVisible, false);
     assert.equal(context.timers.every((timer) => timer.cleared), true);
-    assert.equal(context.tabBar.shown, 1);
+    assert.equal(context.tabBar.hidden, false);
+    assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
     resolveList({ items: [], nextCursor: null });
     await loading;
     assert.equal(context.page.data.launchSplashVisible, false);
@@ -265,4 +281,19 @@ test('启动组件对重复图片错误只向页面上报一次', () => {
   component.methods.handleAssetError.call(instance, { detail: { errMsg: 'image load failed' } });
   component.methods.handleAssetError.call(instance, { detail: { errMsg: 'image load failed again' } });
   assert.equal(emitted, 1);
+});
+
+test('启动流程只控制自定义 TabBar 且全工程不调用原生显隐 API', () => {
+  const discoverScript = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.js'), 'utf8');
+  const tabScript = fs.readFileSync(path.join(root, 'miniprogram/custom-tab-bar/index.js'), 'utf8');
+  const tabTemplate = fs.readFileSync(path.join(root, 'miniprogram/custom-tab-bar/index.wxml'), 'utf8');
+  const tabStyle = fs.readFileSync(path.join(root, 'miniprogram/custom-tab-bar/index.wxss'), 'utf8');
+
+  assert.doesNotMatch(discoverScript, /wx\.(?:hide|show)TabBar/);
+  assert.match(discoverScript, /getTabBar\(\)/);
+  assert.match(discoverScript, /tabBar\.setHidden\(hidden\)/);
+  assert.match(tabScript, /hidden:\s*false/);
+  assert.match(tabScript, /setHidden\(hidden\)/);
+  assert.match(tabTemplate, /tab-shell--hidden/);
+  assert.match(tabStyle, /\.tab-shell--hidden\s*\{[\s\S]*?display:\s*none\s*!important/);
 });

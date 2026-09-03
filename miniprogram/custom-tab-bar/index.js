@@ -3,6 +3,7 @@
 Component({
   data: {
     selected: 0,
+    hidden: false,
     unread: 0,
     unreadLabel: '',
     items: [
@@ -15,6 +16,10 @@ Component({
   },
 
   methods: {
+    setHidden(hidden) {
+      this.setData({ hidden: Boolean(hidden) });
+    },
+
     switchTab(event) {
       const path = event.currentTarget.dataset.path;
       if (!path) return;
