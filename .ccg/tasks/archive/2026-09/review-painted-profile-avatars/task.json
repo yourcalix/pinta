@@ -1,0 +1,12 @@
+{
+  "id": "review-painted-profile-avatars",
+  "title": "验收三张油画棒个人头像素材",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "保留男女头像，重新生成品牌中性占位头像后统一压缩实装",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}
