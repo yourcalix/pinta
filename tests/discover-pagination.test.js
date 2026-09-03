@@ -220,14 +220,14 @@ test('发现页模板提供互斥页尾状态与 44px 重试热区', () => {
 test('发现页使用深蓝纸纹、紧凑标题和可横滑类型筛选，不再渲染旧校园 Hero', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxss'), 'utf8');
-  assert.match(template, /publish-paper-texture\.webp/);
+  assert.match(template, /shared-paper-bg\.webp/);
   assert.match(template, /拼吧 · 发现/);
   assert.match(template, /<scroll-view[^>]*scroll-x/);
   assert.match(template, /enhanced="\{\{true\}\}"/);
   assert.match(template, /show-scrollbar="\{\{false\}\}"/);
   assert.match(template, /bindtap="handleClearKeyword"/);
   assert.doesNotMatch(template, /hero-campus\.png|brand-puzzle\.png|class="hero surface"/);
-  assert.match(style, /\.discover-paper-background/);
+  assert.match(template, /class="global-page-background"/);
   assert.match(style, /background:\s*#075aa7/i);
   assert.match(style, /\.search-clear-button[\s\S]*min-(?:width|height):\s*88rpx/);
   assert.match(style, /\.search-clear-button[^}]*margin-right:\s*12rpx/);

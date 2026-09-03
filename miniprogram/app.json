@@ -49,10 +49,10 @@
   ],
   "window": {
     "navigationBarTitleText": "拼吧",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#F5F7F6",
-    "backgroundTextStyle": "dark"
+    "navigationBarBackgroundColor": "#075AA7",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#075AA7",
+    "backgroundTextStyle": "light"
   },
   "tabBar": {
     "custom": true,

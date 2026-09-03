@@ -1,0 +1,12 @@
+{
+  "id": "replace-global-background",
+  "title": "将所有界面统一替换为新蓝色拼图纸纹背景",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交背景改造",
+  "createdAt": "2026-09-03T00:00:00+08:00",
+  "branch": "main"
+}

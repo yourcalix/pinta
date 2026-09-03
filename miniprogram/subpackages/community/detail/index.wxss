@@ -9,7 +9,7 @@
 .post-time { margin-top: 5rpx; color: #828c87; font-size: 22rpx; }
 .more-button { flex: 0 0 72rpx; min-height: 64rpx; margin: 0; padding: 0; color: #69756f; background: transparent; font-size: 34rpx; line-height: 1; }
 .post-content { display: block; margin-top: 26rpx; font-size: 30rpx; line-height: 1.8; word-break: break-word; }
-.reply-heading { display: flex; align-items: center; gap: 10rpx; margin: 34rpx 4rpx 18rpx; font-size: 31rpx; font-weight: 700; }
+.reply-heading { display: flex; align-items: center; gap: 10rpx; margin: 34rpx 4rpx 18rpx; color: #fff8ee; font-size: 31rpx; font-weight: 700; text-shadow: 0 2rpx 4rpx rgba(7,35,70,.24); }
 .reply-count { color: #16a36a; }
 .reply-list { display: flex; flex-direction: column; gap: 16rpx; }
 .reply-card { padding: 22rpx; }

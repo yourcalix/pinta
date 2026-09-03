@@ -9,22 +9,6 @@
   background: #075aa7;
 }
 
-.form-paper-background,
-.form-paper-tint {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-}
-
-.form-paper-background { z-index: 0; }
-
-.form-paper-tint {
-  z-index: 1;
-  background: rgba(0, 58, 134, .14);
-}
-
 .form-navigation {
   position: absolute;
   z-index: 5;

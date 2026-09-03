@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "发起讨论",
-  "navigationBarBackgroundColor": "#F5F7F6",
-  "navigationBarTextStyle": "black"
+  "navigationBarBackgroundColor": "#075AA7",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#075AA7",
+  "backgroundTextStyle": "light"
 }

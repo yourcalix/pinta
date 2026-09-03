@@ -1,4 +1,6 @@
-<view class="page profile-page">
+<view class="page profile-page global-background-host">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
   <view class="surface profile-form-card">
     <view class="profile-hero">
       <view class="profile-hero-copy">

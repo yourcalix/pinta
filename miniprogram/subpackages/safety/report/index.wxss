@@ -3,15 +3,18 @@
 }
 
 .report-title {
+  color: #fff8ee;
   font-size: 40rpx;
   font-weight: 720;
+  text-shadow: 0 2rpx 5rpx rgba(7, 35, 70, 0.28);
 }
 
 .report-description {
   margin-top: 12rpx;
-  color: #69756e;
+  color: #e6eef6;
   font-size: 25rpx;
   line-height: 1.6;
+  text-shadow: 0 1rpx 3rpx rgba(7, 35, 70, 0.22);
 }
 
 .error-banner {

@@ -1,3 +1,7 @@
 {
-  "navigationBarTitleText": "基本资料"
+  "navigationBarTitleText": "基本资料",
+  "navigationBarBackgroundColor": "#075AA7",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#075AA7",
+  "backgroundTextStyle": "light"
 }

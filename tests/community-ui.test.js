@@ -21,7 +21,7 @@ test('社区首页采用深蓝纸纹、低权重整条发帖入口和三行正�
   assert.match(template, /PINBA COMMUNITY/);
   assert.match(template, /最近有什么想和大家聊聊/);
   assert.match(template, /class="compose-strip"[\s\S]*aria-label="发起新讨论/);
-  assert.match(template, /publish-paper-texture\.webp/);
+  assert.match(template, /shared-paper-bg\.webp/);
   assert.doesNotMatch(template, /tab-community-active\.png|header-voxel|community-watermark/);
   assert.doesNotMatch(template, /class="[^"]*fab/);
   assert.match(style, /\.compose-strip\s*\{[\s\S]*min-height:\s*88rpx[\s\S]*background:\s*#fff8ee/i);

@@ -1,6 +1,6 @@
-<view class="page form-page form-page--{{meta.tone}}" style="padding-top: {{contentTopInset}}px;">
-  <image class="form-paper-background" src="../../../assets/images/publish/publish-paper-texture.webp" mode="aspectFill" aria-hidden="true" />
-  <view class="form-paper-tint" aria-hidden="true"></view>
+<view class="page form-page form-page--{{meta.tone}} global-background-host" style="padding-top: {{contentTopInset}}px;">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
 
   <view class="form-navigation" style="height: {{contentTopInset}}px;">
     <view class="form-navigation-row">

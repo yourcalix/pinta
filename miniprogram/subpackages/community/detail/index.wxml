@@ -1,4 +1,6 @@
-<view class="page detail-page">
+<view class="page detail-page global-background-host">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
   <view wx:if="{{loading}}" class="state-card surface">正在加载讨论…</view>
   <view wx:elif="{{error}}" class="state-card surface">
     <text>{{error}}</text>

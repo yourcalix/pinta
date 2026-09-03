@@ -1,8 +1,8 @@
-<view class="page discover-page" style="padding-top: {{contentTopInset}}px;">
+<view class="page discover-page global-background-host" style="padding-top: {{contentTopInset}}px;">
   <launch-splash wx:if="{{launchSplashVisible}}" progress="{{launchProgress}}" exiting="{{launchSplashExiting}}" bindasseterror="handleLaunchAssetError" />
 
-  <image class="discover-paper-background" src="../../assets/images/publish/publish-paper-texture.webp" mode="aspectFill" aria-hidden="true" />
-  <view class="discover-background-tint" aria-hidden="true"></view>
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
 
   <view class="discover-content">
     <view class="discover-header">

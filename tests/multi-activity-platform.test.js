@@ -209,7 +209,7 @@ test('三类发布表单共用沉浸式自定义导航、纸纹卡片和完整�
   assert.match(template, /class="form-navigation"/);
   assert.match(template, /aria-label="返回上一页"/);
   assert.doesNotMatch(template, /class="form-navigation-title"/);
-  assert.match(template, /publish-paper-texture\.webp/);
+  assert.match(template, /shared-paper-bg\.webp/);
   assert.doesNotMatch(template, /class="publish-hero/);
   assert.ok(textControls.length > 0);
   textControls.forEach((control) => {
@@ -217,7 +217,7 @@ test('三类发布表单共用沉浸式自定义导航、纸纹卡片和完整�
     assert.match(control, /cursor-spacing="140"/);
   });
   assert.match(style, /\.form-page\s*{[\s\S]*background:\s*#075aa7/);
-  assert.match(style, /\.form-paper-background\s*{[\s\S]*position:\s*fixed/);
+  assert.match(template, /class="global-page-background"/);
   const backSurfaceRule = style.match(/\.form-back-surface\s*{([^}]*)\}/);
   assert.ok(backSurfaceRule);
   assert.doesNotMatch(backSurfaceRule[1], /background\s*:/);
@@ -292,7 +292,7 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.match(template, /aria-label="{{item\.ariaLabel}}"/);
   assert.match(script, /pinba_publish_draft_/);
   assert.match(script, /hasMeaningfulDraft/);
-  assert.match(style, /\.paper-background\s*{[^}]*position:\s*fixed/);
+  assert.match(template, /class="global-page-background"/);
   assert.match(style, /\.type-grid\s*{[\s\S]*flex-wrap:\s*wrap[\s\S]*gap:\s*20rpx/);
   assert.match(style, /\.type-card\s*{[\s\S]*calc\(\(100% - 20rpx\) \/ 2\)[\s\S]*min-height:\s*430rpx[\s\S]*aspect-ratio:\s*304 \/ 430/);
   assert.match(style, /\.type-card-description\s*{[\s\S]*white-space:\s*normal/);

@@ -1,4 +1,6 @@
-<view class="page manage-page safe-bottom">
+<view class="page manage-page safe-bottom global-background-host">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
   <view wx:if="{{loading}}" class="loading-block surface">正在加载拼单…</view>
   <empty-state
     wx:elif="{{error}}"

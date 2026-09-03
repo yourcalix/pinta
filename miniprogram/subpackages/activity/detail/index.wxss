@@ -1,4 +1,4 @@
-.detail-page{min-height:100vh;padding:24rpx;background:#f5f7f6;box-sizing:border-box}
+.detail-page{min-height:100vh;padding:24rpx;background:#075aa7;box-sizing:border-box}
 .surface{background:#fff;border-radius:24rpx;border:1rpx solid #e5ebe7;box-shadow:0 8rpx 24rpx rgba(18,38,25,.06)}
 .loading-block{padding:32rpx;text-align:center;color:#657269}
 .detail-hero{position:relative;padding:30rpx}
@@ -26,7 +26,7 @@
 .primary-button::after,.secondary-button::after{display:none}
 .secondary-button{color:#415047;background:#eef2f0}
 .application-state{margin-top:22rpx;padding:24rpx;text-align:center;color:#637168;background:#eef2f0;border-radius:18rpx}
-.report-link{margin:18rpx auto 0;color:#8a5652;background:transparent;font-size:23rpx}
+.report-link{margin:18rpx auto 0;color:#fff0dc;background:transparent;font-size:23rpx;text-shadow:0 1rpx 3rpx rgba(7,35,70,.24)}
 .report-link::after{display:none}
 .apply-modal{position:fixed;z-index:100;inset:0}
 .apply-backdrop{position:absolute;inset:0;background:rgba(10,20,15,.38)}

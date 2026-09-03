@@ -1,5 +1,6 @@
-<view class="messages-page" style="padding-top: {{contentTopInset}}px;">
-  <image class="paper-texture" src="../../assets/images/publish/publish-paper-texture.webp" mode="aspectFill" aria-hidden="true" />
+<view class="messages-page global-background-host" style="padding-top: {{contentTopInset}}px;">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
 
   <view class="messages-header">
     <text class="eyebrow">PINBA MESSAGES</text>

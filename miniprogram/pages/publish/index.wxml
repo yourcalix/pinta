@@ -1,6 +1,6 @@
-<view class="page publish-page" style="padding-top: {{contentTopInset}}px;">
-  <image class="paper-background" src="../../assets/images/publish/publish-paper-texture.webp" mode="aspectFill" aria-hidden="true" />
-  <view class="paper-tint" aria-hidden="true"></view>
+<view class="page publish-page global-background-host" style="padding-top: {{contentTopInset}}px;">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
 
   <view class="publish-content">
     <view class="publish-hero">

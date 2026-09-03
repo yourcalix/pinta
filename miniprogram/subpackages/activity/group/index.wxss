@@ -242,8 +242,9 @@
 .report-link {
   min-height: 76rpx;
   margin-top: 16rpx;
-  color: #90464b;
+  color: #fff0dc;
   background: transparent;
   font-size: 25rpx;
   line-height: 1.4;
+  text-shadow: 0 1rpx 3rpx rgba(7, 35, 70, 0.24);
 }

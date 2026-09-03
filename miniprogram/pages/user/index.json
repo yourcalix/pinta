@@ -1,7 +1,10 @@
 {
   "navigationStyle": "custom",
-  "navigationBarTextStyle": "black",
-  "backgroundColorTop": "#F5F7F6",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#075AA7",
+  "backgroundColorTop": "#075AA7",
+  "backgroundColorBottom": "#075AA7",
+  "backgroundTextStyle": "light",
   "usingComponents": {
     "activity-card": "/components/activity-card/index",
     "status-badge": "/components/status-badge/index",
