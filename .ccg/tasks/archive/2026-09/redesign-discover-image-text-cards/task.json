@@ -1,0 +1,12 @@
+{
+  "id": "redesign-discover-image-text-cards",
+  "title": "发现页活动卡改为左图右文",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "前端终审已综合、W-1已修复并验证；本地归档提交，真机与云端集成由用户后期统一安排",
+  "createdAt": "2026-09-04T02:26:00.538Z",
+  "branch": "main"
+}
