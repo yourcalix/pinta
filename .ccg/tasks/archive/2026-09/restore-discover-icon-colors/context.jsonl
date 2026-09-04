@@ -1,0 +1,3 @@
+{"path":"miniprogram/assets/images/discover/filter-*.png","reason":"恢复上一版原色透明图标"}
+{"path":"miniprogram/pages/discover/index.wxss","reason":"移除图标黑色滤镜"}
+{"path":"tests/discover-filter-icons.test.js","reason":"原色图标与黑色文字、浅绿选中态契约"}

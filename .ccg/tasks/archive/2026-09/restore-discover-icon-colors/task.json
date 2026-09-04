@@ -1,0 +1,12 @@
+{
+  "id": "restore-discover-icon-colors",
+  "title": "恢复发现页四个筛选图标原色",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-04T10:30:00.000Z",
+  "branch": "main"
+}
