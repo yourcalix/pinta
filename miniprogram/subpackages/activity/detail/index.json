@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "活动详情",
+  "navigationStyle": "custom",
   "navigationBarBackgroundColor": "#075AA7",
   "navigationBarTextStyle": "white",
   "backgroundColor": "#075AA7",

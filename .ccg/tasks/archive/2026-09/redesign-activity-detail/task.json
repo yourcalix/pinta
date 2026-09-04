@@ -1,0 +1,12 @@
+{
+  "id": "redesign-activity-detail",
+  "title": "重设计发现页正在组队活动详情",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "实现及前端复审完成，归档提交；下一步独立进行真机冷启动、键盘、窄屏验收，未部署",
+  "createdAt": "2026-09-04",
+  "branch": "main"
+}

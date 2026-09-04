@@ -165,6 +165,6 @@ test('详情模板把 NOT_FOUND 设为不可恢复并提供原生分享入口', 
   assert.match(template, /errorCode === 'TAKEDOWN' \|\| errorCode === 'NOT_FOUND'/);
   assert.match(template, /open-type="share"/);
   assert.match(template, /aria-label="分享活动"/);
-  assert.match(style, /\.share-chip-button\s*\{[\s\S]*min-height:\s*88rpx/);
+  assert.match(style, /\.primary-button, \.secondary-button, \.share-button\s*\{[^}]*min-height:\s*44px/);
   assert.doesNotMatch(appSource, /readiness|readyPromise|initializationPromise/);
 });
