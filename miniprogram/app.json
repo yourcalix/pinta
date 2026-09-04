@@ -17,7 +17,8 @@
     {
       "root": "subpackages/message",
       "pages": [
-        "chat/index"
+        "chat/index",
+        "group-chat/index"
       ]
     },
     {

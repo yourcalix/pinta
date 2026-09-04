@@ -50,6 +50,56 @@ test('没有私信会话时列表成功返回空数组而不是错误态', async
   assert.equal(result.data.nextCursor, null);
 });
 
+test('聊下只创建与活动发起人的咨询，不放宽原成员私信权限', async () => {
+  const { call } = setup();
+  const opened = await call('dm.consult.create', { activityId: 'activity-formed', targetUserId: 'member' }, 'outsider', 'consult-create-001');
+  assert.equal(opened.ok, true);
+  assert.equal(opened.data.conversation.kind, 'OWNER_CONSULT');
+  assert.equal(opened.data.conversation.peer.nickname, '发起人');
+  assert.equal(opened.data.conversation.source.type, 'activity_consult');
+  assert.equal(JSON.stringify(opened.data).includes('ownerId'), false);
+  assert.equal(JSON.stringify(opened.data).includes('consultantId'), false);
+  const ownerList = await call('dm.conversation.list', {}, 'owner');
+  assert.equal(ownerList.data.items[0].kind, 'OWNER_CONSULT');
+  assert.equal(ownerList.data.items[0].peer.nickname, '路人');
+
+  const forbiddenMemberDm = await call('dm.conversation.create', {
+    activityId: 'activity-formed', memberId: 'member-peer'
+  }, 'outsider', 'consult-no-broaden-001');
+  assert.equal(forbiddenMemberDm.error.code, 'NOT_FOUND_OR_NOT_ALLOWED');
+  const self = await call('dm.consult.create', { activityId: 'activity-formed' }, 'owner', 'consult-self-001');
+  assert.equal(self.error.code, 'NOT_FOUND_OR_NOT_ALLOWED');
+});
+
+test('咨询双方可发送，终态保留历史只读，下架后列表预览和重放均fail-closed', async () => {
+  const { call, store } = setup();
+  const opened = await call('dm.consult.create', { activityId: 'activity-formed' }, 'outsider', 'consult-create-002');
+  const conversationId = opened.data.conversation.id;
+  const data = { conversationId, clientMessageId: 'consult_message_001', text: '请问需要带球拍吗？' };
+  const sent = await call('dm.message.send', data, 'outsider', 'consult-send-001');
+  assert.equal(sent.ok, true);
+  const received = await call('dm.message.list', { conversationId }, 'owner');
+  assert.equal(received.data.items[0].text, data.text);
+  assert.equal(received.data.conversation.kind, 'OWNER_CONSULT');
+
+  store.activities.get('activity-formed').status = 'COMPLETED';
+  assert.equal((await call('dm.message.list', { conversationId }, 'outsider')).ok, true);
+  assert.equal((await call('dm.message.send', { ...data, clientMessageId: 'consult_message_002' }, 'owner', 'consult-send-002')).error.code, 'CONFLICT');
+  assert.equal((await call('dm.consult.create', { activityId: 'activity-formed' }, 'member', 'consult-create-closed')).error.code, 'NOT_FOUND_OR_NOT_ALLOWED');
+
+  store.activities.get('activity-formed').status = 'SUSPENDED';
+  assert.deepEqual((await call('dm.conversation.list', {}, 'outsider')).data.items, []);
+  assert.equal((await call('dm.unread', {}, 'owner')).data.totalUnread, 0);
+  const unreadBeforeDeniedRead = store.directConversations.get(conversationId).unreadByUser.owner;
+  assert.equal((await call('dm.conversation.read', {
+    conversationId, lastMessageId: sent.data.message.id
+  }, 'owner', 'consult-read-suspended')).error.code, 'TAKEDOWN');
+  assert.equal(store.directConversations.get(conversationId).unreadByUser.owner, unreadBeforeDeniedRead);
+  assert.equal(store.directConversations.get(conversationId).readAtByUser, undefined);
+  assert.equal((await call('dm.message.list', { conversationId }, 'owner')).error.code, 'TAKEDOWN');
+  assert.equal((await call('dm.message.send', data, 'outsider', 'consult-replay-suspended')).error.code, 'TAKEDOWN');
+});
+
 test('私信来源活动类型经过白名单与历史类型归一化', async () => {
   const { call, store } = setup();
   store.activities.get('activity-formed').type = 'buddy';

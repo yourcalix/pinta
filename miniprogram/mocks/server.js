@@ -47,7 +47,10 @@ const MUTATING_ACTIONS = new Set([
   'member.leave',
   'group.contact.share',
   'group.contact.revoke',
+  'group.message.send',
+  'group.message.read',
   'dm.conversation.create',
+  'dm.consult.create',
   'dm.message.send',
   'dm.conversation.read',
   'notification.read',
@@ -57,7 +60,8 @@ const MUTATING_ACTIONS = new Set([
   'ride.driver.cancel'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
-  'driver.application.submit', 'admin.driverApplication.review', 'community.like.set'
+  'driver.application.submit', 'admin.driverApplication.review', 'community.like.set',
+  'group.message.send', 'group.message.read', 'dm.consult.create', 'dm.message.send'
 ]);
 const PUBLIC_ACTIONS = new Set([
   'activity.list',
@@ -366,6 +370,8 @@ function seedState() {
     communityLikes: [],
     directConversations: directPreview.conversations,
     directMessages: directPreview.messages,
+    groupMessages: [],
+    groupReadStates: [],
     reports: [],
     idempotency: {}
   };
@@ -401,6 +407,8 @@ if (!state.memberContacts) state.memberContacts = [];
 if (!state.communityPosts) state.communityPosts = [];
 if (!state.communityReplies) state.communityReplies = [];
 if (!state.communityLikes) state.communityLikes = [];
+if (!state.groupMessages) state.groupMessages = [];
+if (!state.groupReadStates) state.groupReadStates = [];
 if (!Array.isArray(state.directConversations)
   || !Array.isArray(state.directMessages)
   || (!state.directConversations.length && !state.directMessages.length)) {
@@ -408,6 +416,19 @@ if (!Array.isArray(state.directConversations)
   state.directConversations = directPreview.conversations;
   state.directMessages = directPreview.messages;
 }
+function initializeActivityCommunication(target) {
+  target.activities.forEach((activity) => {
+  if (!Number.isSafeInteger(activity.groupSequence) || activity.groupSequence < 0) activity.groupSequence = 0;
+  });
+  target.members.forEach((member) => {
+  if (!member.groupWindow && member.status === 'ACTIVE') {
+    const activity = target.activities.find((item) => item.id === member.activityId);
+    member.groupWindow = { generation: 1, after: activity && activity.groupSequence || 0 };
+  }
+  });
+  return target;
+}
+initializeActivityCommunication(state);
 
 function publicCommunityPost(item) {
   const like = state.communityLikes.find((entry) => entry.targetType === 'post' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
@@ -526,7 +547,7 @@ function afterAscendingCommunityCursor(item, cursor) {
 }
 
 function persist() {
-  const { memberContacts, directMessages, directConversations, ...safeState } = state;
+  const { memberContacts, directMessages, directConversations, groupMessages, groupReadStates, ...safeState } = state;
   writeStorage(STATE_KEY, safeState);
   writeStorage(PERSONA_KEY, currentUserId);
 }
@@ -557,6 +578,7 @@ function directConversationDto(conversation) {
     : null;
   return {
     id: conversation.id,
+    kind: conversation.kind === 'OWNER_CONSULT' ? 'OWNER_CONSULT' : 'MEMBER_DM',
     peer: {
       nickname: peer && peer.profile && peer.profile.nickname || '拼吧用户',
       avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
@@ -572,9 +594,13 @@ function directConversationDto(conversation) {
       createdAt: conversation.lastMessageAt
     } : null,
     unreadCount: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0),
-    messagingAvailable: Boolean(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
-      && [conversation.participantAId, conversation.participantBId].every((id) =>
-        userById(id) && userById(id).status === 'ACTIVE' && activeMember(sourceActivity.id, id))),
+    messagingAvailable: Boolean(sourceActivity
+      && (conversation.kind === 'OWNER_CONSULT'
+        ? ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
+          && sourceActivity.ownerId === conversation.ownerId
+        : ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
+          && [conversation.participantAId, conversation.participantBId].every((id) => activeMember(sourceActivity.id, id)))
+      && [conversation.participantAId, conversation.participantBId].every((id) => userById(id) && userById(id).status === 'ACTIVE')),
     updatedAt: conversation.updatedAt
   };
 }
@@ -586,6 +612,38 @@ function directMessageDto(message) {
     text: message.text,
     isMine: message.senderId === currentUserId,
     status: message.status || 'SENT',
+    createdAt: message.createdAt
+  };
+}
+
+function groupAccess(activityId, write = false) {
+  const user = requireActiveUser(true);
+  assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+  const activity = activityById(activityId);
+  assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+  assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '活动已下架');
+  assert(['RECRUITING', 'FORMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(activity.status), 'FORBIDDEN', '当前无法访问群聊');
+  const member = activeMember(activity.id, user.id);
+  assert(member && member.groupWindow && Number.isSafeInteger(member.groupWindow.generation)
+    && member.groupWindow.generation > 0 && Number.isSafeInteger(member.groupWindow.after)
+    && Number.isSafeInteger(activity.groupSequence) && member.groupWindow.after <= activity.groupSequence,
+  'FORBIDDEN', '你不是该活动当前的有效成员');
+  const writable = ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status);
+  assert(!write || writable, 'CONFLICT', '活动已结束，群聊仅可查看');
+  return { user, activity, member, generation: member.groupWindow.generation,
+    after: member.groupWindow.after, latestSequence: activity.groupSequence, writable };
+}
+
+function publicGroupMessage(message) {
+  const sender = userById(message.senderId);
+  return {
+    id: message.id,
+    sequence: message.sequence,
+    text: message.text,
+    isMine: message.senderId === currentUserId,
+    sender: { nickname: sender && sender.profile && sender.profile.nickname || '拼吧用户',
+      avatarKind: avatarKindFromGender(sender && sender.profile && sender.profile.gender),
+      role: message.memberId && state.members.find((item) => item.id === message.memberId)?.role === 'OWNER' ? 'OWNER' : 'MEMBER' },
     createdAt: message.createdAt
   };
 }
@@ -940,7 +998,7 @@ function createActivity(input) {
   delete activityInput.contactInfo;
   const activity = {
     id: nextId('activity'), ownerId: user.id, owner: { nickname: user.profile.nickname },
-    ...activityInput, memberCount: 1, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
+    ...activityInput, memberCount: 1, groupSequence: 0, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
   };
   state.activities.unshift(activity);
   const ownerMember = {
@@ -949,6 +1007,7 @@ function createActivity(input) {
     userId: user.id,
     role: 'OWNER',
     status: 'ACTIVE',
+    groupWindow: { generation: 1, after: 0 },
     avatarKind: avatarKindFromGender(user.profile.gender),
     joinedAt: now
   };
@@ -1129,9 +1188,13 @@ function approveApplication(input) {
   application.approvedAt = now;
   application.updatedAt = now;
   const applicant = state.users.find((item) => item.id === application.applicantId);
-  const member = { id: nextId('member'), activityId: activity.id, userId: application.applicantId, role: 'MEMBER', status: 'ACTIVE', joinedAt: now,
-    avatarKind: avatarKindFromGender(applicant && applicant.profile && applicant.profile.gender) };
-  state.members.push(member);
+  let member = state.members.find((item) => item.activityId === activity.id && item.userId === application.applicantId);
+  const previousGeneration = member && member.groupWindow && Number(member.groupWindow.generation) || 0;
+  if (!member) member = { id: nextId('member'), activityId: activity.id, userId: application.applicantId, role: 'MEMBER' };
+  Object.assign(member, { status: 'ACTIVE', joinedAt: now,
+    groupWindow: { generation: previousGeneration + 1, after: Number(activity.groupSequence || 0) },
+    avatarKind: avatarKindFromGender(applicant && applicant.profile && applicant.profile.gender) });
+  if (!state.members.includes(member)) state.members.push(member);
   activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
   activity.memberCount += 1;
   activity.version += 1;
@@ -1412,10 +1475,72 @@ function handle(action, input, idempotencyKey = '') {
     });
     return { activityId: activity.id, meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules || '' }, members };
   }
+  if (action === 'group.thread') {
+    const access = groupAccess(validatedId(input.activityId, '活动ID'));
+    const read = state.groupReadStates.find((item) => item.activityId === access.activity.id && item.userId === currentUserId
+      && item.generation === access.generation);
+    const latestIncoming = state.groupMessages.filter((item) => item.activityId === access.activity.id
+      && item.senderId !== currentUserId && item.sequence > access.after && item.sequence <= access.latestSequence)
+      .sort((left, right) => right.sequence - left.sequence)[0];
+    return { activity: { id: access.activity.id, title: access.activity.title, status: access.activity.status },
+      generation: access.generation, writable: access.writable,
+      hasUnread: Boolean(latestIncoming && latestIncoming.sequence > Number(read && read.sequence || access.after)) };
+  }
+  if (action === 'group.message.list') {
+    const access = groupAccess(validatedId(input.activityId, '活动ID'));
+    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 100);
+    const before = input.before === undefined || input.before === null || input.before === '' ? null : Number(input.before);
+    assert(before === null || Number.isSafeInteger(before) && before >= 0, 'VALIDATION_ERROR', '分页游标无效');
+    const candidates = state.groupMessages.filter((item) => item.activityId === access.activity.id
+      && item.sequence > access.after && item.sequence <= access.latestSequence
+      && (before === null || item.sequence < before)).sort((left, right) => right.sequence - left.sequence);
+    const items = candidates.slice(0, limit);
+    return { generation: access.generation, writable: access.writable, items: items.map(publicGroupMessage),
+      nextBefore: candidates.length > limit ? items[items.length - 1].sequence : null };
+  }
+  if (action === 'group.message.send') {
+    const access = groupAccess(validatedId(input.activityId, '活动ID'), true);
+    const generation = Number(input.generation);
+    const clientMessageId = String(input.clientMessageId || '').trim();
+    assert(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+    assert(/^[A-Za-z0-9_-]{1,80}$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID无效');
+    const text = assertDirectMessageContent(input.text);
+    const id = stableMockEntityId('groupMessage', access.activity.id, currentUserId, access.member.id, generation, clientMessageId);
+    const payloadHash = opaqueSensitiveHash(text);
+    const existing = state.groupMessages.find((item) => item.id === id);
+    if (existing) {
+      assert(existing.payloadHash === payloadHash && existing.sequence > access.after, 'CONFLICT', '客户端消息ID已用于其他内容');
+      return { message: publicGroupMessage(existing) };
+    }
+    assert(access.activity.groupSequence < Number.MAX_SAFE_INTEGER, 'CONFLICT', '群聊序号已失效');
+    const now = new Date().toISOString();
+    const message = { id, activityId: access.activity.id, sequence: access.activity.groupSequence + 1,
+      senderId: currentUserId, memberId: access.member.id, generation, clientMessageId,
+      payloadHash, text, status: 'SENT', createdAt: now, updatedAt: now };
+    access.activity.groupSequence = message.sequence;
+    access.activity.groupLastMessageId = message.id;
+    access.activity.updatedAt = now;
+    state.groupMessages.push(message);
+    return { message: publicGroupMessage(message) };
+  }
+  if (action === 'group.message.read') {
+    const access = groupAccess(validatedId(input.activityId, '活动ID'));
+    const generation = Number(input.generation); const sequence = Number(input.sequence);
+    assert(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+    const message = state.groupMessages.find((item) => item.id === input.messageId);
+    assert(message && message.activityId === access.activity.id && message.sequence === sequence
+      && sequence > access.after && sequence <= access.latestSequence, 'FORBIDDEN', '消息不在当前成员周期内');
+    const now = new Date().toISOString();
+    let read = state.groupReadStates.find((item) => item.activityId === access.activity.id && item.userId === currentUserId);
+    if (!read) { read = { id: stableMockEntityId('groupRead', access.activity.id, currentUserId), activityId: access.activity.id, userId: currentUserId }; state.groupReadStates.push(read); }
+    if (read.generation !== generation || sequence > Number(read.sequence || 0)) Object.assign(read, { generation, sequence, updatedAt: now });
+    return { generation: read.generation, sequence: read.sequence, readAt: read.updatedAt };
+  }
   if (action === 'dm.unread') {
     const user = requireActiveUser(true);
     assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const conversations = state.directConversations.filter((item) => [item.participantAId, item.participantBId].includes(currentUserId));
+    const conversations = state.directConversations.filter((item) => [item.participantAId, item.participantBId].includes(currentUserId))
+      .filter((item) => item.kind !== 'OWNER_CONSULT' || activityById(item.source && item.source.id)?.status !== 'SUSPENDED');
     return {
       totalUnread: conversations.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[currentUserId]) || 0), 0),
       conversationsWithUnread: conversations.filter((item) => Number(item.unreadByUser && item.unreadByUser[currentUserId]) > 0).length
@@ -1428,6 +1553,7 @@ function handle(action, input, idempotencyKey = '') {
     const cursor = decodeDirectCursor(input.cursor);
     const candidates = state.directConversations
       .filter((item) => [item.participantAId, item.participantBId].includes(currentUserId))
+      .filter((item) => item.kind !== 'OWNER_CONSULT' || activityById(item.source && item.source.id)?.status !== 'SUSPENDED')
       .filter((item) => afterDirectCursor(item, cursor, 'updatedAt'))
       .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
     const page = candidates.slice(0, limit + 1);
@@ -1463,6 +1589,7 @@ function handle(action, input, idempotencyKey = '') {
       const now = new Date().toISOString();
       conversation = {
         id: conversationId,
+        kind: 'MEMBER_DM',
         participantAId: participants[0],
         participantBId: participants[1],
         source: { type: 'activity', id: activity.id, title: activity.title },
@@ -1478,11 +1605,37 @@ function handle(action, input, idempotencyKey = '') {
     }
     return { conversation: directConversationDto(conversation) };
   }
+  if (action === 'dm.consult.create') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const activity = activityById(validatedId(input.activityId, '活动ID'));
+    assert(activity && activity.status !== 'SUSPENDED', activity && activity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND', '活动不存在或已失效');
+    assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status) && activity.ownerId !== currentUserId,
+      'CONFLICT', activity.ownerId === currentUserId ? '不能与自己发起私信' : '当前活动暂不可咨询');
+    const owner = userById(activity.ownerId);
+    assert(owner && owner.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED', '发起人当前不可联系');
+    const participants = [currentUserId, owner.id].sort();
+    const conversationId = stableMockEntityId('consultConversation', activity.id, ...participants);
+    let conversation = state.directConversations.find((item) => item.id === conversationId);
+    if (!conversation) {
+      const now = new Date().toISOString();
+      conversation = { id: conversationId, kind: 'OWNER_CONSULT', ownerId: owner.id, consultantId: currentUserId,
+        participantAId: participants[0], participantBId: participants[1],
+        source: { type: 'activity_consult', id: activity.id, title: activity.title },
+        lastMessageId: null, lastMessagePreview: '', lastMessageAt: null, lastSenderId: null,
+        unreadByUser: { [participants[0]]: 0, [participants[1]]: 0 }, createdAt: now, updatedAt: now };
+      state.directConversations.push(conversation);
+    }
+    return { conversation: directConversationDto(conversation) };
+  }
   if (action === 'dm.message.list') {
     const user = requireActiveUser(true);
     assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
     const conversation = state.directConversations.find((item) => item.id === input.conversationId);
     assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    const sourceActivity = conversation.source && activityById(conversation.source.id);
+    assert(conversation.kind !== 'OWNER_CONSULT' || sourceActivity && sourceActivity.status !== 'SUSPENDED',
+      sourceActivity && sourceActivity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
     const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
     const cursor = decodeDirectCursor(input.cursor);
     const candidates = state.directMessages
@@ -1508,16 +1661,24 @@ function handle(action, input, idempotencyKey = '') {
     const id = `directMessage_${opaqueSensitiveHash(`${conversation.id}:${currentUserId}:${clientMessageId}`)}`;
     const existing = state.directMessages.find((item) => item.id === id);
     const payloadHash = opaqueSensitiveHash(text);
+    const sourceActivity = conversation.source && activityById(conversation.source.id);
+    const participantsActive = [conversation.participantAId, conversation.participantBId]
+      .every((id) => userById(id) && userById(id).status === 'ACTIVE');
+    if (conversation.kind === 'OWNER_CONSULT') {
+      assert(sourceActivity && sourceActivity.status !== 'SUSPENDED', sourceActivity && sourceActivity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'CONFLICT', '活动已结束，这段咨询现为只读');
+      assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
+        && sourceActivity.ownerId === conversation.ownerId && participantsActive, 'CONFLICT', '活动已结束，这段咨询现为只读');
+    } else {
+      const firstMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantAId);
+      const secondMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantBId);
+      assert(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status) && firstMember && secondMember
+        && participantsActive, 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
+    }
     if (existing) {
       assert(existing.conversationId === conversation.id && existing.senderId === currentUserId, 'CONFLICT', '客户端消息ID已用于其他会话');
       assert(existing.payloadHash === payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
       return { message: directMessageDto(existing) };
     }
-    const sourceActivity = conversation.source && activityById(conversation.source.id);
-    const firstMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantAId);
-    const secondMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantBId);
-    assert(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status) && firstMember && secondMember
-      && [conversation.participantAId, conversation.participantBId].every((id) => userById(id) && userById(id).status === 'ACTIVE'), 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
     const now = new Date().toISOString();
     const message = { id, conversationId: conversation.id, senderId: currentUserId, text, payloadHash, status: 'SENT', createdAt: now, updatedAt: now };
     state.directMessages.push(message);
@@ -1539,6 +1700,11 @@ function handle(action, input, idempotencyKey = '') {
     assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
     const conversation = state.directConversations.find((item) => item.id === input.conversationId);
     assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    if (conversation.kind === 'OWNER_CONSULT') {
+      const activity = activityById(conversation.source && conversation.source.id);
+      assert(activity && activity.status !== 'SUSPENDED',
+        activity && activity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+    }
     assert(typeof input.lastMessageId === 'string' && input.lastMessageId.length > 0 && input.lastMessageId.length <= 80, 'VALIDATION_ERROR', '已读消息ID无效');
     const now = new Date().toISOString();
     if (!conversation.lastMessageId || conversation.lastMessageId !== input.lastMessageId) {
@@ -1740,7 +1906,8 @@ async function call(event) {
     const idempotencyId = isMutation && event.idempotencyKey
       ? `${currentUserId}:${action}:${event.idempotencyKey}`
       : '';
-    const communityPayloadHash = action === 'community.post.create' || action === 'community.reply.create' || action === 'dm.message.send'
+    const communityPayloadHash = action === 'community.post.create' || action === 'community.reply.create'
+      || action === 'dm.message.send' || action === 'group.message.send'
       ? opaqueSensitiveHash(stableSerialize(event.data || {}))
       : '';
     if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');
@@ -1777,7 +1944,7 @@ function getPersona() {
 }
 
 function reset() {
-  state = seedState();
+  state = initializeActivityCommunication(seedState());
   currentUserId = 'u_owner';
   persist();
 }

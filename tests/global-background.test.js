@@ -24,10 +24,10 @@ function pageTemplates() {
   ].sort();
 }
 
-test('所有页面共用唯一的新拼图纸纹背景并退出无障碍与触控树', () => {
+test('除参考式白底活动详情外，所有页面共用唯一拼图纸纹背景', () => {
   const templates = pageTemplates();
-  assert.equal(templates.length, 14);
-  templates.forEach((relativePath) => {
+  assert.equal(templates.length, 15);
+  templates.filter((relativePath) => relativePath !== 'subpackages/activity/detail/index.wxml').forEach((relativePath) => {
     const template = read(relativePath);
     assert.equal((template.match(/shared-paper-bg\.webp/g) || []).length, 1, relativePath);
     assert.match(template, /src="\/assets\/images\/shared\/shared-paper-bg\.webp"/, relativePath);
@@ -62,6 +62,11 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
   const configs = pageTemplates().map((template) => template.replace(/\.wxml$/, '.json'));
   configs.forEach((relativePath) => {
     const config = JSON.parse(read(relativePath));
+    if (relativePath === 'subpackages/activity/detail/index.json') {
+      assert.equal(config.backgroundColor, '#FFFFFF', relativePath);
+      assert.equal(config.backgroundTextStyle, 'dark', relativePath);
+      return;
+    }
     assert.equal(config.backgroundColor, '#075AA7', relativePath);
     assert.equal(config.backgroundTextStyle, 'light', relativePath);
     if (config.navigationStyle !== 'custom') {

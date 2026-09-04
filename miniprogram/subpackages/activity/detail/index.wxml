@@ -1,54 +1,85 @@
-<view class="detail-page global-background-host" style="padding-top: {{contentTopInset}}px;">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
-  <view class="global-page-background-tint" aria-hidden="true"></view>
-  <view class="detail-navigation" style="top: {{navTop}}px;"><button class="back-button" bindtap="handleBack" hover-class="button--pressed" aria-label="{{singlePage ? '返回发现页' : '返回上一页'}}">{{singlePage ? '⌂' : '‹'}}</button></view>
-  <view wx:if="{{loading}}" class="detail-loading" aria-label="正在加载活动详情"><view class="skeleton-cover"></view><view class="skeleton-panel"><view></view><view></view><view></view></view></view>
-  <view wx:elif="{{errorCode === 'TAKEDOWN' || errorCode === 'NOT_FOUND'}}" class="detail-error"><empty-state symbol="!" title="{{error}}" action-text="返回发现页" bindaction="handleGoDiscover" /></view>
-  <view wx:elif="{{errorCode}}" class="detail-error"><empty-state symbol="!" title="{{error}}" action-text="重新加载" bindaction="handleRetry" /></view>
+<view class="detail-page" style="--content-top: {{contentTopInset}}px;">
+  <view class="detail-navigation {{navSolid ? 'detail-navigation--solid' : ''}}" style="height: {{contentTopInset}}px;">
+    <button class="back-button" style="top: {{navTop}}px;" bindtap="handleBack" hover-class="utility-button--pressed" aria-label="{{singlePage ? '返回发现首页' : '返回上一页'}}">{{singlePage ? '⌂' : '‹'}}</button>
+  </view>
+
+  <view wx:if="{{loading}}" class="detail-loading" style="padding-top: {{contentTopInset}}px;" aria-label="正在加载活动详情">
+    <view class="skeleton-cover"></view>
+    <view class="skeleton-panel"><view></view><view></view><view></view></view>
+  </view>
+  <view wx:elif="{{errorCode === 'TAKEDOWN' || errorCode === 'NOT_FOUND'}}" class="detail-error" style="padding-top: {{contentTopInset}}px;"><empty-state symbol="!" title="{{error}}" action-text="返回发现页" bindaction="handleGoDiscover" /></view>
+  <view wx:elif="{{errorCode}}" class="detail-error" style="padding-top: {{contentTopInset}}px;"><empty-state symbol="!" title="{{error}}" action-text="重新加载" bindaction="handleRetry" /></view>
+
   <block wx:elif="{{activity}}">
-    <view class="detail-cover detail-cover--{{activity.typeTone}}" aria-hidden="true">
-      <image wx:if="{{coverSrc && !coverFailed}}" class="cover-art" src="{{coverSrc}}" mode="aspectFit" binderror="handleCoverError" aria-hidden="true" />
-      <view wx:else class="cover-fallback">一起，把生活拼起来</view>
-      <text class="cover-caption">PINBA · {{activity.typeLabel}}</text>
+    <view class="detail-hero detail-hero--{{activity.typeTone}}">
+      <image wx:if="{{coverSrc && !coverFailed}}" class="hero-art" src="{{coverSrc}}" mode="aspectFit" binderror="handleCoverError" aria-label="{{activity.title}}活动封面" />
+      <view wx:else class="hero-fallback"><text>PINBA</text><text>一起，把生活拼起来</text></view>
+      <view class="hero-shade" aria-hidden="true"></view>
+      <view class="hero-caption" aria-hidden="true"><text>PINBA CLUB</text><text>{{activity.typeLabel}}</text></view>
+      <view class="hero-sentinel" aria-hidden="true"></view>
     </view>
+
     <view class="detail-panel">
-      <view class="detail-heading"><text class="type-tag type-tag--{{activity.typeTone}}">{{activity.typeLabel}}</text><status-badge label="{{activity.statusLabel}}" tone="{{activity.statusTone}}" /><text wx:if="{{activity.legacy && activity.legacy.readOnly}}" class="archive-label">历史归档</text></view>
+      <view class="detail-heading">
+        <text class="type-tag type-tag--{{activity.typeTone}}">{{activity.typeLabel}}</text>
+        <status-badge label="{{activity.statusLabel}}" tone="{{activity.statusTone}}" />
+        <text wx:if="{{activity.legacy && activity.legacy.readOnly}}" class="archive-label">历史归档</text>
+      </view>
       <view class="detail-title">{{activity.title}}</view>
+      <view class="detail-subline">{{activity.sceneLine || activity.placeLabel || '等待发起人补充地点'}}</view>
+
       <view class="info-card">
-        <view class="info-row"><text class="info-symbol" aria-hidden="true">◷</text><text class="info-label">活动时间</text><text class="info-value">{{activity.displayTime}}</text></view>
-        <view class="info-row"><text class="info-symbol" aria-hidden="true">⌖</text><text class="info-label">集合地点</text><text class="info-value">{{activity.sceneLine || activity.placeLabel || '暂未填写'}}</text></view>
-        <view class="info-row"><text class="info-symbol" aria-hidden="true">◴</text><text class="info-label">报名截止</text><text class="info-value">{{deadlineLabel}}</text></view>
-      </view>
-      <view class="detail-section">
-        <view class="section-heading"><text class="section-title">一起组队</text><text class="capacity-text">{{activity.memberCount}} / {{activity.maxMembers}} 人</text></view>
-        <view class="detail-avatar-group" aria-hidden="true">
-          <view wx:for="{{detailSlots}}" wx:for-item="slot" wx:key="id" class="detail-avatar {{slot.empty ? 'detail-avatar--empty' : ''}}" style="z-index: {{slot.layer}};"><text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="aspectFit" aria-hidden="true" /></view>
-          <view wx:if="{{hiddenMembers > 0}}" class="avatar-more">+{{hiddenMembers}}</view>
+        <view class="info-row"><text class="info-symbol" aria-hidden="true">●</text><text class="info-label">活动时间</text><text class="info-value">{{activity.displayTime}}</text></view>
+        <view class="info-row"><text class="info-symbol" aria-hidden="true">◆</text><text class="info-label">集合地点</text><text class="info-value">{{activity.sceneLine || activity.placeLabel || '暂未填写'}}</text><text class="info-arrow" aria-hidden="true">›</text></view>
+        <view class="info-row"><text class="info-symbol" aria-hidden="true">◒</text><text class="info-label">报名截止</text><text class="info-value">{{deadlineLabel}}</text></view>
+        <view class="member-row">
+          <view class="member-heading"><text class="info-symbol" aria-hidden="true">♟</text><text class="info-label">目前已加入</text><text class="member-count">· {{activity.memberCount}} / {{activity.maxMembers}} 人</text></view>
+          <view class="detail-avatar-group" aria-hidden="true">
+            <view wx:for="{{detailSlots}}" wx:for-item="slot" wx:key="id" class="detail-avatar {{slot.empty ? 'detail-avatar--empty' : ''}}">
+              <text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="aspectFill" aria-hidden="true" />
+            </view>
+            <view wx:if="{{hiddenMembers > 0}}" class="avatar-more">+{{hiddenMembers}}</view>
+          </view>
+          <view class="group-hint">{{groupHint}}</view>
         </view>
-        <view class="group-hint">{{groupHint}}</view>
       </view>
-      <view class="detail-section">
-        <view class="section-title">这次怎么拼</view>
+
+      <view class="content-section">
+        <view class="section-title">本场怎么拼</view>
         <text class="detail-description" user-select="true">{{activity.description || '发起者暂未填写补充说明'}}</text>
-        <view wx:if="{{detailRows.length}}" class="arrangement-list"><view wx:for="{{detailRows}}" wx:key="key" class="arrangement-row"><text class="arrangement-label">{{item.label}}</text><text class="arrangement-value" user-select="true">{{item.value}}</text></view></view>
-        <block wx:if="{{activity.rules}}"><view class="rules-heading">参与约定</view><text class="detail-description" user-select="true">{{activity.rules}}</text></block>
+        <view wx:if="{{detailRows.length}}" class="arrangement-list">
+          <view wx:for="{{detailRows}}" wx:key="key" class="arrangement-row"><text class="arrangement-label">{{item.label}}</text><text class="arrangement-value" user-select="true">{{item.value}}</text></view>
+        </view>
       </view>
-      <view class="detail-section owner-card"><view class="owner-avatar" aria-hidden="true">{{activity.ownerInitial}}</view><view class="owner-copy"><view class="owner-label">活动发起人</view><view class="owner-name">{{activity.ownerNickname}}</view></view></view>
-      <view class="safety-card"><view class="safety-title">一起出发，也记得安全</view><view>成团后请在成员空间核验身份并自行确认安排；平台不提供运输、配送、担保或预订服务。</view></view>
-      <button class="report-link" bindtap="handleReport" hover-class="button--pressed">举报活动</button>
+
+      <view wx:if="{{activity.rules}}" class="content-section">
+        <view class="section-title">参与约定</view>
+        <text class="detail-description" user-select="true">{{activity.rules}}</text>
+      </view>
+
+      <view class="content-section owner-card">
+        <view class="owner-avatar" aria-hidden="true">{{activity.ownerInitial}}</view>
+        <view class="owner-copy"><view class="owner-label">活动发起人</view><view class="owner-name">{{activity.ownerNickname}}</view></view>
+      </view>
+      <view class="safety-card"><view class="safety-title">参与更安心</view><view>成团后请在成员空间核验身份并自行确认安排；平台不提供运输、配送、担保或预订服务。</view></view>
+      <button class="report-link" bindtap="handleReport" hover-class="utility-button--pressed">举报活动</button>
     </view>
+
     <view wx:if="{{!showApply}}" class="detail-action-bar">
-      <button class="share-button" open-type="share" hover-class="button--pressed" aria-label="分享活动"><text class="share-symbol" aria-hidden="true">↗</text><text>分享</text></button>
-      <button class="primary-button {{!primaryAction ? 'primary-button--disabled' : ''}}" bindtap="handlePrimary" disabled="{{!primaryAction || opening || applying}}" loading="{{opening || applying}}" hover-class="button--pressed">{{primaryLabel}}</button>
+      <button class="footer-tool {{!groupEnabled ? 'footer-tool--disabled' : ''}}" bindtap="handleGroupChat" hover-class="utility-button--pressed" aria-label="目前已加入成员的群聊"><text class="footer-icon" aria-hidden="true">☵</text><text>群聊</text></button>
+      <button class="footer-tool {{!consultEnabled ? 'footer-tool--disabled' : ''}}" bindtap="handleConsult" disabled="{{consulting}}" loading="{{consulting}}" hover-class="utility-button--pressed" aria-label="与活动发起人私信"><text wx:if="{{!consulting}}" class="footer-icon" aria-hidden="true">◇</text><text>聊下</text></button>
+      <button class="footer-tool" open-type="share" hover-class="utility-button--pressed" aria-label="分享活动"><text class="footer-icon" aria-hidden="true">↗</text><text>分享</text></button>
+      <button class="primary-button {{!primaryAction ? 'primary-button--disabled' : ''}}" bindtap="handlePrimary" disabled="{{!primaryAction || opening || applying}}" loading="{{opening || applying}}" hover-class="primary-button--pressed"><text class="primary-label">{{primaryLabel}}</text></button>
     </view>
   </block>
+
   <view wx:if="{{showApply}}" class="apply-modal">
     <view class="apply-backdrop" bindtap="handleApplyClose" catchtouchmove="preventScroll"></view>
     <view class="apply-sheet" catchtouchmove="preventScroll">
       <view class="apply-heading"><view class="apply-title">申请加入 · {{activity.typeLabel}}</view><button class="close-button" bindtap="handleApplyClose" disabled="{{applying}}" aria-label="关闭申请窗口">×</button></view>
-      <view class="apply-help">备注选填，向发起人介绍你的安排。获批后才占用名额。</view>
-      <textarea class="apply-note" maxlength="120" value="{{note}}" bindinput="handleNote" adjust-position="true" cursor-spacing="140" placeholder="想说点什么？（选填，最多120字）" disabled="{{applying}}" />
-      <view class="apply-actions"><button class="secondary-button" bindtap="handleApplyClose" disabled="{{applying}}" hover-class="button--pressed">取消</button><button class="primary-button" loading="{{applying}}" disabled="{{applying}}" bindtap="handleApplySubmit" hover-class="button--pressed">提交申请</button></view>
+      <view class="apply-help">提交后由发起人审核；审核通过才会加入成团并进入成员群聊。</view>
+      <textarea class="apply-note" maxlength="120" value="{{note}}" bindinput="handleNote" adjust-position="{{true}}" cursor-spacing="40" placeholder="向发起人介绍一下自己（选填，最多120字）" disabled="{{applying}}" />
+      <view class="apply-actions"><button class="secondary-button" bindtap="handleApplyClose" disabled="{{applying}}" hover-class="utility-button--pressed">取消</button><button class="sheet-primary-button" loading="{{applying}}" disabled="{{applying}}" bindtap="handleApplySubmit" hover-class="primary-button--pressed">提交申请</button></view>
     </view>
   </view>
 </view>

@@ -10,6 +10,11 @@ module.exports = {
     { activityId, memberId },
     { mutating: true }
   ),
+  createConsultConversation: (activityId) => api.invoke(
+    'dm.consult.create',
+    { activityId },
+    { mutating: true }
+  ),
   listMessages: (conversationId, cursor, limit = 20) => api.invoke('dm.message.list', { conversationId, cursor, limit }),
   sendMessage: (conversationId, clientMessageId, text) => api.invoke(
     'dm.message.send',

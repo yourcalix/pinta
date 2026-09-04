@@ -1,0 +1,12 @@
+{
+  "id": "match-reference-activity-detail",
+  "title": "按参考截图精确匹配活动详情比例和控件",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送 origin/main；真实 CloudBase 迁移、索引和双账号真机联调另行执行",
+  "createdAt": "2026-09-04",
+  "branch": "main"
+}

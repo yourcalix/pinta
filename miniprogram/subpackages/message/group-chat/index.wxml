@@ -1,0 +1,42 @@
+<view class="group-page global-background-host" style="padding-top: {{contentTopInset}}px;">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
+  <view class="group-nav" style="height: {{contentTopInset}}px;">
+    <button class="back" bindtap="handleBack" aria-label="返回"><text aria-hidden="true">‹</text></button>
+    <text class="nav-title">{{title}}</text>
+  </view>
+  <view wx:if="{{loading}}" class="state" role="status">正在打开成员群聊…</view>
+  <view wx:elif="{{error}}" class="state" role="alert">
+    <text class="state-title">群聊暂不可用</text><text class="state-copy">{{error}}</text>
+    <button class="retry" bindtap="handleRetry">重新加载</button>
+  </view>
+  <block wx:else>
+    <scroll-view class="messages" scroll-y="true" scroll-into-view="{{scrollIntoView}}" enhanced="true" show-scrollbar="false">
+      <view class="older">
+        <button wx:if="{{nextBefore !== null && !loadingOlder && !olderError}}" bindtap="handleLoadOlder">加载更早消息</button>
+        <text wx:elif="{{loadingOlder}}">正在加载…</text>
+        <button wx:elif="{{olderError}}" bindtap="handleLoadOlder">{{olderError}}</button>
+      </view>
+      <view wx:if="{{!messages.length}}" class="empty"><text class="empty-title">还没有消息</text><text>和已经加入的成员打个招呼吧</text></view>
+      <view wx:for="{{messages}}" wx:key="id" id="{{item.anchorId}}" class="message {{item.isMine ? 'mine' : ''}}">
+        <view wx:if="{{!item.isMine}}" class="avatar" aria-hidden="true">{{item.senderInitial}}</view>
+        <view class="message-main">
+          <text wx:if="{{!item.isMine}}" class="sender">{{item.sender.nickname}}{{item.sender.role === 'OWNER' ? ' · 发起人' : ''}}</text>
+          <view class="bubble"><text user-select="true">{{item.text}}</text></view>
+        </view>
+      </view>
+      <view class="scroll-space"></view>
+    </scroll-view>
+    <view class="composer">
+      <view wx:if="{{!writable}}" class="readonly">活动已结束，群聊历史仅供查看</view>
+      <block wx:else>
+        <text wx:if="{{sendError}}" class="send-error">{{sendError}}</text>
+        <view class="compose-row">
+          <textarea class="input" value="{{text}}" maxlength="500" auto-height="true" adjust-position="true" cursor-spacing="24" placeholder="和成员聊一聊" bindinput="handleInput" bindconfirm="handleSend" confirm-type="send" aria-label="群聊消息" />
+          <button class="send" bindtap="handleSend" disabled="{{sending || !text}}">{{sending ? '发送中' : '发送'}}</button>
+        </view>
+        <text class="hint">仅支持文字，请勿发送联系方式或外部链接</text>
+      </block>
+    </view>
+  </block>
+</view>

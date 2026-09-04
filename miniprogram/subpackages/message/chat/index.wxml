@@ -44,7 +44,7 @@
         <view wx:if="{{!messages.length}}" class="chat-empty">
           <view class="empty-bubble" aria-hidden="true"><view class="empty-dot"></view><view class="empty-dot"></view><view class="empty-dot"></view></view>
           <view class="empty-title">还没有消息</view>
-          <view class="empty-copy">打个招呼，开始商量这次拼单吧～</view>
+          <view class="empty-copy">{{emptyCopy}}</view>
           <view class="quick-prompts" aria-label="快捷破冰语">
             <button wx:for="{{quickPrompts}}" wx:key="*this" class="quick-prompt" data-text="{{item}}" bindtap="handleQuickPrompt" hover-class="quick-prompt--pressed">{{item}}</button>
           </view>
@@ -62,7 +62,7 @@
       </scroll-view>
 
       <view class="composer">
-        <view wx:if="{{!messagingAvailable}}" class="composer-closed" role="status"><text class="closed-lock" aria-hidden="true">⌁</text><text>共同拼单已结束，历史私信仅供查看</text></view>
+        <view wx:if="{{!messagingAvailable}}" class="composer-closed" role="status"><text class="closed-lock" aria-hidden="true">⌁</text><text>{{closedText}}</text></view>
         <block wx:else>
           <view wx:if="{{sendError}}" class="composer-error" role="alert">{{sendError}}</view>
           <view class="composer-row">

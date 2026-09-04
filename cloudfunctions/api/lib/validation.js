@@ -242,6 +242,39 @@ function validateDirectMessageCreateInput(input) {
   };
 }
 
+function validateGroupMessageListInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  const before = input.before === undefined || input.before === null ? null : input.before;
+  invariant(before === null || Number.isSafeInteger(before) && before >= 0, 'VALIDATION_ERROR', '分页游标无效');
+  return {
+    activityId: validateId(input.activityId, '活动ID'),
+    before,
+    limit: integerValue(input.limit === undefined ? 20 : input.limit, '分页数量', 1, 30)
+  };
+}
+
+function validateGroupMessageCreateInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  const clientMessageId = stringValue(input.clientMessageId, '客户端消息ID', { required: true, min: 8, max: 80 });
+  invariant(/^[A-Za-z0-9_-]+$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID格式无效');
+  return {
+    activityId: validateId(input.activityId, '活动ID'),
+    generation: integerValue(input.generation, '成员周期', 1, Number.MAX_SAFE_INTEGER - 1),
+    clientMessageId,
+    text: assertDirectMessageTextSafe(stringValue(input.text, '消息内容', { required: true, min: 1, max: 500 }))
+  };
+}
+
+function validateGroupReadInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  return {
+    activityId: validateId(input.activityId, '活动ID'),
+    generation: integerValue(input.generation, '成员周期', 1, Number.MAX_SAFE_INTEGER - 1),
+    messageId: validateId(input.messageId, '已读消息ID'),
+    sequence: integerValue(input.sequence, '已读消息序号', 1, Number.MAX_SAFE_INTEGER - 1)
+  };
+}
+
 function validateId(value, field = 'ID') {
   return stringValue(value, field, { required: true, max: 80 });
 }
@@ -269,6 +302,9 @@ module.exports = {
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,
   validateDirectMessageCreateInput,
+  validateGroupMessageListInput,
+  validateGroupMessageCreateInput,
+  validateGroupReadInput,
   validateId,
   requireIdempotencyKey,
   stringValue

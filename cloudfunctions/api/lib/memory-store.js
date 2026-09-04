@@ -32,6 +32,14 @@ const {
   compareDirectDescending,
   isAfterDirectCursor
 } = require('./direct-message');
+const {
+  beginGroupMembership,
+  resolveGroupAccess,
+  assertGroupMessageVisible,
+  groupHistoryPage,
+  groupUnread,
+  groupMessageId
+} = require('./group-chat-policy');
 const { collectPublicActivityPage } = require('./public-activity-page');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
@@ -82,6 +90,8 @@ class MemoryStore {
     this.communityLikes = new Map((seed.communityLikes || []).map((item) => [item.id, clone(item)]));
     this.directConversations = new Map((seed.directConversations || []).map((item) => [item.id, clone(item)]));
     this.directMessages = new Map((seed.directMessages || []).map((item) => [item.id, clone(item)]));
+    this.groupMessages = new Map((seed.groupMessages || []).map((item) => [item.id, clone(item)]));
+    this.groupReadStates = new Map((seed.groupReadStates || []).map((item) => [item.id, clone(item)]));
     this.drivers = new Map((seed.drivers || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverApplications = new Map((seed.driverApplications || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverSecrets = new Map((seed.driverSecrets || []).map((item) => [item.userId || item.id, clone(item)]));
@@ -264,7 +274,8 @@ class MemoryStore {
       invariant(existing.operationKeyHash === activity.operationKeyHash, 'CONFLICT', '幂等键已用于其他活动');
       return clone(existing);
     }
-    activity = { ...activity, avatarRoster: upsertAvatarRoster(activity.avatarRoster, ownerMember.id, ownerMember.avatarKind) };
+    activity = { ...activity, groupSequence: 0, avatarRoster: upsertAvatarRoster(activity.avatarRoster, ownerMember.id, ownerMember.avatarKind) };
+    ownerMember = { ...ownerMember, groupWindow: beginGroupMembership(activity) };
     this.activities.set(activity.id, clone(activity));
     this.members.set(ownerMember.id, clone(ownerMember));
     if (ownerContact) this.memberContacts.set(ownerContact.id, clone(ownerContact));
@@ -605,10 +616,8 @@ class MemoryStore {
       : (activity.maxMembers || activity.maxPassengers || activity.targetMembers);
     if (activity.memberCount >= capacity) throw new AppError('CAPACITY_FULL');
 
-    const duplicateMember = [...this.members.values()].find(
-      (item) => item.activityId === activityId && item.userId === application.applicantId && item.status === MEMBER_STATUS.ACTIVE
-    );
-    invariant(!duplicateMember, 'CONFLICT', '申请人已经是活动成员');
+    const previousMember = this.members.get(stableEntityId('member', activityId, application.applicantId));
+    invariant(!previousMember || previousMember.status !== MEMBER_STATUS.ACTIVE, 'CONFLICT', '申请人已经是活动成员');
 
     application.status = APPLICATION_STATUS.APPROVED;
     application.approvedAt = at;
@@ -620,7 +629,8 @@ class MemoryStore {
       role: 'MEMBER',
       status: MEMBER_STATUS.ACTIVE,
       avatarKind: avatarKindFromGender((this.users.get(application.applicantId) || {}).profile?.gender),
-      joinedAt: at
+      joinedAt: at,
+      groupWindow: beginGroupMembership(activity, previousMember && previousMember.groupWindow || null)
     };
     this.members.set(member.id, member);
     activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
@@ -846,6 +856,103 @@ class MemoryStore {
     });
   }
 
+  getActiveMember(activityId, actorId) {
+    return [...this.members.values()].find((item) => item.activityId === activityId
+      && item.userId === actorId && item.status === MEMBER_STATUS.ACTIVE) || null;
+  }
+
+  resolveGroupAccessNow(activityId, actorId, write = false) {
+    return resolveGroupAccess({
+      activity: this.activities.get(activityId),
+      user: this.users.get(actorId),
+      member: this.getActiveMember(activityId, actorId),
+      write
+    });
+  }
+
+  publicGroupMember(member) {
+    const user = member && this.users.get(member.userId);
+    return {
+      nickname: user && user.profile && user.profile.nickname || (member && member.role === 'OWNER' ? '发起人' : '拼吧成员'),
+      avatarKind: member && member.avatarKind || null,
+      role: member && member.role || 'MEMBER'
+    };
+  }
+
+  async getGroupThread(activityId, actorId) {
+    const access = this.resolveGroupAccessNow(activityId, actorId);
+    const activity = this.activities.get(activityId);
+    const messages = [...this.groupMessages.values()].filter((item) => item.activityId === activityId);
+    const latestIncoming = messages.filter((item) => item.senderId !== actorId && item.sequence > access.after
+      && item.sequence <= access.latestSequence).sort((a, b) => b.sequence - a.sequence)[0] || null;
+    const readState = this.groupReadStates.get(stableEntityId('groupRead', activityId, actorId));
+    // Re-check after collecting summaries so an exit cannot return stale history.
+    const current = this.resolveGroupAccessNow(activityId, actorId);
+    return clone({
+      activity: { id: activity.id, title: activity.title || '', status: activity.status },
+      generation: current.generation,
+      writable: current.writable,
+      hasUnread: groupUnread(current, latestIncoming, readState)
+    });
+  }
+
+  async listGroupMessages(activityId, actorId, options) {
+    const access = this.resolveGroupAccessNow(activityId, actorId);
+    const page = groupHistoryPage(access, [...this.groupMessages.values()], options);
+    const current = this.resolveGroupAccessNow(activityId, actorId);
+    invariant(current.generation === access.generation && current.after === access.after, 'FORBIDDEN');
+    return clone({
+      ...page,
+      generation: current.generation,
+      writable: current.writable,
+      items: page.items.map((item) => ({ ...item, sender: this.publicGroupMember(this.members.get(item.memberId)) }))
+    });
+  }
+
+  async addGroupMessage({ activityId, actorId, generation, clientMessageId, text, payloadHash, at }) {
+    const access = this.resolveGroupAccessNow(activityId, actorId, true);
+    invariant(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+    const id = groupMessageId(access, generation, clientMessageId);
+    const existing = this.groupMessages.get(id);
+    if (existing) {
+      invariant(existing.payloadHash === payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+      return clone(assertGroupMessageVisible(access, existing));
+    }
+    invariant(access.latestSequence < Number.MAX_SAFE_INTEGER, 'CONFLICT', '群聊序号已失效');
+    const nextSequence = access.latestSequence + 1;
+    const current = this.resolveGroupAccessNow(activityId, actorId, true);
+    invariant(current.generation === generation && current.latestSequence === access.latestSequence, 'CONFLICT');
+    const message = { id, activityId, sequence: nextSequence, senderId: actorId, memberId: access.memberId,
+      generation, clientMessageId, payloadHash, text, status: 'SENT', createdAt: at, updatedAt: at };
+    this.groupMessages.set(id, message);
+    const activity = this.activities.get(activityId);
+    activity.groupSequence = nextSequence;
+    activity.groupLastMessageId = id;
+    activity.updatedAt = at;
+    return clone({ ...message, sender: this.publicGroupMember(this.members.get(access.memberId)) });
+  }
+
+  async getGroupMessageForReplay(activityId, actorId, generation, clientMessageId) {
+    const access = this.resolveGroupAccessNow(activityId, actorId, true);
+    invariant(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+    const existing = this.groupMessages.get(groupMessageId(access, generation, clientMessageId));
+    return clone(existing ? assertGroupMessageVisible(access, existing) : null);
+  }
+
+  async markGroupRead(activityId, actorId, generation, messageId, sequence, at) {
+    const access = this.resolveGroupAccessNow(activityId, actorId);
+    invariant(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+    const message = this.groupMessages.get(messageId);
+    invariant(message && message.sequence === sequence, 'FORBIDDEN');
+    assertGroupMessageVisible(access, message);
+    const id = stableEntityId('groupRead', activityId, actorId);
+    const current = this.groupReadStates.get(id);
+    if (!current || current.generation !== generation || sequence > current.sequence) {
+      this.groupReadStates.set(id, { id, activityId, userId: actorId, generation, sequence, updatedAt: at });
+    }
+    return clone(this.groupReadStates.get(id));
+  }
+
   async setGroupContact({ activityId, actorId, type, value, shared, at }) {
     const activity = this.activities.get(activityId);
     invariant(activity, 'NOT_FOUND');
@@ -1042,8 +1149,33 @@ class MemoryStore {
     return clone({ activity, peerUserId: peer.id });
   }
 
+  async resolveConsultationPeer(activityId, actorId) {
+    const activity = this.activities.get(activityId);
+    invariant(activity && activity.status !== ACTIVITY_STATUS.SUSPENDED, activity && activity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+    invariant([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'NOT_FOUND_OR_NOT_ALLOWED');
+    invariant(activity.ownerId !== actorId, 'NOT_FOUND_OR_NOT_ALLOWED');
+    const owner = this.users.get(activity.ownerId);
+    invariant(owner && owner.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED');
+    return clone({ activity, peerUserId: owner.id });
+  }
+
   async upsertDirectConversation(conversation) {
     const sourceActivity = conversation.source && this.activities.get(conversation.source.id);
+    if (conversation.kind === 'OWNER_CONSULT') {
+      invariant(sourceActivity && sourceActivity.status !== ACTIVITY_STATUS.SUSPENDED,
+        sourceActivity && sourceActivity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+      invariant([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
+        && sourceActivity.ownerId === conversation.ownerId
+        && conversation.ownerId !== conversation.consultantId
+        && [conversation.participantAId, conversation.participantBId].includes(conversation.ownerId)
+        && [conversation.participantAId, conversation.participantBId].includes(conversation.consultantId)
+        && [conversation.participantAId, conversation.participantBId].every((id) => this.users.get(id)?.status === 'ACTIVE'),
+      'NOT_FOUND_OR_NOT_ALLOWED');
+      const existing = this.directConversations.get(conversation.id);
+      if (existing) return clone(existing);
+      this.directConversations.set(conversation.id, clone(conversation));
+      return clone(conversation);
+    }
     const activeParticipants = [...this.members.values()].filter(
       (item) => item.activityId === (conversation.source && conversation.source.id)
         && [conversation.participantAId, conversation.participantBId].includes(item.userId)
@@ -1068,6 +1200,11 @@ class MemoryStore {
   async isDirectMessagingAvailable(conversation) {
     const activityId = conversation.source && conversation.source.id;
     const activity = this.activities.get(activityId);
+    if (conversation.kind === 'OWNER_CONSULT') {
+      return Boolean(activity && [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)
+        && activity.ownerId === conversation.ownerId
+        && [conversation.participantAId, conversation.participantBId].every((userId) => this.users.get(userId)?.status === 'ACTIVE'));
+    }
     return Boolean(activity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)
       && [conversation.participantAId, conversation.participantBId].every((userId) => {
         const user = this.users.get(userId);
@@ -1079,6 +1216,7 @@ class MemoryStore {
   async listDirectConversations(actorId, { cursor, limit }) {
     const candidates = [...this.directConversations.values()]
       .filter((item) => [item.participantAId, item.participantBId].includes(actorId))
+      .filter((item) => item.kind !== 'OWNER_CONSULT' || this.activities.get(item.source && item.source.id)?.status !== ACTIVITY_STATUS.SUSPENDED)
       .filter((item) => isAfterDirectCursor(item, cursor, 'updatedAt'))
       .sort((left, right) => compareDirectDescending(left, right, 'updatedAt'));
     const page = candidates.slice(0, limit + 1);
@@ -1092,6 +1230,10 @@ class MemoryStore {
   async listDirectMessages(conversationId, actorId, { cursor, limit }) {
     const conversation = this.directConversations.get(conversationId);
     invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+    if (conversation.kind === 'OWNER_CONSULT') {
+      const activity = this.activities.get(conversation.source && conversation.source.id);
+      invariant(activity && activity.status !== ACTIVITY_STATUS.SUSPENDED, activity && activity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+    }
     const candidates = [...this.directMessages.values()]
       .filter((item) => item.conversationId === conversationId)
       .filter((item) => isAfterDirectCursor(item, cursor, 'createdAt'))
@@ -1107,13 +1249,15 @@ class MemoryStore {
   async addDirectMessage(message) {
     const conversation = this.directConversations.get(message.conversationId);
     invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(message.senderId), 'NOT_FOUND_OR_NOT_ALLOWED');
-    const existing = this.directMessages.get(message.id);
-    if (existing) {
-      invariant(existing.conversationId === message.conversationId && existing.senderId === message.senderId, 'CONFLICT', '客户端消息ID已用于其他会话');
-      invariant(existing.payloadHash === message.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
-      return clone(existing);
-    }
     const sourceActivity = conversation.source && this.activities.get(conversation.source.id);
+    if (conversation.kind === 'OWNER_CONSULT') {
+      invariant(sourceActivity && sourceActivity.status !== ACTIVITY_STATUS.SUSPENDED,
+        sourceActivity && sourceActivity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'CONFLICT');
+      invariant([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
+        && sourceActivity.ownerId === conversation.ownerId
+        && [conversation.participantAId, conversation.participantBId].every((id) => this.users.get(id)?.status === 'ACTIVE'),
+      'CONFLICT', '活动已结束，这段咨询现为只读');
+    } else {
     const activeParticipants = [...this.members.values()].filter(
       (item) => item.activityId === (conversation.source && conversation.source.id)
         && [conversation.participantAId, conversation.participantBId].includes(item.userId)
@@ -1121,6 +1265,13 @@ class MemoryStore {
     );
     invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status) && activeParticipants.length === 2
       && [conversation.participantAId, conversation.participantBId].every((id) => this.users.get(id)?.status === 'ACTIVE'), 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
+    }
+    const existing = this.directMessages.get(message.id);
+    if (existing) {
+      invariant(existing.conversationId === message.conversationId && existing.senderId === message.senderId, 'CONFLICT', '客户端消息ID已用于其他会话');
+      invariant(existing.payloadHash === message.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+      return clone(existing);
+    }
     const recipientId = conversation.participantAId === message.senderId
       ? conversation.participantBId
       : conversation.participantAId;
@@ -1141,6 +1292,11 @@ class MemoryStore {
   async markDirectConversationRead(conversationId, actorId, lastMessageId, at) {
     const conversation = this.directConversations.get(conversationId);
     invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+    if (conversation.kind === 'OWNER_CONSULT') {
+      const activity = this.activities.get(conversation.source && conversation.source.id);
+      invariant(activity && activity.status !== ACTIVITY_STATUS.SUSPENDED,
+        activity && activity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+    }
     if (!conversation.lastMessageId || conversation.lastMessageId !== lastMessageId) return clone(conversation);
     conversation.unreadByUser = { ...(conversation.unreadByUser || {}), [actorId]: 0 };
     conversation.readAtByUser = { ...(conversation.readAtByUser || {}), [actorId]: at };
@@ -1150,6 +1306,7 @@ class MemoryStore {
   async getDirectUnreadSummary(actorId) {
     const items = [...this.directConversations.values()].filter(
       (item) => [item.participantAId, item.participantBId].includes(actorId)
+        && (item.kind !== 'OWNER_CONSULT' || this.activities.get(item.source && item.source.id)?.status !== ACTIVITY_STATUS.SUSPENDED)
     );
     return {
       totalUnread: items.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[actorId]) || 0), 0),

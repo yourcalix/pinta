@@ -43,6 +43,8 @@ Page({
     peerTone: 'green',
     sourceTypeLabel: '共同拼单',
     sourceTone: 'companion',
+    emptyCopy: '打个招呼，开始商量这次拼单吧～',
+    closedText: '共同拼单已结束，历史私信仅供查看',
     scrollIntoView: '',
     scrollWithAnimation: false,
     quickPrompts: ['你好，想和你确认一下集合地点～', '关于活动时间想和你确认一下']
@@ -135,6 +137,7 @@ Page({
       const messages = decorateMessageList(mergeMessages(this.data.messages, incoming), peer.nickname);
       const messagingAvailable = conversation.messagingAvailable === true;
       const sourceType = conversation.source && conversation.source.activityType;
+      const isConsult = conversation.kind === 'OWNER_CONSULT';
       if (this.data.messagingAvailable && !messagingAvailable) hideKeyboardSafely();
       if (!older) {
         this._syncedLastId = result.items && result.items[0] ? result.items[0].id : boundaryId;
@@ -150,8 +153,10 @@ Page({
         peerName: peer.nickname,
         peerInitial: peer.initial,
         peerTone: peer.tone,
-        sourceTypeLabel: SOURCE_LABELS[sourceType] || '共同拼单',
+        sourceTypeLabel: isConsult ? '咨询发起人' : (SOURCE_LABELS[sourceType] || '共同拼单'),
         sourceTone: SOURCE_LABELS[sourceType] ? sourceType : 'companion',
+        emptyCopy: isConsult ? '向发起人问问活动安排吧～' : '打个招呼，开始商量这次拼单吧～',
+        closedText: isConsult ? '当前活动已结束，这段咨询仅供查看' : '共同拼单已结束，历史私信仅供查看',
         messages,
         ...(refresh && this.data.conversation ? {} : { nextCursor: result.nextCursor || '', hasMore: Boolean(result.nextCursor) }),
         loading: false,

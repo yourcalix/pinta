@@ -115,7 +115,9 @@ test('私信空状态提供轻量破冰词且只读态不保留输入框', () =>
   const chatScript = read('subpackages/message/chat/index.js');
   assert.match(chatTemplate, /wx:for="\{\{quickPrompts\}\}"/);
   assert.match(chatTemplate, /bindtap="handleQuickPrompt"/);
-  assert.match(chatTemplate, /历史私信仅供查看/);
+  assert.match(chatTemplate, /\{\{closedText\}\}/);
+  assert.match(chatScript, /历史私信仅供查看/);
+  assert.match(chatScript, /当前活动已结束，这段咨询仅供查看/);
   assert.match(chatScript, /quickPrompts:/);
   assert.match(chatScript, /handleQuickPrompt/);
 });

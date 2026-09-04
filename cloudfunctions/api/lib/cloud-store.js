@@ -31,6 +31,13 @@ const {
   compareDirectDescending,
   isAfterDirectCursor
 } = require('./direct-message');
+const {
+  beginGroupMembership,
+  resolveGroupAccess,
+  assertGroupMessageVisible,
+  groupUnread,
+  groupMessageId
+} = require('./group-chat-policy');
 const { collectPublicActivityPage } = require('./public-activity-page');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
@@ -123,7 +130,7 @@ class CloudStore {
       const result = await this.db.collection(collection).doc(id).get();
       return first(result);
     } catch (error) {
-      if (/not exist|not found/i.test(String(error && error.message))) return null;
+      if (isMissingDocumentError(error)) return null;
       throw error;
     }
   }
@@ -361,7 +368,8 @@ class CloudStore {
   }
 
   async createActivityWithOwner(activity, ownerMember, rideFulfillment = null, ownerContact = null) {
-    activity = { ...activity, avatarRoster: upsertAvatarRoster(activity.avatarRoster, ownerMember.id, ownerMember.avatarKind) };
+    activity = { ...activity, groupSequence: 0, avatarRoster: upsertAvatarRoster(activity.avatarRoster, ownerMember.id, ownerMember.avatarKind) };
+    ownerMember = { ...ownerMember, groupWindow: beginGroupMembership(activity) };
     if (activity.type === 'ride') {
       invariant(MEMBER_LUGGAGE_TYPES.includes(ownerMember.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     }
@@ -881,7 +889,8 @@ class CloudStore {
         role: 'MEMBER',
         status: MEMBER_STATUS.ACTIVE,
         avatarKind,
-        joinedAt: at
+        joinedAt: at,
+        groupWindow: beginGroupMembership(effectiveActivity, duplicateMember && duplicateMember.groupWindow || null)
       };
       await transaction.collection('activities').doc(activityId).update({
         data: {
@@ -1415,6 +1424,140 @@ class CloudStore {
     return (result.data || []).map(entity);
   }
 
+  async getGroupAccessFacts(activityId, actorId, write = false) {
+    const [activity, user, member] = await Promise.all([
+      this.getDocument('activities', activityId),
+      this.getUser(actorId),
+      this.getDocument('members', stableEntityId('member', activityId, actorId))
+    ]);
+    return resolveGroupAccess({ activity, user, member, write });
+  }
+
+  async hydrateGroupSender(message) {
+    const member = await this.getDocument('members', message.memberId);
+    const user = member ? await this.getUser(member.userId) : null;
+    return {
+      ...message,
+      sender: {
+        nickname: user && user.profile && user.profile.nickname || (member && member.role === 'OWNER' ? '发起人' : '拼吧成员'),
+        avatarKind: member && member.avatarKind || null,
+        role: member && member.role || 'MEMBER'
+      }
+    };
+  }
+
+  async queryGroupMessages(access, { before = null, limit = 20 } = {}) {
+    if (before !== null && before <= access.after + 1) return { items: [], nextBefore: null };
+    const sequence = before === null ? this.command.gt(access.after) : this.command.lt(before);
+    const result = await this.db.collection('activityGroupMessages')
+      .where({ activityId: access.activityId, sequence })
+      .orderBy('sequence', 'desc')
+      .limit(limit + 1)
+      .get();
+    const visible = (result.data || []).map(entity).filter((item) => item.sequence > access.after
+      && item.sequence <= access.latestSequence && (before === null || item.sequence < before));
+    const items = visible.slice(0, limit);
+    return { items, nextBefore: visible.length > limit ? items[items.length - 1].sequence : null };
+  }
+
+  async findLatestIncoming(access) {
+    let before = null;
+    while (true) {
+      const page = await this.queryGroupMessages(access, { before, limit: 100 });
+      const incoming = page.items.find((item) => item.senderId !== access.actorId);
+      if (incoming) return incoming;
+      if (!page.nextBefore) return null;
+      before = page.nextBefore;
+    }
+  }
+
+  async getGroupThread(activityId, actorId) {
+    const access = await this.getGroupAccessFacts(activityId, actorId);
+    const [activity, latestIncoming, readState] = await Promise.all([
+      this.getDocument('activities', activityId),
+      this.findLatestIncoming(access),
+      this.getDocument('activityGroupReadStates', stableEntityId('groupRead', activityId, actorId))
+    ]);
+    const current = await this.getGroupAccessFacts(activityId, actorId);
+    invariant(current.generation === access.generation && current.after === access.after, 'FORBIDDEN');
+    return {
+      activity: { id: activity.id, title: activity.title || '', status: activity.status },
+      generation: current.generation,
+      writable: current.writable,
+      hasUnread: groupUnread(current, latestIncoming, readState)
+    };
+  }
+
+  async listGroupMessages(activityId, actorId, options) {
+    const access = await this.getGroupAccessFacts(activityId, actorId);
+    const page = await this.queryGroupMessages(access, options);
+    const current = await this.getGroupAccessFacts(activityId, actorId);
+    invariant(current.generation === access.generation && current.after === access.after, 'FORBIDDEN');
+    return {
+      generation: current.generation,
+      writable: current.writable,
+      nextBefore: page.nextBefore,
+      items: await Promise.all(page.items.map((item) => this.hydrateGroupSender(item)))
+    };
+  }
+
+  async getGroupMessageForReplay(activityId, actorId, generation, clientMessageId) {
+    const access = await this.getGroupAccessFacts(activityId, actorId, true);
+    invariant(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+    const existing = await this.getDocument('activityGroupMessages', groupMessageId(access, generation, clientMessageId));
+    const current = await this.getGroupAccessFacts(activityId, actorId, true);
+    invariant(current.generation === access.generation && current.after === access.after, 'FORBIDDEN');
+    return existing ? assertGroupMessageVisible(current, existing) : null;
+  }
+
+  async addGroupMessage({ activityId, actorId, generation, clientMessageId, text, payloadHash, at }) {
+    const message = await this.db.runTransaction(async (transaction) => {
+      const activityRef = transaction.collection('activities').doc(activityId);
+      const memberId = stableEntityId('member', activityId, actorId);
+      const activity = await getTransactionDocument(activityRef);
+      const user = await getTransactionDocument(transaction.collection('users').doc(actorId));
+      const member = await getTransactionDocument(transaction.collection('members').doc(memberId));
+      const access = resolveGroupAccess({ activity, user, member, write: true });
+      invariant(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+      const id = groupMessageId(access, generation, clientMessageId);
+      const messageRef = transaction.collection('activityGroupMessages').doc(id);
+      const existing = await getTransactionDocument(messageRef);
+      if (existing) {
+        invariant(existing.payloadHash === payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+        return assertGroupMessageVisible(access, existing);
+      }
+      invariant(access.latestSequence < Number.MAX_SAFE_INTEGER, 'CONFLICT', '群聊序号已失效');
+      const sequence = access.latestSequence + 1;
+      const next = { id, activityId, sequence, senderId: actorId, memberId, generation,
+        clientMessageId, payloadHash, text, status: 'SENT', createdAt: at, updatedAt: at };
+      await messageRef.set({ data: document(next) });
+      await activityRef.update({ data: { groupSequence: sequence, groupLastMessageId: id, updatedAt: at } });
+      return next;
+    });
+    return this.hydrateGroupSender(message);
+  }
+
+  async markGroupRead(activityId, actorId, generation, messageId, sequence, at) {
+    return this.db.runTransaction(async (transaction) => {
+      const activity = await getTransactionDocument(transaction.collection('activities').doc(activityId));
+      const user = await getTransactionDocument(transaction.collection('users').doc(actorId));
+      const member = await getTransactionDocument(transaction.collection('members').doc(stableEntityId('member', activityId, actorId)));
+      const access = resolveGroupAccess({ activity, user, member });
+      invariant(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+      const message = await getTransactionDocument(transaction.collection('activityGroupMessages').doc(messageId));
+      invariant(message && message.sequence === sequence, 'FORBIDDEN');
+      assertGroupMessageVisible(access, message);
+      const id = stableEntityId('groupRead', activityId, actorId);
+      const reference = transaction.collection('activityGroupReadStates').doc(id);
+      const existing = await getTransactionDocument(reference);
+      const next = existing && existing.generation === generation && existing.sequence >= sequence
+        ? existing
+        : { id, activityId, userId: actorId, generation, sequence, updatedAt: at };
+      if (next !== existing) await reference.set({ data: document(next) });
+      return next;
+    });
+  }
+
   async resolveDirectMessagePeer(activityId, actorId, memberId) {
     const activity = await this.getActivity(activityId);
     invariant(activity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status), 'NOT_FOUND_OR_NOT_ALLOWED');
@@ -1437,6 +1580,17 @@ class CloudStore {
     return { activity, peerUserId: peer.id };
   }
 
+  async resolveConsultationPeer(activityId, actorId) {
+    const activity = await this.getActivity(activityId);
+    invariant(activity && activity.status !== ACTIVITY_STATUS.SUSPENDED,
+      activity && activity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+    invariant([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)
+      && activity.ownerId !== actorId, 'NOT_FOUND_OR_NOT_ALLOWED');
+    const owner = await this.getUser(activity.ownerId);
+    invariant(owner && owner.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED');
+    return { activity, peerUserId: owner.id };
+  }
+
   async upsertDirectConversation(conversation) {
     return this.db.runTransaction(async (transaction) => {
       const reference = transaction.collection('directConversations').doc(conversation.id);
@@ -1444,6 +1598,23 @@ class CloudStore {
       const firstMemberReference = transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantAId));
       const secondMemberReference = transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantBId));
       const sourceActivity = await getTransactionDocument(sourceActivityReference);
+      if (conversation.kind === 'OWNER_CONSULT') {
+        const owner = await getTransactionDocument(transaction.collection('users').doc(conversation.ownerId));
+        const consultant = await getTransactionDocument(transaction.collection('users').doc(conversation.consultantId));
+        invariant(sourceActivity && sourceActivity.status !== ACTIVITY_STATUS.SUSPENDED,
+          sourceActivity && sourceActivity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+        invariant([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
+          && sourceActivity.ownerId === conversation.ownerId
+          && conversation.ownerId !== conversation.consultantId
+          && owner && owner.status === 'ACTIVE' && consultant && consultant.status === 'ACTIVE'
+          && [conversation.participantAId, conversation.participantBId].includes(conversation.ownerId)
+          && [conversation.participantAId, conversation.participantBId].includes(conversation.consultantId),
+        'NOT_FOUND_OR_NOT_ALLOWED');
+        const existing = await getTransactionDocument(reference);
+        if (existing) return existing;
+        await reference.set({ data: document(conversation) });
+        return conversation;
+      }
       const firstMember = await getTransactionDocument(firstMemberReference);
       const secondMember = await getTransactionDocument(secondMemberReference);
       const firstUser = await getTransactionDocument(transaction.collection('users').doc(conversation.participantAId));
@@ -1482,6 +1653,12 @@ class CloudStore {
     const activityId = conversation.source && conversation.source.id;
     if (!activityId) return false;
     const activity = await this.getActivity(activityId);
+    if (conversation.kind === 'OWNER_CONSULT') {
+      if (!activity || ![ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)
+        || activity.ownerId !== conversation.ownerId) return false;
+      const users = await Promise.all([conversation.participantAId, conversation.participantBId].map((id) => this.getUser(id)));
+      return users.every((user) => user && user.status === 'ACTIVE');
+    }
     if (!activity || ![ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)) return false;
     const participants = await Promise.all([conversation.participantAId, conversation.participantBId].map(async (userId) => {
       const [user, member] = await Promise.all([
@@ -1515,7 +1692,12 @@ class CloudStore {
       queryByParticipant('participantBId')
     ]);
     const unique = new Map([...asFirst, ...asSecond].map((item) => [item.id, item]));
-    const candidates = [...unique.values()]
+    const visibility = await Promise.all([...unique.values()].map(async (item) => {
+      if (item.kind !== 'OWNER_CONSULT') return item;
+      const activity = await this.getActivity(item.source && item.source.id);
+      return activity && activity.status !== ACTIVITY_STATUS.SUSPENDED ? item : null;
+    }));
+    const candidates = visibility.filter(Boolean)
       .filter((item) => isAfterDirectCursor(item, cursor, 'updatedAt'))
       .sort((left, right) => compareDirectDescending(left, right, 'updatedAt'));
     const items = candidates.slice(0, limit);
@@ -1528,6 +1710,11 @@ class CloudStore {
   async listDirectMessages(conversationId, actorId, { cursor, limit }) {
     const conversation = await this.getDirectConversation(conversationId);
     invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+    if (conversation.kind === 'OWNER_CONSULT') {
+      const activity = await this.getActivity(conversation.source && conversation.source.id);
+      invariant(activity && activity.status !== ACTIVITY_STATUS.SUSPENDED,
+        activity && activity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+    }
     const where = cursor
       ? this.command.or([
           { conversationId, createdAt: this.command.lt(cursor.at) },
@@ -1556,15 +1743,19 @@ class CloudStore {
       const messageReference = transaction.collection('directMessages').doc(message.id);
       const conversation = await getTransactionDocument(conversationReference);
       invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(message.senderId), 'NOT_FOUND_OR_NOT_ALLOWED');
-      const existing = await getTransactionDocument(messageReference);
-      if (existing) {
-        invariant(existing.conversationId === message.conversationId && existing.senderId === message.senderId, 'CONFLICT', '客户端消息ID已用于其他会话');
-        invariant(existing.payloadHash === message.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
-        return existing;
-      }
       const sourceActivity = conversation.source && await getTransactionDocument(
         transaction.collection('activities').doc(conversation.source.id)
       );
+      if (conversation.kind === 'OWNER_CONSULT') {
+        const owner = await getTransactionDocument(transaction.collection('users').doc(conversation.ownerId));
+        const consultant = await getTransactionDocument(transaction.collection('users').doc(conversation.consultantId));
+        invariant(sourceActivity && sourceActivity.status !== ACTIVITY_STATUS.SUSPENDED,
+          sourceActivity && sourceActivity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'CONFLICT');
+        invariant([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
+          && sourceActivity.ownerId === conversation.ownerId
+          && owner && owner.status === 'ACTIVE' && consultant && consultant.status === 'ACTIVE',
+        'CONFLICT', '活动已结束，这段咨询现为只读');
+      } else {
       const firstMember = conversation.source && await getTransactionDocument(
         transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantAId))
       );
@@ -1589,6 +1780,13 @@ class CloudStore {
         'CONFLICT',
         '共同活动或成员关系已失效，这段私信现为只读'
       );
+      }
+      const existing = await getTransactionDocument(messageReference);
+      if (existing) {
+        invariant(existing.conversationId === message.conversationId && existing.senderId === message.senderId, 'CONFLICT', '客户端消息ID已用于其他会话');
+        invariant(existing.payloadHash === message.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+        return existing;
+      }
       const recipientId = conversation.participantAId === message.senderId
         ? conversation.participantBId
         : conversation.participantAId;
@@ -1615,6 +1813,13 @@ class CloudStore {
       const reference = transaction.collection('directConversations').doc(conversationId);
       const conversation = await getTransactionDocument(reference);
       invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(actorId), 'NOT_FOUND_OR_NOT_ALLOWED');
+      if (conversation.kind === 'OWNER_CONSULT') {
+        const activity = conversation.source && await getTransactionDocument(
+          transaction.collection('activities').doc(conversation.source.id)
+        );
+        invariant(activity && activity.status !== ACTIVITY_STATUS.SUSPENDED,
+          activity && activity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+      }
       if (!conversation.lastMessageId || conversation.lastMessageId !== lastMessageId) return conversation;
       const unreadByUser = { ...(conversation.unreadByUser || {}), [actorId]: 0 };
       const readAtByUser = { ...(conversation.readAtByUser || {}), [actorId]: at };
@@ -1641,7 +1846,13 @@ class CloudStore {
       return items;
     };
     const [asFirst, asSecond] = await Promise.all([collect('participantAId'), collect('participantBId')]);
-    const items = [...new Map([...asFirst, ...asSecond].map((item) => [item.id, item])).values()];
+    const candidates = [...new Map([...asFirst, ...asSecond].map((item) => [item.id, item])).values()];
+    const visible = await Promise.all(candidates.map(async (item) => {
+      if (item.kind !== 'OWNER_CONSULT') return item;
+      const activity = await this.getActivity(item.source && item.source.id);
+      return activity && activity.status !== ACTIVITY_STATUS.SUSPENDED ? item : null;
+    }));
+    const items = visible.filter(Boolean);
     return {
       totalUnread: items.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[actorId]) || 0), 0),
       conversationsWithUnread: items.filter((item) => Number(item.unreadByUser && item.unreadByUser[actorId]) > 0).length

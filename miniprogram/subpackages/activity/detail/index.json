@@ -1,10 +1,10 @@
 {
   "navigationBarTitleText": "活动详情",
   "navigationStyle": "custom",
-  "navigationBarBackgroundColor": "#075AA7",
-  "navigationBarTextStyle": "white",
-  "backgroundColor": "#075AA7",
-  "backgroundTextStyle": "light",
+  "navigationBarBackgroundColor": "#FFFFFF",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#FFFFFF",
+  "backgroundTextStyle": "dark",
   "usingComponents": {
     "status-badge": "/components/status-badge/index",
     "empty-state": "/components/empty-state/index"

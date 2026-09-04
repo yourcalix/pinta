@@ -21,7 +21,10 @@ const MUTATING_ACTIONS = new Set([
   'application.reject',
   'application.withdraw',
   'member.leave',
+  'group.message.send',
+  'group.message.read',
   'dm.conversation.create',
+  'dm.consult.create',
   'dm.message.send',
   'dm.conversation.read',
   'notification.read',
@@ -35,7 +38,8 @@ const SENSITIVE_MUTATING_ACTIONS = new Set([
   'activity.create',
   'community.post.create',
   'community.reply.create',
-  'dm.message.send'
+  'dm.message.send',
+  'group.message.send'
 ]);
 const sensitiveFingerprintSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 let authenticatedActorScope = '';

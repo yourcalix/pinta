@@ -24,6 +24,9 @@ const {
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,
   validateDirectMessageCreateInput,
+  validateGroupMessageListInput,
+  validateGroupMessageCreateInput,
+  validateGroupReadInput,
   validateId,
   requireIdempotencyKey,
   stringValue
@@ -60,7 +63,10 @@ const MUTATING_ACTIONS = new Set([
   'member.leave',
   'group.contact.share',
   'group.contact.revoke',
+  'group.message.send',
+  'group.message.read',
   'dm.conversation.create',
+  'dm.consult.create',
   'dm.message.send',
   'dm.conversation.read',
   'notification.read',
@@ -68,7 +74,13 @@ const MUTATING_ACTIONS = new Set([
   'admin.activity.suspend'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
-  'community.like.set'
+  'community.like.set',
+  // Membership generation and current activity state must be checked on every
+  // replay; the store owns idempotency for group messages.
+  'group.message.send',
+  'group.message.read',
+  'dm.consult.create',
+  'dm.message.send'
 ]);
 const REMOVED_ACTIONS = new Set([
   'student.verification.get',
@@ -93,7 +105,8 @@ const REMOVED_ACTIONS = new Set([
 const PAYLOAD_BOUND_IDEMPOTENT_ACTIONS = new Set([
   'community.post.create',
   'community.reply.create',
-  'dm.message.send'
+  'dm.message.send',
+  'group.message.send'
 ]);
 
 function stableSerialize(value) {
@@ -304,6 +317,7 @@ function createPinbaService(options) {
       : null;
     return {
       id: conversation.id,
+      kind: conversation.kind === 'OWNER_CONSULT' ? 'OWNER_CONSULT' : 'MEMBER_DM',
       peer: {
         nickname: peer && peer.profile && peer.profile.nickname || '拼吧用户',
         avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
@@ -336,6 +350,22 @@ function createPinbaService(options) {
       conversationId: message.conversationId,
       text: message.text,
       isMine: message.senderId === actorId,
+      status: message.status || 'SENT',
+      createdAt: message.createdAt
+    };
+  }
+
+  function publicGroupMessage(message, actorId) {
+    return {
+      id: message.id,
+      sequence: message.sequence,
+      text: message.text,
+      isMine: message.senderId === actorId,
+      sender: message.sender ? {
+        nickname: message.sender.nickname || '拼吧成员',
+        avatarKind: message.sender.avatarKind || null,
+        role: message.sender.role === 'OWNER' ? 'OWNER' : 'MEMBER'
+      } : { nickname: '拼吧成员', avatarKind: null, role: 'MEMBER' },
       status: message.status || 'SENT',
       createdAt: message.createdAt
     };
@@ -819,6 +849,52 @@ function createPinbaService(options) {
       return space;
     }
 
+    if (action === 'group.thread') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const activityId = validateId(input && input.activityId, '活动ID');
+      return store.getGroupThread(activityId, user.id);
+    }
+
+    if (action === 'group.message.list') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateGroupMessageListInput(input);
+      const page = await store.listGroupMessages(payload.activityId, user.id, payload);
+      return {
+        generation: page.generation,
+        writable: page.writable,
+        items: page.items.map((item) => publicGroupMessage(item, user.id)),
+        nextBefore: page.nextBefore
+      };
+    }
+
+    if (action === 'group.message.send') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateGroupMessageCreateInput(input);
+      const existing = await store.getGroupMessageForReplay(payload.activityId, user.id,
+        payload.generation, payload.clientMessageId);
+      if (existing) {
+        invariant(existing.payloadHash === context.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+        return { message: publicGroupMessage(existing, user.id) };
+      }
+      await moderation.check([payload.text], { actorId: user.id, scene: 2 });
+      await store.consumeCommunityRateLimit(user.id, 'groupMessage', at, 30, 10 * 60 * 1000);
+      const message = await store.addGroupMessage({ ...payload, actorId: user.id,
+        payloadHash: context.payloadHash, at });
+      return { message: publicGroupMessage(message, user.id) };
+    }
+
+    if (action === 'group.message.read') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateGroupReadInput(input);
+      const read = await store.markGroupRead(payload.activityId, user.id,
+        payload.generation, payload.messageId, payload.sequence, at);
+      return { generation: read.generation, sequence: read.sequence, readAt: read.updatedAt };
+    }
+
     if (action === 'dm.unread') {
       const user = await requireActiveUser(context);
       invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
@@ -844,9 +920,35 @@ function createPinbaService(options) {
       const participantIds = [user.id, relationship.peerUserId].sort();
       const conversation = await store.upsertDirectConversation({
         id: stableEntityId('conversation', relationship.activity.id, ...participantIds),
+        kind: 'MEMBER_DM',
         participantAId: participantIds[0],
         participantBId: participantIds[1],
         source: { type: 'activity', id: relationship.activity.id, title: relationship.activity.title || '' },
+        lastMessageId: null,
+        lastMessagePreview: '',
+        lastMessageAt: null,
+        lastSenderId: null,
+        unreadByUser: { [participantIds[0]]: 0, [participantIds[1]]: 0 },
+        createdAt: at,
+        updatedAt: at
+      });
+      return { conversation: await publicDirectConversation(conversation, user.id) };
+    }
+
+    if (action === 'dm.consult.create') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const activityId = validateId(input && input.activityId, '活动ID');
+      const relationship = await store.resolveConsultationPeer(activityId, user.id);
+      const participantIds = [user.id, relationship.peerUserId].sort();
+      const conversation = await store.upsertDirectConversation({
+        id: stableEntityId('consultConversation', relationship.activity.id, ...participantIds),
+        kind: 'OWNER_CONSULT',
+        ownerId: relationship.peerUserId,
+        consultantId: user.id,
+        participantAId: participantIds[0],
+        participantBId: participantIds[1],
+        source: { type: 'activity_consult', id: relationship.activity.id, title: relationship.activity.title || '' },
         lastMessageId: null,
         lastMessagePreview: '',
         lastMessageAt: null,
@@ -879,6 +981,13 @@ function createPinbaService(options) {
       const payload = validateDirectMessageCreateInput(input);
       const conversation = await store.getDirectConversation(payload.conversationId);
       invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(user.id), 'NOT_FOUND_OR_NOT_ALLOWED');
+      const sourceActivity = conversation.source && conversation.source.id
+        ? await store.getActivity(conversation.source.id)
+        : null;
+      if (conversation.kind === 'OWNER_CONSULT') {
+        invariant(sourceActivity && sourceActivity.status !== ACTIVITY_STATUS.SUSPENDED,
+          sourceActivity && sourceActivity.status === ACTIVITY_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED');
+      }
       const messageId = stableEntityId('directMessage', conversation.id, user.id, payload.clientMessageId);
       const existing = await store.getDirectMessage(messageId);
       if (existing) {
@@ -887,10 +996,11 @@ function createPinbaService(options) {
         // Replay is a read of an already accepted message, not a new send/quota charge.
         return { message: publicDirectMessage(existing, user.id) };
       }
-      const sourceActivity = conversation.source && conversation.source.id
-        ? await store.getActivity(conversation.source.id)
-        : null;
-      invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status), 'CONFLICT', '共同活动已结束，这段私信现为只读');
+      const canSend = conversation.kind === 'OWNER_CONSULT'
+        ? sourceActivity && [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
+        : sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status);
+      invariant(canSend, 'CONFLICT', conversation.kind === 'OWNER_CONSULT'
+        ? '活动已结束，这段咨询现为只读' : '共同活动已结束，这段私信现为只读');
       await moderation.check([payload.text], { actorId: user.id, scene: 2 });
       await store.consumeCommunityRateLimit(user.id, 'directMessage', at, 30, 10 * 60 * 1000);
       const message = await store.addDirectMessage({
