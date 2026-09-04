@@ -1,0 +1,7 @@
+{"path":"cloudfunctions/api/lib/service.js","reason":"私信 action、DTO、权限与状态派生"}
+{"path":"cloudfunctions/api/lib/cloud-store.js","reason":"CloudBase 会话、消息、未读事务与分页"}
+{"path":"cloudfunctions/api/lib/memory-store.js","reason":"业务契约内存实现与单元测试事实源"}
+{"path":"miniprogram/pages/messages/index.js","reason":"会话列表、系统通知、分页与未读刷新"}
+{"path":"miniprogram/subpackages/message/chat/index.js","reason":"聊天加载、发送、已读、键盘和生命周期"}
+{"path":"miniprogram/utils/tab-bar.js","reason":"全局消息未读徽标"}
+{"path":"tests/direct-message.test.js","reason":"现有私信服务端测试矩阵"}

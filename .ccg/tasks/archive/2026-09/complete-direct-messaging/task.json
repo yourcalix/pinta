@@ -1,0 +1,12 @@
+{
+  "id": "complete-direct-messaging",
+  "title": "完善补齐一对一私信功能",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "本地代码与分域终审已完成并归档；后续另行授权真实云部署、复合索引检查及双账号真机联调",
+  "createdAt": "2026-09-04T00:00:00+08:00",
+  "branch": "main"
+}
