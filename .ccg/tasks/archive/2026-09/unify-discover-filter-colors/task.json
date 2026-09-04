@@ -1,0 +1,12 @@
+{
+  "id": "unify-discover-filter-colors",
+  "title": "统一发现页筛选模块黑色图文与浅绿选中态",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-04T10:00:00.000Z",
+  "branch": "main"
+}

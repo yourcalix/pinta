@@ -180,7 +180,7 @@
   min-height: 88rpx;
   margin: 0;
   padding: 10rpx 20rpx 10rpx 14rpx;
-  color: #193755;
+  color: #111;
   background: #fff8ee;
   border: 3rpx solid rgba(255, 240, 201, 0.9);
   border-radius: 25rpx 22rpx 27rpx 23rpx;
@@ -206,22 +206,19 @@
   display: block;
   width: 100%;
   height: 100%;
+  filter: grayscale(1) brightness(0);
   pointer-events: none;
 }
 
 .chip-label { pointer-events: none; }
 
 .filter-chip--active {
-  color: #fff8ee;
-  background: #0b9a66;
-  border-color: #69d69f;
-  box-shadow: 0 6rpx 0 rgba(3, 73, 59, 0.34);
+  color: #111;
+  background: #e4f6ea;
+  border-color: #b8dfc5;
+  box-shadow: 0 6rpx 0 rgba(77, 137, 98, 0.24);
   font-weight: 700;
 }
-
-.filter-chip--companion.filter-chip--active { background: #167fb1; border-color: #6ec6da; }
-.filter-chip--sport.filter-chip--active { background: #6655b4; border-color: #a99ae2; }
-.filter-chip--food.filter-chip--active { background: #d8662e; border-color: #f3aa76; }
 
 .search-clear-button::after,
 .search-submit-button::after,
