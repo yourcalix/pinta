@@ -1,0 +1,3 @@
+{"path":"miniprogram/components/activity-card/index.wxml","reason":"人数进度呈现结构"}
+{"path":"miniprogram/components/activity-card/index.wxss","reason":"发现卡人数进度微动效"}
+{"path":"tests/discover-image-cards.test.js","reason":"发现卡视觉契约测试"}

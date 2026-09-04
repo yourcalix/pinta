@@ -76,3 +76,11 @@ test('发现启用图文变体与骨架，我的保持默认，图片区懒加�
   assert.match(read('pages/discover/index.wxml'), /skeleton-cover/);
   assert.match(read('components/activity-card/index.wxss'), /\.activity-card--discover/);
 });
+
+test('发现卡人数进度只播放一次轻量入场动效且支持减少动态效果', () => {
+  const style = read('components/activity-card/index.wxss');
+  assert.match(style, /\.activity-card--discover \.capacity-link\s*\{[^}]*animation:\s*capacity-progress-enter[^;}]*;/s);
+  assert.match(style, /\.activity-card--discover \.capacity-arrow\s*\{[^}]*animation:\s*capacity-arrow-nudge[^;}]*;/s);
+  assert.doesNotMatch(style, /capacity-(?:progress-enter|arrow-nudge)[^;]*infinite/);
+  assert.match(style, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none;/);
+});

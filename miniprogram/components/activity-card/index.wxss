@@ -206,7 +206,13 @@
 .activity-card--discover .card-footer { margin-top: 14rpx; padding-top: 0; border-top: 0; gap: 8rpx; flex-wrap: wrap; }
 .activity-card--discover .owner-line { flex: 1; gap: 8rpx; font-size: 24rpx; }
 .activity-card--discover .owner-avatar { flex-basis: 32rpx; width: 32rpx; height: 32rpx; font-size: 20rpx; }
-.activity-card--discover .capacity-link { margin-left: auto; font-size: 24rpx; }
+.activity-card--discover .capacity-link {
+  margin-left: auto;
+  font-size: 24rpx;
+  transform-origin: right center;
+  animation: capacity-progress-enter 560ms cubic-bezier(0.2, 0.8, 0.2, 1) 180ms both;
+}
+.activity-card--discover .capacity-arrow { animation: capacity-arrow-nudge 700ms ease-out 300ms both; }
 .activity-card--discover.activity-card--large-text { align-items: flex-start; }
 .activity-card--large-text .activity-title { display: block; -webkit-line-clamp: unset; overflow: visible; }
 .activity-card--large-text .meta-text--place { white-space: normal; overflow: visible; }
@@ -216,4 +222,19 @@
   .activity-card--discover { gap: 16rpx; padding: 16rpx; }
   .card-cover { flex-basis: 170rpx; width: 170rpx; height: 230rpx; }
   .activity-card--discover .activity-title { font-size: 30rpx; }
+}
+
+@keyframes capacity-progress-enter {
+  0% { opacity: 0.5; transform: translateY(4rpx) scale(0.94); }
+  68% { opacity: 1; transform: translateY(-1rpx) scale(1.04); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes capacity-arrow-nudge {
+  0%, 52%, 100% { transform: translateX(0); }
+  76% { transform: translateX(4rpx); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-card--discover .capacity-link,
+  .activity-card--discover .capacity-arrow { animation: none; }
 }

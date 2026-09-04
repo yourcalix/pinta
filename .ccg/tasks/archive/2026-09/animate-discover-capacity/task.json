@@ -1,0 +1,12 @@
+{
+  "id": "animate-discover-capacity",
+  "title": "为发现页人数进度增加微动效",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-04T11:30:00.000Z",
+  "branch": "main"
+}
