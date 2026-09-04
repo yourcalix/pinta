@@ -171,6 +171,7 @@
 }
 
 .filter-chip {
+  position: relative;
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -181,16 +182,24 @@
   margin: 0;
   padding: 10rpx 20rpx 10rpx 14rpx;
   color: #111;
-  background: #fff8ee;
-  border: 3rpx solid rgba(255, 240, 201, 0.9);
-  border-radius: 25rpx 22rpx 27rpx 23rpx;
-  box-shadow: 0 6rpx 0 rgba(4, 48, 104, 0.17);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   font-size: 25rpx;
   line-height: 1.2;
   white-space: nowrap;
 }
 
+.filter-chip::before {
+  position: absolute; z-index: 0; top: 8rpx; right: 0; bottom: 8rpx; left: 0;
+  box-sizing: border-box; background: #fff8ee; border: 3rpx solid rgba(255, 240, 201, 0.9);
+  border-radius: 25rpx 22rpx 27rpx 23rpx; box-shadow: 0 4rpx 0 rgba(4, 48, 104, 0.17);
+  content: ''; pointer-events: none;
+}
+
 .chip-icon-box {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 0 0 48rpx;
   align-items: center;
@@ -209,15 +218,11 @@
   pointer-events: none;
 }
 
-.chip-label { pointer-events: none; }
+.chip-label { position: relative; z-index: 1; pointer-events: none; }
 
-.filter-chip--active {
-  color: #111;
-  background: #e4f6ea;
-  border-color: #b8dfc5;
-  box-shadow: 0 6rpx 0 rgba(77, 137, 98, 0.24);
-  font-weight: 700;
-}
+.filter-chip--active { color: #111; font-weight: 700; }
+
+.filter-chip--active::before { background: #e4f6ea; border-color: #b8dfc5; box-shadow: 0 4rpx 0 rgba(77, 137, 98, 0.24); }
 
 .search-clear-button::after,
 .search-submit-button::after,

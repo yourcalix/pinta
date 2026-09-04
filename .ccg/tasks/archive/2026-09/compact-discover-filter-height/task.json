@@ -1,0 +1,12 @@
+{
+  "id": "compact-discover-filter-height",
+  "title": "收紧发现页筛选模块视觉高度",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-04T11:00:00.000Z",
+  "branch": "main"
+}

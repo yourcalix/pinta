@@ -55,7 +55,10 @@ test('筛选图标放大后透明融入Chip并保留触控穿透和窄屏保护'
 test('筛选文字保持黑色、图标保持原色且所有选中态使用浅绿色', () => {
   const styles = read('pages/discover/index.wxss');
   assert.match(styles, /\.filter-chip\s*\{[^}]*color:\s*#111;/s);
-  assert.match(styles, /\.filter-chip--active\s*\{[^}]*color:\s*#111;[^}]*background:\s*#e4f6ea;/s);
+  assert.match(styles, /\.filter-chip--active\s*\{[^}]*color:\s*#111;/s);
+  assert.match(styles, /\.filter-chip--active::before\s*\{[^}]*background:\s*#e4f6ea;/s);
   assert.doesNotMatch(styles, /\.filter-chip--(?:companion|sport|food)\.filter-chip--active/);
   assert.doesNotMatch(styles, /\.chip-icon-img\s*\{[^}]*filter:/s);
+  assert.match(styles, /\.filter-chip\s*\{[^}]*min-height:\s*88rpx;[^}]*background:\s*transparent;/s);
+  assert.match(styles, /\.filter-chip::before\s*\{[^}]*top:\s*8rpx;[^}]*bottom:\s*8rpx;/s);
 });
