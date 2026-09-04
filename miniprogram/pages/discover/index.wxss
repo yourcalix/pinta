@@ -256,10 +256,17 @@
 }
 
 .skeleton-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  box-sizing: border-box;
+  min-height: 300rpx;
   margin-bottom: 20rpx;
-  padding: 26rpx 28rpx;
+  padding: 18rpx;
   border-radius: 28rpx 24rpx 30rpx 26rpx;
 }
+.skeleton-cover { flex: 0 0 200rpx; width: 200rpx; height: 254rpx; background: #e8ddce; border-radius: 20rpx; }
+.skeleton-copy { flex: 1; min-width: 0; }
 
 .skeleton-line {
   height: 22rpx;
@@ -319,6 +326,8 @@
 }
 
 @media (max-width: 340px) {
+  .skeleton-card { gap: 16rpx; padding: 16rpx; }
+  .skeleton-cover { flex-basis: 170rpx; width: 170rpx; height: 230rpx; }
   .discover-content { padding-right: 22rpx; padding-left: 22rpx; }
   .discover-title { font-size: 38rpx; }
   .discover-subtitle { font-size: 22rpx; }

@@ -148,3 +148,72 @@
   .activity-title { font-size: 29rpx; }
   .owner-name { max-width: 180rpx; }
 }
+
+/* Opt-in discovery layout. The compact personal-center card stays unchanged. */
+.activity-card--discover {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  box-sizing: border-box;
+  min-height: 300rpx;
+  padding: 18rpx;
+}
+.activity-card--discover::before { display: none; }
+.card-cover {
+  position: relative;
+  flex: 0 0 200rpx;
+  width: 200rpx;
+  height: 254rpx;
+  overflow: hidden;
+  background: #eee9df;
+  border-radius: 20rpx 17rpx 22rpx 18rpx;
+  pointer-events: none;
+}
+.card-cover--companion { background: #edf4fd; }
+.card-cover--sport { background: #f1effb; }
+.card-cover--food { background: #fff3e9; }
+.card-cover-image { display: block; width: 100%; height: 100%; pointer-events: none; }
+.card-cover-fallback {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  color: #63746c;
+  font-size: 24rpx;
+}
+.cover-fallback-symbol { font-size: 64rpx; color: #16835c; }
+.card-copy { flex: 1; min-width: 0; }
+.activity-card--discover .card-head { gap: 8rpx; }
+.activity-card--discover .type-tag { padding: 5rpx 10rpx; font-size: 24rpx; }
+.activity-card--discover .activity-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 12rpx;
+  font-size: 30rpx;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.archive-prefix { font-size: 24rpx; color: #65675f; font-weight: 500; }
+.activity-card--discover .meta-list { margin-top: 12rpx; }
+.activity-card--discover .meta-item { gap: 6rpx; font-size: 24rpx; }
+.activity-card--discover .meta-icon { flex-basis: 24rpx; width: 24rpx; }
+.activity-card--discover .meta-text { flex: 1; }
+.activity-card--discover .meta-text--place { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.activity-card--discover .card-footer { margin-top: 14rpx; padding-top: 0; border-top: 0; gap: 8rpx; flex-wrap: wrap; }
+.activity-card--discover .owner-line { flex: 1; gap: 8rpx; font-size: 24rpx; }
+.activity-card--discover .owner-avatar { flex-basis: 32rpx; width: 32rpx; height: 32rpx; font-size: 20rpx; }
+.activity-card--discover .capacity-link { margin-left: auto; font-size: 24rpx; }
+.activity-card--discover.activity-card--large-text { align-items: flex-start; }
+.activity-card--large-text .activity-title { display: block; -webkit-line-clamp: unset; overflow: visible; }
+.activity-card--large-text .meta-text--place { white-space: normal; overflow: visible; }
+.activity-card--large-text .owner-line { flex-basis: 100%; }
+.activity-card--large-text .owner-name { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 340px) {
+  .activity-card--discover { gap: 16rpx; padding: 16rpx; }
+  .card-cover { flex-basis: 170rpx; width: 170rpx; height: 230rpx; }
+  .activity-card--discover .activity-title { font-size: 30rpx; }
+}

@@ -32,10 +32,10 @@
       <view class="list-heading-meta"><text class="list-count" wx:if="{{!loading}}">{{activities.length}} 个活动</text><button wx:if="{{hasActiveFilters}}" class="clear-filter-button" bindtap="handleClearFilters">清除筛选</button></view>
     </view>
 
-    <view wx:if="{{loading}}" class="skeleton-list"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card"><view class="skeleton-line skeleton-line--short"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-line--medium"></view></view></view>
+    <view wx:if="{{loading}}" class="skeleton-list" aria-label="正在加载活动"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"><view class="skeleton-line skeleton-line--short"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-line--medium"></view></view></view></view>
 
     <view wx:elif="{{activities.length}}">
-      <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" bindselect="handleCardSelect" />
+      <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" bindselect="handleCardSelect" />
       <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" aria-role="status">
         <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多…</text></view>
         <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载更多失败，点击重试</button>
