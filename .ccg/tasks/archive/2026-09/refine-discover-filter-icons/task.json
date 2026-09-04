@@ -1,0 +1,12 @@
+{
+  "id": "refine-discover-filter-icons",
+  "title": "放大发现页筛选图标并移除图标边框",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-04T09:30:00.000Z",
+  "branch": "main"
+}

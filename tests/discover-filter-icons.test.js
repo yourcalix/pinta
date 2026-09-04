@@ -41,9 +41,13 @@ test('筛选图标为72像素小型PNG且总量不超过16KB', () => {
   assert.ok(totalBytes <= 16 * 1024, `筛选图标总量为 ${totalBytes} bytes`);
 });
 
-test('筛选图标具备圆形裁切、触控穿透和窄屏尺寸保护', () => {
+test('筛选图标放大后透明融入Chip并保留触控穿透和窄屏保护', () => {
   const styles = read('pages/discover/index.wxss');
-  assert.match(styles, /\.chip-icon-box\s*\{[^}]*width:\s*36rpx;[^}]*height:\s*36rpx;[^}]*overflow:\s*hidden;[^}]*border-radius:\s*50%;[^}]*pointer-events:\s*none;/s);
+  const iconBox = styles.match(/\.chip-icon-box\s*\{([^}]*)\}/s)?.[1] || '';
+  assert.match(iconBox, /width:\s*48rpx;/);
+  assert.match(iconBox, /height:\s*48rpx;/);
+  assert.match(iconBox, /pointer-events:\s*none;/);
+  assert.doesNotMatch(iconBox, /background:|border:|border-radius:|box-shadow:/);
   assert.match(styles, /\.chip-icon-img\s*\{[^}]*pointer-events:\s*none;/s);
-  assert.match(styles, /@media \(max-width: 340px\)[\s\S]*\.chip-icon-box\s*\{[^}]*width:\s*32rpx;[^}]*height:\s*32rpx;/);
+  assert.match(styles, /@media \(max-width: 340px\)[\s\S]*\.chip-icon-box\s*\{[^}]*width:\s*42rpx;[^}]*height:\s*42rpx;/);
 });

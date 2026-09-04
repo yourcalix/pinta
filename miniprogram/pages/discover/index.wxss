@@ -192,17 +192,13 @@
 
 .chip-icon-box {
   display: flex;
-  flex: 0 0 36rpx;
+  flex: 0 0 48rpx;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 10rpx;
-  overflow: hidden;
-  background: #fff;
-  border: 2rpx solid #eadbce;
-  border-radius: 50%;
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 8rpx;
   pointer-events: none;
 }
 
@@ -221,11 +217,6 @@
   border-color: #69d69f;
   box-shadow: 0 6rpx 0 rgba(3, 73, 59, 0.34);
   font-weight: 700;
-}
-
-.filter-chip--active .chip-icon-box {
-  border-color: rgba(255, 248, 238, 0.7);
-  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.12);
 }
 
 .filter-chip--companion.filter-chip--active { background: #167fb1; border-color: #6ec6da; }
@@ -369,7 +360,7 @@
   .filter-scroll { width: calc(100% + 22rpx); }
   .filter-track { gap: 10rpx; }
   .filter-chip { min-width: 128rpx; padding: 8rpx 16rpx 8rpx 12rpx; font-size: 23rpx; }
-  .chip-icon-box { flex-basis: 32rpx; width: 32rpx; height: 32rpx; margin-right: 8rpx; }
+  .chip-icon-box { flex-basis: 42rpx; width: 42rpx; height: 42rpx; margin-right: 6rpx; }
 }
 
 @keyframes footer-spin { to { transform: rotate(360deg); } }

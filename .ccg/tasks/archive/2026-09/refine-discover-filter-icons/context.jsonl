@@ -1,0 +1,4 @@
+{"path":"miniprogram/pages/discover/index.wxss","reason":"筛选图标容器尺寸与装饰样式"}
+{"path":"miniprogram/assets/images/discover/filter-*.png","reason":"图标透明画布与有效内容边界"}
+{"path":"tests/discover-filter-icons.test.js","reason":"图标尺寸、透明融合与窄屏契约"}
+{"path":"/var/folders/gy/0p9_9w4d413f2nd87n01z9680000gn/T/codex-clipboard-32aa79d6-35bc-4496-bda8-2a62a90fd6e9.png","reason":"用户提供的当前效果截图"}
