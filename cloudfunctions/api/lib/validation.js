@@ -208,6 +208,13 @@ function validateCommunityReplyCreateInput(input) {
   };
 }
 
+function validateCommunityLikeInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(['post', 'reply'].includes(input.targetType), 'VALIDATION_ERROR', '点赞目标类型无效');
+  invariant(typeof input.liked === 'boolean', 'VALIDATION_ERROR', '点赞状态无效');
+  return { targetType: input.targetType, targetId: validateId(input.targetId, '点赞目标ID'), liked: input.liked };
+}
+
 function validateDirectMessageListInput(input = {}) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   return {
@@ -258,6 +265,7 @@ module.exports = {
   validateCommunityListInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
+  validateCommunityLikeInput,
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,
   validateDirectMessageCreateInput,

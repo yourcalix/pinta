@@ -15,6 +15,7 @@ function decorate(item) {
   const avatarInitial = Array.from(authorNickname)[0] || '拼';
   const avatarTone = AVATAR_TONES[(avatarInitial.codePointAt(0) || 0) % AVATAR_TONES.length];
   const replyCount = Math.max(0, Number(item.replyCount) || 0);
+  const likeCount = Math.max(0, Number(item.likeCount) || 0);
   const timeLabel = minutes < 1 ? '刚刚' : minutes < 60 ? `${minutes}分钟前` : minutes < 1440 ? `${Math.floor(minutes / 60)}小时前` : `${Math.floor(minutes / 1440)}天前`;
   return {
     ...item,
@@ -22,8 +23,9 @@ function decorate(item) {
     avatarInitial,
     avatarTone,
     replyCount,
+    likeCount,
     timeLabel,
-    accessibilityLabel: `${authorNickname}发布的讨论：${String(item.content || '').slice(0, 30)}，${timeLabel}，当前${replyCount}条回复，双击查看详情`
+    accessibilityLabel: `${authorNickname}发布的讨论：${String(item.content || '').slice(0, 30)}，${timeLabel}，${likeCount}个赞，${replyCount}条回复，双击查看详情`
   };
 }
 

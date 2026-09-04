@@ -20,6 +20,8 @@ const { stableEntityId } = require('./ids');
 const {
   COMMUNITY_POST_STATUS,
   COMMUNITY_REPLY_STATUS,
+  COMMUNITY_LIKE_STATUS,
+  communityLikeId,
   encodeCursor,
   isAfterDescendingCursor,
   isAfterAscendingCursor
@@ -643,6 +645,42 @@ class CloudStore {
     const candidates = (result.data || []).map(entity).filter((item) => isAfterAscendingCursor(item, cursor));
     const items = candidates.slice(0, limit);
     return { items, nextCursor: candidates.length > limit ? encodeCursor(items[items.length - 1]) : null };
+  }
+
+  async getCommunityLikeStates(actorId, targets) {
+    const ids = (targets || []).map(({ targetType, targetId }) => communityLikeId(targetType, targetId, actorId));
+    const active = new Set();
+    for (let index = 0; index < ids.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
+      const chunk = ids.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
+      if (!chunk.length) continue;
+      const result = await this.db.collection('communityLikes').where({ _id: this.command.in(chunk), status: COMMUNITY_LIKE_STATUS.ACTIVE }).get();
+      (result.data || []).forEach((item) => active.add(item._id));
+    }
+    const states = {};
+    (targets || []).forEach(({ targetType, targetId }) => { states[`${targetType}:${targetId}`] = active.has(communityLikeId(targetType, targetId, actorId)); });
+    return states;
+  }
+
+  async setCommunityLikeAtomic({ targetType, targetId, actorId, liked, at, audit }) {
+    return this.db.runTransaction(async (transaction) => {
+      const collection = targetType === 'post' ? 'communityPosts' : 'communityReplies';
+      const targetReference = transaction.collection(collection).doc(targetId);
+      const target = await getTransactionDocument(targetReference);
+      invariant(target && target.status === (targetType === 'post' ? COMMUNITY_POST_STATUS.ACTIVE : COMMUNITY_REPLY_STATUS.ACTIVE), 'NOT_FOUND');
+      if (targetType === 'reply') {
+        const post = await getTransactionDocument(transaction.collection('communityPosts').doc(target.postId));
+        invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
+      }
+      const id = communityLikeId(targetType, targetId, actorId);
+      const likeReference = transaction.collection('communityLikes').doc(id);
+      const existing = await getTransactionDocument(likeReference);
+      const wasLiked = Boolean(existing && existing.status === COMMUNITY_LIKE_STATUS.ACTIVE);
+      const likeCount = Math.max(0, Number(target.likeCount || 0) + (wasLiked === liked ? 0 : liked ? 1 : -1));
+      await likeReference.set({ data: document({ id, targetType, targetId, postId: targetType === 'reply' ? target.postId : targetId, actorId, status: liked ? COMMUNITY_LIKE_STATUS.ACTIVE : COMMUNITY_LIKE_STATUS.DELETED, createdAt: existing && existing.createdAt || at, updatedAt: at }) });
+      if (wasLiked !== liked) await targetReference.update({ data: { likeCount, updatedAt: at } });
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return { targetType, targetId, liked, likeCount };
+    });
   }
 
   async createCommunityPost(post, audit) {

@@ -20,6 +20,7 @@ const {
   validateCommunityListInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
+  validateCommunityLikeInput,
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,
   validateDirectMessageCreateInput,
@@ -50,6 +51,7 @@ const MUTATING_ACTIONS = new Set([
   'community.reply.create',
   'community.post.delete',
   'community.reply.delete',
+  'community.like.set',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -64,7 +66,9 @@ const MUTATING_ACTIONS = new Set([
   'report.create',
   'admin.activity.suspend'
 ]);
-const BUSINESS_IDEMPOTENT_ACTIONS = new Set();
+const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
+  'community.like.set'
+]);
 const REMOVED_ACTIONS = new Set([
   'student.verification.get',
   'student.verification.submit',
@@ -196,27 +200,31 @@ function publicActivity(activity, viewer = {}, at) {
   return result;
 }
 
-function publicCommunityPost(post, viewerId = '') {
+function publicCommunityPost(post, viewerId = '', viewerHasLiked = false) {
   return {
     id: post.id,
     author: post.author ? { nickname: post.author.nickname, avatarKind: post.author.avatarKind } : null,
     content: post.content,
     replyCount: Number(post.replyCount || 0),
+    likeCount: Number(post.likeCount || 0),
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
-    viewerIsAuthor: Boolean(viewerId && post.authorId === viewerId)
+    viewerIsAuthor: Boolean(viewerId && post.authorId === viewerId),
+    viewerHasLiked: Boolean(viewerHasLiked)
   };
 }
 
-function publicCommunityReply(reply, viewerId = '') {
+function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false) {
   return {
     id: reply.id,
     postId: reply.postId,
     author: reply.author ? { nickname: reply.author.nickname, avatarKind: reply.author.avatarKind } : null,
     content: reply.content,
+    likeCount: Number(reply.likeCount || 0),
     createdAt: reply.createdAt,
     updatedAt: reply.updatedAt,
-    viewerIsAuthor: Boolean(viewerId && reply.authorId === viewerId)
+    viewerIsAuthor: Boolean(viewerId && reply.authorId === viewerId),
+    viewerHasLiked: Boolean(viewerHasLiked)
   };
 }
 
@@ -427,8 +435,11 @@ function createPinbaService(options) {
     if (action === 'community.post.list') {
       const payload = validateCommunityListInput(input);
       const page = await store.listCommunityPosts(payload);
+      const actorId = context && context.actorId;
+      const targets = page.items.map((item) => ({ targetType: 'post', targetId: item.id }));
+      const likeStates = actorId ? await store.getCommunityLikeStates(actorId, targets) : {};
       return {
-        items: page.items.map((item) => publicCommunityPost(item, context && context.actorId)),
+        items: page.items.map((item) => publicCommunityPost(item, actorId, likeStates[`post:${item.id}`])),
         nextCursor: page.nextCursor || null
       };
     }
@@ -439,9 +450,12 @@ function createPinbaService(options) {
       invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, post && post.status === COMMUNITY_POST_STATUS.SUSPENDED ? 'TAKEDOWN' : 'NOT_FOUND');
       const replyInput = validateCommunityListInput({ cursor: input && input.cursor, limit: input && input.limit || 30 });
       const page = await store.listCommunityReplies(postId, replyInput);
+      const actorId = context && context.actorId;
+      const targets = [{ targetType: 'post', targetId: post.id }, ...page.items.map((item) => ({ targetType: 'reply', targetId: item.id }))];
+      const likeStates = actorId ? await store.getCommunityLikeStates(actorId, targets) : {};
       return {
-        post: publicCommunityPost(post, context && context.actorId),
-        replies: page.items.map((item) => publicCommunityReply(item, context && context.actorId)),
+        post: publicCommunityPost(post, actorId, likeStates[`post:${post.id}`]),
+        replies: page.items.map((item) => publicCommunityReply(item, actorId, likeStates[`reply:${item.id}`])),
         nextCursor: page.nextCursor || null
       };
     }
@@ -487,7 +501,9 @@ function createPinbaService(options) {
         updatedAt: at
       };
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityReply', targetId: reply.id, at };
-      return { reply: publicCommunityReply(await store.createCommunityReply(reply, audit), user.id) };
+      const createdReply = await store.createCommunityReply(reply, audit);
+      const updatedPost = await store.getCommunityPost(payload.postId);
+      return { reply: publicCommunityReply(createdReply, user.id), replyCount: Number(updatedPost && updatedPost.replyCount || 0) };
     }
 
     if (action === 'community.post.delete') {
@@ -502,8 +518,17 @@ function createPinbaService(options) {
       const user = await requireActiveUser(context, false);
       const replyId = validateId(input && input.replyId, '回复ID');
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityReply', targetId: replyId, at };
-      await store.deleteCommunityReply(replyId, user.id, at, audit);
-      return { deleted: true, replyId };
+      const deletedReply = await store.deleteCommunityReply(replyId, user.id, at, audit);
+      const updatedPost = await store.getCommunityPost(deletedReply.postId);
+      return { deleted: true, replyId, replyCount: Number(updatedPost && updatedPost.replyCount || 0) };
+    }
+
+    if (action === 'community.like.set') {
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const payload = validateCommunityLikeInput(input);
+      const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: payload.targetType === 'post' ? 'communityPost' : 'communityReply', targetId: payload.targetId, at };
+      return store.setCommunityLikeAtomic({ ...payload, actorId: user.id, at, audit });
     }
 
     if (action === 'activity.question.list') {

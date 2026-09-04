@@ -1,0 +1,11 @@
+{"path":"cloudfunctions/api/lib/service.js","reason":"社区与私信动作、DTO、幂等和门禁入口"}
+{"path":"cloudfunctions/api/lib/memory-store.js","reason":"社区事实与事务等价内存实现"}
+{"path":"cloudfunctions/api/lib/cloud-store.js","reason":"CloudBase事务与稳定游标实现"}
+{"path":"cloudfunctions/api/lib/community.js","reason":"社区状态、游标与文本安全规则"}
+{"path":"miniprogram/mocks/server.js","reason":"Mock契约与本地演示闭环"}
+{"path":"miniprogram/services/community.js","reason":"社区客户端动作封装"}
+{"path":"miniprogram/pages/community/index","reason":"社区列表及发帖入口"}
+{"path":"miniprogram/subpackages/community/detail/index","reason":"回复、删除、举报和点赞交互主页面"}
+{"path":"miniprogram/subpackages/community/compose/index","reason":"纯文字发帖流程"}
+{"path":"miniprogram/subpackages/message/chat/index","reason":"既有私信状态机回归边界"}
+

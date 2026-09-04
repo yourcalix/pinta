@@ -22,6 +22,9 @@
 .post-author-row,
 .post-footer,
 .reply-count,
+.like-count,
+.post-metrics,
+.post-open,
 .footer-state,
 .skeleton-head {
   display: flex;
@@ -274,6 +277,10 @@
 }
 
 .reply-count { gap: 9rpx; }
+.post-metrics { min-width: 0; gap: 18rpx; }
+.like-count, .post-open { gap: 7rpx; }
+.like-count > text:first-child { color: #16835c; font-size: 29rpx; line-height: 1; }
+.post-open { flex-shrink: 0; color: #6b7f91; }
 .reply-bubble { position: relative; width: 25rpx; height: 18rpx; border: 3rpx solid #627d98; border-radius: 9rpx; }
 .reply-bubble::after { position: absolute; bottom: -7rpx; left: 4rpx; width: 7rpx; height: 7rpx; content: ''; border-left: 3rpx solid #627d98; transform: skew(-24deg); }
 .post-arrow { color: #9fb3c8; font-size: 32rpx; line-height: 1; }

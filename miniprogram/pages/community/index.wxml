@@ -39,8 +39,8 @@
         </view>
         <text class="post-preview">{{item.content}}</text>
         <view class="post-footer">
-          <view class="reply-count"><view class="reply-bubble" aria-hidden="true"></view><text>{{item.replyCount}} 条讨论</text></view>
-          <text class="post-arrow" aria-hidden="true">›</text>
+          <view class="post-metrics"><view class="like-count"><text aria-hidden="true">♡</text><text>{{item.likeCount}} 赞</text></view><view class="reply-count"><view class="reply-bubble" aria-hidden="true"></view><text>{{item.replyCount}} 讨论</text></view></view>
+          <view class="post-open"><text>查看</text><text class="post-arrow" aria-hidden="true">›</text></view>
         </view>
       </view>
 

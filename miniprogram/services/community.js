@@ -8,5 +8,6 @@ module.exports = {
   createPost: (content) => api.invoke('community.post.create', { content }, { mutating: true }),
   createReply: (postId, content) => api.invoke('community.reply.create', { postId, content }, { mutating: true }),
   deletePost: (postId) => api.invoke('community.post.delete', { postId }, { mutating: true }),
-  deleteReply: (replyId) => api.invoke('community.reply.delete', { replyId }, { mutating: true })
+  deleteReply: (replyId) => api.invoke('community.reply.delete', { replyId }, { mutating: true }),
+  setLike: (targetType, targetId, liked) => api.invoke('community.like.set', { targetType, targetId, liked }, { mutating: true })
 };

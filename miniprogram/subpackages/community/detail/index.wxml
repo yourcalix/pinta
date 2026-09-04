@@ -4,23 +4,60 @@
   <view wx:if="{{loading}}" class="state-card surface">正在加载讨论…</view>
   <view wx:elif="{{error}}" class="state-card surface">
     <text>{{error}}</text>
-    <button class="secondary-button retry-button" bindtap="loadDetail">重新加载</button>
+    <button class="secondary-button retry-button" bindtap="handleRetryDetail">重新加载</button>
   </view>
   <block wx:else>
     <view class="post-detail surface">
       <view class="author-row">
-        <image class="avatar" src="{{post.avatarPath}}" mode="aspectFit" aria-hidden="true" />
-        <view class="author-meta"><text class="author-name">{{post.author.nickname || '拼吧用户'}}</text><text class="post-time">{{post.createdAt}}</text></view>
+        <view class="avatar avatar--{{post.avatarTone}}" aria-hidden="true">{{post.avatarInitial}}</view>
+        <view class="author-meta">
+          <text class="author-name">{{post.authorNickname}}</text>
+          <text class="post-time">{{post.displayTime}}</text>
+        </view>
         <button class="more-button" bindtap="handlePostMore" aria-label="更多帖子操作">···</button>
       </view>
       <text class="post-content">{{post.content}}</text>
+      <view class="post-actions">
+        <button
+          class="like-button {{post.viewerHasLiked ? 'like-button--active' : ''}} {{post.likePending ? 'like-button--pending' : ''}}"
+          data-target-type="post"
+          data-target-id="{{post.id}}"
+          bindtap="handleLike"
+          disabled="{{post.likePending}}"
+          hover-class="like-button--pressed"
+          aria-label="{{post.viewerHasLiked ? '取消点赞' : '点赞'}}这条讨论，当前{{post.likeCount}}个赞"
+        >{{post.viewerHasLiked ? '已赞' : '点赞'}} {{post.likeCount}}</button>
+        <text class="reply-total">{{post.replyCount}} 条回复</text>
+      </view>
     </view>
     <view class="reply-heading"><text>全部回复</text><text class="reply-count">{{post.replyCount}}</text></view>
     <view wx:if="{{replies.length}}" class="reply-list">
       <view wx:for="{{replies}}" wx:key="id" class="reply-card surface">
-        <image class="reply-avatar" src="{{item.avatarPath}}" mode="aspectFit" aria-hidden="true" />
-        <view class="reply-body"><text class="reply-author">{{item.author.nickname || '拼吧用户'}}</text><text class="reply-content">{{item.content}}</text></view>
-        <button class="more-button reply-more" data-index="{{index}}" bindtap="handleReplyMore" aria-label="更多回复操作">···</button>
+        <view class="reply-avatar avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
+        <view class="reply-body">
+          <view class="reply-meta">
+            <text class="reply-author">{{item.authorNickname}}</text>
+            <text class="reply-time">{{item.displayTime}}</text>
+          </view>
+          <text class="reply-content" user-select="true">{{item.content}}</text>
+          <view class="reply-actions">
+            <button
+              class="like-button reply-like {{item.viewerHasLiked ? 'like-button--active' : ''}} {{item.likePending ? 'like-button--pending' : ''}}"
+              data-target-type="reply"
+              data-target-id="{{item.id}}"
+              bindtap="handleLike"
+              disabled="{{item.likePending}}"
+              hover-class="like-button--pressed"
+              aria-label="{{item.viewerHasLiked ? '取消点赞' : '点赞'}}这条回复，当前{{item.likeCount}}个赞"
+            >{{item.viewerHasLiked ? '已赞' : '点赞'}} {{item.likeCount}}</button>
+          </view>
+        </view>
+        <button class="more-button reply-more" data-id="{{item.id}}" bindtap="handleReplyMore" aria-label="更多回复操作">···</button>
+      </view>
+      <button wx:if="{{hasMore}}" class="load-more-button" loading="{{loadingMore}}" disabled="{{loadingMore}}" bindtap="handleLoadMore" aria-label="加载更多回复">加载更多回复</button>
+      <view wx:if="{{loadMoreError}}" class="load-more-error">
+        <text>{{loadMoreError}}</text>
+        <button class="secondary-button retry-button" bindtap="handleRetryLoadMore">重试</button>
       </view>
     </view>
     <view wx:else class="empty-replies surface">暂时没有回复，来聊聊你的想法。</view>
@@ -36,6 +73,7 @@
       adjust-position="true"
       aria-label="回复内容，最多300字"
       bindinput="handleReplyInput"
+      bindfocus="handleReplyFocus"
       bindconfirm="handleSendReply"
     />
     <button class="send-button" disabled="{{!replyContent || submitting}}" loading="{{submitting}}" bindtap="handleSendReply">发送</button>

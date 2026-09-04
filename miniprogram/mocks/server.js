@@ -38,6 +38,7 @@ const MUTATING_ACTIONS = new Set([
   'community.reply.create',
   'community.post.delete',
   'community.reply.delete',
+  'community.like.set',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -56,7 +57,7 @@ const MUTATING_ACTIONS = new Set([
   'ride.driver.cancel'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
-  'driver.application.submit', 'admin.driverApplication.review'
+  'driver.application.submit', 'admin.driverApplication.review', 'community.like.set'
 ]);
 const PUBLIC_ACTIONS = new Set([
   'activity.list',
@@ -134,6 +135,18 @@ function opaqueSensitiveHash(value) {
     hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
   }
   return `${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+}
+
+function stableMockEntityId(prefix, ...parts) {
+  let hashA = 0x811c9dc5;
+  let hashB = 0x9e3779b9;
+  const input = parts.map((part) => String(part)).join('\u001f');
+  for (let index = 0; index < input.length; index += 1) {
+    const code = input.charCodeAt(index);
+    hashA = Math.imul(hashA ^ code, 0x01000193) >>> 0;
+    hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
+  }
+  return `${prefix}_${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
 }
 
 function normalizeActivityForRead(activity, now) {
@@ -347,6 +360,7 @@ function seedState() {
         status: 'ACTIVE', createdAt: now, updatedAt: now
       }
     ],
+    communityLikes: [],
     directConversations: directPreview.conversations,
     directMessages: directPreview.messages,
     reports: [],
@@ -383,6 +397,7 @@ if (!state.driverDocumentUploads) state.driverDocumentUploads = [];
 if (!state.memberContacts) state.memberContacts = [];
 if (!state.communityPosts) state.communityPosts = [];
 if (!state.communityReplies) state.communityReplies = [];
+if (!state.communityLikes) state.communityLikes = [];
 if (!Array.isArray(state.directConversations)
   || !Array.isArray(state.directMessages)
   || (!state.directConversations.length && !state.directMessages.length)) {
@@ -392,26 +407,32 @@ if (!Array.isArray(state.directConversations)
 }
 
 function publicCommunityPost(item) {
+  const like = state.communityLikes.find((entry) => entry.targetType === 'post' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
   return {
     id: item.id,
     author: clone(item.author),
     content: item.content,
     replyCount: Number(item.replyCount || 0),
+    likeCount: Number(item.likeCount || 0),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
-    viewerIsAuthor: item.authorId === currentUserId
+    viewerIsAuthor: item.authorId === currentUserId,
+    viewerHasLiked: Boolean(like)
   };
 }
 
 function publicCommunityReply(item) {
+  const like = state.communityLikes.find((entry) => entry.targetType === 'reply' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
   return {
     id: item.id,
     postId: item.postId,
     author: clone(item.author),
     content: item.content,
+    likeCount: Number(item.likeCount || 0),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
-    viewerIsAuthor: item.authorId === currentUserId
+    viewerIsAuthor: item.authorId === currentUserId,
+    viewerHasLiked: Boolean(like)
   };
 }
 
@@ -1304,7 +1325,7 @@ function handle(action, input, idempotencyKey = '') {
     };
     state.communityReplies.push(reply);
     post.replyCount = Number(post.replyCount || 0) + 1;
-    return { reply: publicCommunityReply(reply) };
+    return { reply: publicCommunityReply(reply), replyCount: post.replyCount };
   }
   if (action === 'community.post.delete') {
     const post = state.communityPosts.find((item) => item.id === input.postId && item.status !== 'SUSPENDED');
@@ -1320,7 +1341,29 @@ function handle(action, input, idempotencyKey = '') {
     reply.status = 'DELETED'; reply.deletedAt = new Date().toISOString(); reply.updatedAt = reply.deletedAt;
     const post = state.communityPosts.find((item) => item.id === reply.postId);
     if (post) post.replyCount = Math.max(0, Number(post.replyCount || 0) - 1);
-    return { deleted: true, replyId: reply.id };
+    return { deleted: true, replyId: reply.id, replyCount: Number(post && post.replyCount || 0) };
+  }
+  if (action === 'community.like.set') {
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    assert(['post', 'reply'].includes(input.targetType) && typeof input.liked === 'boolean', 'VALIDATION_ERROR', '点赞参数无效');
+    const targetId = validatedId(input.targetId, '点赞目标ID');
+    const target = input.targetType === 'post'
+      ? state.communityPosts.find((item) => item.id === targetId && item.status === 'ACTIVE')
+      : state.communityReplies.find((item) => item.id === targetId && item.status === 'ACTIVE');
+    assert(target, 'NOT_FOUND', '讨论不存在或已被删除');
+    if (input.targetType === 'reply') assert(state.communityPosts.some((item) => item.id === target.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
+    const id = stableMockEntityId('communityLike', input.targetType, targetId, currentUserId);
+    let like = state.communityLikes.find((item) => item.targetType === input.targetType && item.targetId === targetId && item.actorId === currentUserId);
+    const wasLiked = Boolean(like && like.status === 'ACTIVE');
+    if (wasLiked !== input.liked) target.likeCount = Math.max(0, Number(target.likeCount || 0) + (input.liked ? 1 : -1));
+    const now = new Date().toISOString();
+    if (!like) {
+      like = { id, targetType: input.targetType, targetId, postId: input.targetType === 'reply' ? target.postId : target.id, actorId: currentUserId, createdAt: now };
+      state.communityLikes.push(like);
+    }
+    Object.assign(like, { status: input.liked ? 'ACTIVE' : 'DELETED', updatedAt: now });
+    return { targetType: input.targetType, targetId, liked: input.liked, likeCount: Number(target.likeCount || 0) };
   }
   if (action === 'activity.mine') {
     const user = requireActiveUser();

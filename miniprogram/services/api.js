@@ -15,6 +15,7 @@ const MUTATING_ACTIONS = new Set([
   'community.reply.create',
   'community.post.delete',
   'community.reply.delete',
+  'community.like.set',
   'application.submit',
   'application.approve',
   'application.reject',

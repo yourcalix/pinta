@@ -4,6 +4,13 @@ const { AppError, invariant } = require('./errors');
 
 const COMMUNITY_POST_STATUS = Object.freeze({ ACTIVE: 'ACTIVE', DELETED: 'DELETED', SUSPENDED: 'SUSPENDED' });
 const COMMUNITY_REPLY_STATUS = Object.freeze({ ACTIVE: 'ACTIVE', DELETED: 'DELETED', SUSPENDED: 'SUSPENDED' });
+const COMMUNITY_LIKE_STATUS = Object.freeze({ ACTIVE: 'ACTIVE', DELETED: 'DELETED' });
+const COMMUNITY_LIKE_TARGETS = Object.freeze(['post', 'reply']);
+const { stableEntityId } = require('./ids');
+
+function communityLikeId(targetType, targetId, actorId) {
+  return stableEntityId('communityLike', targetType, targetId, actorId);
+}
 
 function encodeCursor(item) {
   if (!item) return null;
@@ -52,6 +59,9 @@ function assertCommunityTextSafe(content) {
 module.exports = {
   COMMUNITY_POST_STATUS,
   COMMUNITY_REPLY_STATUS,
+  COMMUNITY_LIKE_STATUS,
+  COMMUNITY_LIKE_TARGETS,
+  communityLikeId,
   encodeCursor,
   decodeCursor,
   compareDescending,

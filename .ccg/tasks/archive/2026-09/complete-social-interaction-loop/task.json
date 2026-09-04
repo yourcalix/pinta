@@ -1,0 +1,12 @@
+{
+  "id": "complete-social-interaction-loop",
+  "title": "完善私信、社区发帖、评论与点赞闭环",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交本地Git",
+  "createdAt": "2026-09-04T03:15:00.000Z",
+  "branch": "main"
+}
