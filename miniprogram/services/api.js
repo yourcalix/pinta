@@ -228,6 +228,7 @@ module.exports = {
   makeMutationFingerprint,
   sanitizeUserFacingMessage,
   setActorScope,
+  getActorScope: () => config.useMock ? `mock:${mockServer.getPersona()}` : authenticatedActorScope,
   isMock: () => config.useMock,
   setMockPersona: mockServer.setPersona,
   getMockPersona: mockServer.getPersona,

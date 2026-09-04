@@ -62,7 +62,7 @@ npm run verify
 
 1. 使用被 Git 忽略的 `project.private.config.json` 配置真实小程序 AppID，公共 `project.config.json` 继续保留 `touristappid`。
 2. 在微信开发者工具中开通云开发环境。G1 联调时再通过不进入版本控制的本地配置或已选默认环境指定环境 ID；当前仓库中的 `cloudEnv` 保持空值。
-3. 创建集合：`users`、`activities`、`applications`、`members`、`memberContacts`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`、`communityPosts`、`communityReplies`、`communityRateLimits`。
+3. 创建集合：`users`、`activities`、`applications`、`members`、`memberContacts`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`、`communityPosts`、`communityReplies`、`communityRateLimits`、`directConversations`、`directMessages`。
    当前 MVP 使用确定性文档 ID 保障并发和幂等，正式环境应使用新建空库初始化，不要与采用随机成员/申请 ID 的旧版数据混用。
 4. 将数据库集合权限设为“所有用户不可直接读写”，业务数据只允许通过 `cloudfunctions/api` 云函数访问。`driverSecrets`、`driverApplications`、`driverDocumentUploads`、`drivers` 和 `vehicles` 不得开放客户端直读。
 5. 将 `private-driver/**` 与 `private-driver-sealed/**` 配置为私有云存储路径：客户端仅可向后端签发的临时 staging 路径上传，单文件上限 5MB；禁止列目录、覆盖 sealed 路径或直接下载。服务端确认 JPEG/PNG 内容后会迁移到随机 sealed 路径并删除 staging 文件。
@@ -97,12 +97,31 @@ npm run verify
 - `communityPosts`：`status + createdAt(降序) + _id(降序)`。
 - `communityReplies`：`postId + status + createdAt(升序) + _id(升序)`。
 - `communityRateLimits`：使用调用者、动作与固定时间窗派生的确定性文档 ID，无需额外索引。
+- `directConversations`：会话列表分别建立 `participantAId(升序) + updatedAt(降序) + _id(降序)` 和 `participantBId(升序) + updatedAt(降序) + _id(降序)`；未读扫描另建 `participantAId(升序) + _id(升序)`、`participantBId(升序) + _id(升序)`。未读按不可变 ID 分页遍历，不以单页 100 条作为总量上限。
+- `directMessages`：`conversationId(升序) + createdAt(降序) + _id(降序)`。消息和会话集合均禁止客户端直接读写，只经云函数鉴权访问。
+
+## 私信功能与联调清单
+
+私信只面向共同活动的有效成员：从成团成员空间进入会话，双方账号可用、双方成员关系有效且活动为 `FORMED / IN_PROGRESS` 时可发送最多 500 字纯文字。活动结束、成员退出或对方账号停用后，原会话参与者仍可查看历史和举报，但不能发送新消息。当前账号停用时不可继续访问。
+
+- 聊天页可见且可发送时，每轮请求结束后约 8 秒刷新最新消息；跨页追赶并按消息 ID 合并，不覆盖已加载的历史。离屏停止轮询并忽略晚到响应。
+- 用户阅读历史时不强制滚到底部、不提前清除新消息未读；返回底部后以实际取得的最新消息 ID 条件确认。ID 为不透明字符串，不比较其大小。
+- 发送失败保留正文和当前页面内的 `clientMessageId`，相同正文重试不会重复入库。页面销毁后不持久化私信草稿；重开页面先检查历史再决定重发。
+- 未读徽标共享上一次服务端确认值，刷新失败不伪造为 0；切换账号清空旧账号快照。此阶段不提供后台推送、在线状态或对方已读回执。
+
+本地 `npm run verify` 覆盖 Memory/Mock 业务、前端时序和模拟 Cloud Store 查询/事务契约，**不代表真实 CloudBase 事务并发、索引或真机键盘已验证**。部署新版本 `api` 云函数并创建以上集合与索引后，使用两个真实账号完成：
+
+1. 共同成团成员创建会话、双向发送、页面停留接收、20 条以上历史分页；第三方账号直达同一会话必须拒绝。
+2. 弱网下发送后超时，同正文重试只生成一条消息；并发发送、收到新消息时的条件已读不得清掉尚未拉取的消息。
+3. 退出成员/结束活动/停用对方账号后转只读并收键盘；当前账号停用后清空页面私信。
+4. iOS/Android 输入多行、阅读历史收到新消息、返回底部、前后台切换、99+ 徽标与跨 Tab 刷新。
+5. 云函数不可用或接口缺失时展示安全错误，不回退 Mock。检查真实云事务冲突重试、上述复合索引可用性及未读扫描的耗时/读量。
 
 ## MVP 边界
 
 - 不接平台支付，不做资金担保。
 - 不提供车辆或司机，不承接运输服务。
-- 不提供即时聊天；成团后才允许有效成员按需获取联系方式。
+- 提供活动关系内的低频轮询纯文字私信，不提供任意陌生人聊天、媒体消息或后台推送；联系方式仍只在成团后由有效成员按需获取。
 - 不公开手机号、二维码或微信 OpenID。
 - 当前 Mock 数据只用于产品演示，正式运营还需完成真实账号、隐私政策、类目资质、内容安全和风控配置。
 

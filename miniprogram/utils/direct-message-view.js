@@ -48,8 +48,18 @@ function getPeerIdentity(nickname) {
   };
 }
 
+function mergeMessages(existing = [], incoming = []) {
+  const byId = new Map();
+  [...existing, ...incoming].forEach((item) => {
+    if (item && typeof item.id === 'string' && item.id) byId.set(item.id, item);
+  });
+  return [...byId.values()].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))
+    || String(a.id).localeCompare(String(b.id)));
+}
+
 module.exports = {
   GROUP_WINDOW_MS,
   decorateMessageList,
-  getPeerIdentity
+  getPeerIdentity,
+  mergeMessages
 };

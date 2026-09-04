@@ -1017,7 +1017,8 @@ class MemoryStore {
         && [conversation.participantAId, conversation.participantBId].includes(item.userId)
         && item.status === MEMBER_STATUS.ACTIVE
     );
-    invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status) && activeParticipants.length === 2, 'NOT_FOUND_OR_NOT_ALLOWED');
+    invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status) && activeParticipants.length === 2
+      && [conversation.participantAId, conversation.participantBId].every((id) => this.users.get(id)?.status === 'ACTIVE'), 'NOT_FOUND_OR_NOT_ALLOWED');
     const existing = this.directConversations.get(conversation.id);
     if (existing) return clone(existing);
     this.directConversations.set(conversation.id, clone(conversation));
@@ -1026,6 +1027,21 @@ class MemoryStore {
 
   async getDirectConversation(conversationId) {
     return clone(this.directConversations.get(conversationId) || null);
+  }
+
+  async getDirectMessage(messageId) {
+    return clone(this.directMessages.get(messageId) || null);
+  }
+
+  async isDirectMessagingAvailable(conversation) {
+    const activityId = conversation.source && conversation.source.id;
+    const activity = this.activities.get(activityId);
+    return Boolean(activity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)
+      && [conversation.participantAId, conversation.participantBId].every((userId) => {
+        const user = this.users.get(userId);
+        return user && user.status === 'ACTIVE' && [...this.members.values()].some((member) =>
+          member.activityId === activityId && member.userId === userId && member.status === MEMBER_STATUS.ACTIVE);
+      }));
   }
 
   async listDirectConversations(actorId, { cursor, limit }) {
@@ -1071,7 +1087,8 @@ class MemoryStore {
         && [conversation.participantAId, conversation.participantBId].includes(item.userId)
         && item.status === MEMBER_STATUS.ACTIVE
     );
-    invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status) && activeParticipants.length === 2, 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
+    invariant(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status) && activeParticipants.length === 2
+      && [conversation.participantAId, conversation.participantBId].every((id) => this.users.get(id)?.status === 'ACTIVE'), 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
     const recipientId = conversation.participantAId === message.senderId
       ? conversation.participantBId
       : conversation.participantAId;

@@ -548,7 +548,9 @@ function directConversationDto(conversation) {
       createdAt: conversation.lastMessageAt
     } : null,
     unreadCount: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0),
-    messagingAvailable: Boolean(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)),
+    messagingAvailable: Boolean(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
+      && [conversation.participantAId, conversation.participantBId].every((id) =>
+        userById(id) && userById(id).status === 'ACTIVE' && activeMember(sourceActivity.id, id))),
     updatedAt: conversation.updatedAt
   };
 }
@@ -1445,10 +1447,6 @@ function handle(action, input, idempotencyKey = '') {
     assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
     const conversation = state.directConversations.find((item) => item.id === input.conversationId);
     assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    const sourceActivity = conversation.source && activityById(conversation.source.id);
-    const firstMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantAId);
-    const secondMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantBId);
-    assert(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status) && firstMember && secondMember, 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
     const clientMessageId = String(input.clientMessageId || '').trim();
     assert(/^[A-Za-z0-9:_-]{8,80}$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID格式无效');
     const text = assertDirectMessageContent(input.text);
@@ -1460,6 +1458,11 @@ function handle(action, input, idempotencyKey = '') {
       assert(existing.payloadHash === payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
       return { message: directMessageDto(existing) };
     }
+    const sourceActivity = conversation.source && activityById(conversation.source.id);
+    const firstMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantAId);
+    const secondMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantBId);
+    assert(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status) && firstMember && secondMember
+      && [conversation.participantAId, conversation.participantBId].every((id) => userById(id) && userById(id).status === 'ACTIVE'), 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
     const now = new Date().toISOString();
     const message = { id, conversationId: conversation.id, senderId: currentUserId, text, payloadHash, status: 'SENT', createdAt: now, updatedAt: now };
     state.directMessages.push(message);

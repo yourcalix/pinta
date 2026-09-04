@@ -34,7 +34,7 @@
         <button class="source-report" bindtap="handleReport" hover-class="source-report--pressed" aria-label="举报此私信会话"><text aria-hidden="true">!</text> 举报</button>
       </view>
 
-      <scroll-view class="message-scroll" scroll-y="true" scroll-into-view="{{scrollIntoView}}" scroll-with-animation="{{scrollWithAnimation}}" enhanced="true" show-scrollbar="false">
+      <scroll-view class="message-scroll" scroll-y="true" scroll-into-view="{{scrollIntoView}}" scroll-with-animation="{{scrollWithAnimation}}" enhanced="true" show-scrollbar="false" bindscroll="handleScroll" bindscrolltolower="handleScrollLower" lower-threshold="150">
         <view class="older-area">
           <button wx:if="{{hasMore && !loadingOlder && !olderError}}" bindtap="handleLoadOlder" hover-class="older-button--pressed">加载更早消息</button>
           <text wx:elif="{{loadingOlder}}">正在加载…</text>

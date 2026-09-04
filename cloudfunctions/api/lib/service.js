@@ -315,7 +315,7 @@ function createPinbaService(options) {
           }
         : null,
       unreadCount: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[actorId]) || 0),
-      messagingAvailable: Boolean(sourceActivity && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)),
+      messagingAvailable: await store.isDirectMessagingAvailable(conversation),
       updatedAt: conversation.updatedAt
     };
   }
@@ -852,6 +852,14 @@ function createPinbaService(options) {
       const payload = validateDirectMessageCreateInput(input);
       const conversation = await store.getDirectConversation(payload.conversationId);
       invariant(conversation && [conversation.participantAId, conversation.participantBId].includes(user.id), 'NOT_FOUND_OR_NOT_ALLOWED');
+      const messageId = stableEntityId('directMessage', conversation.id, user.id, payload.clientMessageId);
+      const existing = await store.getDirectMessage(messageId);
+      if (existing) {
+        invariant(existing.conversationId === conversation.id && existing.senderId === user.id, 'CONFLICT', '客户端消息ID已用于其他会话');
+        invariant(existing.payloadHash === context.payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+        // Replay is a read of an already accepted message, not a new send/quota charge.
+        return { message: publicDirectMessage(existing, user.id) };
+      }
       const sourceActivity = conversation.source && conversation.source.id
         ? await store.getActivity(conversation.source.id)
         : null;
@@ -859,7 +867,7 @@ function createPinbaService(options) {
       await moderation.check([payload.text], { actorId: user.id, scene: 2 });
       await store.consumeCommunityRateLimit(user.id, 'directMessage', at, 30, 10 * 60 * 1000);
       const message = await store.addDirectMessage({
-        id: stableEntityId('directMessage', conversation.id, user.id, payload.clientMessageId),
+        id: messageId,
         conversationId: conversation.id,
         senderId: user.id,
         text: payload.text,

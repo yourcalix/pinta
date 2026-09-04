@@ -1400,8 +1400,12 @@ class CloudStore {
       const sourceActivity = await getTransactionDocument(sourceActivityReference);
       const firstMember = await getTransactionDocument(firstMemberReference);
       const secondMember = await getTransactionDocument(secondMemberReference);
+      const firstUser = await getTransactionDocument(transaction.collection('users').doc(conversation.participantAId));
+      const secondUser = await getTransactionDocument(transaction.collection('users').doc(conversation.participantBId));
       invariant(
         sourceActivity
+          && firstUser && firstUser.status === 'ACTIVE'
+          && secondUser && secondUser.status === 'ACTIVE'
           && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
           && firstMember
           && firstMember.activityId === conversation.source.id
@@ -1422,6 +1426,26 @@ class CloudStore {
 
   async getDirectConversation(conversationId) {
     return this.getDocument('directConversations', conversationId);
+  }
+
+  async getDirectMessage(messageId) {
+    return this.getDocument('directMessages', messageId);
+  }
+
+  async isDirectMessagingAvailable(conversation) {
+    const activityId = conversation.source && conversation.source.id;
+    if (!activityId) return false;
+    const activity = await this.getActivity(activityId);
+    if (!activity || ![ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)) return false;
+    const participants = await Promise.all([conversation.participantAId, conversation.participantBId].map(async (userId) => {
+      const [user, member] = await Promise.all([
+        this.getUser(userId),
+        this.getDocument('members', stableEntityId('member', activityId, userId))
+      ]);
+      return Boolean(user && user.status === 'ACTIVE' && member && member.activityId === activityId
+        && member.userId === userId && member.status === MEMBER_STATUS.ACTIVE);
+    }));
+    return participants.every(Boolean);
   }
 
   async listDirectConversations(actorId, { cursor, limit }) {
@@ -1501,8 +1525,12 @@ class CloudStore {
       const secondMember = conversation.source && await getTransactionDocument(
         transaction.collection('members').doc(stableEntityId('member', conversation.source.id, conversation.participantBId))
       );
+      const firstUser = await getTransactionDocument(transaction.collection('users').doc(conversation.participantAId));
+      const secondUser = await getTransactionDocument(transaction.collection('users').doc(conversation.participantBId));
       invariant(
         sourceActivity
+          && firstUser && firstUser.status === 'ACTIVE'
+          && secondUser && secondUser.status === 'ACTIVE'
           && [ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(sourceActivity.status)
           && firstMember
           && firstMember.activityId === conversation.source.id
@@ -1551,8 +1579,20 @@ class CloudStore {
 
   async getDirectUnreadSummary(actorId) {
     const collect = async (field) => {
-      const result = await this.db.collection('directConversations').where({ [field]: actorId }).limit(100).get();
-      return (result.data || []).map(entity);
+      const items = [];
+      let afterId = '';
+      while (true) {
+        // Page by immutable document ID, not the mutable last-message timestamp.
+        const where = { [field]: actorId, ...(afterId ? { _id: this.command.gt(afterId) } : {}) };
+        const result = await this.db.collection('directConversations').where(where).orderBy('_id', 'asc').limit(100).get();
+        const batch = (result.data || []).map(entity);
+        items.push(...batch);
+        if (batch.length < 100) break;
+        const nextId = batch[batch.length - 1].id;
+        invariant(nextId && nextId !== afterId, 'INTERNAL');
+        afterId = nextId;
+      }
+      return items;
     };
     const [asFirst, asSecond] = await Promise.all([collect('participantAId'), collect('participantBId')]);
     const items = [...new Map([...asFirst, ...asSecond].map((item) => [item.id, item])).values()];

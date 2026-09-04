@@ -63,14 +63,16 @@ Page({
     const seq = append ? (this._loadSeq || 0) : (this._loadSeq = (this._loadSeq || 0) + 1);
     this.setData(append
       ? { loadingMore: true, loadMoreError: '' }
-      : { loading: !keepContent, error: '', loadMoreError: '', ...(keepContent ? {} : { conversations: [] }) });
+      : { loading: !keepContent, loadingMore: false, error: '', loadMoreError: '', ...(keepContent ? {} : { conversations: [] }) });
     try {
       await userService.login();
+      if (seq !== this._loadSeq) return;
       const [conversationResult, notificationResult] = await Promise.allSettled([
         directMessageService.listConversations(append ? this.data.nextCursor : undefined, PAGE_SIZE),
         append ? Promise.resolve(null) : userService.notifications()
       ]);
       if (conversationResult.status === 'rejected') throw conversationResult.reason;
+      if (notificationResult.status === 'rejected' && notificationResult.reason && notificationResult.reason.handled) throw notificationResult.reason;
       if (seq !== this._loadSeq) return;
       const result = conversationResult.value || { items: [] };
       const incoming = (result.items || []).map(decorateConversation);
@@ -79,7 +81,7 @@ Page({
         : [];
       const unreadNotifications = notifications.filter((item) => !item.read);
       this.setData({
-        conversations: append ? [...this.data.conversations, ...incoming] : incoming,
+        conversations: append ? [...new Map([...this.data.conversations, ...incoming].map((item) => [item.id, item])).values()] : incoming,
         nextCursor: result.nextCursor || '',
         hasMore: Boolean(result.nextCursor),
         loading: false,
@@ -94,6 +96,12 @@ Page({
       refreshUnread(this);
     } catch (error) {
       if (seq !== this._loadSeq) return;
+      if (error && ['ACCOUNT_DISABLED', 'PROFILE_INCOMPLETE', 'UNAUTHENTICATED', 'FORBIDDEN'].includes(error.code)) {
+        this.setData({ loading: false, loadingMore: false, conversations: [], nextCursor: '', hasMore: false, systemNotification: null, systemUnread: 0,
+          error: error.code === 'PROFILE_INCOMPLETE' ? '请先到“我的”完善成年资料，再使用私信' : '账号暂时无法使用' });
+        refreshUnread(this);
+        return;
+      }
       if (append) return this.setData({ loadingMore: false, loadMoreError: '加载更多失败，点击重试' });
       if (keepContent && this.data.conversations.length) {
         this.setData({ loading: false, loadingMore: false });
@@ -102,7 +110,7 @@ Page({
       this.setData({
         loading: false,
         loadingMore: false,
-        error: error.handled ? '账号暂时无法使用' : '网络连接较慢或服务开小差了，请重试'
+        error: error && error.handled ? '账号暂时无法使用' : '网络连接较慢或服务开小差了，请重试'
       });
     }
   },

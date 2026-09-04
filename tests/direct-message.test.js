@@ -16,7 +16,7 @@ function user(id, nickname) {
   };
 }
 
-function setup() {
+function setup(options = {}) {
   let now = new Date('2026-09-02T07:00:00.000Z');
   let request = 0;
   const activity = { id: 'activity-formed', ownerId: 'owner', type: 'sport', title: '周末羽毛球', status: 'FORMED' };
@@ -28,7 +28,7 @@ function setup() {
       { id: 'member-peer', activityId: activity.id, userId: 'member', role: 'MEMBER', status: 'ACTIVE' }
     ]
   });
-  const service = createPinbaService({ store, clock: () => new Date(now), idGenerator: () => `generated-${++request}` });
+  const service = createPinbaService({ ...options, store, clock: () => new Date(now), idGenerator: () => `generated-${++request}` });
   const call = (action, data = {}, actorId = null, key) => service.execute({
     action,
     data,
@@ -156,6 +156,29 @@ test('同一发送者在不同活动会话复用 clientMessageId 不会串消息
   assert.equal(store.directMessages.size, 2);
 });
 
+test('已入库消息重试跳过限流审核，关闭后只重放旧结果，停用发送者仍拒绝', async () => {
+  let rejectModeration = false;
+  const { call, store } = setup({ moderation: { async check() { if (rejectModeration) throw new Error('should not moderate a replay'); } } });
+  const opened = await call('dm.conversation.create', { activityId: 'activity-formed', memberId: 'member-peer' }, 'owner', 'replay-create');
+  const conversationId = opened.data.conversation.id;
+  const data = { conversationId, clientMessageId: 'replay-known-message', text: '已经发送的消息' };
+  const first = await call('dm.message.send', data, 'owner', 'replay-first');
+  assert.equal(first.ok, true);
+  rejectModeration = true;
+  store.consumeCommunityRateLimit = async () => { throw new Error('should not consume replay quota'); };
+  const replay = await call('dm.message.send', data, 'owner', 'replay-second');
+  assert.equal(replay.ok, true);
+  assert.equal(replay.data.message.id, first.data.message.id);
+  store.activities.get('activity-formed').status = 'COMPLETED';
+  assert.equal((await call('dm.message.send', data, 'owner', 'replay-closed')).ok, true);
+  const conflict = await call('dm.message.send', { ...data, text: '改了正文' }, 'owner', 'replay-conflict');
+  assert.equal(conflict.error.code, 'CONFLICT');
+  assert.equal(store.directMessages.size, 1);
+  assert.equal((await call('dm.unread', {}, 'member')).data.totalUnread, 1);
+  store.users.get('owner').status = 'DISABLED';
+  assert.equal((await call('dm.message.send', data, 'owner', 'replay-disabled')).error.code, 'ACCOUNT_DISABLED');
+});
+
 test('未读数只为收件人增加，打开具体会话后才清零', async () => {
   const { call } = setup();
   const opened = await call('dm.conversation.create', {
@@ -250,12 +273,39 @@ test('成员退出后即使活动仍为成团也不能继续发私信', async ()
     activityId: 'activity-formed', memberId: 'member-peer'
   }, 'owner', 'dm-create-036');
   store.members.get('member-peer').status = 'LEFT';
+  const history = await call('dm.message.list', { conversationId: opened.data.conversation.id }, 'owner');
+  assert.equal(history.ok, true);
+  assert.equal(history.data.conversation.messagingAvailable, false);
   const sent = await call('dm.message.send', {
     conversationId: opened.data.conversation.id,
     clientMessageId: 'client_message_036',
     text: '退出后联系'
   }, 'owner', 'dm-send-036');
   assert.equal(sent.error.code, 'CONFLICT');
+});
+
+test('对方账号受限后历史保留但不得发送新消息', async () => {
+  const { call, store } = setup();
+  const opened = await call('dm.conversation.create', { activityId: 'activity-formed', memberId: 'member-peer' }, 'owner', 'disabled-peer-create');
+  const conversationId = opened.data.conversation.id;
+  store.users.get('member').status = 'DISABLED';
+  const history = await call('dm.message.list', { conversationId }, 'owner');
+  assert.equal(history.data.conversation.messagingAvailable, false);
+  const sent = await call('dm.message.send', { conversationId, clientMessageId: 'disabled-peer-message', text: '新的消息' }, 'owner', 'disabled-peer-send');
+  assert.equal(sent.ok, false);
+  assert.equal(store.directMessages.size, 0);
+});
+
+test('未参与者不能标记已读，活动关闭仍能读取与举报历史', async () => {
+  const { call, store } = setup();
+  const opened = await call('dm.conversation.create', { activityId: 'activity-formed', memberId: 'member-peer' }, 'owner', 'closed-read-create');
+  const conversationId = opened.data.conversation.id;
+  const sent = await call('dm.message.send', { conversationId, clientMessageId: 'closed-read-message', text: '你好' }, 'owner', 'closed-read-send');
+  const denied = await call('dm.conversation.read', { conversationId, lastMessageId: sent.data.message.id }, 'outsider', 'outsider-read-key');
+  assert.equal(denied.error.code, 'NOT_FOUND_OR_NOT_ALLOWED');
+  store.activities.get('activity-formed').status = 'CANCELLED';
+  assert.equal((await call('dm.message.list', { conversationId }, 'member')).ok, true);
+  assert.equal((await call('report.create', { targetType: 'directConversation', targetId: conversationId, reason: 'HARASSMENT' }, 'member', 'closed-report-key')).ok, true);
 });
 
 test('会话可进入统一举报契约，Cloud 写入使用事务', async () => {
