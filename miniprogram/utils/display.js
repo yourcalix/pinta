@@ -1,6 +1,7 @@
 'use strict';
 
 const { formatDateTime } = require('./date');
+const { normalizeAvatarSlots } = require('./passenger-avatar');
 
 const TYPE_META = Object.freeze({
   companion: { label: '拼同行', icon: '↗', color: '#3D7FD6', tone: 'companion' },
@@ -50,6 +51,10 @@ function decorateActivity(activity) {
     && (activity.viewerRole === 'guest' || (activity.viewerRole === 'applicant' && canReapply));
   const summary = typeSummary(activity);
   const ownerNickname = String(activity.owner && activity.owner.nickname || '拼吧用户').trim() || '拼吧用户';
+  const slots = normalizeAvatarSlots(activity.avatarSlots, maxMembers);
+  const visibleLimit = maxMembers <= 4 ? maxMembers : maxMembers <= 7 ? 3 : 2;
+  const visibleAvatarSlots = slots.slice(0, visibleLimit).map((slot, index) => ({ ...slot, delay: index * 45, layer: visibleLimit - index }));
+  const hiddenMemberCount = slots.slice(visibleLimit).filter((slot) => !slot.empty).length;
   return {
     ...activity,
     typeLabel: typeMeta.label,
@@ -65,6 +70,8 @@ function decorateActivity(activity) {
     minMembers,
     remaining,
     progressPercent,
+    visibleAvatarSlots,
+    hiddenMemberCount,
     canApply,
     capacityLabel: `${memberCount}/${maxMembers} 人`,
     ownerNickname,

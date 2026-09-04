@@ -37,6 +37,7 @@ const {
 } = require('./ride-policy');
 const {
   avatarKindFromGender,
+  publicAvatarSlots,
   isCompleteRideProfile
 } = require('./passenger-avatar');
 
@@ -144,6 +145,7 @@ function publicActivity(activity, viewer = {}, at) {
     minPassengers,
     maxPassengers,
     memberCount: activity.memberCount,
+    avatarSlots: publicAvatarSlots(activity.avatarRoster, maxPassengers),
     remainingCapacity: Math.max(0, Number(maxPassengers) - Number(activity.memberCount || 0)),
     status: activity.status,
     rules: activity.rules,

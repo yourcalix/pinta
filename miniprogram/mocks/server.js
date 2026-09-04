@@ -87,7 +87,7 @@ function normalizeAvatarRoster(roster) {
     if (!item || typeof item.memberId !== 'string' || !PASSENGER_AVATAR_KINDS.includes(item.avatarKind) || seen.has(item.memberId)) return false;
     seen.add(item.memberId);
     return true;
-  }).slice(0, 7).map((item) => ({ memberId: item.memberId, avatarKind: item.avatarKind }));
+  }).slice(0, 20).map((item) => ({ memberId: item.memberId, avatarKind: item.avatarKind }));
 }
 
 function upsertAvatarRoster(roster, memberId, avatarKind) {
@@ -95,14 +95,15 @@ function upsertAvatarRoster(roster, memberId, avatarKind) {
   if (!PASSENGER_AVATAR_KINDS.includes(avatarKind)) return next;
   const existing = next.find((item) => item.memberId === memberId);
   if (existing) existing.avatarKind = avatarKind;
-  else if (next.length < 7) next.push({ memberId, avatarKind });
+  else if (next.length < 20) next.push({ memberId, avatarKind });
   return next;
 }
 
-function publicAvatarSlots(roster) {
+function publicAvatarSlots(roster, capacity = 7) {
+  const total = Math.max(1, Math.min(20, Math.floor(Number(capacity)) || 7));
   const kinds = normalizeAvatarRoster(roster).map((item) => item.avatarKind);
-  while (kinds.length < 7) kinds.push('EMPTY');
-  return kinds.slice(0, 7).map((kind) => ({ kind }));
+  while (kinds.length < total) kinds.push('EMPTY');
+  return kinds.slice(0, total).map((kind) => ({ kind }));
 }
 
 function resolveNotificationTarget(type) {
@@ -155,6 +156,8 @@ function normalizeActivityForRead(activity, now) {
     activity = {
       ...activity,
       targetMembers: 7,
+      minMembers: 7,
+      maxMembers: 7,
       minPassengers: 7,
       maxPassengers: 7,
       status: ['RECRUITING', 'FORMED'].includes(activity.status)
@@ -686,6 +689,8 @@ function publicActivityQuestion(question) {
 }
 
 function publicActivity(activity, options = {}) {
+  // Normalize legacy capacity even for callers that bypass the public list/detail readers.
+  activity = normalizeActivityForRead(activity);
   const anonymous = options && options.anonymous === true;
   const viewerApplication = anonymous
     ? null
@@ -708,6 +713,7 @@ function publicActivity(activity, options = {}) {
     type: LEGACY_ACTIVITY_TYPE_MAP[storedType] || storedType,
     minMembers: activity.minMembers || activity.minPassengers || Math.min(2, capacity),
     maxMembers: capacity,
+    avatarSlots: publicAvatarSlots(avatarRoster, capacity),
     remainingCapacity: Math.max(0, Number(capacity) - Number(activity.memberCount || 0)),
     status: activity.status,
     viewerRole
@@ -943,8 +949,10 @@ function createActivity(input) {
     userId: user.id,
     role: 'OWNER',
     status: 'ACTIVE',
+    avatarKind: avatarKindFromGender(user.profile.gender),
     joinedAt: now
   };
+  activity.avatarRoster = upsertAvatarRoster([], ownerMember.id, ownerMember.avatarKind);
   state.members.push(ownerMember);
   return { activity: publicActivity(activity) };
 }
@@ -1115,16 +1123,20 @@ function approveApplication(input) {
     '行程当前不可继续批准乘客'
   );
   assert(application.status === 'PENDING', 'CONFLICT', '该申请已处理');
-  const capacity = activity.type === 'ride' ? 7 : activity.targetMembers;
+  const capacity = activity.type === 'ride' ? 7 : (activity.maxMembers || activity.targetMembers);
   assert(activity.memberCount < capacity, 'CAPACITY_FULL', '名额已满');
   application.status = 'APPROVED';
   application.approvedAt = now;
   application.updatedAt = now;
-  state.members.push({ id: nextId('member'), activityId: activity.id, userId: application.applicantId, role: 'MEMBER', status: 'ACTIVE', joinedAt: now });
+  const applicant = state.users.find((item) => item.id === application.applicantId);
+  const member = { id: nextId('member'), activityId: activity.id, userId: application.applicantId, role: 'MEMBER', status: 'ACTIVE', joinedAt: now,
+    avatarKind: avatarKindFromGender(applicant && applicant.profile && applicant.profile.gender) };
+  state.members.push(member);
+  activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
   activity.memberCount += 1;
   activity.version += 1;
   activity.updatedAt = now;
-  const justFormed = activity.status === 'RECRUITING' && activity.memberCount >= (activity.type === 'ride' ? 7 : activity.targetMembers);
+  const justFormed = activity.status === 'RECRUITING' && activity.memberCount >= (activity.type === 'ride' ? 7 : (activity.minMembers || activity.targetMembers));
   if (justFormed) {
     activity.status = 'FORMED';
     activity.formedAt = now;
@@ -1164,7 +1176,7 @@ function handle(action, input, idempotencyKey = '') {
     const avatarKind = avatarKindFromGender(input.gender);
     state.members.filter((member) => member.userId === user.id && member.status === 'ACTIVE').forEach((member) => {
       const activity = activityById(member.activityId);
-      if (activity && activity.type === 'ride' && ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status)) {
+      if (activity && ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status)) {
         member.avatarKind = avatarKind;
         member.updatedAt = new Date().toISOString();
         activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
@@ -1623,11 +1635,9 @@ function handle(action, input, idempotencyKey = '') {
     member.leftAt = now;
     const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
     if (contact) Object.assign(contact, { status: 'INACTIVE', updatedAt: now });
-    if (activity.type === 'ride') {
-      activity.avatarRoster = normalizeAvatarRoster(activity.avatarRoster).filter((item) => item.memberId !== member.id);
-    }
+    activity.avatarRoster = normalizeAvatarRoster(activity.avatarRoster).filter((item) => item.memberId !== member.id);
     activity.memberCount = Math.max(1, activity.memberCount - 1);
-    if (activity.status === 'FORMED' && activity.memberCount < (activity.minPassengers || activity.targetMembers)) {
+    if (activity.status === 'FORMED' && activity.memberCount < (activity.minMembers || activity.minPassengers || activity.targetMembers)) {
       activity.status = 'RECRUITING';
       delete activity.formedAt;
     }

@@ -1,0 +1,12 @@
+{
+  "id": "restore-avatar-capacity-progress",
+  "title": "恢复发现卡真实用户头像与人数进度",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "代码实现及分域复审通过，归档提交；真机视觉、真实CloudBase集成验收与部署留待后续执行",
+  "createdAt": "2026-09-04T12:00:00.000Z",
+  "branch": "main"
+}

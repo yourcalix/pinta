@@ -43,6 +43,7 @@ const {
 } = require('./ride-policy');
 const {
   upsertAvatarRoster,
+  avatarKindFromGender,
   removeAvatarRosterMember
 } = require('./passenger-avatar');
 
@@ -173,11 +174,11 @@ class CloudStore {
         const member = await getTransactionDocument(memberRef);
         const activity = await getTransactionDocument(activityRef);
         if (!member || member.userId !== actorId || member.status !== MEMBER_STATUS.ACTIVE) return;
-        if (!activity || activity.type !== 'ride') return;
+        if (!activity) return;
         if (![ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)) return;
         const avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
         await memberRef.update({ data: { avatarKind, updatedAt: at } });
-        await activityRef.update({ data: { avatarRoster } });
+        await activityRef.update({ data: { avatarRoster, updatedAt: at } });
       });
     }
   }
@@ -360,6 +361,7 @@ class CloudStore {
   }
 
   async createActivityWithOwner(activity, ownerMember, rideFulfillment = null, ownerContact = null) {
+    activity = { ...activity, avatarRoster: upsertAvatarRoster(activity.avatarRoster, ownerMember.id, ownerMember.avatarKind) };
     if (activity.type === 'ride') {
       invariant(MEMBER_LUGGAGE_TYPES.includes(ownerMember.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
     }
@@ -854,6 +856,8 @@ class CloudStore {
       invariant(!duplicateMember || duplicateMember.status !== MEMBER_STATUS.ACTIVE, 'CONFLICT', '申请人已经是活动成员');
 
       const nextCount = effectiveActivity.memberCount + 1;
+      const applicant = await getTransactionDocument(transaction.collection('users').doc(application.applicantId));
+      const avatarKind = avatarKindFromGender(applicant && applicant.profile && applicant.profile.gender);
       const threshold = effectiveActivity.type === 'ride'
         ? rideThreshold(effectiveActivity)
         : (effectiveActivity.minMembers || effectiveActivity.minPassengers || effectiveActivity.targetMembers);
@@ -862,6 +866,7 @@ class CloudStore {
       const nextActivity = {
         ...effectiveActivity,
         memberCount: nextCount,
+        avatarRoster: upsertAvatarRoster(effectiveActivity.avatarRoster, stableMemberId, avatarKind),
         status: formed ? ACTIVITY_STATUS.FORMED : effectiveActivity.status,
         formedAt: formed ? effectiveActivity.formedAt || at : effectiveActivity.formedAt,
         version: effectiveActivity.version + 1,
@@ -875,11 +880,13 @@ class CloudStore {
         userId: application.applicantId,
         role: 'MEMBER',
         status: MEMBER_STATUS.ACTIVE,
+        avatarKind,
         joinedAt: at
       };
       await transaction.collection('activities').doc(activityId).update({
         data: {
           memberCount: nextCount,
+          avatarRoster: nextActivity.avatarRoster,
           status: nextActivity.status,
           formedAt: nextActivity.formedAt || this.command.remove(),
           version: nextActivity.version,
@@ -989,7 +996,8 @@ class CloudStore {
       const nextStatus = activity.status === ACTIVITY_STATUS.FORMED && nextCount < threshold
         ? ACTIVITY_STATUS.RECRUITING
         : activity.status;
-      const nextActivity = { ...effectiveActivity, memberCount: nextCount, status: nextStatus };
+      const nextActivity = { ...effectiveActivity, memberCount: nextCount, status: nextStatus,
+        avatarRoster: removeAvatarRosterMember(activity.avatarRoster, member.id) };
       const rideJoinable = activity.type === 'ride' && isRideJoinable(nextActivity, at);
       const contactId = stableEntityId('memberContact', activityId, member.id);
       const contact = await getTransactionDocument(transaction.collection('memberContacts').doc(contactId));
@@ -1009,12 +1017,12 @@ class CloudStore {
         data: {
           memberCount: nextCount,
           status: nextStatus,
+          avatarRoster: nextActivity.avatarRoster,
           formedAt: nextStatus === ACTIVITY_STATUS.RECRUITING ? this.command.remove() : activity.formedAt,
           ...(activity.type === 'ride'
             ? {
                 rideFulfillment: effectiveActivity.rideFulfillment,
-                rideJoinable,
-                avatarRoster: removeAvatarRosterMember(activity.avatarRoster, member.id)
+                rideJoinable
               }
             : {}),
           version: activity.version + 1,

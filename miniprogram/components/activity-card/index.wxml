@@ -14,7 +14,13 @@
       <view class="meta-item"><text class="meta-icon" aria-hidden="true">⌖</text><text class="meta-text meta-text--place">{{item.sceneLine}}</text></view>
     </view>
     <view class="card-footer">
-      <view class="owner-line"><view class="owner-avatar" aria-hidden="true">{{item.ownerInitial}}</view><text class="owner-name">{{item.ownerNickname}}</text></view>
+      <view class="member-avatar-group" aria-hidden="true">
+        <view wx:for="{{item.visibleAvatarSlots}}" wx:for-item="slot" wx:key="id" class="member-avatar-slot member-avatar-slot--{{slot.empty ? 'empty' : 'filled'}}" style="animation-delay: {{slot.delay}}ms; z-index: {{slot.layer}};">
+          <text wx:if="{{slot.empty}}">·</text>
+          <image wx:else src="{{slot.src}}" mode="aspectFit" aria-hidden="true" />
+        </view>
+        <text wx:if="{{item.hiddenMemberCount > 0}}" class="member-avatar-more">+{{item.hiddenMemberCount}}</text>
+      </view>
       <view class="capacity-link"><text>{{item.capacityLabel}}</text><text class="capacity-arrow" aria-hidden="true">›</text></view>
     </view>
   </view>

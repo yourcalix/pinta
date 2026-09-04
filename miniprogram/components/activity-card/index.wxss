@@ -209,10 +209,15 @@
 .activity-card--discover .capacity-link {
   margin-left: auto;
   font-size: 24rpx;
-  transform-origin: right center;
-  animation: capacity-progress-enter 560ms cubic-bezier(0.2, 0.8, 0.2, 1) 180ms both;
+  white-space: nowrap;
 }
-.activity-card--discover .capacity-arrow { animation: capacity-arrow-nudge 700ms ease-out 300ms both; }
+.member-avatar-group { display: flex; align-items: center; flex-shrink: 0; pointer-events: none; }
+.member-avatar-slot { display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 36rpx; height: 36rpx; border: 2rpx solid #fff8ee; border-radius: 50%; background: #fff8ee; }
+.member-avatar-slot + .member-avatar-slot { margin-left: -10rpx; }
+.member-avatar-slot image { width: 100%; height: 100%; }
+.member-avatar-slot--empty { border: 2rpx dashed #c7beaf; background: #eee8dd; color: #807867; }
+.member-avatar-slot--filled { animation: member-avatar-enter 220ms ease-out both; }
+.member-avatar-more { margin-left: 6rpx; color: #596975; font-size: 24rpx; white-space: nowrap; }
 .activity-card--discover.activity-card--large-text { align-items: flex-start; }
 .activity-card--large-text .activity-title { display: block; -webkit-line-clamp: unset; overflow: visible; }
 .activity-card--large-text .meta-text--place { white-space: normal; overflow: visible; }
@@ -222,19 +227,15 @@
   .activity-card--discover { gap: 16rpx; padding: 16rpx; }
   .card-cover { flex-basis: 170rpx; width: 170rpx; height: 230rpx; }
   .activity-card--discover .activity-title { font-size: 30rpx; }
+  .member-avatar-slot { width: 30rpx; height: 30rpx; }
+  .member-avatar-slot + .member-avatar-slot { margin-left: -8rpx; }
 }
 
-@keyframes capacity-progress-enter {
-  0% { opacity: 0.5; transform: translateY(4rpx) scale(0.94); }
-  68% { opacity: 1; transform: translateY(-1rpx) scale(1.04); }
-  100% { opacity: 1; transform: none; }
-}
-@keyframes capacity-arrow-nudge {
-  0%, 52%, 100% { transform: translateX(0); }
-  76% { transform: translateX(4rpx); }
+@keyframes member-avatar-enter {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .activity-card--discover .capacity-link,
-  .activity-card--discover .capacity-arrow { animation: none; }
+  .member-avatar-slot--filled { animation: none; }
 }

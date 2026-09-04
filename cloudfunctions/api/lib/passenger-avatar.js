@@ -1,6 +1,7 @@
 'use strict';
 
-const { USER_GENDERS, PASSENGER_AVATAR_KINDS, RIDE_MAX_PASSENGERS } = require('./constants');
+const { USER_GENDERS, PASSENGER_AVATAR_KINDS } = require('./constants');
+const ACTIVITY_AVATAR_LIMIT = 20;
 
 const EMPTY_AVATAR_KIND = 'EMPTY';
 
@@ -24,7 +25,7 @@ function normalizeAvatarRoster(roster) {
     if (seen.has(item.memberId)) return false;
     seen.add(item.memberId);
     return true;
-  }).slice(0, RIDE_MAX_PASSENGERS).map((item) => ({
+  }).slice(0, ACTIVITY_AVATAR_LIMIT).map((item) => ({
     memberId: item.memberId,
     avatarKind: item.avatarKind
   }));
@@ -35,7 +36,7 @@ function upsertAvatarRoster(roster, memberId, avatarKind) {
   const next = normalizeAvatarRoster(roster);
   const existing = next.find((item) => item.memberId === memberId);
   if (existing) existing.avatarKind = avatarKind;
-  else if (next.length < RIDE_MAX_PASSENGERS) next.push({ memberId, avatarKind });
+  else if (next.length < ACTIVITY_AVATAR_LIMIT) next.push({ memberId, avatarKind });
   return next;
 }
 
@@ -43,8 +44,8 @@ function removeAvatarRosterMember(roster, memberId) {
   return normalizeAvatarRoster(roster).filter((item) => item.memberId !== memberId);
 }
 
-function publicAvatarSlots(roster, capacity = RIDE_MAX_PASSENGERS) {
-  const total = Math.max(1, Math.min(RIDE_MAX_PASSENGERS, Number(capacity) || RIDE_MAX_PASSENGERS));
+function publicAvatarSlots(roster, capacity = 7) {
+  const total = Math.max(1, Math.min(ACTIVITY_AVATAR_LIMIT, Math.floor(Number(capacity)) || 7));
   const kinds = normalizeAvatarRoster(roster).map((item) => item.avatarKind).slice(0, total);
   while (kinds.length < total) kinds.push(EMPTY_AVATAR_KIND);
   return kinds.map((kind) => ({ kind }));

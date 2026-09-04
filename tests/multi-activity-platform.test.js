@@ -57,7 +57,7 @@ test('新活动不接收司机、车辆或公开联系方式字段', () => {
 });
 
 test('普通成年用户无需学生认证即可创建、申请和使用成员空间', async () => {
-  const users = ['owner', 'member'].map((id) => ({ id, role: 'user', status: 'ACTIVE', profile: { nickname: `${id}用户`, gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } }));
+  const users = ['owner', 'member'].map((id) => ({ id, role: 'user', status: 'ACTIVE', profile: { nickname: `${id}用户`, gender: id === 'owner' ? 'MALE' : 'FEMALE', city: '澳门', interests: [], adultConfirmed: true } }));
   const store = new MemoryStore({ users });
   const service = createPinbaService({ store, clock: () => new Date(NOW) });
   let request = 0;
@@ -66,6 +66,8 @@ test('普通成年用户无需学生认证即可创建、申请和使用成员�
   assert.equal(created.ok, true);
   assert.equal(created.data.activity.type, 'sport');
   assert.equal(created.data.activity.maxMembers, 4);
+  assert.deepEqual(created.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'EMPTY', 'EMPTY', 'EMPTY']);
+  assert.equal(JSON.stringify(created.data.activity.avatarSlots).includes('member'), false);
   const applied = await call('application.submit', { activityId: created.data.activity.id, note: '我可以准时到', autoJoinConsent: true }, 'member', 'apply-sport-001');
   assert.equal(applied.ok, true);
 
@@ -83,6 +85,7 @@ test('普通成年用户无需学生认证即可创建、申请和使用成员�
   }, 'owner', 'approve-sport-001');
   assert.equal(approved.ok, true);
   assert.equal(approved.data.activity.status, 'FORMED');
+  assert.deepEqual(approved.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'PASSENGER_B', 'EMPTY', 'EMPTY']);
 
   const shared = await call('group.contact.share', {
     activityId: created.data.activity.id,
@@ -95,6 +98,29 @@ test('普通成年用户无需学生认证即可创建、申请和使用成员�
   const revoked = await call('group.contact.revoke', { activityId: created.data.activity.id }, 'member', 'revoke-contact-001');
   assert.equal(revoked.ok, true);
   assert.equal(revoked.data.members.find((item) => item.isSelf).sharedContact, null);
+
+  await store.syncUserAvatarKind('member', 'PASSENGER_A', NOW.toISOString());
+  const refreshed = await call('activity.detail', { activityId: created.data.activity.id }, 'owner');
+  assert.deepEqual(refreshed.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'PASSENGER_A', 'EMPTY', 'EMPTY']);
+
+  const left = await call('member.leave', { activityId: created.data.activity.id, reason: '临时有事' }, 'member', 'leave-sport-001');
+  assert.equal(left.ok, true);
+  assert.deepEqual(left.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'EMPTY', 'EMPTY', 'EMPTY']);
+});
+
+test('历史活动缺少头像名册时保留真实人数但只返回空头像槽', async () => {
+  const activity = {
+    id: 'legacy-food-no-roster', ownerId: 'owner', owner: { nickname: '发起者' }, type: 'food',
+    title: '一起吃饭', description: '历史活动', city: '澳门', district: '澳门城区', placeLabel: '餐厅',
+    startsAt: '2026-08-24T02:00:00.000Z', deadlineAt: '2026-08-23T14:00:00.000Z',
+    minMembers: 2, maxMembers: 5, memberCount: 3, status: 'FORMED', rules: '', typeData: {},
+    version: 1, createdAt: NOW.toISOString(), updatedAt: NOW.toISOString()
+  };
+  const service = createPinbaService({ store: new MemoryStore({ activities: [activity] }), clock: () => new Date(NOW) });
+  const result = await service.execute({ action: 'activity.detail', data: { activityId: activity.id }, requestId: 'legacy-roster-detail' }, {});
+  assert.equal(result.ok, true);
+  assert.equal(result.data.activity.memberCount, 3);
+  assert.deepEqual(result.data.activity.avatarSlots.map((slot) => slot.kind), ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY']);
 });
 
 test('旧学生认证接口明确下线且当前服务不再需要学生认证存储', async () => {

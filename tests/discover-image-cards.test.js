@@ -77,10 +77,14 @@ test('发现启用图文变体与骨架，我的保持默认，图片区懒加�
   assert.match(read('components/activity-card/index.wxss'), /\.activity-card--discover/);
 });
 
-test('发现卡人数进度只播放一次轻量入场动效且支持减少动态效果', () => {
+test('发现卡恢复真实头像槽位、折叠容量与一次性成员入场动效', () => {
+  const template = read('components/activity-card/index.wxml');
   const style = read('components/activity-card/index.wxss');
-  assert.match(style, /\.activity-card--discover \.capacity-link\s*\{[^}]*animation:\s*capacity-progress-enter[^;}]*;/s);
-  assert.match(style, /\.activity-card--discover \.capacity-arrow\s*\{[^}]*animation:\s*capacity-arrow-nudge[^;}]*;/s);
-  assert.doesNotMatch(style, /capacity-(?:progress-enter|arrow-nudge)[^;]*infinite/);
+  assert.match(template, /wx:for="\{\{item\.visibleAvatarSlots\}\}"/);
+  assert.match(template, /class="member-avatar-slot[^\"]*member-avatar-slot--\{\{slot\.empty \? 'empty' : 'filled'\}\}/);
+  assert.match(template, /wx:if="\{\{item\.hiddenMemberCount > 0\}\}"[^>]*>\+\{\{item\.hiddenMemberCount\}\}/);
+  assert.doesNotMatch(template.split('<view wx:elif')[0], /class="owner-line"/);
+  assert.match(style, /@keyframes member-avatar-enter/);
+  assert.doesNotMatch(style, /capacity-progress-enter|capacity-arrow-nudge/);
   assert.match(style, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none;/);
 });

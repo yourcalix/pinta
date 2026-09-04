@@ -2,10 +2,11 @@
 
 const {
   ACTIVITY_STATUS,
-  RIDE_FULFILLMENT_STATUS,
-  RIDE_MIN_PASSENGERS,
-  RIDE_MAX_PASSENGERS
+  RIDE_FULFILLMENT_STATUS
 } = require('./constants');
+// Legacy ride records remain read-only and retain their original seven-seat capacity.
+const RIDE_MIN_PASSENGERS = 7;
+const RIDE_MAX_PASSENGERS = 7;
 
 const ACTIVE_RIDE_STATUSES = new Set([
   ACTIVITY_STATUS.RECRUITING,
@@ -80,6 +81,8 @@ function normalizeRideCapacity(activity) {
   const next = {
     ...activity,
     targetMembers: RIDE_MIN_PASSENGERS,
+    minMembers: RIDE_MIN_PASSENGERS,
+    maxMembers: RIDE_MAX_PASSENGERS,
     minPassengers: RIDE_MIN_PASSENGERS,
     maxPassengers: RIDE_MAX_PASSENGERS
   };

@@ -44,6 +44,7 @@ const {
 } = require('./ride-policy');
 const {
   upsertAvatarRoster,
+  avatarKindFromGender,
   removeAvatarRosterMember
 } = require('./passenger-avatar');
 
@@ -124,7 +125,7 @@ class MemoryStore {
     for (const member of this.members.values()) {
       if (member.userId !== actorId || member.status !== MEMBER_STATUS.ACTIVE) continue;
       const activity = this.activities.get(member.activityId);
-      if (activity && activity.type === 'ride' && [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)) {
+      if (activity && [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED, ACTIVITY_STATUS.IN_PROGRESS].includes(activity.status)) {
         member.avatarKind = avatarKind;
         member.updatedAt = at;
         activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
@@ -263,6 +264,7 @@ class MemoryStore {
       invariant(existing.operationKeyHash === activity.operationKeyHash, 'CONFLICT', '幂等键已用于其他活动');
       return clone(existing);
     }
+    activity = { ...activity, avatarRoster: upsertAvatarRoster(activity.avatarRoster, ownerMember.id, ownerMember.avatarKind) };
     this.activities.set(activity.id, clone(activity));
     this.members.set(ownerMember.id, clone(ownerMember));
     if (ownerContact) this.memberContacts.set(ownerContact.id, clone(ownerContact));
@@ -617,9 +619,11 @@ class MemoryStore {
       userId: application.applicantId,
       role: 'MEMBER',
       status: MEMBER_STATUS.ACTIVE,
+      avatarKind: avatarKindFromGender((this.users.get(application.applicantId) || {}).profile?.gender),
       joinedAt: at
     };
     this.members.set(member.id, member);
+    activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
     activity.memberCount += 1;
     if (activity.type === 'ride') activity.rideFulfillment = effectiveActivity.rideFulfillment;
     activity.version += 1;
@@ -711,8 +715,8 @@ class MemoryStore {
     if (activity.type === 'ride') {
       activity.rideFulfillment = effectiveActivity.rideFulfillment;
       activity.rideJoinable = isRideJoinable(activity, at);
-      activity.avatarRoster = removeAvatarRosterMember(activity.avatarRoster, member.id);
     }
+    activity.avatarRoster = removeAvatarRosterMember(activity.avatarRoster, member.id);
     for (const item of this.applications.values()) {
       if (item.activityId === activityId && item.applicantId === actorId && item.status === APPLICATION_STATUS.APPROVED) {
         item.status = APPLICATION_STATUS.LEFT;

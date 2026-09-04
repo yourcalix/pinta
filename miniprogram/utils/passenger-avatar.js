@@ -29,7 +29,7 @@ function profileAvatarPath(gender) {
 }
 
 function normalizeAvatarSlots(slots, total = 7) {
-  const safeTotal = Math.max(1, Math.min(7, Number(total) || 7));
+  const safeTotal = Math.max(1, Math.min(20, Math.floor(Number(total)) || 7));
   const source = Array.isArray(slots) ? slots : [];
   return Array.from({ length: safeTotal }, (_, index) => {
     const raw = source[index] || {};

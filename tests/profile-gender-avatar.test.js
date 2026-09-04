@@ -18,6 +18,20 @@ const {
 } = require('../miniprogram/utils/passenger-avatar');
 
 const ROOT = path.join(__dirname, '..');
+const { decorateActivity } = require('../miniprogram/utils/display');
+
+test('卡片按容量折叠真实头像，未知历史人数不生成头像或加号', () => {
+  for (const [capacity, visible] of [[2, 2], [4, 4], [5, 3], [7, 3], [8, 2], [20, 2]]) {
+    const base = { type: 'sport', status: 'RECRUITING', maxMembers: capacity, memberCount: capacity };
+    const full = decorateActivity({ ...base, avatarSlots: Array.from({ length: capacity }, () => ({ kind: 'PASSENGER_A' })) });
+    assert.equal(full.visibleAvatarSlots.length, visible);
+    assert.equal(full.hiddenMemberCount, capacity - visible);
+    const legacy = decorateActivity(base);
+    assert.ok(legacy.visibleAvatarSlots.every((slot) => slot.empty));
+    assert.equal(legacy.hiddenMemberCount, 0);
+    assert.equal(legacy.memberCount, capacity);
+  }
+});
 
 test('个人资料强制选择男或女且只映射为受控头像类型', () => {
   const base = { nickname: '测试用户', city: '澳门', interests: [], adultConfirmed: true };
@@ -29,7 +43,7 @@ test('个人资料强制选择男或女且只映射为受控头像类型', () =>
   assert.equal(avatarKindFromGender('UNKNOWN'), null);
 });
 
-test.skip('旧固定七人拼车头像槽位工具已退出新活动主链路', () => {
+test('活动头像名册只公开受控头像类型并支持最多二十人容量', () => {
   let roster = upsertAvatarRoster([], 'member-owner', 'PASSENGER_A');
   roster = upsertAvatarRoster(roster, 'member-guest', 'PASSENGER_B');
   const slots = publicAvatarSlots(roster, 7);
@@ -41,6 +55,9 @@ test.skip('旧固定七人拼车头像槽位工具已退出新活动主链路', 
   assert.deepEqual(removeAvatarRosterMember(roster, 'member-owner'), [
     { memberId: 'member-guest', avatarKind: 'PASSENGER_B' }
   ]);
+  const largeSlots = publicAvatarSlots(roster, 20);
+  assert.equal(largeSlots.length, 20);
+  assert.equal(largeSlots[19].kind, 'EMPTY');
 });
 
 test('前端未知头像一律降级为空位且资料头像按性别自动对应', () => {
@@ -52,6 +69,7 @@ test('前端未知头像一律降级为空位且资料头像按性别自动对�
   assert.equal(slots[0].empty, false);
   assert.equal(slots[1].kind, 'EMPTY');
   assert.equal(slots[6].kind, 'EMPTY');
+  assert.equal(normalizeAvatarSlots([], 20).length, 20);
 });
 
 test('资料页和我的页面使用真实性别选择与头像映射而非演示身份猜测', () => {
