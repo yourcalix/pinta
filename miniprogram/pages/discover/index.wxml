@@ -23,7 +23,10 @@
 
     <scroll-view class="filter-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" role="tablist" aria-label="选择拼单类型">
       <view class="filter-track">
-        <button wx:for="{{typeOptions}}" wx:key="value" class="filter-chip filter-chip--{{item.value || 'all'}} {{type === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">{{item.label}}</button>
+        <button wx:for="{{typeOptions}}" wx:key="value" class="filter-chip filter-chip--{{item.value || 'all'}} {{type === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">
+          <view class="chip-icon-box" aria-hidden="true"><image class="chip-icon-img" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" /></view>
+          <text class="chip-label">{{item.label}}</text>
+        </button>
       </view>
     </scroll-view>
 

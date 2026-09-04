@@ -1,0 +1,5 @@
+{"path":"miniprogram/pages/discover/index.js","reason":"类型筛选项数据定义"}
+{"path":"miniprogram/pages/discover/index.wxml","reason":"筛选Chip模板"}
+{"path":"miniprogram/pages/discover/index.wxss","reason":"筛选Chip布局与选中态"}
+{"path":"tests/discover-image-cards.test.js","reason":"现有发现页资源预算与图像测试模式"}
+{"path":"/Users/cx/Desktop/pinba/模块图标","reason":"用户提供的四张源图"}

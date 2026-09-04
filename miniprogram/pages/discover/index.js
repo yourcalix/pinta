@@ -31,10 +31,10 @@ function hasActiveFilters(filters) {
 Page({
   data: {
     typeOptions: [
-      { value: '', label: '全部' },
-      { value: 'companion', label: '拼同行' },
-      { value: 'sport', label: '拼运动' },
-      { value: 'food', label: '拼饭桌' }
+      { value: '', label: '全部', iconSrc: '/assets/images/discover/filter-all.png' },
+      { value: 'companion', label: '拼同行', iconSrc: '/assets/images/discover/filter-companion.png' },
+      { value: 'sport', label: '拼运动', iconSrc: '/assets/images/discover/filter-sport.png' },
+      { value: 'food', label: '拼饭桌', iconSrc: '/assets/images/discover/filter-food.png' }
     ],
     type: '',
     keyword: '',

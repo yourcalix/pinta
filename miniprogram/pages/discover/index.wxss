@@ -165,6 +165,7 @@
 .filter-track {
   display: inline-flex;
   min-width: 100%;
+  align-items: center;
   gap: 14rpx;
   padding-right: 28rpx;
 }
@@ -174,10 +175,11 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  min-width: 136rpx;
-  min-height: 72rpx;
+  box-sizing: border-box;
+  min-width: 144rpx;
+  min-height: 88rpx;
   margin: 0;
-  padding: 12rpx 24rpx;
+  padding: 10rpx 20rpx 10rpx 14rpx;
   color: #193755;
   background: #fff8ee;
   border: 3rpx solid rgba(255, 240, 201, 0.9);
@@ -188,12 +190,42 @@
   white-space: nowrap;
 }
 
+.chip-icon-box {
+  display: flex;
+  flex: 0 0 36rpx;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 10rpx;
+  overflow: hidden;
+  background: #fff;
+  border: 2rpx solid #eadbce;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.chip-icon-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.chip-label { pointer-events: none; }
+
 .filter-chip--active {
   color: #fff8ee;
   background: #0b9a66;
   border-color: #69d69f;
   box-shadow: 0 6rpx 0 rgba(3, 73, 59, 0.34);
   font-weight: 700;
+}
+
+.filter-chip--active .chip-icon-box {
+  border-color: rgba(255, 248, 238, 0.7);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.12);
 }
 
 .filter-chip--companion.filter-chip--active { background: #167fb1; border-color: #6ec6da; }
@@ -335,7 +367,9 @@
   .search-row { padding-left: 16rpx; }
   .search-submit-button { min-width: 78rpx; }
   .filter-scroll { width: calc(100% + 22rpx); }
-  .filter-chip { min-width: 124rpx; padding-right: 20rpx; padding-left: 20rpx; }
+  .filter-track { gap: 10rpx; }
+  .filter-chip { min-width: 128rpx; padding: 8rpx 16rpx 8rpx 12rpx; font-size: 23rpx; }
+  .chip-icon-box { flex-basis: 32rpx; width: 32rpx; height: 32rpx; margin-right: 8rpx; }
 }
 
 @keyframes footer-spin { to { transform: rotate(360deg); } }

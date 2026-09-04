@@ -1,0 +1,12 @@
+{
+  "id": "add-discover-filter-icons",
+  "title": "为发现页类型筛选加入模块图标",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-04T08:30:00.000Z",
+  "branch": "main"
+}
