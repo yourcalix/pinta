@@ -62,10 +62,10 @@ npm run verify
 
 1. 使用被 Git 忽略的 `project.private.config.json` 配置真实小程序 AppID，公共 `project.config.json` 继续保留 `touristappid`。
 2. 在微信开发者工具中开通云开发环境。G1 联调时再通过不进入版本控制的本地配置或已选默认环境指定环境 ID；当前仓库中的 `cloudEnv` 保持空值。
-3. 创建集合：`users`、`activities`、`applications`、`members`、`memberContacts`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`、`communityPosts`、`communityReplies`、`communityLikes`、`communityRateLimits`、`directConversations`、`directMessages`。
+3. 创建集合：`users`、`activities`、`applications`、`members`、`memberContacts`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`、`profileAvatarUploads`、`communityPosts`、`communityReplies`、`communityLikes`、`communityRateLimits`、`directConversations`、`directMessages`。
    当前 MVP 使用确定性文档 ID 保障并发和幂等，正式环境应使用新建空库初始化，不要与采用随机成员/申请 ID 的旧版数据混用。
 4. 将数据库集合权限设为“所有用户不可直接读写”，业务数据只允许通过 `cloudfunctions/api` 云函数访问。`driverSecrets`、`driverApplications`、`driverDocumentUploads`、`drivers` 和 `vehicles` 不得开放客户端直读。
-5. 将 `private-driver/**` 与 `private-driver-sealed/**` 配置为私有云存储路径：客户端仅可向后端签发的临时 staging 路径上传，单文件上限 5MB；禁止列目录、覆盖 sealed 路径或直接下载。服务端确认 JPEG/PNG 内容后会迁移到随机 sealed 路径并删除 staging 文件。
+5. 将 `private-driver/**`、`private-driver-sealed/**`、`private-profile-avatar-temp/**` 与 `private-profile-avatar/**` 配置为私有云存储路径：客户端仅可向后端签发的临时 staging 路径上传；司机资料单文件上限 5MB，头像单文件上限 1MB。禁止列目录、覆盖最终私有路径或直接下载。服务端确认 JPEG/PNG 内容与安全审核结果后迁移到随机最终路径并删除 staging 文件。
 6. 在 `cloudfunctions/api` 安装依赖并上传部署，云端安装即可：
 
    ```bash
@@ -80,7 +80,7 @@ npm run verify
 
    生产环境不要设置 `ENABLE_DEV_DRIVER_REVIEW=true`；司机审核应接入独立运营后台。
 
-8. 部署每日敏感资料清理任务：删除已过期 `PREPARED` staging 文件，并在 `retentionUntil` 到期后删除 `RETENTION_PENDING` 的 sealed 文件与 `driverSecrets`；清理动作必须写审计且可幂等重试。
+8. 部署每日敏感资料清理任务：删除已过期的司机资料与头像 `PREPARED` staging 文件，并在 `retentionUntil` 到期后删除 `RETENTION_PENDING` 的 sealed 文件与 `driverSecrets`；清理动作必须写审计且可幂等重试。
 9. 在隐私保护指引中单独说明司机实名、驾驶证、车辆照片的用途、保存期限、撤回方式和删除渠道，并完成真实 AppID 真机验证。
 10. G1 建立本地环境配置后将 `useMock` 切换为 `false`；不要把真实环境 ID、密钥或订阅模板 ID 提交到仓库。
 

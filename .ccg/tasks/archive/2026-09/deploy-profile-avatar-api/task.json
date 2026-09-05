@@ -1,0 +1,12 @@
+{
+  "id": "deploy-profile-avatar-api",
+  "title": "部署支持自定义头像上传的 api 云函数",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档部署记录",
+  "createdAt": "2026-09-05T20:40:00+08:00",
+  "branch": "main"
+}
