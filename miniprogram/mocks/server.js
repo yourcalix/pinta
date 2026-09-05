@@ -833,6 +833,20 @@ function normalizedContent(value, field, min, max) {
   return content;
 }
 
+function optionalNormalizedContent(value, field, max) {
+  const content = typeof value === 'string' ? value.trim() : '';
+  assert(content.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`);
+  return content;
+}
+
+function requiredNormalizedContent(value, field, min, max) {
+  const content = typeof value === 'string' ? value.trim() : '';
+  assert(content.length > 0, 'VALIDATION_ERROR', `${field}不能为空`);
+  assert(content.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`);
+  assert(content.length >= min, 'VALIDATION_ERROR', `${field}至少需要${min}个字符`);
+  return content;
+}
+
 function validatedId(value, field) {
   const id = typeof value === 'string' ? value.trim() : '';
   assert(id.length >= 1 && id.length <= 80, 'VALIDATION_ERROR', `${field}格式无效`);
@@ -983,8 +997,8 @@ function createActivity(input) {
   const now = new Date().toISOString();
   const activityInput = clone(input);
   assert(ACTIVITY_TYPES.includes(activityInput.type), 'VALIDATION_ERROR', '活动类型选项无效');
-  assert(normalizedContent(activityInput.title, '标题', 2, 40), 'VALIDATION_ERROR', '标题格式无效');
-  assert(normalizedContent(activityInput.description, '活动说明', 2, 500), 'VALIDATION_ERROR', '活动说明格式无效');
+  activityInput.title = requiredNormalizedContent(activityInput.title, '标题', 2, 30);
+  activityInput.description = optionalNormalizedContent(activityInput.description, '补充说明', 300);
   const startsAt = Date.parse(activityInput.startsAt);
   const deadlineAt = Date.parse(activityInput.deadlineAt);
   assert(Number.isFinite(startsAt) && startsAt > Date.parse(now), 'VALIDATION_ERROR', '活动时间必须晚于当前时间');

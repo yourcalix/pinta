@@ -1,0 +1,12 @@
+{
+  "id": "fix-activity-description-validation",
+  "title": "修复发布活动时活动说明长度校验异常",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-05T00:00:00+08:00",
+  "branch": "main"
+}
