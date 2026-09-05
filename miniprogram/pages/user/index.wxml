@@ -19,8 +19,8 @@
     <view class="profile-stage" style="padding-top: {{contentTopInset}}px;" role="region" aria-label="个人主页，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
       <view class="profile-atmosphere" aria-hidden="true">
         <view class="profile-atmosphere-base"></view>
-        <image class="profile-atmosphere-image" src="{{profileAvatarPath}}" mode="aspectFill" aria-hidden="true" />
-        <view class="profile-atmosphere-shade"></view>
+        <image class="profile-atmosphere-image {{profileCoverUsesAvatar ? 'profile-atmosphere-image--avatar' : 'profile-atmosphere-image--seascape'}}" src="{{profileCoverPath}}" mode="aspectFill" aria-hidden="true" />
+        <view class="profile-atmosphere-shade {{profileCoverUsesAvatar ? '' : 'profile-atmosphere-shade--seascape'}}"></view>
       </view>
 
       <view class="profile-stage-content">

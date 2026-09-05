@@ -56,6 +56,7 @@ page {
 
 .profile-nav-back::after,
 .adult-row::after,
+.cover-row::after,
 .save-button::after {
   display: none;
 }
@@ -159,6 +160,10 @@ page {
   box-shadow: inset 0 -3rpx 0 #e45858;
 }
 
+.profile-row--pressed {
+  background: #f3f4f6;
+}
+
 .row-label {
   flex: 0 0 auto;
   color: #17191c;
@@ -238,6 +243,27 @@ page {
 
 .adult-row--confirmed .adult-checkmark {
   background: #16a36a;
+}
+
+.cover-row {
+  min-height: 104rpx;
+  border-radius: 0;
+}
+
+.cover-thumbnail {
+  width: 52rpx;
+  height: 52rpx;
+  flex: 0 0 52rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 12rpx;
+}
+
+.cover-thumbnail--avatar {
+  filter: blur(2px);
+}
+
+.cover-label {
+  flex: 0 1 auto;
 }
 
 .preference-card {
@@ -375,6 +401,13 @@ page {
   .profile-row {
     min-height: 96rpx;
     gap: 16rpx;
+  }
+
+  .cover-thumbnail {
+    width: 46rpx;
+    height: 46rpx;
+    flex-basis: 46rpx;
+    border-radius: 10rpx;
   }
 
   .row-label {

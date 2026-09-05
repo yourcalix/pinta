@@ -7,6 +7,12 @@ const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { profileAvatarPath } = require('../../utils/passenger-avatar');
+const {
+  DEFAULT_PROFILE_COVER,
+  DEFAULT_PROFILE_COVER_PATH,
+  readProfileCover,
+  resolveProfileCover
+} = require('../../utils/profile-cover');
 const { selectTab, refreshUnread } = require('../../utils/tab-bar');
 
 const PROFILE_COVERS = Object.freeze({
@@ -49,6 +55,9 @@ Page({
     error: '',
     user: null,
     profileAvatarPath: profileAvatarPath(null),
+    currentCoverType: DEFAULT_PROFILE_COVER,
+    profileCoverPath: DEFAULT_PROFILE_COVER_PATH,
+    profileCoverUsesAvatar: false,
     profileGenderLabel: '性别未设置',
     profileIntro: '添加兴趣标签，让搭子更快认识你',
     hasProfileIntro: false,
@@ -74,6 +83,7 @@ Page({
   },
 
   onShow() {
+    this.refreshProfileCover();
     selectTab(this, 4);
     refreshUnread(this);
     return this.loadDashboard();
@@ -103,9 +113,14 @@ Page({
       const interests = user.profile && Array.isArray(user.profile.interests)
         ? user.profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
         : [];
+      const avatarPath = profileAvatarPath(user.profile && user.profile.gender);
+      const cover = resolveProfileCover(readProfileCover(wx), avatarPath);
       this.setData({
         user,
-        profileAvatarPath: profileAvatarPath(user.profile && user.profile.gender),
+        profileAvatarPath: avatarPath,
+        currentCoverType: cover.key,
+        profileCoverPath: cover.path,
+        profileCoverUsesAvatar: cover.usesAvatar,
         profileGenderLabel: user.profile && user.profile.gender === 'MALE' ? '男' : user.profile && user.profile.gender === 'FEMALE' ? '女' : '性别未设置',
         profileIntro: interests.length ? interests.join(' · ') : '添加兴趣标签，让搭子更快认识你',
         hasProfileIntro: interests.length > 0,
@@ -122,6 +137,15 @@ Page({
       if (seq !== this._loadSeq) return;
       this.setData({ loading: false, error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试' });
     }
+  },
+
+  refreshProfileCover() {
+    const cover = resolveProfileCover(readProfileCover(typeof wx === 'undefined' ? null : wx), this.data.profileAvatarPath);
+    this.setData({
+      currentCoverType: cover.key,
+      profileCoverPath: cover.path,
+      profileCoverUsesAvatar: cover.usesAvatar
+    });
   },
 
   handleListChange(event) {

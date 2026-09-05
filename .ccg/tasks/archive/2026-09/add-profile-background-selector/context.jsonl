@@ -1,0 +1,9 @@
+{"path":"miniprogram/assets/images/profile/profile-default-cover.webp","role":"用户生成的默认澳门海景背景，1182×1330 WebP"}
+{"path":"miniprogram/utils/profile-cover.js","role":"背景白名单、读取写入与安全回退"}
+{"path":"miniprogram/pages/user/index.js","role":"我的页 onShow 与资料加载时解析背景"}
+{"path":"miniprogram/pages/user/index.wxml","role":"我的页顶部背景渲染"}
+{"path":"miniprogram/pages/user/index.wxss","role":"海景/头像氛围两种背景样式与可读性遮罩"}
+{"path":"miniprogram/subpackages/profile/edit/index.js","role":"更换背景 ActionSheet 与即时本地持久化"}
+{"path":"miniprogram/subpackages/profile/edit/index.wxml","role":"编辑资料更换背景行"}
+{"path":"miniprogram/subpackages/profile/edit/index.wxss","role":"更换背景行、缩略图与按压态"}
+{"path":"tests/profile-cover-preference.test.js","role":"背景白名单、回退和静态接入测试"}

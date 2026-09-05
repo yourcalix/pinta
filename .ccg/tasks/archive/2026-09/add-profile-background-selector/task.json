@@ -1,0 +1,12 @@
+{
+  "id": "add-profile-background-selector",
+  "title": "设置我的默认背景并在编辑资料中增加更换背景",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付",
+  "createdAt": "2026-09-05T17:45:00+08:00",
+  "branch": "main"
+}

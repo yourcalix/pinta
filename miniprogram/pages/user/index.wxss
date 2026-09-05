@@ -41,6 +41,10 @@ button::after { display: none; }
 
 .profile-atmosphere-image {
   position: absolute;
+  pointer-events: none;
+}
+
+.profile-atmosphere-image--avatar {
   top: -28%;
   left: -20%;
   width: 140%;
@@ -50,7 +54,15 @@ button::after { display: none; }
   transform: translate3d(0, 0, 0) scale(1.4);
   transform-origin: center;
   will-change: transform;
-  pointer-events: none;
+}
+
+.profile-atmosphere-image--seascape {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  filter: none;
+  transform: none;
 }
 
 .profile-atmosphere-shade {
@@ -59,6 +71,16 @@ button::after { display: none; }
   background:
     radial-gradient(circle at 22% 35%, rgba(126, 207, 231, 0.32), transparent 42%),
     linear-gradient(180deg, rgba(7, 90, 167, 0.32) 0%, rgba(7, 65, 120, 0.48) 44%, rgba(8, 30, 54, 0.88) 100%);
+}
+
+.profile-atmosphere-shade--seascape {
+  background: linear-gradient(
+    180deg,
+    rgba(12, 28, 48, 0.38) 0%,
+    rgba(12, 28, 48, 0.15) 35%,
+    rgba(8, 24, 44, 0.82) 80%,
+    rgba(8, 24, 44, 0.96) 100%
+  );
 }
 
 .profile-stage-content {

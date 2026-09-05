@@ -53,6 +53,16 @@
           <text class="adult-checkmark" aria-hidden="true">{{form.adultConfirmed ? '✓' : '›'}}</text>
         </view>
       </button>
+
+      <view class="profile-divider"></view>
+      <button class="profile-row cover-row" bindtap="handleSelectCover" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="更换内置背景，当前为{{currentCoverLabel}}">
+        <text class="row-label">更换背景</text>
+        <view class="row-value-group">
+          <image class="cover-thumbnail {{currentCoverType === 'avatar_ambient' ? 'cover-thumbnail--avatar' : ''}}" src="{{currentCoverPath}}" mode="aspectFill" aria-hidden="true" />
+          <text class="row-value cover-label">{{currentCoverLabel}}</text>
+          <text class="row-chevron" aria-hidden="true">›</text>
+        </view>
+      </button>
     </view>
 
     <view class="section-heading section-heading--spaced">搭子偏好</view>

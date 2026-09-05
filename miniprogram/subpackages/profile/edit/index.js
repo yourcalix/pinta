@@ -4,6 +4,14 @@ const userService = require('../../../services/user');
 const { PILOT_CITY } = require('../../../config/locations');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { profileAvatarPath } = require('../../../utils/passenger-avatar');
+const {
+  DEFAULT_PROFILE_COVER,
+  DEFAULT_PROFILE_COVER_PATH,
+  PROFILE_COVER_OPTIONS,
+  readProfileCover,
+  writeProfileCover,
+  resolveProfileCover
+} = require('../../../utils/profile-cover');
 
 const GENDER_OPTIONS = Object.freeze([
   { label: '男', value: 'MALE' },
@@ -24,6 +32,9 @@ Page({
     contentTopInset: 88,
     loading: true,
     profileAvatarPath: profileAvatarPath(null),
+    currentCoverType: DEFAULT_PROFILE_COVER,
+    currentCoverLabel: PROFILE_COVER_OPTIONS[0].label,
+    currentCoverPath: DEFAULT_PROFILE_COVER_PATH,
     genderOptions: GENDER_OPTIONS,
     genderIndex: 0,
     genderLabel: '请选择',
@@ -41,7 +52,13 @@ Page({
 
   onLoad(options) {
     this.nextUrl = options.next ? decodeURIComponent(options.next) : '';
-    this.setData({ contentTopInset: calculateContentTopInset(wx) });
+    const cover = resolveProfileCover(readProfileCover(wx), this.data.profileAvatarPath);
+    this.setData({
+      contentTopInset: calculateContentTopInset(wx),
+      currentCoverType: cover.key,
+      currentCoverLabel: cover.label,
+      currentCoverPath: cover.path
+    });
     this.loadProfile();
   },
 
@@ -55,9 +72,14 @@ Page({
         return;
       }
       const gender = profile.gender || '';
+      const avatarPath = profileAvatarPath(gender);
+      const cover = resolveProfileCover(readProfileCover(wx), avatarPath);
       this.setData({
         loading: false,
-        profileAvatarPath: profileAvatarPath(gender),
+        profileAvatarPath: avatarPath,
+        currentCoverType: cover.key,
+        currentCoverLabel: cover.label,
+        currentCoverPath: cover.path,
         genderIndex: genderIndex(gender),
         genderLabel: genderLabel(gender),
         form: {
@@ -99,13 +121,45 @@ Page({
     const option = GENDER_OPTIONS[index];
     if (!option) return;
     const gender = option.value;
+    const avatarPath = profileAvatarPath(gender);
+    const cover = resolveProfileCover(this.data.currentCoverType, avatarPath);
     this.setData({
       'form.gender': gender,
       genderIndex: index,
       genderLabel: option.label,
-      profileAvatarPath: profileAvatarPath(gender),
+      profileAvatarPath: avatarPath,
+      currentCoverPath: cover.path,
       genderError: false,
       errorMessage: ''
+    });
+  },
+
+  handleSelectCover() {
+    if (this._coverPickerOpen) return;
+    this._coverPickerOpen = true;
+    wx.showActionSheet({
+      itemList: PROFILE_COVER_OPTIONS.map((option) => option.label),
+      success: (result) => {
+        const option = PROFILE_COVER_OPTIONS[result.tapIndex];
+        if (!option) return;
+        if (!writeProfileCover(wx, option.key)) {
+          wx.showToast({ title: '背景保存失败，请重试', icon: 'none' });
+          return;
+        }
+        const cover = resolveProfileCover(option.key, this.data.profileAvatarPath);
+        this.setData({
+          currentCoverType: cover.key,
+          currentCoverLabel: cover.label,
+          currentCoverPath: cover.path
+        });
+        wx.showToast({ title: '背景已更新', icon: 'success', duration: 1500 });
+      },
+      fail: (error) => {
+        if (!String(error && error.errMsg || '').includes('cancel')) {
+          wx.showToast({ title: '背景选择失败，请重试', icon: 'none' });
+        }
+      },
+      complete: () => { this._coverPickerOpen = false; }
     });
   },
 
