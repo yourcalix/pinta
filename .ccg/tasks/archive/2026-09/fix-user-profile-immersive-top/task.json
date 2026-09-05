@@ -1,0 +1,12 @@
+{
+  "id": "fix-user-profile-immersive-top",
+  "title": "修复我的页面沉浸背景未通顶",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-05T14:20:00+08:00",
+  "branch": "main"
+}

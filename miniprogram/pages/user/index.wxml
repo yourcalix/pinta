@@ -1,14 +1,14 @@
-<view class="page user-page global-background-host" style="padding-top: {{contentTopInset}}px;">
+<view class="page user-page global-background-host">
   <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
   <view class="global-page-background-tint" aria-hidden="true"></view>
 
-  <view wx:if="{{loading}}" class="page-state-layer" role="status" aria-label="正在整理你的个人主页">
+  <view wx:if="{{loading}}" class="page-state-layer" style="margin-top: {{contentTopInset}}px;" role="status" aria-label="正在整理你的个人主页">
     <view class="profile-loading-avatar skeleton-shimmer"></view>
     <view class="profile-loading-line profile-loading-line--title skeleton-shimmer"></view>
     <view class="profile-loading-line skeleton-shimmer"></view>
   </view>
 
-  <view wx:elif="{{error}}" class="page-state-layer page-state-layer--error">
+  <view wx:elif="{{error}}" class="page-state-layer page-state-layer--error" style="margin-top: {{contentTopInset}}px;">
     <view class="state-symbol" aria-hidden="true">!</view>
     <view class="state-title">{{error}}</view>
     <view class="state-copy">个人资料或活动暂时没有加载出来，请稍后重试。</view>
@@ -16,7 +16,7 @@
   </view>
 
   <block wx:else>
-    <view class="profile-stage" role="region" aria-label="个人主页，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
+    <view class="profile-stage" style="padding-top: {{contentTopInset}}px;" role="region" aria-label="个人主页，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
       <view class="profile-atmosphere" aria-hidden="true">
         <view class="profile-atmosphere-base"></view>
         <image class="profile-atmosphere-image" src="{{profileAvatarPath}}" mode="aspectFill" aria-hidden="true" />

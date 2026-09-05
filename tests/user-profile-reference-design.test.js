@@ -12,6 +12,10 @@ test('我的页面采用沉浸式个人背景与白色圆角活动面板', () =>
   const template = read('index.wxml');
   const style = read('index.wxss');
 
+  assert.match(template, /^<view class="page user-page global-background-host">/);
+  assert.doesNotMatch(template, /^<view class="page user-page global-background-host"[^>]*padding-top/);
+  assert.match(template, /class="profile-stage"[^>]*style="padding-top: \{\{contentTopInset\}\}px;"/);
+  assert.match(template, /class="page-state-layer"[^>]*style="margin-top: \{\{contentTopInset\}\}px;"/);
   assert.match(template, /class="profile-atmosphere-image"[^>]*src="\{\{profileAvatarPath\}\}"[^>]*mode="aspectFill"[^>]*aria-hidden="true"/);
   assert.match(template, /class="profile-atmosphere-shade"/);
   assert.match(template, /class="profile-content-sheet"/);
