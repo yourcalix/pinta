@@ -1,0 +1,12 @@
+{
+  "id": "remove-profile-adult-row",
+  "title": "删除个人资料页年龄确认展示行",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交",
+  "createdAt": "2026-09-05T18:55:00+08:00",
+  "branch": "main"
+}

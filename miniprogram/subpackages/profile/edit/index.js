@@ -306,7 +306,11 @@ Page({
 
   handleBirthdayConfirm() {
     if (!this.data.birthdaySheetMounted || this.data.birthdayPicking || !this.data.birthdayDraft) return;
-    this.setData({ 'form.birthDate': this.data.birthdayDraft, errorMessage: '' });
+    this.setData({
+      'form.birthDate': this.data.birthdayDraft,
+      'form.adultConfirmed': true,
+      errorMessage: ''
+    });
     this.handleBirthdayClose();
   },
 
@@ -345,11 +349,6 @@ Page({
   },
 
   preventScroll() {},
-
-  handleAdultConfirm() {
-    if (this.data.form.adultConfirmed) return;
-    this.setData({ 'form.adultConfirmed': true, errorMessage: '' });
-  },
 
   handleGenderPick(event) {
     const index = Number(event.detail.value);
@@ -403,7 +402,7 @@ Page({
     const form = this.data.form;
     if (form.nickname.trim().length < 2) return this.setData({ errorMessage: '昵称至少需要2个字' });
     if (!['MALE', 'FEMALE'].includes(form.gender)) return this.setData({ genderError: true, errorMessage: '请选择性别' });
-    if (!form.adultConfirmed) return this.setData({ errorMessage: 'MVP 仅面向18岁及以上用户' });
+    if (!form.adultConfirmed) return this.setData({ errorMessage: '请选择生日完成年龄核验' });
     this.setData({ saving: true, errorMessage: '' });
     try {
       const profileInput = {

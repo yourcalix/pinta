@@ -33,19 +33,19 @@ test('编辑主页只呈现真实资料字段且受控头像随性别联动', ()
   assert.match(template, /class="profile-row nickname-row"[^>]*bindtap="handleNicknameOpen"/);
   assert.match(template, /class="row-chevron"[^>]*aria-hidden="true">›/);
   assert.match(template, /bindchange="handleGenderPick"/);
-  assert.match(template, /年龄确认/);
+  assert.doesNotMatch(template, /年龄确认|已确认满18岁|请确认已满18岁/);
   assert.match(template, /data-field="interestsText"/);
   assert.match(script, /profileAvatarPath\(gender\)/);
   assert.doesNotMatch(template, /MBTI|手机号|常用报名|切换账号|1\/20|class="avatar-add"/);
 });
 
-test('行式编辑保留窄屏、键盘、错误与成年确认能力', () => {
+test('行式编辑保留窄屏、键盘、错误与生日年龄核验能力', () => {
   const template = read('index.wxml');
   const style = read('index.wxss');
 
   assert.match(template, /adjust-position="\{\{true\}\}"/);
   assert.match(template, /cursor-spacing="140"/);
-  assert.match(template, /aria-label="年龄确认/);
+  assert.match(template, /class="profile-row birthday-row"/);
   assert.match(template, /wx:if="\{\{errorMessage\}\}"[^>]*role="alert"/);
   assert.match(style, /\.profile-row\s*{[\s\S]*min-height:\s*104rpx/);
   assert.match(style, /\.row-control\s*{[\s\S]*flex:\s*1[\s\S]*min-width:\s*0[\s\S]*text-align:\s*right/);

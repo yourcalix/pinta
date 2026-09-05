@@ -104,6 +104,8 @@ test('个人资料页包含生日行、三列滚轮、隐私说明和滚动锁',
   assert.match(template, /<picker-view[^>]*bindchange="handleBirthdayChange"[^>]*bindpickstart="handleBirthdayPickStart"[^>]*bindpickend="handleBirthdayPickEnd"/);
   assert.equal((template.match(/<picker-view-column/g) || []).length, 3);
   assert.match(template, /仅用于年龄核验与活动匹配，不对外公开/);
+  assert.doesNotMatch(template, /年龄确认|adult-row/);
+  assert.match(script, /'form\.adultConfirmed': true/);
   assert.doesNotMatch(template, /显示星座/);
   assert.match(script, /if \(form\.birthDate\) profileInput\.birthDate = form\.birthDate/);
   assert.match(style, /\.birthday-picker\s*{[^}]*height:\s*400rpx/);

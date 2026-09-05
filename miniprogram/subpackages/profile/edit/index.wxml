@@ -58,15 +58,6 @@
       </button>
 
       <view class="profile-divider"></view>
-      <button class="profile-row adult-row {{form.adultConfirmed ? 'adult-row--confirmed' : ''}}" bindtap="handleAdultConfirm" role="checkbox" aria-checked="{{form.adultConfirmed}}" aria-label="年龄确认，{{form.adultConfirmed ? '已确认年满18岁' : '点击确认已年满18岁'}}">
-        <text class="row-label">年龄确认</text>
-        <view class="row-value-group">
-          <text class="adult-status">{{form.adultConfirmed ? '已确认满18岁' : '请确认已满18岁'}}</text>
-          <text class="adult-checkmark" aria-hidden="true">{{form.adultConfirmed ? '✓' : '›'}}</text>
-        </view>
-      </button>
-
-      <view class="profile-divider"></view>
       <button class="profile-row cover-row" bindtap="handleSelectCover" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="更换内置背景，当前为{{currentCoverLabel}}">
         <text class="row-label">更换背景</text>
         <view class="row-value-group">
