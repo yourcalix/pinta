@@ -102,11 +102,6 @@
           <button class="empty-action" bindtap="handleGoDiscover" hover-class="soft-button--pressed">去发现页看看</button>
         </view>
       </view>
-
-      <view wx:if="{{isMock}}" class="demo-panel">
-        <view class="demo-heading"><view><view class="demo-title">演示身份</view><view class="demo-description">仅用于本地体验拼单流程</view></view><button class="reset-button" bindtap="handleResetDemo">重置</button></view>
-        <view class="persona-row"><button wx:for="{{personas}}" wx:key="id" class="persona-button {{persona === item.id ? 'persona-button--active' : ''}}" data-id="{{item.id}}" bindtap="handlePersona">{{item.label}}</button></view>
-      </view>
     </view>
   </block>
 </view>

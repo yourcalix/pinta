@@ -46,6 +46,7 @@ test('个人资料、统计、待办和四类活动入口保留真实业务语�
   assert.match(template, /wx:if="\{\{tasks\.length\}\}"[^>]*class="quick-task-strip"/);
   assert.match(script, /profileIntro:/);
   assert.match(script, /decorateProfileActivity/);
+  assert.doesNotMatch(template, /演示身份|demo-panel|handleResetDemo|handlePersona/);
 });
 
 test('活动记录使用日期时间线、类型插画和安全区避让', () => {

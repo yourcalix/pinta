@@ -1,0 +1,12 @@
+{
+  "id": "remove-user-demo-panel",
+  "title": "删除我的页面演示身份模块",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已归档",
+  "createdAt": "2026-09-05T16:40:00+08:00",
+  "branch": "main"
+}
