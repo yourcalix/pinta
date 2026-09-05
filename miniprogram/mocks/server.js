@@ -24,6 +24,9 @@ const STATE_KEY = 'pinba_mock_state_v3';
 const PERSONA_KEY = 'pinba_mock_persona_v1';
 const MUTATING_ACTIONS = new Set([
   'profile.update',
+  'profile.avatar.prepare',
+  'profile.avatar.confirm',
+  'profile.avatar.clear',
   'onboarding.selectRole',
   'driver.application.submit',
   'driver.document.prepare',
@@ -102,6 +105,7 @@ function validateMockProfile(input, currentProfile) {
     interests: Array.isArray(input.interests) ? input.interests.slice(0, 8).map((item) => String(item).trim()).filter(Boolean) : [],
     adultConfirmed: true
   };
+  if (currentProfile && currentProfile.avatar) profile.avatar = clone(currentProfile.avatar);
   const suppliedBirthDate = Object.prototype.hasOwnProperty.call(input, 'birthDate');
   if (suppliedBirthDate) {
     const parsed = parseBirthDate(input.birthDate);
@@ -338,6 +342,7 @@ function seedState() {
       }
     ],
     driverDocumentUploads: [],
+    profileAvatarUploads: [],
     vehicles: [
       { id: 'vehicle_driver_1', driverId: 'u_driver', status: 'ACTIVE', reviewStatus: 'APPROVED', type: '七座轿车', plateMasked: '澳·***28', passengerCapacity: 7 }
     ],
@@ -433,6 +438,7 @@ if (!state.vehicles) state.vehicles = [];
 if (!state.rideFulfillments) state.rideFulfillments = [];
 if (!state.driverApplications) state.driverApplications = [];
 if (!state.driverDocumentUploads) state.driverDocumentUploads = [];
+if (!state.profileAvatarUploads) state.profileAvatarUploads = [];
 if (!state.memberContacts) state.memberContacts = [];
 if (!state.communityPosts) state.communityPosts = [];
 if (!state.communityReplies) state.communityReplies = [];
@@ -717,7 +723,8 @@ function selfUser(user) {
       city: user.profile.city,
       interests: clone(user.profile.interests || []),
       birthDate: user.profile.birthDate || null,
-      adultConfirmed: user.profile.adultConfirmed === true
+      adultConfirmed: user.profile.adultConfirmed === true,
+      avatar: user.profile.avatar && user.profile.avatar.status === 'ACTIVE' ? clone(user.profile.avatar) : null
     } : null,
     profileComplete: completeRideProfile(user.profile)
   } : null;
@@ -1297,6 +1304,38 @@ function handle(action, input, idempotencyKey = '') {
         activity.updatedAt = member.updatedAt;
       }
     });
+    return { user: selfUser(user) };
+  }
+  if (action === 'profile.avatar.prepare') {
+    const user = requireUser();
+    const upload = {
+      id: nextId('profile_avatar_upload'), userId: user.id,
+      cloudPath: `mock-profile-avatar/${user.id}/${Date.now()}.jpg`, status: 'PREPARED',
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    };
+    state.profileAvatarUploads.push(upload);
+    return { upload: { id: upload.id, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt, maxBytes: 1024 * 1024, mockOnly: true } };
+  }
+  if (action === 'profile.avatar.confirm') {
+    const user = requireUser();
+    const upload = state.profileAvatarUploads.find((item) => item.id === input.uploadId);
+    assert(upload && upload.userId === user.id && ['PREPARED', 'BOUND'].includes(upload.status), 'PROFILE_AVATAR_INVALID', '头像上传凭据无效');
+    assert(Date.parse(upload.expiresAt) > Date.now(), 'PROFILE_AVATAR_INVALID', '头像上传凭据已失效');
+    assert(typeof input.fileID === 'string' && /^(wxfile:\/\/|http:\/\/tmp\/|\/tmp\/|\/var\/)/.test(input.fileID), 'PROFILE_AVATAR_INVALID', '演示头像文件无效');
+    if (upload.status !== 'BOUND') {
+      const revision = Math.max(0, Number(user.profile && user.profile.avatar && user.profile.avatar.revision) || 0) + 1;
+      user.profile = { ...(user.profile || {}), avatar: { status: 'ACTIVE', fileID: input.fileID, revision, updatedAt: new Date().toISOString(), mockOnly: true } };
+      upload.status = 'BOUND';
+      upload.fileID = input.fileID;
+    }
+    return { user: selfUser(user) };
+  }
+  if (action === 'profile.avatar.clear') {
+    const user = requireUser();
+    if (user.profile && user.profile.avatar) {
+      const { avatar, ...profile } = user.profile;
+      user.profile = profile;
+    }
     return { user: selfUser(user) };
   }
   if (action === 'onboarding.selectRole') {

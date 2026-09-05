@@ -4,6 +4,7 @@ const userService = require('../../../services/user');
 const { PILOT_CITY } = require('../../../config/locations');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { profileAvatarPath } = require('../../../utils/passenger-avatar');
+const { resolveProfileAvatar } = require('../../../utils/profile-avatar');
 const {
   DEFAULT_PROFILE_COVER,
   DEFAULT_PROFILE_COVER_PATH,
@@ -53,6 +54,11 @@ Page({
     contentTopInset: 88,
     loading: true,
     profileAvatarPath: profileAvatarPath(null),
+    avatarFallbackPath: profileAvatarPath(null),
+    hasCustomAvatar: false,
+    customAvatarLoadFailed: false,
+    avatarUploading: false,
+    avatarUploadError: '',
     currentCoverType: DEFAULT_PROFILE_COVER,
     currentCoverLabel: PROFILE_COVER_OPTIONS[0].label,
     currentCoverPath: DEFAULT_PROFILE_COVER_PATH,
@@ -89,6 +95,7 @@ Page({
   },
 
   onLoad(options) {
+    this._disposed = false;
     this.nextUrl = options.next ? decodeURIComponent(options.next) : '';
     const cover = resolveProfileCover(readProfileCover(wx), this.data.profileAvatarPath);
     let windowWidth = 375;
@@ -113,6 +120,7 @@ Page({
   },
 
   onUnload() {
+    this._disposed = true;
     this.clearNicknameTimers();
     this.clearBirthdayTimers();
     if (typeof wx !== 'undefined' && typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
@@ -128,11 +136,14 @@ Page({
         return;
       }
       const gender = profile.gender || '';
-      const avatarPath = profileAvatarPath(gender);
-      const cover = resolveProfileCover(readProfileCover(wx), avatarPath);
+      const avatar = resolveProfileAvatar(profile);
+      const cover = resolveProfileCover(readProfileCover(wx), avatar.path);
       this.setData({
         loading: false,
-        profileAvatarPath: avatarPath,
+        profileAvatarPath: avatar.path,
+        avatarFallbackPath: avatar.fallbackPath,
+        hasCustomAvatar: avatar.custom,
+        customAvatarLoadFailed: false,
         currentCoverType: cover.key,
         currentCoverLabel: cover.label,
         currentCoverPath: cover.path,
@@ -355,17 +366,69 @@ Page({
     const option = GENDER_OPTIONS[index];
     if (!option) return;
     const gender = option.value;
-    const avatarPath = profileAvatarPath(gender);
+    const fallbackPath = profileAvatarPath(gender);
+    const avatarPath = this.data.hasCustomAvatar && !this.data.customAvatarLoadFailed ? this.data.profileAvatarPath : fallbackPath;
     const cover = resolveProfileCover(this.data.currentCoverType, avatarPath);
     this.setData({
       'form.gender': gender,
       genderIndex: index,
       genderLabel: option.label,
       profileAvatarPath: avatarPath,
+      avatarFallbackPath: fallbackPath,
       currentCoverPath: cover.path,
       genderError: false,
       errorMessage: ''
     });
+  },
+
+  async handleChooseAvatar(event) {
+    const filePath = event.detail && event.detail.avatarUrl;
+    if (!filePath || this.data.avatarUploading) return;
+    const previousPath = this.data.profileAvatarPath;
+    this.setData({ profileAvatarPath: filePath, customAvatarLoadFailed: false, avatarUploading: true, avatarUploadError: '' });
+    try {
+      const result = await userService.uploadAvatar(filePath);
+      if (this._disposed) return;
+      const profile = result.user && result.user.profile;
+      const avatar = resolveProfileAvatar(profile);
+      const cover = resolveProfileCover(this.data.currentCoverType, avatar.path);
+      getApp().globalData.user = result.user;
+      this.setData({
+        profileAvatarPath: avatar.path,
+        avatarFallbackPath: avatar.fallbackPath,
+        hasCustomAvatar: avatar.custom,
+        customAvatarLoadFailed: false,
+        avatarUploading: false,
+        currentCoverPath: cover.path
+      });
+      wx.showToast({ title: '头像已更换', icon: 'success' });
+    } catch (error) {
+      if (this._disposed) return;
+      this.setData({ profileAvatarPath: previousPath, customAvatarLoadFailed: false, avatarUploading: false, avatarUploadError: error.handled ? '账号暂时无法使用' : error.message || '上传失败，点击重试' });
+      wx.showToast({ title: '头像上传失败，请重试', icon: 'none' });
+    }
+  },
+
+  handleAvatarImageError() {
+    if (this.data.profileAvatarPath === this.data.avatarFallbackPath) return;
+    this.setData({ profileAvatarPath: this.data.avatarFallbackPath, customAvatarLoadFailed: true, avatarUploadError: '头像加载失败，点击重新选择' });
+  },
+
+  async handleRestoreAvatar() {
+    if (!this.data.hasCustomAvatar || this.data.avatarUploading) return;
+    this.setData({ avatarUploading: true, avatarUploadError: '' });
+    try {
+      const result = await userService.clearAvatar();
+      if (this._disposed) return;
+      const avatar = resolveProfileAvatar(result.user && result.user.profile);
+      const cover = resolveProfileCover(this.data.currentCoverType, avatar.path);
+      getApp().globalData.user = result.user;
+      this.setData({ profileAvatarPath: avatar.path, avatarFallbackPath: avatar.fallbackPath, hasCustomAvatar: false, customAvatarLoadFailed: false, avatarUploading: false, currentCoverPath: cover.path });
+      wx.showToast({ title: '已恢复默认头像', icon: 'success' });
+    } catch (error) {
+      if (this._disposed) return;
+      this.setData({ avatarUploading: false, avatarUploadError: error.handled ? '账号暂时无法使用' : error.message || '恢复失败，请重试' });
+    }
   },
 
   handleSelectCover() {

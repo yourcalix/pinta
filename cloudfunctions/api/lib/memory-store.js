@@ -96,6 +96,7 @@ class MemoryStore {
     this.driverApplications = new Map((seed.driverApplications || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverSecrets = new Map((seed.driverSecrets || []).map((item) => [item.userId || item.id, clone(item)]));
     this.driverDocumentUploads = new Map((seed.driverDocumentUploads || []).map((item) => [item.id, clone(item)]));
+    this.profileAvatarUploads = new Map((seed.profileAvatarUploads || []).map((item) => [item.id, clone(item)]));
     this.vehicles = new Map((seed.vehicles || []).map((item) => [item.id, clone(item)]));
     this.rideFulfillments = new Map((seed.rideFulfillments || []).map((item) => [item.activityId, clone(item)]));
     this.reports = new Map((seed.reports || []).map((item) => [item.id, clone(item)]));
@@ -127,6 +128,51 @@ class MemoryStore {
     invariant(user, 'UNAUTHENTICATED');
     user.profile = clone(profile);
     user.updatedAt = at;
+    return clone(user);
+  }
+
+  async registerProfileAvatarUpload(upload) {
+    this.profileAvatarUploads.set(upload.id, clone(upload));
+    return clone(upload);
+  }
+
+  async inspectProfileAvatarUpload({ userId, uploadId, fileID, at }) {
+    const upload = this.profileAvatarUploads.get(uploadId);
+    invariant(upload && upload.userId === userId, 'PROFILE_AVATAR_INVALID', '头像上传凭据无效');
+    if (upload.status === 'BOUND') return { bound: true, upload: clone(upload) };
+    invariant(upload.status === 'PREPARED' && Date.parse(upload.expiresAt) > Date.parse(at), 'PROFILE_AVATAR_INVALID', '头像上传凭据已失效');
+    invariant(typeof fileID === 'string' && /^(wxfile:\/\/|http:\/\/tmp\/|\/tmp\/|\/var\/)/.test(fileID), 'PROFILE_AVATAR_INVALID', '演示头像文件无效');
+    return { upload: clone(upload), fileID, fileContent: Buffer.alloc(0), metadata: { format: 'jpg', contentType: 'image/jpeg', width: 512, height: 512, byteLength: 0 }, mockOnly: true };
+  }
+
+  async discardProfileAvatarUpload({ userId, uploadId, at }) {
+    const upload = this.profileAvatarUploads.get(uploadId);
+    if (!upload || upload.userId !== userId || upload.status !== 'PREPARED') return;
+    Object.assign(upload, { status: 'REJECTED', updatedAt: at });
+  }
+
+  async bindProfileAvatar({ userId, uploadId, fileID, metadata, at, mockOnly }) {
+    const upload = this.profileAvatarUploads.get(uploadId);
+    const user = this.users.get(userId);
+    invariant(upload && upload.userId === userId && user, 'PROFILE_AVATAR_INVALID');
+    if (upload.status === 'BOUND') return clone(user);
+    invariant(upload.status === 'PREPARED', 'PROFILE_AVATAR_INVALID');
+    const revision = Math.max(0, Number(user.profile && user.profile.avatar && user.profile.avatar.revision) || 0) + 1;
+    const avatar = { status: 'ACTIVE', uploadId, fileID, revision, updatedAt: at, ...(mockOnly ? { mockOnly: true } : {}) };
+    user.profile = { ...(user.profile || {}), avatar };
+    user.updatedAt = at;
+    Object.assign(upload, { status: 'BOUND', fileID, metadata: clone(metadata), boundAt: at, updatedAt: at });
+    return clone(user);
+  }
+
+  async clearProfileAvatar(userId, at) {
+    const user = this.users.get(userId);
+    invariant(user, 'UNAUTHENTICATED');
+    if (user.profile && user.profile.avatar) {
+      const { avatar, ...profile } = user.profile;
+      user.profile = profile;
+      user.updatedAt = at;
+    }
     return clone(user);
   }
 

@@ -26,6 +26,7 @@ const ERROR_MESSAGES = Object.freeze({
   PICKUP_TIME_EXPIRED: '接车时间已过，无法承接',
   CONTACT_INCOMPLETE: '成员联系方式尚未齐全，请稍后重试',
   CONTENT_REJECTED: '内容未通过安全检查，请修改后重试',
+  PROFILE_AVATAR_INVALID: '头像图片无效，请重新选择',
   RATE_LIMITED: '操作过于频繁，请稍后重试',
   INTERNAL: '服务暂时不可用，请稍后重试'
 });

@@ -1,0 +1,8 @@
+{"path":"miniprogram/subpackages/profile/edit/index.js","reason":"个人资料加载、保存与交互入口"}
+{"path":"miniprogram/subpackages/profile/edit/index.wxml","reason":"头像区域当前为只读展示"}
+{"path":"miniprogram/pages/user/index.js","reason":"我的页头像展示与预览"}
+{"path":"miniprogram/services/user.js","reason":"资料 API 客户端入口"}
+{"path":"cloudfunctions/api/lib/service.js","reason":"本人资料 DTO 与 profile.update 业务契约"}
+{"path":"cloudfunctions/api/lib/validation.js","reason":"资料输入校验"}
+{"path":"cloudfunctions/api/lib/cloud-store.js","reason":"CloudBase 用户资料与上传引用持久化"}
+{"path":"cloudfunctions/api/lib/memory-store.js","reason":"Mock/测试存储实现"}

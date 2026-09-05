@@ -56,6 +56,7 @@ const {
 
 const CLOUD_IN_QUERY_CHUNK_SIZE = 10;
 const DRIVER_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
+const { inspectProfileAvatar } = require('./profile-avatar');
 
 function entity(data) {
   if (!data) return null;
@@ -162,6 +163,99 @@ class CloudStore {
       await userDocument.set({ data: document(next) });
       return next;
     });
+  }
+
+  async registerProfileAvatarUpload(upload) {
+    await this.db.collection('profileAvatarUploads').doc(upload.id).set({ data: document(upload) });
+    return upload;
+  }
+
+  async inspectProfileAvatarUpload({ userId, uploadId, fileID, at }) {
+    const upload = await this.getDocument('profileAvatarUploads', uploadId);
+    invariant(upload && upload.userId === userId, 'PROFILE_AVATAR_INVALID', '头像上传凭据无效');
+    if (upload.status === 'BOUND') return { bound: true, upload };
+    invariant(isExactCloudFile(fileID, upload.cloudPath), 'PROFILE_AVATAR_INVALID', '头像文件与上传凭据不匹配');
+    try {
+      invariant(upload.status === 'PREPARED' && Date.parse(upload.expiresAt) > Date.parse(at), 'PROFILE_AVATAR_INVALID', '头像上传凭据已失效');
+      const result = await this.cloud.downloadFile({ fileID });
+      const fileContent = result && result.fileContent;
+      const metadata = inspectProfileAvatar(fileContent);
+      return { upload, fileID, fileContent, metadata, mockOnly: false };
+    } catch (error) {
+      await this.deleteUnusedProfileAvatarFiles(userId, [fileID]);
+      if (error instanceof AppError) throw error;
+      throw new AppError('PROFILE_AVATAR_INVALID', '头像图片读取失败，请重新选择');
+    }
+  }
+
+  async discardProfileAvatarUpload({ userId, uploadId, fileID, at }) {
+    const upload = await this.getDocument('profileAvatarUploads', uploadId);
+    if (!upload || upload.userId !== userId || upload.status !== 'PREPARED' || !isExactCloudFile(fileID, upload.cloudPath)) return;
+    await this.db.collection('profileAvatarUploads').doc(uploadId).set({ data: document({ ...upload, status: 'REJECTED', updatedAt: at }) });
+    await this.deleteUnusedProfileAvatarFiles(userId, [fileID]);
+  }
+
+  async deleteUnusedProfileAvatarFiles(userId, candidates) {
+    if (typeof this.cloud.deleteFile !== 'function') return;
+    let current;
+    try {
+      current = await this.getUser(userId);
+    } catch (error) {
+      return;
+    }
+    const currentFileID = current && current.profile && current.profile.avatar && current.profile.avatar.fileID;
+    const fileList = [...new Set((candidates || []).filter((fileID) => fileID && fileID !== currentFileID))];
+    if (!fileList.length) return;
+    try { await this.cloud.deleteFile({ fileList }); } catch (error) { /* scheduled retention is the backstop */ }
+  }
+
+  async bindProfileAvatar({ userId, uploadId, fileID, fileContent, metadata, moderationProvider, at }) {
+    const extension = metadata.format === 'png' ? 'png' : 'jpg';
+    const finalPath = `private-profile-avatar/${crypto.randomBytes(20).toString('hex')}.${extension}`;
+    const stored = await this.cloud.uploadFile({ cloudPath: finalPath, fileContent });
+    invariant(stored && stored.fileID, 'PROFILE_AVATAR_INVALID', '头像保存失败，请重试');
+    let previousFileID = null;
+    let user;
+    try {
+      user = await this.db.runTransaction(async (transaction) => {
+        const userRef = transaction.collection('users').doc(userId);
+        const uploadRef = transaction.collection('profileAvatarUploads').doc(uploadId);
+        const currentUser = first(await userRef.get());
+        const currentUpload = first(await uploadRef.get());
+        invariant(currentUser && currentUpload && currentUpload.userId === userId, 'PROFILE_AVATAR_INVALID');
+        if (currentUpload.status === 'BOUND') return currentUser;
+        invariant(currentUpload.status === 'PREPARED' && Date.parse(currentUpload.expiresAt) > Date.parse(at), 'PROFILE_AVATAR_INVALID');
+        previousFileID = currentUser.profile && currentUser.profile.avatar && currentUser.profile.avatar.fileID || null;
+        const revision = Math.max(0, Number(currentUser.profile && currentUser.profile.avatar && currentUser.profile.avatar.revision) || 0) + 1;
+        const avatar = { status: 'ACTIVE', uploadId, fileID: stored.fileID, cloudPath: finalPath, revision, updatedAt: at };
+        const nextUser = { ...currentUser, profile: { ...(currentUser.profile || {}), avatar }, updatedAt: at };
+        await userRef.set({ data: document(nextUser) });
+        await uploadRef.set({ data: document({ ...currentUpload, status: 'BOUND', fileID: stored.fileID, cloudPath: finalPath, metadata, moderationProvider, boundAt: at, updatedAt: at }) });
+        return nextUser;
+      });
+    } finally {
+      const boundFileID = user && user.profile && user.profile.avatar && user.profile.avatar.fileID;
+      const redundant = boundFileID !== stored.fileID ? stored.fileID : null;
+      await this.deleteUnusedProfileAvatarFiles(userId, [fileID, redundant, previousFileID]);
+    }
+    return user;
+  }
+
+  async clearProfileAvatar(userId, at) {
+    let previousFileID = null;
+    const user = await this.db.runTransaction(async (transaction) => {
+      const ref = transaction.collection('users').doc(userId);
+      const current = first(await ref.get());
+      invariant(current, 'UNAUTHENTICATED');
+      if (!current.profile || !current.profile.avatar) return current;
+      previousFileID = current.profile.avatar.fileID || null;
+      const { avatar, ...profile } = current.profile;
+      const next = { ...current, profile, updatedAt: at };
+      await ref.set({ data: document(next) });
+      return next;
+    });
+    await this.deleteUnusedProfileAvatarFiles(userId, [previousFileID]);
+    return user;
   }
 
   async syncUserAvatarKind(actorId, avatarKind, at) {

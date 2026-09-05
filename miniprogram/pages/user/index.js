@@ -7,6 +7,7 @@ const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { profileAvatarPath } = require('../../utils/passenger-avatar');
+const { resolveProfileAvatar } = require('../../utils/profile-avatar');
 const { profileImagePreviewPath } = require('../../utils/profile-image-preview');
 const {
   DEFAULT_PROFILE_COVER,
@@ -56,6 +57,8 @@ Page({
     error: '',
     user: null,
     profileAvatarPath: profileAvatarPath(null),
+    avatarFallbackPath: profileAvatarPath(null),
+    hasCustomAvatar: false,
     currentCoverType: DEFAULT_PROFILE_COVER,
     profileCoverPath: DEFAULT_PROFILE_COVER_PATH,
     profileCoverUsesAvatar: false,
@@ -114,11 +117,13 @@ Page({
       const interests = user.profile && Array.isArray(user.profile.interests)
         ? user.profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
         : [];
-      const avatarPath = profileAvatarPath(user.profile && user.profile.gender);
-      const cover = resolveProfileCover(readProfileCover(wx), avatarPath);
+      const avatar = resolveProfileAvatar(user.profile);
+      const cover = resolveProfileCover(readProfileCover(wx), avatar.path);
       this.setData({
         user,
-        profileAvatarPath: avatarPath,
+        profileAvatarPath: avatar.path,
+        avatarFallbackPath: avatar.fallbackPath,
+        hasCustomAvatar: avatar.custom,
         currentCoverType: cover.key,
         profileCoverPath: cover.path,
         profileCoverUsesAvatar: cover.usesAvatar,
@@ -222,6 +227,12 @@ Page({
 
   handleAvatarPreview() {
     this.previewProfileImage(profileImagePreviewPath(this.data.profileAvatarPath), '头像');
+  },
+
+  handleAvatarImageError() {
+    if (this.data.profileAvatarPath === this.data.avatarFallbackPath) return;
+    const cover = resolveProfileCover(this.data.currentCoverType, this.data.avatarFallbackPath);
+    this.setData({ profileAvatarPath: this.data.avatarFallbackPath, profileCoverPath: cover.path });
   },
 
   handleBackgroundPreview() {

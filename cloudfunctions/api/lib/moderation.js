@@ -18,6 +18,9 @@ function createLocalModeration(options = {}) {
         throw new AppError('CONTENT_REJECTED');
       }
       return { accepted: true, provider: 'local-policy' };
+    },
+    async checkImage() {
+      return { accepted: true, provider: 'local-image-policy' };
     }
   };
 }
@@ -50,6 +53,30 @@ function createWechatModeration(cloud, options = {}) {
         if (error instanceof AppError) throw error;
         if (production) throw new AppError('INTERNAL', '内容安全服务暂时不可用，请稍后重试');
         return { accepted: true, provider: 'local-policy-fallback' };
+      }
+    },
+    async checkImage(fileContent, context = {}) {
+      if (!enabled) {
+        if (production) throw new AppError('INTERNAL', '图片安全服务未配置，暂时无法更换头像');
+        return { accepted: true, provider: 'local-image-policy' };
+      }
+      try {
+        const result = await cloud.openapi.security.imgSecCheck({
+          media: { contentType: context.contentType || 'image/jpeg', value: fileContent },
+          version: 2,
+          scene: context.scene || 2,
+          openid: context.actorId
+        });
+        if (Number(result && result.errCode) === 87014) throw new AppError('CONTENT_REJECTED', '头像未通过安全检查');
+        const suggest = result && result.result && result.result.suggest;
+        if (suggest && suggest !== 'pass') throw new AppError('CONTENT_REJECTED', '头像未通过安全检查');
+        if (production && suggest !== 'pass') throw new AppError('INTERNAL', '图片安全服务返回异常，请稍后重试');
+        return { accepted: true, provider: 'wechat' };
+      } catch (error) {
+        if (error instanceof AppError) throw error;
+        if (Number(error && error.errCode) === 87014) throw new AppError('CONTENT_REJECTED', '头像未通过安全检查');
+        if (production) throw new AppError('INTERNAL', '图片安全服务暂时不可用，请稍后重试');
+        return { accepted: true, provider: 'local-image-policy-fallback' };
       }
     }
   };

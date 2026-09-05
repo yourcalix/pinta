@@ -168,6 +168,14 @@ function validateProfileInput(input, now = new Date()) {
   return profile;
 }
 
+function validateProfileAvatarConfirmInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  return {
+    uploadId: validateId(input.uploadId, '头像上传ID'),
+    fileID: stringValue(input.fileID, '头像文件', { required: true, max: 512 })
+  };
+}
+
 function validateReportInput(input) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   return {
@@ -300,6 +308,7 @@ module.exports = {
   validateActivityListInput,
   validateApplicationInput,
   validateProfileInput,
+  validateProfileAvatarConfirmInput,
   validateReportInput,
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,

@@ -29,7 +29,8 @@ test('编辑主页只呈现真实资料字段且受控头像随性别联动', ()
   const script = read('index.js');
 
   assert.match(template, /class="controlled-avatar"[^>]*src="\{\{profileAvatarPath\}\}"/);
-  assert.match(template, /头像根据性别自动生成，暂不支持自定义上传/);
+  assert.match(template, /open-type="chooseAvatar"/);
+  assert.match(template, /点击更换 · 仅主页展示/);
   assert.match(template, /class="profile-row nickname-row"[^>]*bindtap="handleNicknameOpen"/);
   assert.match(template, /class="row-chevron"[^>]*aria-hidden="true">›/);
   assert.match(template, /bindchange="handleGenderPick"/);
@@ -50,6 +51,6 @@ test('行式编辑保留窄屏、键盘、错误与生日年龄核验能力', ()
   assert.match(template, /wx:if="\{\{errorMessage\}\}"[^>]*role="alert"/);
   assert.match(style, /\.profile-row\s*{[\s\S]*min-height:\s*104rpx/);
   assert.match(style, /\.row-control\s*{[\s\S]*flex:\s*1[\s\S]*min-width:\s*0[\s\S]*text-align:\s*right/);
-  assert.match(style, /\.avatar-section\s*{[\s\S]*pointer-events:\s*none/);
+  assert.match(style, /\.avatar-section\s*{[\s\S]*min-height:\s*208rpx/);
   assert.match(style, /@media \(max-width:\s*340px\)/);
 });

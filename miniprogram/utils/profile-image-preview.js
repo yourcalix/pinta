@@ -8,6 +8,8 @@ const PREVIEW_PATHS = Object.freeze({
 });
 
 function profileImagePreviewPath(displayPath) {
+  if (typeof displayPath !== 'string' || !displayPath) return '';
+  if (/^(https:\/\/|cloud:\/\/|wxfile:\/\/|http:\/\/tmp\/|\/tmp\/|\/var\/)/.test(displayPath)) return displayPath;
   return PREVIEW_PATHS[displayPath] || '';
 }
 

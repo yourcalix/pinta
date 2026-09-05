@@ -6,6 +6,9 @@ const accountDisabledFeedback = require('./account-disabled-feedback');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
+  'profile.avatar.prepare',
+  'profile.avatar.confirm',
+  'profile.avatar.clear',
   'activity.create',
   'activity.cancel',
   'activity.complete',

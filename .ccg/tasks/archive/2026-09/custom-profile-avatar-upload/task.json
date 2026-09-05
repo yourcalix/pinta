@@ -1,0 +1,12 @@
+{
+  "id": "custom-profile-avatar-upload",
+  "title": "在编辑主页中支持上传并更换个人头像",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交实现",
+  "createdAt": "2026-09-05T19:45:00+08:00",
+  "branch": "main"
+}

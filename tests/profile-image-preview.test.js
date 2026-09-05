@@ -37,5 +37,9 @@ test('预览资源由WebP白名单映射到原生预览兼容的JPEG', () => {
     assert.deepEqual([...file.subarray(0, 3)], [0xff, 0xd8, 0xff]);
     assert.ok(file.length > 1024);
   }
-  assert.equal(profileImagePreviewPath('https://example.com/unsafe.jpg'), '');
+  assert.equal(profileImagePreviewPath('https://cdn.example.com/profile/avatar.jpg'), 'https://cdn.example.com/profile/avatar.jpg');
+  assert.equal(profileImagePreviewPath('cloud://pinba/private-profile-avatar/avatar.jpg'), 'cloud://pinba/private-profile-avatar/avatar.jpg');
+  assert.equal(profileImagePreviewPath('wxfile://tmp/avatar.jpg'), 'wxfile://tmp/avatar.jpg');
+  assert.equal(profileImagePreviewPath('http://example.com/insecure.jpg'), '');
+  assert.equal(profileImagePreviewPath('javascript:alert(1)'), '');
 });

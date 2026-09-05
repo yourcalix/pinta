@@ -92,8 +92,8 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   assert.match(editJs, /gender: form\.gender/);
   assert.match(editJs, /city: PILOT_CITY/);
   assert.match(editJs, /profileAvatarPath\(gender\)/);
-  assert.match(userJs, /const avatarPath = profileAvatarPath\(user\.profile && user\.profile\.gender\)/);
-  assert.match(userJs, /profileAvatarPath: avatarPath/);
+  assert.match(userJs, /const avatar = resolveProfileAvatar\(user\.profile\)/);
+  assert.match(userJs, /profileAvatarPath: avatar\.path/);
   assert.match(userWxml, /shared-paper-bg\.webp/);
   assert.match(userWxml, /data-value="owned"[^>]*bindtap="handleMetricTap"/);
   assert.match(userWxml, /data-value="joined"[^>]*bindtap="handleMetricTap"/);

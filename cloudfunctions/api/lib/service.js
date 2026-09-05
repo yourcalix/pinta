@@ -14,6 +14,7 @@ const {
   validateActivityListInput,
   validateApplicationInput,
   validateProfileInput,
+  validateProfileAvatarConfirmInput,
   validateReportInput,
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,
@@ -43,9 +44,13 @@ const {
   publicAvatarSlots,
   isCompleteRideProfile
 } = require('./passenger-avatar');
+const { safeSelfAvatar } = require('./profile-avatar');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
+  'profile.avatar.prepare',
+  'profile.avatar.confirm',
+  'profile.avatar.clear',
   'activity.create',
   'activity.cancel',
   'activity.complete',
@@ -131,7 +136,8 @@ function selfUser(user) {
           city: user.profile.city,
           interests: user.profile.interests || [],
           birthDate: user.profile.birthDate || null,
-          adultConfirmed: user.profile.adultConfirmed === true
+          adultConfirmed: user.profile.adultConfirmed === true,
+          avatar: safeSelfAvatar(user.profile.avatar)
         }
       : null,
     profileComplete: isCompleteRideProfile(user.profile)
@@ -429,6 +435,7 @@ function createPinbaService(options) {
       if (!Object.prototype.hasOwnProperty.call(input, 'birthDate') && currentUser.profile && currentUser.profile.birthDate) {
         profile.birthDate = currentUser.profile.birthDate;
       }
+      if (currentUser.profile && currentUser.profile.avatar) profile.avatar = currentUser.profile.avatar;
       const user = await store.updateProfile(actorId, profile, at);
       if (typeof store.syncUserAvatarKind === 'function') {
         try {
@@ -441,6 +448,57 @@ function createPinbaService(options) {
       }
       await store.addAudit({ id: operationId(context, 'audit'), actorId, action, targetType: 'user', targetId: actorId, at });
       return { user: selfUser(user) };
+    }
+
+    if (action === 'profile.avatar.prepare') {
+      const user = await requireActiveUser(context, false);
+      const uploadId = idGenerator();
+      const actorScope = crypto.createHash('sha256').update(user.id).digest('hex').slice(0, 24);
+      const upload = {
+        id: uploadId,
+        userId: user.id,
+        cloudPath: `private-profile-avatar-temp/${actorScope}/${uploadId}.jpg`,
+        status: 'PREPARED',
+        expiresAt: new Date(Date.parse(at) + 15 * 60 * 1000).toISOString(),
+        createdAt: at,
+        updatedAt: at
+      };
+      await store.registerProfileAvatarUpload(upload);
+      return { upload: { id: upload.id, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt, maxBytes: 1024 * 1024 } };
+    }
+
+    if (action === 'profile.avatar.confirm') {
+      const user = await requireActiveUser(context, false);
+      const inputData = validateProfileAvatarConfirmInput(input);
+      let candidate;
+      try {
+        candidate = await store.inspectProfileAvatarUpload({ userId: user.id, ...inputData, at });
+      } catch (error) {
+        if (typeof store.discardProfileAvatarUpload === 'function') {
+          try { await store.discardProfileAvatarUpload({ userId: user.id, ...inputData, at }); } catch (cleanupError) { /* preserve the inspection failure */ }
+        }
+        throw error;
+      }
+      if (candidate.bound) return { user: selfUser(await store.getUser(user.id)) };
+      let moderationResult;
+      try {
+        moderationResult = await moderation.checkImage(candidate.fileContent, { contentType: candidate.metadata.contentType, actorId: user.id });
+      } catch (error) {
+        if (typeof store.discardProfileAvatarUpload === 'function') {
+          try { await store.discardProfileAvatarUpload({ userId: user.id, ...inputData, at }); } catch (cleanupError) { /* preserve the moderation failure */ }
+        }
+        throw error;
+      }
+      const updated = await store.bindProfileAvatar({ userId: user.id, ...inputData, ...candidate, moderationProvider: moderationResult.provider, at });
+      await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'user', targetId: user.id, at });
+      return { user: selfUser(updated) };
+    }
+
+    if (action === 'profile.avatar.clear') {
+      const user = await requireActiveUser(context, false);
+      const updated = await store.clearProfileAvatar(user.id, at);
+      await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'user', targetId: user.id, at });
+      return { user: selfUser(updated) };
     }
 
     if (action === 'activity.list') {

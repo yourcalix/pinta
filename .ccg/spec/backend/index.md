@@ -1,5 +1,12 @@
 # 拼吧后端规范
 
+## 个人头像
+
+- 自定义头像使用独立的 `profile.avatar.prepare / profile.avatar.confirm / profile.avatar.clear` 状态机，不通过 `profile.update` 接收自由 `fileID`。
+- 上传记录必须绑定当前 actor、服务端生成的 uploadId、精确 cloudPath 与过期时间；confirm 必须下载文件并校验真实格式、大小、尺寸及图片安全结果，生产环境审核不可用时 fail-closed。
+- 自定义头像只进入 `selfUser.profile.avatar`，不得进入公开活动、社区作者、申请人、群成员、消息参与者、分享或审计 payload。默认性别头像继续作为空值和加载失败回退。
+- 新头像绑定与用户资料更新必须事务化；临时文件和被替换文件采用即时 best-effort 删除并由部署侧清理机制兜底。
+
 ## 架构
 
 - MVP 使用一个聚合 CloudBase 云函数作为 BFF，内部按领域服务拆分，不在函数入口堆业务规则。

@@ -19,7 +19,7 @@
     <view class="profile-stage" style="padding-top: {{contentTopInset}}px;" role="region" aria-label="个人主页，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
       <view class="profile-atmosphere" aria-hidden="true">
         <view class="profile-atmosphere-base"></view>
-        <image class="profile-atmosphere-image {{profileCoverUsesAvatar ? 'profile-atmosphere-image--avatar' : 'profile-atmosphere-image--seascape'}}" src="{{profileCoverPath}}" mode="aspectFill" aria-hidden="true" />
+        <image class="profile-atmosphere-image {{profileCoverUsesAvatar ? 'profile-atmosphere-image--avatar' : 'profile-atmosphere-image--seascape'}}" src="{{profileCoverPath}}" mode="aspectFill" binderror="handleAvatarImageError" aria-hidden="true" />
         <view class="profile-atmosphere-shade {{profileCoverUsesAvatar ? '' : 'profile-atmosphere-shade--seascape'}}"></view>
       </view>
       <button class="profile-background-preview" bindtap="handleBackgroundPreview" hover-class="profile-background-preview--pressed" hover-stay-time="80" aria-label="查看背景大图"></button>
@@ -32,7 +32,7 @@
         </view>
 
         <view class="profile-identity">
-          <button class="profile-avatar-shell" bindtap="handleAvatarPreview" hover-class="profile-avatar-shell--pressed" hover-stay-time="80" aria-label="查看头像大图"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" /></button>
+          <button class="profile-avatar-shell" bindtap="handleAvatarPreview" hover-class="profile-avatar-shell--pressed" hover-stay-time="80" aria-label="查看头像大图"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="{{hasCustomAvatar ? 'aspectFill' : 'aspectFit'}}" binderror="handleAvatarImageError" aria-hidden="true" /></button>
           <view class="profile-name-block">
             <view class="profile-name-row"><text class="profile-name">{{user.profile.nickname}}</text><text class="profile-gender profile-gender--{{user.profile.gender === 'FEMALE' ? 'female' : 'male'}}" aria-label="性别，{{profileGenderLabel}}">{{user.profile.gender === 'FEMALE' ? '♀' : '♂'}}</text></view>
             <view class="profile-verification">已确认年满18岁</view>
