@@ -96,7 +96,8 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   assert.match(userWxml, /data-value="joined"[^>]*bindtap="handleMetricTap"/);
   assert.match(userWxml, /data-value="formed"[^>]*bindtap="handleMetricTap"/);
   assert.match(userWxss, /background:\s*#075aa7/);
-  assert.match(userWxss, /padding-bottom:\s*calc\(140rpx \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(userWxss, /\.user-page\s*{[\s\S]*padding-bottom:\s*0/);
+  assert.match(userWxss, /\.profile-content-sheet\s*{[\s\S]*padding-bottom:\s*calc\(164rpx \+ env\(safe-area-inset-bottom\)\)/);
   assert.doesNotMatch(userWxml, /喜欢散步|个人简介|个人签名/);
   assert.doesNotMatch(userJs, /u_driver|司机任务|司机认证/);
   assert.match(editWxml, /gender-options--error/);

@@ -1,0 +1,12 @@
+{
+  "id": "fix-user-profile-bottom-seam",
+  "title": "修复我的页面顶部与底部断层",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-05T14:35:00+08:00",
+  "branch": "main"
+}

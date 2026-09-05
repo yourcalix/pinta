@@ -22,6 +22,8 @@ test('我的页面采用沉浸式个人背景与白色圆角活动面板', () =>
   assert.match(style, /\.profile-stage\s*{[\s\S]*min-height:\s*560rpx/);
   assert.match(style, /\.profile-content-sheet\s*{[\s\S]*margin-top:\s*-40rpx[\s\S]*border-radius:\s*36rpx 36rpx 0 0/);
   assert.match(style, /\.user-page\s*{[\s\S]*width:\s*100vw[\s\S]*padding-right:\s*0[\s\S]*padding-left:\s*0/);
+  assert.match(style, /\.user-page\s*{[\s\S]*padding-top:\s*0/);
+  assert.match(style, /\.user-page\s*{[\s\S]*padding-bottom:\s*0/);
   assert.match(style, /\.profile-stage\s*{[\s\S]*width:\s*100vw/);
   assert.match(style, /\.profile-content-sheet\s*{[\s\S]*width:\s*100vw[\s\S]*margin-right:\s*0[\s\S]*margin-left:\s*0/);
   assert.match(style, /filter:\s*blur\(35px\)/);
