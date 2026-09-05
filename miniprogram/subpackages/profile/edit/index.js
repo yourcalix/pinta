@@ -12,6 +12,10 @@ const {
   writeProfileCover,
   resolveProfileCover
 } = require('../../../utils/profile-cover');
+const {
+  buildBirthDatePicker,
+  updateBirthDatePicker
+} = require('../../../utils/profile-birth-date');
 
 const GENDER_OPTIONS = Object.freeze([
   { label: '男', value: 'MALE' },
@@ -62,9 +66,19 @@ Page({
     nicknameCanConfirm: false,
     nicknameError: '',
     nicknameHint: '',
+    birthdaySheetMounted: false,
+    birthdaySheetOpen: false,
+    birthdayPicking: false,
+    birthdayYears: [],
+    birthdayMonths: [],
+    birthdayDays: [],
+    birthdayPickerValue: [0, 0, 0],
+    birthdayDraft: '',
+    birthdayIndicatorStyle: 'height: 88rpx; border-top: 2rpx solid rgba(22, 163, 106, 0.45); border-bottom: 2rpx solid rgba(22, 163, 106, 0.45);',
     form: {
       nickname: '',
       gender: '',
+      birthDate: '',
       city: PILOT_CITY,
       interestsText: '',
       adultConfirmed: false
@@ -77,8 +91,15 @@ Page({
   onLoad(options) {
     this.nextUrl = options.next ? decodeURIComponent(options.next) : '';
     const cover = resolveProfileCover(readProfileCover(wx), this.data.profileAvatarPath);
+    let windowWidth = 375;
+    try {
+      const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+      windowWidth = Number(info.windowWidth) || windowWidth;
+    } catch (error) {}
+    const indicatorHeight = windowWidth <= 340 ? 80 : 88;
     this.setData({
       contentTopInset: calculateContentTopInset(wx),
+      birthdayIndicatorStyle: `height: ${indicatorHeight}rpx; border-top: 2rpx solid rgba(22, 163, 106, 0.45); border-bottom: 2rpx solid rgba(22, 163, 106, 0.45);`,
       currentCoverType: cover.key,
       currentCoverLabel: cover.label,
       currentCoverPath: cover.path
@@ -88,10 +109,12 @@ Page({
 
   onHide() {
     this.dismissNicknameSheetImmediately();
+    this.dismissBirthdaySheetImmediately();
   },
 
   onUnload() {
     this.clearNicknameTimers();
+    this.clearBirthdayTimers();
     if (typeof wx !== 'undefined' && typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
   },
 
@@ -118,6 +141,7 @@ Page({
         form: {
           nickname: profile.nickname || '',
           gender,
+          birthDate: profile.birthDate || '',
           city: profile.city || PILOT_CITY,
           interestsText: (profile.interests || []).join('、'),
           adultConfirmed: profile.adultConfirmed === true
@@ -231,6 +255,95 @@ Page({
     });
   },
 
+  clearBirthdayTimers() {
+    clearTimeout(this._birthdayOpenTimer);
+    clearTimeout(this._birthdayCloseTimer);
+    this._birthdayOpenTimer = null;
+    this._birthdayCloseTimer = null;
+  },
+
+  handleBirthdayOpen() {
+    if (this.data.loading || this.data.saving || (this.data.birthdaySheetMounted && this.data.birthdaySheetOpen)) return;
+    this.dismissNicknameSheetImmediately();
+    this.clearBirthdayTimers();
+    const picker = buildBirthDatePicker(this.data.form.birthDate);
+    this._birthdayPickerState = picker;
+    this.setData({
+      birthdaySheetMounted: true,
+      birthdaySheetOpen: false,
+      birthdayPicking: false,
+      birthdayYears: picker.years,
+      birthdayMonths: picker.months,
+      birthdayDays: picker.days,
+      birthdayPickerValue: picker.pickerValue,
+      birthdayDraft: picker.draft
+    });
+    this._birthdayOpenTimer = setTimeout(() => {
+      if (this.data.birthdaySheetMounted) this.setData({ birthdaySheetOpen: true });
+    }, 16);
+  },
+
+  handleBirthdayChange(event) {
+    if (!this._birthdayPickerState) return;
+    const picker = updateBirthDatePicker(this._birthdayPickerState, event.detail.value || []);
+    this._birthdayPickerState = picker;
+    this.setData({
+      birthdayYears: picker.years,
+      birthdayMonths: picker.months,
+      birthdayDays: picker.days,
+      birthdayPickerValue: picker.pickerValue,
+      birthdayDraft: picker.draft
+    });
+  },
+
+  handleBirthdayPickStart() {
+    this.setData({ birthdayPicking: true });
+  },
+
+  handleBirthdayPickEnd() {
+    this.setData({ birthdayPicking: false });
+  },
+
+  handleBirthdayConfirm() {
+    if (!this.data.birthdaySheetMounted || this.data.birthdayPicking || !this.data.birthdayDraft) return;
+    this.setData({ 'form.birthDate': this.data.birthdayDraft, errorMessage: '' });
+    this.handleBirthdayClose();
+  },
+
+  handleBirthdayClose() {
+    if (!this.data.birthdaySheetMounted) return;
+    this.clearBirthdayTimers();
+    this.setData({ birthdaySheetOpen: false, birthdayPicking: false });
+    this._birthdayCloseTimer = setTimeout(() => {
+      if (this.data.birthdaySheetOpen) return;
+      this._birthdayPickerState = null;
+      this.setData({
+        birthdaySheetMounted: false,
+        birthdayYears: [],
+        birthdayMonths: [],
+        birthdayDays: [],
+        birthdayPickerValue: [0, 0, 0],
+        birthdayDraft: ''
+      });
+    }, 200);
+  },
+
+  dismissBirthdaySheetImmediately() {
+    this.clearBirthdayTimers();
+    this._birthdayPickerState = null;
+    if (!this.data.birthdaySheetMounted) return;
+    this.setData({
+      birthdaySheetMounted: false,
+      birthdaySheetOpen: false,
+      birthdayPicking: false,
+      birthdayYears: [],
+      birthdayMonths: [],
+      birthdayDays: [],
+      birthdayPickerValue: [0, 0, 0],
+      birthdayDraft: ''
+    });
+  },
+
   preventScroll() {},
 
   handleAdultConfirm() {
@@ -293,13 +406,15 @@ Page({
     if (!form.adultConfirmed) return this.setData({ errorMessage: 'MVP 仅面向18岁及以上用户' });
     this.setData({ saving: true, errorMessage: '' });
     try {
-      const result = await userService.updateProfile({
+      const profileInput = {
         nickname: form.nickname.trim(),
         gender: form.gender,
         city: PILOT_CITY,
         interests: form.interestsText.split(/[、,，\s]+/).map((item) => item.trim()).filter(Boolean).slice(0, 8),
         adultConfirmed: true
-      });
+      };
+      if (form.birthDate) profileInput.birthDate = form.birthDate;
+      const result = await userService.updateProfile(profileInput);
       getApp().globalData.user = result.user;
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => {

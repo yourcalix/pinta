@@ -49,6 +49,15 @@
       </picker>
 
       <view class="profile-divider"></view>
+      <button class="profile-row birthday-row" bindtap="handleBirthdayOpen" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="修改生日，当前为{{form.birthDate || '未填写'}}">
+        <text class="row-label">生日</text>
+        <view class="row-value-group">
+          <text class="row-value {{form.birthDate ? '' : 'row-placeholder'}}">{{form.birthDate || '未填写'}}</text>
+          <text class="row-chevron" aria-hidden="true">›</text>
+        </view>
+      </button>
+
+      <view class="profile-divider"></view>
       <button class="profile-row adult-row {{form.adultConfirmed ? 'adult-row--confirmed' : ''}}" bindtap="handleAdultConfirm" role="checkbox" aria-checked="{{form.adultConfirmed}}" aria-label="年龄确认，{{form.adultConfirmed ? '已确认年满18岁' : '点击确认已年满18岁'}}">
         <text class="row-label">年龄确认</text>
         <view class="row-value-group">
@@ -98,6 +107,30 @@
         </view>
         <view class="nickname-hint {{nicknameError ? 'nickname-hint--error' : ''}}" role="{{nicknameError ? 'alert' : 'note'}}">{{nicknameHint}}</view>
       </view>
+    </view>
+  </view>
+
+  <view wx:if="{{birthdaySheetMounted}}" class="nickname-dialog" catchtouchmove="preventScroll" role="dialog" aria-modal="true" aria-label="修改生日">
+    <view class="nickname-backdrop {{birthdaySheetOpen ? 'nickname-backdrop--open' : ''}}" bindtap="handleBirthdayClose" catchtouchmove="preventScroll"></view>
+    <view class="nickname-sheet birthday-sheet {{birthdaySheetOpen ? 'nickname-sheet--open' : ''}}" catchtouchmove="preventScroll">
+      <view class="nickname-sheet-header">
+        <button class="nickname-sheet-action nickname-sheet-cancel" bindtap="handleBirthdayClose" hover-class="nickname-sheet-action--pressed">取消</button>
+        <view class="nickname-sheet-title">修改生日</view>
+        <button class="nickname-sheet-action nickname-sheet-confirm" disabled="{{birthdayPicking}}" bindtap="handleBirthdayConfirm" hover-class="nickname-sheet-action--pressed">确定</button>
+      </view>
+      <picker-view class="birthday-picker" value="{{birthdayPickerValue}}" indicator-style="{{birthdayIndicatorStyle}}" bindchange="handleBirthdayChange" bindpickstart="handleBirthdayPickStart" bindpickend="handleBirthdayPickEnd">
+        <picker-view-column class="birthday-picker-column">
+          <view wx:for="{{birthdayYears}}" wx:key="*this" class="birthday-picker-item">{{item}}年</view>
+        </picker-view-column>
+        <picker-view-column class="birthday-picker-column">
+          <view wx:for="{{birthdayMonths}}" wx:key="*this" class="birthday-picker-item">{{item}}月</view>
+        </picker-view-column>
+        <picker-view-column class="birthday-picker-column">
+          <view wx:for="{{birthdayDays}}" wx:key="*this" class="birthday-picker-item">{{item}}日</view>
+        </picker-view-column>
+      </picker-view>
+      <view class="birthday-privacy">🔒 仅用于年龄核验与活动匹配，不对外公开</view>
+      <view class="birthday-safe-area" aria-hidden="true"></view>
     </view>
   </view>
 </view>

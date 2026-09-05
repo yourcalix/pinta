@@ -3,6 +3,7 @@
 const { AppError, invariant } = require('./errors');
 const { decodeCursor, assertCommunityTextSafe } = require('./community');
 const { decodeDirectCursor, assertDirectMessageTextSafe } = require('./direct-message');
+const { parseBirthDate, adultBirthLimit, compareCalendarDate } = require('./profile-birth-date');
 const {
   ACTIVITY_TYPES,
   PILOT_CITY,
@@ -145,19 +146,26 @@ function validateApplicationInput(input) {
   };
 }
 
-function validateProfileInput(input) {
+function validateProfileInput(input, now = new Date()) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   invariant(input.adultConfirmed === true, 'VALIDATION_ERROR', 'MVP 仅面向18岁及以上用户', { field: 'adultConfirmed' });
   const interests = Array.isArray(input.interests)
     ? input.interests.slice(0, 8).map((item) => stringValue(item, '兴趣标签', { max: 16 })).filter(Boolean)
     : [];
-  return {
+  const profile = {
     nickname: stringValue(input.nickname, '昵称', { required: true, min: 2, max: 20 }),
     gender: enumValue(input.gender, '性别', USER_GENDERS),
     city: stringValue(input.city, '城市', { required: true, max: 20 }),
     interests,
     adultConfirmed: true
   };
+  if (Object.prototype.hasOwnProperty.call(input, 'birthDate')) {
+    const birthDate = parseBirthDate(input.birthDate);
+    invariant(birthDate, 'VALIDATION_ERROR', '生日格式无效', { field: 'birthDate' });
+    invariant(compareCalendarDate(birthDate, adultBirthLimit(now)) <= 0, 'VALIDATION_ERROR', '用户须年满18岁', { field: 'birthDate' });
+    profile.birthDate = input.birthDate;
+  }
+  return profile;
 }
 
 function validateReportInput(input) {

@@ -130,6 +130,7 @@ function selfUser(user) {
           gender: user.profile.gender || null,
           city: user.profile.city,
           interests: user.profile.interests || [],
+          birthDate: user.profile.birthDate || null,
           adultConfirmed: user.profile.adultConfirmed === true
         }
       : null,
@@ -423,8 +424,11 @@ function createPinbaService(options) {
 
     if (action === 'profile.update') {
       const actorId = requireActor(context);
-      assertActiveAccount(await store.ensureUser(actorId, at));
-      const profile = validateProfileInput(input);
+      const currentUser = assertActiveAccount(await store.ensureUser(actorId, at));
+      const profile = validateProfileInput(input, at);
+      if (!Object.prototype.hasOwnProperty.call(input, 'birthDate') && currentUser.profile && currentUser.profile.birthDate) {
+        profile.birthDate = currentUser.profile.birthDate;
+      }
       const user = await store.updateProfile(actorId, profile, at);
       if (typeof store.syncUserAvatarKind === 'function') {
         try {

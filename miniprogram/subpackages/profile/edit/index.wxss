@@ -56,6 +56,7 @@ page {
 
 .profile-nav-back::after,
 .nickname-row::after,
+.birthday-row::after,
 .adult-row::after,
 .cover-row::after,
 .nickname-sheet-action::after,
@@ -272,6 +273,10 @@ page {
   border-radius: 0;
 }
 
+.birthday-row {
+  border-radius: 0;
+}
+
 .nickname-dialog,
 .nickname-backdrop,
 .nickname-sheet {
@@ -404,6 +409,41 @@ page {
 .nickname-hint--error {
   color: #dc2626;
   text-align: left;
+}
+
+.birthday-picker {
+  box-sizing: border-box;
+  width: 100%;
+  height: 400rpx;
+  padding: 28rpx 24rpx 10rpx;
+  background: #ffffff;
+}
+
+.birthday-picker-column {
+  flex: 1;
+}
+
+.birthday-picker-item {
+  height: 88rpx;
+  color: #17191c;
+  font-size: 30rpx;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.birthday-privacy {
+  margin: 4rpx 32rpx 18rpx;
+  padding: 18rpx 22rpx;
+  color: #7d8187;
+  font-size: 22rpx;
+  line-height: 1.5;
+  text-align: center;
+  background: #f6f7f9;
+  border-radius: 18rpx;
+}
+
+.birthday-safe-area {
+  height: env(safe-area-inset-bottom);
 }
 
 .preference-card {
@@ -575,6 +615,17 @@ page {
   .nickname-input-shell {
     height: 84rpx;
     border-radius: 16rpx;
+  }
+
+  .birthday-picker {
+    height: 360rpx;
+    padding-top: 20rpx;
+  }
+
+  .birthday-picker-item {
+    height: 80rpx;
+    font-size: 28rpx;
+    line-height: 80rpx;
   }
 
   .row-label {

@@ -1,0 +1,12 @@
+{
+  "id": "add-profile-birthday",
+  "title": "个人资料新增生日字段与修改生日选择器",
+  "status": "in_progress",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交",
+  "createdAt": "2026-09-05T18:25:00+08:00",
+  "branch": "main"
+}

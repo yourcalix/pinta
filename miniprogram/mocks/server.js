@@ -6,6 +6,7 @@ const {
   RIDE_ROUTES,
   getRideRoute
 } = require('../config/locations');
+const { parseBirthDate, adultBirthLimit } = require('../utils/profile-birth-date');
 
 const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
 const LEGACY_ACTIVITY_TYPE_MAP = Object.freeze({ ride: 'companion', buddy: 'sport', product: 'food' });
@@ -82,6 +83,35 @@ function avatarKindFromGender(gender) {
 
 function completeRideProfile(profile) {
   return Boolean(profile && profile.adultConfirmed === true && ['MALE', 'FEMALE'].includes(profile.gender));
+}
+
+function compareCalendarDate(left, right) {
+  return left.year - right.year || left.month - right.month || left.day - right.day;
+}
+
+function validateMockProfile(input, currentProfile) {
+  assert(input && typeof input === 'object', 'VALIDATION_ERROR', '资料格式无效');
+  const nickname = typeof input.nickname === 'string' ? input.nickname.trim() : '';
+  assert(nickname.length >= 2 && nickname.length <= 20, 'VALIDATION_ERROR', '昵称需为2—20个字');
+  assert(['MALE', 'FEMALE'].includes(input.gender), 'VALIDATION_ERROR', '请选择性别');
+  assert(input.adultConfirmed === true, 'VALIDATION_ERROR', 'MVP 仅面向18岁及以上用户');
+  const profile = {
+    nickname,
+    gender: input.gender,
+    city: typeof input.city === 'string' && input.city.trim() ? input.city.trim() : PILOT_CITY,
+    interests: Array.isArray(input.interests) ? input.interests.slice(0, 8).map((item) => String(item).trim()).filter(Boolean) : [],
+    adultConfirmed: true
+  };
+  const suppliedBirthDate = Object.prototype.hasOwnProperty.call(input, 'birthDate');
+  if (suppliedBirthDate) {
+    const parsed = parseBirthDate(input.birthDate);
+    assert(parsed, 'VALIDATION_ERROR', '生日格式无效', { field: 'birthDate' });
+    assert(compareCalendarDate(parsed, adultBirthLimit(new Date())) <= 0, 'VALIDATION_ERROR', '用户须年满18岁', { field: 'birthDate' });
+    profile.birthDate = input.birthDate;
+  } else if (currentProfile && currentProfile.birthDate) {
+    profile.birthDate = currentProfile.birthDate;
+  }
+  return profile;
 }
 
 function normalizeAvatarRoster(roster) {
@@ -681,7 +711,14 @@ function selfUser(user) {
     role: user.role,
     status: user.status,
     onboarding: user.onboarding ? clone(user.onboarding) : { roleIntent: null, completedAt: null },
-    profile: clone(user.profile),
+    profile: user.profile ? {
+      nickname: user.profile.nickname,
+      gender: user.profile.gender || null,
+      city: user.profile.city,
+      interests: clone(user.profile.interests || []),
+      birthDate: user.profile.birthDate || null,
+      adultConfirmed: user.profile.adultConfirmed === true
+    } : null,
     profileComplete: completeRideProfile(user.profile)
   } : null;
 }
@@ -764,7 +801,7 @@ function publicActivity(activity, options = {}) {
       : viewerMember
         ? 'member'
         : viewerApplication ? 'applicant' : 'guest';
-  const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, ...safe } = activity;
+  const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, ...safe } = activity;
   const capacity = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
   const result = {
     ...clone(safe),
@@ -776,6 +813,7 @@ function publicActivity(activity, options = {}) {
     status: activity.status,
     viewerRole
   };
+  if (result.owner) result.owner = { nickname: String(result.owner.nickname || '') };
   if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) result.legacy = { sourceType: storedType, readOnly: true };
   if (viewerApplication) result.viewerApplication = publicApplication(viewerApplication);
   if (viewerMember) {
@@ -1248,8 +1286,7 @@ function handle(action, input, idempotencyKey = '') {
   if (action === 'profile.get') return { user: selfUser(requireUser()) };
   if (action === 'profile.update') {
     const user = requireUser();
-    assert(['MALE', 'FEMALE'].includes(input.gender), 'VALIDATION_ERROR', '请选择性别');
-    user.profile = clone(input);
+    user.profile = validateMockProfile(input, user.profile);
     const avatarKind = avatarKindFromGender(input.gender);
     state.members.filter((member) => member.userId === user.id && member.status === 'ACTIVE').forEach((member) => {
       const activity = activityById(member.activityId);
