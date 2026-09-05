@@ -1,0 +1,12 @@
+{
+  "id": "store-profile-default-cover",
+  "title": "存放我的页面默认背景图资源",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已归档",
+  "createdAt": "2026-09-05T17:30:00+08:00",
+  "branch": "main"
+}
