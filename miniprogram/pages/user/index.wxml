@@ -22,6 +22,7 @@
         <image class="profile-atmosphere-image {{profileCoverUsesAvatar ? 'profile-atmosphere-image--avatar' : 'profile-atmosphere-image--seascape'}}" src="{{profileCoverPath}}" mode="aspectFill" aria-hidden="true" />
         <view class="profile-atmosphere-shade {{profileCoverUsesAvatar ? '' : 'profile-atmosphere-shade--seascape'}}"></view>
       </view>
+      <button class="profile-background-preview" bindtap="handleBackgroundPreview" hover-class="profile-background-preview--pressed" hover-stay-time="80" aria-label="查看背景大图"></button>
 
       <view class="profile-stage-content">
         <view class="profile-action-row" style="top: calc({{profileActionTop}}px - {{contentTopInset}}px); right: {{profileActionRight}}px;">
@@ -31,7 +32,7 @@
         </view>
 
         <view class="profile-identity">
-          <view class="profile-avatar-shell" aria-hidden="true"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" /></view>
+          <button class="profile-avatar-shell" bindtap="handleAvatarPreview" hover-class="profile-avatar-shell--pressed" hover-stay-time="80" aria-label="查看头像大图"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="aspectFit" aria-hidden="true" /></button>
           <view class="profile-name-block">
             <view class="profile-name-row"><text class="profile-name">{{user.profile.nickname}}</text><text class="profile-gender profile-gender--{{user.profile.gender === 'FEMALE' ? 'female' : 'male'}}" aria-label="性别，{{profileGenderLabel}}">{{user.profile.gender === 'FEMALE' ? '♀' : '♂'}}</text></view>
             <view class="profile-verification">已确认年满18岁</view>

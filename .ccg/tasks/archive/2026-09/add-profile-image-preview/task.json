@@ -1,0 +1,12 @@
+{
+  "id": "add-profile-image-preview",
+  "title": "我的页面头像与背景支持图片预览",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交",
+  "createdAt": "2026-09-05T19:10:00+08:00",
+  "branch": "main"
+}

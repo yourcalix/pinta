@@ -83,12 +83,37 @@ button::after { display: none; }
   );
 }
 
+.profile-background-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  background: transparent;
+}
+
+.profile-background-preview--pressed {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .profile-stage-content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   box-sizing: border-box;
   min-height: 560rpx;
   padding: 12rpx 30rpx 72rpx;
+  pointer-events: none;
+}
+
+.profile-action-row,
+.profile-avatar-shell,
+.profile-intro,
+.profile-metrics,
+.quick-task-strip {
+  pointer-events: auto;
 }
 
 .profile-action-row {
@@ -143,12 +168,19 @@ button::after { display: none; }
   box-sizing: border-box;
   width: 132rpx;
   height: 132rpx;
+  margin: 0;
+  line-height: 1;
   padding: 3rpx;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.9);
   border: 4rpx solid rgba(255, 255, 255, 0.92);
   border-radius: 50%;
   box-shadow: 0 8rpx 22rpx rgba(0, 0, 0, 0.24);
+}
+
+.profile-avatar-shell--pressed {
+  transform: scale(0.96);
+  opacity: 0.88;
 }
 
 .profile-avatar {

@@ -188,6 +188,24 @@ Page({
     wx.navigateTo({ url });
   },
 
+  previewProfileImage(imagePath, label) {
+    if (!imagePath || typeof wx === 'undefined' || typeof wx.previewImage !== 'function') return;
+    wx.previewImage({
+      current: imagePath,
+      urls: [imagePath],
+      showmenu: false,
+      fail: () => wx.showToast({ title: `${label}暂时无法查看`, icon: 'none' })
+    });
+  },
+
+  handleAvatarPreview() {
+    this.previewProfileImage(this.data.profileAvatarPath, '头像');
+  },
+
+  handleBackgroundPreview() {
+    this.previewProfileImage(this.data.profileCoverPath, '背景');
+  },
+
   handleProfile() { wx.navigateTo({ url: '/subpackages/profile/edit/index' }); },
 
   handleGoDiscover() { wx.switchTab({ url: '/pages/discover/index' }); },
