@@ -29,10 +29,13 @@
       </view>
 
       <view class="profile-divider"></view>
-      <label class="profile-row">
+      <button class="profile-row nickname-row" bindtap="handleNicknameOpen" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="修改昵称，当前为{{form.nickname || '未填写'}}">
         <text class="row-label">昵称</text>
-        <input class="row-control" maxlength="20" cursor-spacing="140" adjust-position="{{true}}" placeholder="请输入 2—20 个字" value="{{form.nickname}}" data-field="nickname" bindinput="handleInput" aria-label="昵称，必填" />
-      </label>
+        <view class="row-value-group">
+          <text class="row-value {{form.nickname ? '' : 'row-placeholder'}}">{{form.nickname || '未填写'}}</text>
+          <text class="row-chevron" aria-hidden="true">›</text>
+        </view>
+      </button>
 
       <view class="profile-divider"></view>
       <picker mode="selector" range="{{genderOptions}}" range-key="label" value="{{genderIndex}}" bindchange="handleGenderPick">
@@ -79,5 +82,22 @@
 
   <view class="fixed-save-bar">
     <button class="save-button" loading="{{saving}}" disabled="{{saving || loading}}" bindtap="handleSave" hover-class="save-button--pressed">{{saving ? '正在保存…' : '保存资料'}}</button>
+  </view>
+
+  <view wx:if="{{nicknameSheetMounted}}" class="nickname-dialog" catchtouchmove="preventScroll" role="dialog" aria-modal="true" aria-label="修改昵称">
+    <view class="nickname-backdrop {{nicknameSheetOpen ? 'nickname-backdrop--open' : ''}}" bindtap="handleNicknameClose" catchtouchmove="preventScroll"></view>
+    <view class="nickname-sheet {{nicknameSheetOpen ? 'nickname-sheet--open' : ''}}" catchtouchmove="preventScroll">
+      <view class="nickname-sheet-header">
+        <button class="nickname-sheet-action nickname-sheet-cancel" bindtap="handleNicknameClose" hover-class="nickname-sheet-action--pressed">取消</button>
+        <view class="nickname-sheet-title">修改昵称</view>
+        <button class="nickname-sheet-action nickname-sheet-confirm" disabled="{{!nicknameCanConfirm}}" bindtap="handleNicknameConfirm" hover-class="nickname-sheet-action--pressed">确定</button>
+      </view>
+      <view class="nickname-sheet-body">
+        <view class="nickname-input-shell {{nicknameError ? 'nickname-input-shell--error' : ''}}">
+          <input class="nickname-input" maxlength="20" value="{{nicknameDraft}}" focus="{{nicknameInputFocus}}" adjust-position="{{true}}" cursor-spacing="48" confirm-type="done" bindinput="handleNicknameDraftInput" bindconfirm="handleNicknameConfirm" aria-label="输入新昵称，最多20字" />
+        </view>
+        <view class="nickname-hint {{nicknameError ? 'nickname-hint--error' : ''}}" role="{{nicknameError ? 'alert' : 'note'}}">{{nicknameHint}}</view>
+      </view>
+    </view>
   </view>
 </view>

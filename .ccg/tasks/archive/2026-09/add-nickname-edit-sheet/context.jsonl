@@ -1,0 +1,4 @@
+{"path":"miniprogram/subpackages/profile/edit/index.wxml","role":"昵称行箭头、可点击入口与修改昵称底部抽屉"}
+{"path":"miniprogram/subpackages/profile/edit/index.js","role":"昵称临时草稿、延迟聚焦、校验、确认与取消生命周期"}
+{"path":"miniprogram/subpackages/profile/edit/index.wxss","role":"遮罩、底部抽屉、输入区、动效和窄屏样式"}
+{"path":"tests/profile-nickname-sheet.test.js","role":"昵称抽屉结构、草稿隔离与校验行为测试"}

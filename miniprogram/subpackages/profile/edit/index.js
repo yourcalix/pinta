@@ -18,6 +18,23 @@ const GENDER_OPTIONS = Object.freeze([
   { label: '女', value: 'FEMALE' }
 ]);
 
+const NICKNAME_MIN_LENGTH = 2;
+const NICKNAME_MAX_LENGTH = 20;
+
+function nicknameDraftState(value) {
+  const draft = String(value || '');
+  const nickname = draft.trim();
+  const length = nickname.length;
+  const valid = length >= NICKNAME_MIN_LENGTH && length <= NICKNAME_MAX_LENGTH;
+  return {
+    draft,
+    nickname,
+    valid,
+    error: valid ? '' : '昵称需为 2—20 个字',
+    hint: valid ? `${length}/${NICKNAME_MAX_LENGTH}` : '昵称需为 2—20 个字'
+  };
+}
+
 function genderIndex(gender) {
   return Math.max(0, GENDER_OPTIONS.findIndex((item) => item.value === gender));
 }
@@ -38,6 +55,13 @@ Page({
     genderOptions: GENDER_OPTIONS,
     genderIndex: 0,
     genderLabel: '请选择',
+    nicknameSheetMounted: false,
+    nicknameSheetOpen: false,
+    nicknameDraft: '',
+    nicknameInputFocus: false,
+    nicknameCanConfirm: false,
+    nicknameError: '',
+    nicknameHint: '',
     form: {
       nickname: '',
       gender: '',
@@ -60,6 +84,15 @@ Page({
       currentCoverPath: cover.path
     });
     this.loadProfile();
+  },
+
+  onHide() {
+    this.dismissNicknameSheetImmediately();
+  },
+
+  onUnload() {
+    this.clearNicknameTimers();
+    if (typeof wx !== 'undefined' && typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
   },
 
   async loadProfile() {
@@ -110,6 +143,95 @@ Page({
   handleInput(event) {
     this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value, errorMessage: '' });
   },
+
+  clearNicknameTimers() {
+    clearTimeout(this._nicknameOpenTimer);
+    clearTimeout(this._nicknameFocusTimer);
+    clearTimeout(this._nicknameCloseTimer);
+    this._nicknameOpenTimer = null;
+    this._nicknameFocusTimer = null;
+    this._nicknameCloseTimer = null;
+  },
+
+  handleNicknameOpen() {
+    if (this.data.loading || this.data.saving || (this.data.nicknameSheetMounted && this.data.nicknameSheetOpen)) return;
+    this.clearNicknameTimers();
+    const state = nicknameDraftState(this.data.form.nickname);
+    this.setData({
+      nicknameSheetMounted: true,
+      nicknameSheetOpen: false,
+      nicknameDraft: state.draft,
+      nicknameInputFocus: false,
+      nicknameCanConfirm: state.valid,
+      nicknameError: '',
+      nicknameHint: state.valid ? state.hint : ''
+    });
+    this._nicknameOpenTimer = setTimeout(() => {
+      if (this.data.nicknameSheetMounted) this.setData({ nicknameSheetOpen: true });
+    }, 16);
+    this._nicknameFocusTimer = setTimeout(() => {
+      if (this.data.nicknameSheetMounted && this.data.nicknameSheetOpen) this.setData({ nicknameInputFocus: true });
+    }, 180);
+  },
+
+  handleNicknameDraftInput(event) {
+    const state = nicknameDraftState(event.detail.value);
+    this.setData({
+      nicknameDraft: state.draft,
+      nicknameCanConfirm: state.valid,
+      nicknameError: state.error,
+      nicknameHint: state.hint
+    });
+  },
+
+  handleNicknameConfirm() {
+    if (!this.data.nicknameSheetMounted) return;
+    const state = nicknameDraftState(this.data.nicknameDraft);
+    if (!state.valid) {
+      this.setData({
+        nicknameCanConfirm: false,
+        nicknameError: state.error,
+        nicknameHint: state.hint
+      });
+      return;
+    }
+    this.setData({ 'form.nickname': state.nickname, errorMessage: '' });
+    this.handleNicknameClose();
+  },
+
+  handleNicknameClose() {
+    if (!this.data.nicknameSheetMounted) return;
+    this.clearNicknameTimers();
+    if (typeof wx !== 'undefined' && typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
+    this.setData({ nicknameSheetOpen: false, nicknameInputFocus: false });
+    this._nicknameCloseTimer = setTimeout(() => {
+      if (this.data.nicknameSheetOpen) return;
+      this.setData({
+        nicknameSheetMounted: false,
+        nicknameDraft: '',
+        nicknameCanConfirm: false,
+        nicknameError: '',
+        nicknameHint: ''
+      });
+    }, 200);
+  },
+
+  dismissNicknameSheetImmediately() {
+    this.clearNicknameTimers();
+    if (!this.data.nicknameSheetMounted) return;
+    if (typeof wx !== 'undefined' && typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
+    this.setData({
+      nicknameSheetMounted: false,
+      nicknameSheetOpen: false,
+      nicknameDraft: '',
+      nicknameInputFocus: false,
+      nicknameCanConfirm: false,
+      nicknameError: '',
+      nicknameHint: ''
+    });
+  },
+
+  preventScroll() {},
 
   handleAdultConfirm() {
     if (this.data.form.adultConfirmed) return;

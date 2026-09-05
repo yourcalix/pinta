@@ -1,0 +1,12 @@
+{
+  "id": "add-nickname-edit-sheet",
+  "title": "个人资料昵称行增加箭头与底部修改昵称抽屉",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付",
+  "createdAt": "2026-09-05T18:10:00+08:00",
+  "branch": "main"
+}

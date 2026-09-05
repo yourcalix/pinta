@@ -30,7 +30,8 @@ test('编辑主页只呈现真实资料字段且受控头像随性别联动', ()
 
   assert.match(template, /class="controlled-avatar"[^>]*src="\{\{profileAvatarPath\}\}"/);
   assert.match(template, /头像根据性别自动生成，暂不支持自定义上传/);
-  assert.match(template, /data-field="nickname"/);
+  assert.match(template, /class="profile-row nickname-row"[^>]*bindtap="handleNicknameOpen"/);
+  assert.match(template, /class="row-chevron"[^>]*aria-hidden="true">›/);
   assert.match(template, /bindchange="handleGenderPick"/);
   assert.match(template, /年龄确认/);
   assert.match(template, /data-field="interestsText"/);
