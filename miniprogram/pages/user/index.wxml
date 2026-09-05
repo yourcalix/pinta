@@ -24,7 +24,7 @@
       </view>
 
       <view class="profile-stage-content">
-        <view class="profile-action-row">
+        <view class="profile-action-row" style="top: calc({{profileActionTop}}px - {{contentTopInset}}px); right: {{profileActionRight}}px;">
           <button class="profile-edit-button" bindtap="handleProfile" hover-class="glass-button--pressed" aria-label="编辑个人资料">
             <view class="profile-edit-surface"><text aria-hidden="true">✎</text><text>编辑主页</text></view>
           </button>

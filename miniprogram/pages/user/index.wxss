@@ -71,8 +71,6 @@ button::after { display: none; }
 
 .profile-action-row {
   position: absolute;
-  top: 0;
-  right: 32rpx;
   display: flex;
   min-height: 88rpx;
   align-items: center;

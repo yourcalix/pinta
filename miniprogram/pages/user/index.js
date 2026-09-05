@@ -16,6 +16,17 @@ const PROFILE_COVERS = Object.freeze({
 });
 const WEEKDAYS = Object.freeze(['日', '一', '二', '三', '四', '五', '六']);
 
+function profileActionPosition(platform) {
+  try {
+    const menuRect = platform.getMenuButtonBoundingClientRect();
+    const windowWidth = platform.getWindowInfo().windowWidth;
+    if (Number.isFinite(menuRect.top) && Number.isFinite(menuRect.left) && Number.isFinite(windowWidth)) {
+      return { top: Math.max(0, Math.round(menuRect.top - 9)), right: Math.max(16, Math.round(windowWidth - menuRect.left + 8)) };
+    }
+  } catch (error) { return { top: 36, right: 112 }; }
+  return { top: 36, right: 112 };
+}
+
 function decorateProfileActivity(activity) {
   const date = new Date(activity.startsAt);
   const validDate = Number.isFinite(date.getTime());
@@ -32,6 +43,8 @@ function decorateProfileActivity(activity) {
 Page({
   data: {
     contentTopInset: 88,
+    profileActionTop: 36,
+    profileActionRight: 112,
     loading: true,
     error: '',
     user: null,
@@ -51,7 +64,13 @@ Page({
   },
 
   onLoad() {
-    this.setData({ contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx) });
+    const platform = typeof wx === 'undefined' ? null : wx;
+    const actionPosition = profileActionPosition(platform);
+    this.setData({
+      contentTopInset: calculateContentTopInset(platform),
+      profileActionTop: actionPosition.top,
+      profileActionRight: actionPosition.right
+    });
   },
 
   onShow() {

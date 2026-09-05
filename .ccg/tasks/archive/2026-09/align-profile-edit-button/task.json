@@ -1,0 +1,12 @@
+{
+  "id": "align-profile-edit-button",
+  "title": "按参考图校准编辑主页按钮位置",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已归档",
+  "createdAt": "2026-09-05T17:00:00+08:00",
+  "branch": "main"
+}

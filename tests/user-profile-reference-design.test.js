@@ -37,7 +37,9 @@ test('个人资料、统计、待办和四类活动入口保留真实业务语�
 
   assert.match(template, /aria-label="编辑个人资料"/);
   assert.match(template, /class="profile-edit-surface"/);
-  assert.match(style, /\.profile-action-row\s*{[\s\S]*position:\s*absolute[\s\S]*right:\s*32rpx/);
+  assert.match(template, /class="profile-action-row"[^>]*style="top: calc\(\{\{profileActionTop\}\}px - \{\{contentTopInset\}\}px\); right: \{\{profileActionRight\}\}px;"/);
+  assert.match(style, /\.profile-action-row\s*{[\s\S]*position:\s*absolute/);
+  assert.match(script, /menuRect\.top - 9[\s\S]*windowWidth - menuRect\.left \+ 8/);
   assert.match(style, /\.profile-edit-surface\s*{[\s\S]*min-height:\s*52rpx/);
   assert.equal((template.match(/hover-class="metric-item--pressed"/g) || []).length, 3);
   for (const value of ['owned', 'joined', 'formed', 'history']) {

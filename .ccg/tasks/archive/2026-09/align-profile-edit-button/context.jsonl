@@ -1,0 +1,4 @@
+{"path":"miniprogram/pages/user/index.js","reason":"根据微信胶囊和窗口实时尺寸计算编辑按钮锚点"}
+{"path":"miniprogram/pages/user/index.wxml","reason":"将动态顶部与右侧坐标应用到编辑主页按钮"}
+{"path":"miniprogram/pages/user/index.wxss","reason":"移除会覆盖动态坐标的固定 top/right"}
+{"path":"tests/user-profile-reference-design.test.js","reason":"验证按钮使用胶囊动态位置且背景仍从顶部通铺"}
