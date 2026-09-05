@@ -144,7 +144,7 @@ function selfUser(user) {
   };
 }
 
-function publicActivity(activity, viewer = {}, at) {
+function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
   const storedType = activity.type;
   activity = normalizeRideCapacity(activity);
   const maxPassengers = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
@@ -165,7 +165,11 @@ function publicActivity(activity, viewer = {}, at) {
     minPassengers,
     maxPassengers,
     memberCount: activity.memberCount,
-    avatarSlots: publicAvatarSlots(activity.avatarRoster, maxPassengers),
+    avatarSlots: publicAvatarSlots(
+      avatarHydration.roster || activity.avatarRoster,
+      maxPassengers,
+      avatarHydration.profilesByMemberId || {}
+    ),
     remainingCapacity: Math.max(0, Number(maxPassengers) - Number(activity.memberCount || 0)),
     status: activity.status,
     rules: activity.rules,
@@ -309,6 +313,51 @@ function createPinbaService(options) {
 
   function nowIso() {
     return clock().toISOString();
+  }
+
+  async function publicActivities(activities, viewers, at) {
+    const items = (activities || []).filter(Boolean);
+    let hydration = { rostersByActivity: {}, profilesByMemberId: {} };
+    if (typeof store.hydratePublicActivityAvatars === 'function') {
+      try {
+        hydration = await store.hydratePublicActivityAvatars(items);
+      } catch (error) {
+        console.error('[pinba-public-avatar-hydration]', {
+          activityCount: items.length,
+          code: error && (error.errCode || error.code) || 'UNKNOWN'
+        });
+      }
+    }
+    return items.map((activity, index) => publicActivity(activity, Array.isArray(viewers) ? viewers[index] || {} : viewers || {}, at, {
+      roster: hydration.rostersByActivity && hydration.rostersByActivity[activity.id],
+      profilesByMemberId: hydration.profilesByMemberId || {}
+    }));
+  }
+
+  async function onePublicActivity(activity, viewer, at) {
+    const items = await publicActivities(activity ? [activity] : [], [viewer || {}], at);
+    return items[0] || null;
+  }
+
+  async function refreshCachedActivity(data, context, at) {
+    if (!data || !data.activity || !data.activity.id) return data;
+    const emptyCachedAvatarSlots = () => {
+      const capacity = data.activity.maxMembers || data.activity.maxPassengers || data.activity.targetMembers;
+      return { ...data, activity: { ...data.activity, avatarSlots: publicAvatarSlots([], capacity) } };
+    };
+    try {
+      const stored = normalizeActivityForRead(await store.getActivity(data.activity.id), at);
+      if (!stored) return emptyCachedAvatarSlots();
+      const actorId = context && context.actorId;
+      const viewer = actorId ? await store.getViewerContext(stored.id, actorId) : {};
+      if (data.activity.viewerRole === 'admin') viewer.role = 'admin';
+      return { ...data, activity: await onePublicActivity(stored, viewer, at) };
+    } catch (error) {
+      console.error('[pinba-idempotent-avatar-refresh]', {
+        code: error && (error.errCode || error.code) || 'UNKNOWN'
+      });
+      return emptyCachedAvatarSlots();
+    }
   }
 
   async function publicDirectConversation(conversation, actorId) {
@@ -510,7 +559,7 @@ function createPinbaService(options) {
       };
       const page = await store.listActivities(filters, at);
       return {
-        items: page.items.map((item) => publicActivity(item, {}, at)),
+        items: await publicActivities(page.items, {}, at),
         nextCursor: page.nextCursor || null
       };
     }
@@ -523,7 +572,7 @@ function createPinbaService(options) {
       invariant(activity.status !== ACTIVITY_STATUS.SUSPENDED, 'TAKEDOWN');
       const actorId = context && context.actorId;
       const viewer = actorId ? await store.getViewerContext(activityId, actorId) : {};
-      return { activity: publicActivity(activity, viewer, at) };
+      return { activity: await onePublicActivity(activity, viewer, at) };
     }
 
     if (action === 'community.post.list') {
@@ -716,9 +765,15 @@ function createPinbaService(options) {
     if (action === 'activity.mine') {
       const user = await requireActiveUser(context, false);
       const result = await store.listUserActivities(user.id, at);
+      const combined = [...result.owned, ...result.joined];
+      const viewers = [
+        ...result.owned.map(() => ({ role: 'owner' })),
+        ...result.joined.map(() => ({ role: 'member' }))
+      ];
+      const visible = await publicActivities(combined, viewers, at);
       return {
-        owned: result.owned.map((item) => publicActivity(item, { role: 'owner' }, at)),
-        joined: result.joined.map((item) => publicActivity(item, { role: 'member' }, at))
+        owned: visible.slice(0, result.owned.length),
+        joined: visible.slice(result.owned.length)
       };
     }
 
@@ -751,7 +806,7 @@ function createPinbaService(options) {
       };
       const storedActivity = await store.createActivityWithOwner(activity, ownerMember, null, null);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
-      return { activity: publicActivity(storedActivity, { role: 'owner' }, at) };
+      return { activity: await onePublicActivity(storedActivity, { role: 'owner' }, at) };
     }
 
     if (action === 'application.submit') {
@@ -824,7 +879,7 @@ function createPinbaService(options) {
       }
       await store.addAudit({ id: operationId(context, 'audit'), actorId: owner.id, action, targetType: 'application', targetId: applicationId, at });
       return {
-        activity: publicActivity(result.activity, { role: 'owner' }, at),
+        activity: await onePublicActivity(result.activity, { role: 'owner' }, at),
         application: publicApplication(result.application)
       };
     }
@@ -844,7 +899,7 @@ function createPinbaService(options) {
       });
       await store.addAudit({ id: operationId(context, 'audit'), actorId: owner.id, action, targetType: 'application', targetId: applicationId, at });
       return {
-        activity: publicActivity(result.activity, { role: 'owner' }, at),
+        activity: await onePublicActivity(result.activity, { role: 'owner' }, at),
         application: publicApplication(result.application)
       };
     }
@@ -864,7 +919,7 @@ function createPinbaService(options) {
       await moderation.check([reason], { actorId: user.id, scene: 2 });
       const result = await store.leaveActivity(activityId, user.id, reason, at);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'activity', targetId: activityId, at });
-      return { activity: publicActivity(result.activity, { role: 'member' }, at) };
+      return { activity: await onePublicActivity(result.activity, { role: 'member' }, at) };
     }
 
     if (action === 'activity.cancel') {
@@ -874,7 +929,7 @@ function createPinbaService(options) {
       await moderation.check([reason], { actorId: owner.id, scene: 2 });
       const result = await store.cancelActivity(activityId, owner.id, reason, at);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: owner.id, action, targetType: 'activity', targetId: activityId, at });
-      return { activity: publicActivity(result.activity, { role: 'owner' }, at) };
+      return { activity: await onePublicActivity(result.activity, { role: 'owner' }, at) };
     }
 
     if (action === 'activity.complete') {
@@ -882,7 +937,7 @@ function createPinbaService(options) {
       const activityId = validateId(input && input.activityId, '活动ID');
       const activity = await store.completeActivity(activityId, owner.id, at);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: owner.id, action, targetType: 'activity', targetId: activityId, at });
-      return { activity: publicActivity(activity, { role: 'owner' }, at) };
+      return { activity: await onePublicActivity(activity, { role: 'owner' }, at) };
     }
 
     if (action === 'group.space') {
@@ -1154,7 +1209,7 @@ function createPinbaService(options) {
       const reason = stringValue(input && input.reason, '处置原因', { required: true, max: 160 });
       const activity = await store.suspendActivity(activityId, admin.id, reason, at);
       await store.addAudit({ id: operationId(context, 'audit'), actorId: admin.id, action, targetType: 'activity', targetId: activityId, at });
-      return { activity: publicActivity(activity, { role: 'admin' }, at) };
+      return { activity: await onePublicActivity(activity, { role: 'admin' }, at) };
     }
 
     throw new AppError('NOT_FOUND', '接口动作不存在');
@@ -1175,7 +1230,7 @@ function createPinbaService(options) {
         const payloadHash = crypto.createHash('sha256').update(stableSerialize(input)).digest('hex');
         const cacheAction = PAYLOAD_BOUND_IDEMPOTENT_ACTIONS.has(action) ? `${action}:${payloadHash}` : action;
         const cached = BUSINESS_IDEMPOTENT_ACTIONS.has(action) ? null : await store.getIdempotency(actorId, cacheAction, key);
-        if (cached) return { ok: true, data: cached, requestId, idempotentReplay: true };
+        if (cached) return { ok: true, data: await refreshCachedActivity(cached, context, nowIso()), requestId, idempotentReplay: true };
         data = await runAction(action, input, { ...context, idempotencyKey: key, payloadHash });
         if (!BUSINESS_IDEMPOTENT_ACTIONS.has(action)) await store.saveIdempotency(actorId, cacheAction, key, data, nowIso());
       } else {

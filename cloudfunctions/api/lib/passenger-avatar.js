@@ -4,6 +4,14 @@ const { USER_GENDERS, PASSENGER_AVATAR_KINDS } = require('./constants');
 const ACTIVITY_AVATAR_LIMIT = 20;
 
 const EMPTY_AVATAR_KIND = 'EMPTY';
+const CUSTOM_AVATAR_KIND = 'CUSTOM';
+const DEFAULT_AVATAR_KIND = 'DEFAULT';
+
+function fallbackFromGender(gender) {
+  if (gender === 'MALE') return 'MALE_DEFAULT';
+  if (gender === 'FEMALE') return 'FEMALE_DEFAULT';
+  return null;
+}
 
 function avatarKindFromGender(gender) {
   if (gender === 'MALE') return 'PASSENGER_A';
@@ -21,13 +29,13 @@ function normalizeAvatarRoster(roster) {
   if (!Array.isArray(roster)) return [];
   const seen = new Set();
   return roster.filter((item) => {
-    if (!item || typeof item.memberId !== 'string' || !PASSENGER_AVATAR_KINDS.includes(item.avatarKind)) return false;
+    if (!item || typeof item.memberId !== 'string' || !item.memberId.trim()) return false;
     if (seen.has(item.memberId)) return false;
     seen.add(item.memberId);
     return true;
   }).slice(0, ACTIVITY_AVATAR_LIMIT).map((item) => ({
     memberId: item.memberId,
-    avatarKind: item.avatarKind
+    avatarKind: PASSENGER_AVATAR_KINDS.includes(item.avatarKind) ? item.avatarKind : null
   }));
 }
 
@@ -44,19 +52,35 @@ function removeAvatarRosterMember(roster, memberId) {
   return normalizeAvatarRoster(roster).filter((item) => item.memberId !== memberId);
 }
 
-function publicAvatarSlots(roster, capacity = 7) {
+function publicAvatarSlot(profile) {
+  const fallback = fallbackFromGender(profile && profile.gender);
+  if (!fallback) return { kind: EMPTY_AVATAR_KIND };
+  const src = profile && typeof profile.avatarSrc === 'string' ? profile.avatarSrc.trim() : '';
+  if (/^https:\/\//.test(src)) {
+    return { kind: CUSTOM_AVATAR_KIND, src, fallback };
+  }
+  return { kind: DEFAULT_AVATAR_KIND, fallback };
+}
+
+function publicAvatarSlots(roster, capacity = 7, profilesByMemberId = {}) {
   const total = Math.max(1, Math.min(ACTIVITY_AVATAR_LIMIT, Math.floor(Number(capacity)) || 7));
-  const kinds = normalizeAvatarRoster(roster).map((item) => item.avatarKind).slice(0, total);
-  while (kinds.length < total) kinds.push(EMPTY_AVATAR_KIND);
-  return kinds.map((kind) => ({ kind }));
+  const slots = normalizeAvatarRoster(roster)
+    .slice(0, total)
+    .map((item) => publicAvatarSlot(profilesByMemberId[item.memberId]));
+  while (slots.length < total) slots.push({ kind: EMPTY_AVATAR_KIND });
+  return slots;
 }
 
 module.exports = {
   EMPTY_AVATAR_KIND,
+  CUSTOM_AVATAR_KIND,
+  DEFAULT_AVATAR_KIND,
   avatarKindFromGender,
+  fallbackFromGender,
   isCompleteRideProfile,
   normalizeAvatarRoster,
   upsertAvatarRoster,
   removeAvatarRosterMember,
+  publicAvatarSlot,
   publicAvatarSlots
 };

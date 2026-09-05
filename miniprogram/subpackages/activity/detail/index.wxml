@@ -36,7 +36,7 @@
           <view class="member-heading"><text class="info-symbol" aria-hidden="true">♟</text><text class="info-label">目前已加入</text><text class="member-count">· {{activity.memberCount}} / {{activity.maxMembers}} 人</text></view>
           <view class="detail-avatar-group" aria-hidden="true">
             <view wx:for="{{detailSlots}}" wx:for-item="slot" wx:key="id" class="detail-avatar {{slot.empty ? 'detail-avatar--empty' : ''}}">
-              <text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="aspectFill" aria-hidden="true" />
+              <text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="{{slot.mode}}" data-index="{{index}}" data-slot-id="{{slot.id}}" data-src="{{slot.src}}" binderror="handleMemberAvatarError" aria-hidden="true" />
             </view>
             <view wx:if="{{hiddenMembers > 0}}" class="avatar-more">+{{hiddenMembers}}</view>
           </view>

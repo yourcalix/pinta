@@ -6,7 +6,7 @@ const notificationRouter = require('../../services/notification-router');
 const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
-const { profileAvatarPath } = require('../../utils/passenger-avatar');
+const { profileAvatarPath, fallbackAvatarSlot } = require('../../utils/passenger-avatar');
 const { resolveProfileAvatar } = require('../../utils/profile-avatar');
 const { profileImagePreviewPath } = require('../../utils/profile-image-preview');
 const {
@@ -175,6 +175,20 @@ Page({
 
   handleActivityTap(event) {
     this.openActivity(event.currentTarget.dataset.id);
+  },
+
+  handleTimelineAvatarError(event) {
+    const dataset = event && event.currentTarget && event.currentTarget.dataset || {};
+    const activityIndex = Number(dataset.activityIndex);
+    const slotIndex = Number(dataset.slotIndex);
+    const activity = this.data.currentItems[activityIndex];
+    if (!Number.isInteger(activityIndex) || !Number.isInteger(slotIndex) || !activity
+      || activity.id !== dataset.activityId || !activity.visibleAvatarSlots) return;
+    const current = activity.visibleAvatarSlots[slotIndex];
+    if (!current || current.id !== dataset.slotId || current.src !== dataset.src) return;
+    const next = fallbackAvatarSlot(current);
+    if (!next || next === current) return;
+    this.setData({ [`currentItems[${activityIndex}].visibleAvatarSlots[${slotIndex}]`]: next });
   },
 
   openActivity(id) {

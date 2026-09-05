@@ -7,7 +7,7 @@ const { decorateActivity } = require('../../../utils/display');
 const { decodeActivityId } = require('../../../utils/activity-route');
 const { resolveDetailError } = require('../../../utils/detail-error');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
-const { normalizeAvatarSlots } = require('../../../utils/passenger-avatar');
+const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../../utils/passenger-avatar');
 const { formatDateTime } = require('../../../utils/date');
 
 function presentation(activity) {
@@ -77,6 +77,16 @@ Page({
   },
   preventScroll() {},
   handleCoverError() { this.setData({ coverFailed: true }); },
+  handleMemberAvatarError(event) {
+    const dataset = event && event.currentTarget && event.currentTarget.dataset || {};
+    const index = Number(dataset.index);
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.detailSlots.length) return;
+    const current = this.data.detailSlots[index];
+    if (!current || current.id !== dataset.slotId || current.src !== dataset.src) return;
+    const next = fallbackAvatarSlot(current);
+    if (!next || next === current) return;
+    this.setData({ [`detailSlots[${index}]`]: next });
+  },
   async loadDetail() {
     const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
     if (!this.data.id) {

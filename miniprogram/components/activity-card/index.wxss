@@ -212,9 +212,9 @@
   white-space: nowrap;
 }
 .member-avatar-group { display: flex; align-items: center; flex-shrink: 0; pointer-events: none; }
-.member-avatar-slot { display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 36rpx; height: 36rpx; border: 2rpx solid #fff8ee; border-radius: 50%; background: #fff8ee; }
+.member-avatar-slot { display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 36rpx; height: 36rpx; border: 2rpx solid #fff8ee; border-radius: 50%; background: #f5f6f8; }
 .member-avatar-slot + .member-avatar-slot { margin-left: -10rpx; }
-.member-avatar-slot image { width: 100%; height: 100%; }
+.member-avatar-slot image { display: block; width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
 .member-avatar-slot--empty { border: 2rpx dashed #c7beaf; background: #eee8dd; color: #807867; }
 .member-avatar-slot--filled { animation: member-avatar-enter 220ms ease-out both; }
 .member-avatar-more { margin-left: 6rpx; color: #596975; font-size: 24rpx; white-space: nowrap; }

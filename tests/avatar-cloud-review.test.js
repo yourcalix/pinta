@@ -18,6 +18,23 @@ test('Mock直接公开历史ride也固定七个槽位', () => {
   assert.equal(dto.minMembers, 7);
   assert.equal(dto.avatarSlots.length, 7);
 });
+
+test('Mock活动头像拒绝公开 cloud fileID 并降级为手绘默认头像', () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  const { createRequire } = require('node:module');
+  const filename = require.resolve('../miniprogram/mocks/server');
+  const context = { require: createRequire(filename), module: { exports: {} }, console };
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports.reviewPublicAvatarSlots = publicAvatarSlots;', context);
+  const slots = context.module.exports.reviewPublicAvatarSlots(
+    [{ memberId: 'member-owner', avatarKind: 'PASSENGER_A' }],
+    2,
+    { 'member-owner': { gender: 'MALE', avatar: { status: 'ACTIVE', fileID: 'cloud://private/avatar.jpg' } } }
+  );
+  assert.equal(slots[0].kind, 'DEFAULT');
+  assert.equal(slots[0].fallback, 'MALE_DEFAULT');
+  assert.doesNotMatch(JSON.stringify(slots), /cloud:\/\//);
+});
 // In-memory transaction contract double; not a real CloudBase integration test.
 function harness() {
   const tables = { activities: {}, members: {}, applications: {}, users: {}, memberContacts: {} };

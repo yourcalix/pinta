@@ -122,10 +122,13 @@ function normalizeAvatarRoster(roster) {
   if (!Array.isArray(roster)) return [];
   const seen = new Set();
   return roster.filter((item) => {
-    if (!item || typeof item.memberId !== 'string' || !PASSENGER_AVATAR_KINDS.includes(item.avatarKind) || seen.has(item.memberId)) return false;
+    if (!item || typeof item.memberId !== 'string' || !item.memberId.trim() || seen.has(item.memberId)) return false;
     seen.add(item.memberId);
     return true;
-  }).slice(0, 20).map((item) => ({ memberId: item.memberId, avatarKind: item.avatarKind }));
+  }).slice(0, 20).map((item) => ({
+    memberId: item.memberId,
+    avatarKind: PASSENGER_AVATAR_KINDS.includes(item.avatarKind) ? item.avatarKind : null
+  }));
 }
 
 function upsertAvatarRoster(roster, memberId, avatarKind) {
@@ -137,11 +140,26 @@ function upsertAvatarRoster(roster, memberId, avatarKind) {
   return next;
 }
 
-function publicAvatarSlots(roster, capacity = 7) {
+function publicAvatarSlots(roster, capacity = 7, profilesByMemberId = {}) {
   const total = Math.max(1, Math.min(20, Math.floor(Number(capacity)) || 7));
-  const kinds = normalizeAvatarRoster(roster).map((item) => item.avatarKind);
-  while (kinds.length < total) kinds.push('EMPTY');
-  return kinds.slice(0, total).map((kind) => ({ kind }));
+  const slots = normalizeAvatarRoster(roster).slice(0, total).map((item) => {
+    const profile = profilesByMemberId[item.memberId];
+    const fallback = profile && profile.gender === 'MALE'
+      ? 'MALE_DEFAULT'
+      : profile && profile.gender === 'FEMALE' ? 'FEMALE_DEFAULT' : '';
+    if (!fallback) return { kind: 'EMPTY' };
+    const avatar = profile.avatar;
+    const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
+      ? avatar.fileID.trim()
+      : '';
+    const src = /^(?:https:\/\/|wxfile:\/\/|\/tmp\/|\/var\/)/.test(candidate)
+      && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
+      ? candidate
+      : '';
+    return src ? { kind: 'CUSTOM', src, fallback } : { kind: 'DEFAULT', fallback };
+  });
+  while (slots.length < total) slots.push({ kind: 'EMPTY' });
+  return slots;
 }
 
 function resolveNotificationTarget(type) {
@@ -810,12 +828,26 @@ function publicActivity(activity, options = {}) {
         : viewerApplication ? 'applicant' : 'guest';
   const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, ...safe } = activity;
   const capacity = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
+  const activeMembers = state.members
+    .filter((item) => item.activityId === activity.id && item.status === 'ACTIVE')
+    .sort((left, right) => (left.role === 'OWNER' ? -1 : 0) - (right.role === 'OWNER' ? -1 : 0)
+      || String(left.joinedAt || '').localeCompare(String(right.joinedAt || '')));
+  const activeById = new Map(activeMembers.map((item) => [item.id, item]));
+  const resolvedRoster = normalizeAvatarRoster(avatarRoster).filter((item) => activeById.has(item.memberId));
+  const rosterIds = new Set(resolvedRoster.map((item) => item.memberId));
+  for (const member of activeMembers) {
+    if (!rosterIds.has(member.id)) resolvedRoster.push({ memberId: member.id, avatarKind: member.avatarKind || null });
+  }
+  const profilesByMemberId = Object.fromEntries(activeMembers.map((member) => {
+    const user = userById(member.userId);
+    return [member.id, user && user.status === 'ACTIVE' ? user.profile || null : null];
+  }));
   const result = {
     ...clone(safe),
     type: LEGACY_ACTIVITY_TYPE_MAP[storedType] || storedType,
     minMembers: activity.minMembers || activity.minPassengers || Math.min(2, capacity),
     maxMembers: capacity,
-    avatarSlots: publicAvatarSlots(avatarRoster, capacity),
+    avatarSlots: publicAvatarSlots(resolvedRoster, capacity, profilesByMemberId),
     remainingCapacity: Math.max(0, Number(capacity) - Number(activity.memberCount || 0)),
     status: activity.status,
     viewerRole

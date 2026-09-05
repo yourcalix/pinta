@@ -1,0 +1,12 @@
+{
+  "id": "use-user-avatars-in-progress",
+  "title": "活动人数进度显示用户头像并移除废弃像素头像",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已完成并归档；真实环境生效前部署 api 云函数",
+  "createdAt": "2026-09-05T21:35:00+08:00",
+  "branch": "main"
+}

@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { createRequire } = require('node:module');
 const root = path.join(__dirname, '../miniprogram');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
@@ -11,10 +12,17 @@ function component(fontSizeSetting = 16, fail = false) {
   let definition;
   vm.runInNewContext(read('components/activity-card/index.js'), {
     Component: (value) => { definition = value; },
+    require: createRequire(path.join(root, 'components/activity-card/index.js')),
     wx: { getAppBaseInfo: () => { if (fail) throw new Error('unavailable'); return { fontSizeSetting }; } }
   });
   const instance = { ...definition.methods, data: { ...definition.data, variant: 'discover' },
-    setData(patch) { Object.assign(this.data, patch); }, triggerEvent(name, detail) { this.event = { name, detail }; } };
+    setData(patch) {
+      for (const [key, value] of Object.entries(patch)) {
+        const match = /^avatarSlots\[(\d+)\]$/.exec(key);
+        if (match) this.data.avatarSlots[Number(match[1])] = value;
+        else this.data[key] = value;
+      }
+    }, triggerEvent(name, detail) { this.event = { name, detail }; } };
   return { definition, instance, update(item, variant = 'discover') {
     instance.data.item = item; instance.data.variant = variant;
     definition.observers['item, variant'].call(instance, item, variant);
@@ -80,11 +88,44 @@ test('发现启用图文变体与骨架，我的保持默认，图片区懒加�
 test('发现卡恢复真实头像槽位、折叠容量与一次性成员入场动效', () => {
   const template = read('components/activity-card/index.wxml');
   const style = read('components/activity-card/index.wxss');
-  assert.match(template, /wx:for="\{\{item\.visibleAvatarSlots\}\}"/);
+  assert.match(template, /wx:for="\{\{avatarSlots\}\}"/);
   assert.match(template, /class="member-avatar-slot[^\"]*member-avatar-slot--\{\{slot\.empty \? 'empty' : 'filled'\}\}/);
   assert.match(template, /wx:if="\{\{item\.hiddenMemberCount > 0\}\}"[^>]*>\+\{\{item\.hiddenMemberCount\}\}/);
   assert.doesNotMatch(template.split('<view wx:elif')[0], /class="owner-line"/);
   assert.match(style, /@keyframes member-avatar-enter/);
   assert.doesNotMatch(style, /capacity-progress-enter|capacity-arrow-nudge/);
   assert.match(style, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none;/);
+});
+
+test('真实头像失败只降级一次到本地手绘头像', () => {
+  const h = component();
+  h.update({
+    id: 'custom-avatar',
+    typeTone: 'sport',
+    visibleAvatarSlots: [{
+      id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/avatar.jpg',
+      fallbackSrc: '/assets/images/profile/profile-avatar-female-painted.webp',
+      custom: true, failed: false, mode: 'aspectFill', empty: false
+    }]
+  });
+  h.instance.handleAvatarError({ currentTarget: { dataset: { index: 0, slotId: 'slot-1', src: 'https://example.test/avatar.jpg' } } });
+  assert.equal(h.instance.data.avatarSlots[0].kind, 'DEFAULT');
+  assert.equal(h.instance.data.avatarSlots[0].failed, true);
+  assert.match(h.instance.data.avatarSlots[0].src, /profile-avatar-female-painted\.webp$/);
+  const once = h.instance.data.avatarSlots[0];
+  h.instance.handleAvatarError({ currentTarget: { dataset: { index: 0, slotId: 'slot-1', src: 'https://example.test/avatar.jpg' } } });
+  assert.equal(h.instance.data.avatarSlots[0], once);
+});
+
+test('头像错误事件在卡片复用后不修改同索引的新头像', () => {
+  const h = component();
+  h.update({ id: 'first', typeTone: 'sport', visibleAvatarSlots: [{
+    id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/old.jpg', fallbackSrc: '/assets/images/profile/profile-avatar-male-painted.webp', custom: true, failed: false, mode: 'aspectFill', empty: false
+  }] });
+  h.update({ id: 'second', typeTone: 'sport', visibleAvatarSlots: [{
+    id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/new.jpg', fallbackSrc: '/assets/images/profile/profile-avatar-female-painted.webp', custom: true, failed: false, mode: 'aspectFill', empty: false
+  }] });
+  h.instance.handleAvatarError({ currentTarget: { dataset: { index: 0, slotId: 'slot-1', src: 'https://example.test/old.jpg' } } });
+  assert.equal(h.instance.data.avatarSlots[0].src, 'https://example.test/new.jpg');
+  assert.equal(h.instance.data.avatarSlots[0].kind, 'CUSTOM');
 });

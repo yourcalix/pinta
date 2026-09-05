@@ -53,7 +53,8 @@ const {
 const {
   upsertAvatarRoster,
   avatarKindFromGender,
-  removeAvatarRosterMember
+  removeAvatarRosterMember,
+  normalizeAvatarRoster
 } = require('./passenger-avatar');
 
 function clone(value) {
@@ -121,6 +122,42 @@ class MemoryStore {
 
   async getUser(actorId) {
     return clone(this.users.get(actorId) || null);
+  }
+
+  async hydratePublicActivityAvatars(activities = []) {
+    const activityIds = new Set(activities.filter(Boolean).map((activity) => activity.id));
+    const activeMembers = [...this.members.values()]
+      .filter((member) => activityIds.has(member.activityId) && member.status === MEMBER_STATUS.ACTIVE)
+      .sort((left, right) => {
+        if (left.role === 'OWNER' && right.role !== 'OWNER') return -1;
+        if (right.role === 'OWNER' && left.role !== 'OWNER') return 1;
+        return String(left.joinedAt || '').localeCompare(String(right.joinedAt || '')) || String(left.id).localeCompare(String(right.id));
+      });
+    const memberById = new Map(activeMembers.map((member) => [member.id, member]));
+    const rostersByActivity = {};
+    const profilesByMemberId = {};
+    for (const activity of activities.filter(Boolean)) {
+      const resolved = normalizeAvatarRoster(activity.avatarRoster)
+        .filter((item) => memberById.has(item.memberId));
+      const seen = new Set(resolved.map((item) => item.memberId));
+      for (const member of activeMembers) {
+        if (member.activityId === activity.id && !seen.has(member.id)) {
+          resolved.push({ memberId: member.id, avatarKind: member.avatarKind || null });
+          seen.add(member.id);
+        }
+      }
+      rostersByActivity[activity.id] = resolved.slice(0, 20);
+    }
+    for (const member of activeMembers) {
+      const user = this.users.get(member.userId);
+      if (!user || user.status !== 'ACTIVE' || !user.profile) continue;
+      const avatar = user.profile.avatar;
+      profilesByMemberId[member.id] = {
+        gender: user.profile.gender || null,
+        avatarSrc: avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : ''
+      };
+    }
+    return clone({ rostersByActivity, profilesByMemberId });
   }
 
   async updateProfile(actorId, profile, at) {

@@ -4,7 +4,7 @@
 
 - 自定义头像使用独立的 `profile.avatar.prepare / profile.avatar.confirm / profile.avatar.clear` 状态机，不通过 `profile.update` 接收自由 `fileID`。
 - 上传记录必须绑定当前 actor、服务端生成的 uploadId、精确 cloudPath 与过期时间；confirm 必须下载文件并校验真实格式、大小、尺寸及图片安全结果，生产环境审核不可用时 fail-closed。
-- 自定义头像只进入 `selfUser.profile.avatar`，不得进入公开活动、社区作者、申请人、群成员、消息参与者、分享或审计 payload。默认性别头像继续作为空值和加载失败回退。
+- 自定义头像原始记录只进入 `selfUser.profile.avatar`。公开活动人数进度可在服务端从 `ACTIVE` 成员事实批量水合当前头像，但只允许输出 `CUSTOM { src, fallback } | DEFAULT { fallback } | EMPTY` 展示 DTO；不得输出 memberId、userId、cloudPath、uploadId、revision，且社区作者、申请人、群成员、消息参与者、分享与审计 payload 仍不得携带自定义头像。默认性别手绘头像继续作为无自定义头像和加载失败回退。
 - 新头像绑定与用户资料更新必须事务化；临时文件和被替换文件采用即时 best-effort 删除并由部署侧清理机制兜底。
 
 ## 架构
@@ -53,7 +53,7 @@
 
 ## 数据与隐私
 
-- 三类新活动头像名册只公开受控 kind，不公开内部 memberId；创建、批准、退出在同一存储事务更新名册，资料同步同时更新活动 updatedAt。名册缺失不按人数伪造头像。历史 ride 只读 DTO 必须在公开转换入口归一七人容量，包括 Mock 的聚合页直接入口，不依赖 list/detail 上游预处理。
+- 三类新活动头像名册不得公开内部 memberId。公开转换必须按活动页批量读取 `ACTIVE` 成员及其当前资料，CloudBase `command.in` 每批不超过 10 条；已有名册用于稳定排序，名册缺失时只可依据成员事实重建，绝不按聚合人数伪造头像。旧 `PASSENGER_A/B` 仅作为内部迁移提示，不得再出现在公共活动 DTO。历史 ride 只读 DTO 必须在公开转换入口归一七人容量，包括 Mock 的聚合页直接入口，不依赖 list/detail 上游预处理。
 
 - 公开 DTO 不得包含 `contactInfo`、完整 openid、内部风控字段或运营备注。
 - 公开列表与游客详情不得暴露成员个人行李；只可在当前用户自己的 `viewerMembership` 或经授权的成团/管理成员视图中按需返回。

@@ -34,8 +34,8 @@ button::after { display: none; }
 .member-heading .info-label { flex: none; }
 .member-count { color: #999; font-weight: 400; }
 .detail-avatar-group { display: flex; align-items: center; gap: 14rpx; margin: 24rpx 0 0 44rpx; pointer-events: none; }
-.detail-avatar { display: flex; flex: 0 0 72rpx; width: 72rpx; height: 72rpx; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; border: 2rpx solid #dedede; border-radius: 50%; background: #fff; }
-.detail-avatar image { width: 100%; height: 100%; }
+.detail-avatar { display: flex; flex: 0 0 72rpx; width: 72rpx; height: 72rpx; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; border: 2rpx solid #fff; border-radius: 50%; background: #f5f6f8; }
+.detail-avatar image { display: block; width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
 .detail-avatar--empty { border: 2rpx dashed #bcbcbc; background: transparent; color: #aaa; font-size: 34rpx; }
 .avatar-more { display: flex; min-width: 72rpx; height: 72rpx; padding: 0 10rpx; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 40rpx; background: #222; color: #fff; font-size: 24rpx; }
 .group-hint { margin: 16rpx 0 0 44rpx; color: #858585; font-size: 23rpx; }

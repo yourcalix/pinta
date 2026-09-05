@@ -72,12 +72,12 @@
       </view>
 
       <view class="timeline-list">
-        <view wx:for="{{currentItems}}" wx:key="id" class="timeline-entry">
+        <view wx:for="{{currentItems}}" wx:for-index="activityIndex" wx:key="id" class="timeline-entry">
           <view class="timeline-heading">
             <view class="timeline-date"><text>{{item.timelineDate}}</text><text class="timeline-weekday">{{item.timelineDay}}</text></view>
             <view class="timeline-summary">
               <view class="timeline-avatar-group" aria-hidden="true">
-                <view wx:for="{{item.visibleAvatarSlots}}" wx:for-item="slot" wx:key="id" class="timeline-avatar {{slot.empty ? 'timeline-avatar--empty' : ''}}"><text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="aspectFit" aria-hidden="true" /></view>
+                <view wx:for="{{item.visibleAvatarSlots}}" wx:for-item="slot" wx:for-index="slotIndex" wx:key="id" class="timeline-avatar {{slot.empty ? 'timeline-avatar--empty' : ''}}"><text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="{{slot.mode}}" data-activity-index="{{activityIndex}}" data-activity-id="{{item.id}}" data-slot-index="{{slotIndex}}" data-slot-id="{{slot.id}}" data-src="{{slot.src}}" lazy-load="{{true}}" binderror="handleTimelineAvatarError" aria-hidden="true" /></view>
               </view>
               <text>{{item.timelinePeopleLabel}}</text>
             </view>

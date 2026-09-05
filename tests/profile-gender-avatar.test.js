@@ -47,11 +47,18 @@ test('活动头像名册只公开受控头像类型并支持最多二十人容�
   let roster = upsertAvatarRoster([], 'member-owner', 'PASSENGER_A');
   roster = upsertAvatarRoster(roster, 'member-guest', 'PASSENGER_B');
   const slots = publicAvatarSlots(roster, 7);
-  assert.deepEqual(slots.map((slot) => slot.kind), [
-    'PASSENGER_A', 'PASSENGER_B', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'
+  const hydratedSlots = publicAvatarSlots(roster, 7, {
+    'member-owner': { gender: 'MALE', avatarSrc: 'https://cdn.example/owner.jpg' },
+    'member-guest': { gender: 'FEMALE', avatarSrc: '' }
+  });
+  assert.deepEqual(hydratedSlots.map((slot) => slot.kind), [
+    'CUSTOM', 'DEFAULT', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'
   ]);
-  assert.equal(JSON.stringify(slots).includes('member-owner'), false);
-  assert.equal(JSON.stringify(slots).includes('gender'), false);
+  assert.equal(hydratedSlots[0].fallback, 'MALE_DEFAULT');
+  assert.equal(hydratedSlots[1].fallback, 'FEMALE_DEFAULT');
+  assert.equal(JSON.stringify(hydratedSlots).includes('member-owner'), false);
+  assert.equal(JSON.stringify(hydratedSlots).includes('gender'), false);
+  assert.ok(slots.every((slot) => slot.kind === 'EMPTY'));
   assert.deepEqual(removeAvatarRosterMember(roster, 'member-owner'), [
     { memberId: 'member-guest', avatarKind: 'PASSENGER_B' }
   ]);
@@ -60,14 +67,29 @@ test('活动头像名册只公开受控头像类型并支持最多二十人容�
   assert.equal(largeSlots[19].kind, 'EMPTY');
 });
 
-test('前端未知头像一律降级为空位且资料头像按性别自动对应', () => {
+test('前端真实头像优先、旧像素枚举迁移为手绘默认且未知头像为空位', () => {
   assert.match(profileAvatarPath('MALE'), /profile-avatar-male-painted\.webp$/);
   assert.match(profileAvatarPath('FEMALE'), /profile-avatar-female-painted\.webp$/);
   assert.match(profileAvatarPath(null), /profile-avatar-neutral-painted\.webp$/);
-  const slots = normalizeAvatarSlots([{ kind: 'PASSENGER_A' }, { kind: 'UNTRUSTED' }], 7);
+  const slots = normalizeAvatarSlots([
+    { kind: 'CUSTOM', src: 'https://cdn.example/avatar.jpg', fallback: 'FEMALE_DEFAULT' },
+    { kind: 'PASSENGER_A' },
+    { kind: 'CUSTOM', src: '/assets/images/discover/avatar-passenger-a.png', fallback: 'MALE_DEFAULT' },
+    { kind: 'UNTRUSTED' },
+    { kind: 'CUSTOM', src: 'cloud://private/avatar.jpg', fallback: 'FEMALE_DEFAULT' },
+    { kind: 'CUSTOM', src: 'http://cdn.example/avatar.jpg', fallback: 'MALE_DEFAULT' }
+  ], 7);
   assert.equal(slots.length, 7);
-  assert.equal(slots[0].empty, false);
-  assert.equal(slots[1].kind, 'EMPTY');
+  assert.equal(slots[0].kind, 'CUSTOM');
+  assert.equal(slots[0].mode, 'aspectFill');
+  assert.equal(slots[1].kind, 'DEFAULT');
+  assert.match(slots[1].src, /profile-avatar-male-painted\.webp$/);
+  assert.equal(slots[2].kind, 'DEFAULT');
+  assert.doesNotMatch(slots[2].src, /avatar-passenger/);
+  assert.equal(slots[3].kind, 'EMPTY');
+  assert.equal(slots[4].kind, 'DEFAULT');
+  assert.equal(slots[5].kind, 'DEFAULT');
+  assert.doesNotMatch(JSON.stringify(slots), /cloud:\/\/|http:\/\//);
   assert.equal(slots[6].kind, 'EMPTY');
   assert.equal(normalizeAvatarSlots([], 20).length, 20);
 });

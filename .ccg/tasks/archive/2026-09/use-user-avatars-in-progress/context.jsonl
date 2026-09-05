@@ -1,0 +1,8 @@
+{"path":"cloudfunctions/api/lib/passenger-avatar.js","reason":"活动头像名册与公开槽位"}
+{"path":"cloudfunctions/api/lib/service.js","reason":"公开活动 DTO"}
+{"path":"cloudfunctions/api/lib/cloud-store.js","reason":"成员与活动头像事实同步"}
+{"path":"cloudfunctions/api/lib/memory-store.js","reason":"内存契约"}
+{"path":"miniprogram/mocks/server.js","reason":"Mock 契约"}
+{"path":"miniprogram/utils/passenger-avatar.js","reason":"像素头像路径映射与槽位装饰"}
+{"path":"miniprogram/utils/display.js","reason":"发现页活动展示模型"}
+{"path":"miniprogram/subpackages/activity/detail/index.js","reason":"详情页进度头像展示模型"}

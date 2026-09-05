@@ -66,7 +66,8 @@ test('普通成年用户无需学生认证即可创建、申请和使用成员�
   assert.equal(created.ok, true);
   assert.equal(created.data.activity.type, 'sport');
   assert.equal(created.data.activity.maxMembers, 4);
-  assert.deepEqual(created.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'EMPTY', 'EMPTY', 'EMPTY']);
+  assert.deepEqual(created.data.activity.avatarSlots.map((slot) => slot.kind), ['DEFAULT', 'EMPTY', 'EMPTY', 'EMPTY']);
+  assert.equal(created.data.activity.avatarSlots[0].fallback, 'MALE_DEFAULT');
   assert.equal(JSON.stringify(created.data.activity.avatarSlots).includes('member'), false);
   const applied = await call('application.submit', { activityId: created.data.activity.id, note: '我可以准时到', autoJoinConsent: true }, 'member', 'apply-sport-001');
   assert.equal(applied.ok, true);
@@ -85,7 +86,8 @@ test('普通成年用户无需学生认证即可创建、申请和使用成员�
   }, 'owner', 'approve-sport-001');
   assert.equal(approved.ok, true);
   assert.equal(approved.data.activity.status, 'FORMED');
-  assert.deepEqual(approved.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'PASSENGER_B', 'EMPTY', 'EMPTY']);
+  assert.deepEqual(approved.data.activity.avatarSlots.map((slot) => slot.kind), ['DEFAULT', 'DEFAULT', 'EMPTY', 'EMPTY']);
+  assert.deepEqual(approved.data.activity.avatarSlots.slice(0, 2).map((slot) => slot.fallback), ['MALE_DEFAULT', 'FEMALE_DEFAULT']);
 
   const shared = await call('group.contact.share', {
     activityId: created.data.activity.id,
@@ -99,13 +101,16 @@ test('普通成年用户无需学生认证即可创建、申请和使用成员�
   assert.equal(revoked.ok, true);
   assert.equal(revoked.data.members.find((item) => item.isSelf).sharedContact, null);
 
-  await store.syncUserAvatarKind('member', 'PASSENGER_A', NOW.toISOString());
+  await call('profile.update', {
+    nickname: 'member用户', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true
+  }, 'member', 'profile-member-male-001');
   const refreshed = await call('activity.detail', { activityId: created.data.activity.id }, 'owner');
-  assert.deepEqual(refreshed.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'PASSENGER_A', 'EMPTY', 'EMPTY']);
+  assert.deepEqual(refreshed.data.activity.avatarSlots.map((slot) => slot.kind), ['DEFAULT', 'DEFAULT', 'EMPTY', 'EMPTY']);
+  assert.equal(refreshed.data.activity.avatarSlots[1].fallback, 'MALE_DEFAULT');
 
   const left = await call('member.leave', { activityId: created.data.activity.id, reason: '临时有事' }, 'member', 'leave-sport-001');
   assert.equal(left.ok, true);
-  assert.deepEqual(left.data.activity.avatarSlots.map((slot) => slot.kind), ['PASSENGER_A', 'EMPTY', 'EMPTY', 'EMPTY']);
+  assert.deepEqual(left.data.activity.avatarSlots.map((slot) => slot.kind), ['DEFAULT', 'EMPTY', 'EMPTY', 'EMPTY']);
 });
 
 test('历史活动缺少头像名册时保留真实人数但只返回空头像槽', async () => {
@@ -121,6 +126,74 @@ test('历史活动缺少头像名册时保留真实人数但只返回空头像�
   assert.equal(result.ok, true);
   assert.equal(result.data.activity.memberCount, 3);
   assert.deepEqual(result.data.activity.avatarSlots.map((slot) => slot.kind), ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY']);
+});
+
+test('活动进度动态读取当前自定义头像，清除后立即回退手绘默认头像', async () => {
+  const activity = {
+    id: 'custom-avatar-activity', ownerId: 'owner', owner: { nickname: '发起者' }, type: 'sport',
+    title: '头像联动活动', description: '验证当前头像', city: '澳门', district: '澳门城区', placeLabel: '体育馆',
+    startsAt: '2026-08-24T02:00:00.000Z', deadlineAt: '2026-08-23T14:00:00.000Z',
+    minMembers: 2, maxMembers: 4, memberCount: 2, status: 'RECRUITING', rules: '', typeData: {},
+    avatarRoster: [
+      { memberId: 'member-owner', avatarKind: 'PASSENGER_A' },
+      { memberId: 'member-left', avatarKind: 'PASSENGER_B' }
+    ],
+    version: 1, createdAt: NOW.toISOString(), updatedAt: NOW.toISOString()
+  };
+  const users = [
+    { id: 'owner', role: 'user', status: 'ACTIVE', profile: { nickname: '发起者', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true, avatar: { status: 'ACTIVE', fileID: 'https://temp.example/opaque-avatar.jpg' } } },
+    { id: 'left', role: 'user', status: 'ACTIVE', profile: { nickname: '已退出', gender: 'FEMALE', city: '澳门', interests: [], adultConfirmed: true } }
+  ];
+  const members = [
+    { id: 'member-owner', activityId: activity.id, userId: 'owner', role: 'OWNER', status: 'ACTIVE', joinedAt: NOW.toISOString() },
+    { id: 'member-left', activityId: activity.id, userId: 'left', role: 'MEMBER', status: 'LEFT', joinedAt: NOW.toISOString() }
+  ];
+  const store = new MemoryStore({ activities: [activity], users, members });
+  const service = createPinbaService({ store, clock: () => new Date(NOW) });
+  const first = await service.execute({ action: 'activity.detail', data: { activityId: activity.id }, requestId: 'custom-avatar-first' }, {});
+  assert.deepEqual(first.data.activity.avatarSlots[0], {
+    kind: 'CUSTOM', src: 'https://temp.example/opaque-avatar.jpg', fallback: 'MALE_DEFAULT'
+  });
+  assert.equal(first.data.activity.avatarSlots[1].kind, 'EMPTY');
+  await store.clearProfileAvatar('owner', NOW.toISOString());
+  const cleared = await service.execute({ action: 'activity.detail', data: { activityId: activity.id }, requestId: 'custom-avatar-cleared' }, {});
+  assert.deepEqual(cleared.data.activity.avatarSlots[0], { kind: 'DEFAULT', fallback: 'MALE_DEFAULT' });
+});
+
+test('活动写接口幂等重放重新读取当前头像而不复用缓存临时地址', async () => {
+  const user = { id: 'owner', role: 'user', status: 'ACTIVE', profile: { nickname: '发起者', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } };
+  const store = new MemoryStore({ users: [user] });
+  const service = createPinbaService({ store, clock: () => new Date(NOW) });
+  const event = {
+    action: 'activity.create',
+    data: common('sport', { sportType: '羽毛球', venue: '体育馆', level: 'ANY', intensity: 'LIGHT', equipment: '' }),
+    requestId: 'avatar-replay-first',
+    idempotencyKey: 'avatar-replay-create'
+  };
+  const first = await service.execute(event, { actorId: 'owner' });
+  assert.equal(first.data.activity.avatarSlots[0].kind, 'DEFAULT');
+  store.users.get('owner').profile.avatar = { status: 'ACTIVE', fileID: 'https://temp.example/current-avatar.jpg' };
+  const replay = await service.execute({ ...event, requestId: 'avatar-replay-second' }, { actorId: 'owner' });
+  assert.equal(replay.idempotentReplay, true);
+  assert.deepEqual(replay.data.activity.avatarSlots[0], {
+    kind: 'CUSTOM', src: 'https://temp.example/current-avatar.jpg', fallback: 'MALE_DEFAULT'
+  });
+});
+
+test('头像水合故障不拖垮公开活动接口并安全回退空槽', async () => {
+  const activity = {
+    id: 'avatar-hydration-failure', ownerId: 'owner', owner: { nickname: '发起者' }, type: 'sport',
+    title: '容灾活动', description: '', city: '澳门', district: '澳门城区', placeLabel: '体育馆',
+    startsAt: '2026-08-24T02:00:00.000Z', deadlineAt: '2026-08-23T14:00:00.000Z',
+    minMembers: 2, maxMembers: 4, memberCount: 1, status: 'RECRUITING', rules: '', typeData: {},
+    avatarRoster: [{ memberId: 'member-owner', avatarKind: 'PASSENGER_A' }], createdAt: NOW.toISOString(), updatedAt: NOW.toISOString()
+  };
+  const store = new MemoryStore({ activities: [activity] });
+  store.hydratePublicActivityAvatars = async () => { const error = new Error('database unavailable'); error.code = 'DB_TEMPORARY'; throw error; };
+  const service = createPinbaService({ store, clock: () => new Date(NOW) });
+  const result = await service.execute({ action: 'activity.detail', data: { activityId: activity.id }, requestId: 'avatar-hydration-failure' }, {});
+  assert.equal(result.ok, true);
+  assert.ok(result.data.activity.avatarSlots.every((slot) => slot.kind === 'EMPTY'));
 });
 
 test('旧学生认证接口明确下线且当前服务不再需要学生认证存储', async () => {

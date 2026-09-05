@@ -51,7 +51,8 @@ const {
 const {
   upsertAvatarRoster,
   avatarKindFromGender,
-  removeAvatarRosterMember
+  removeAvatarRosterMember,
+  normalizeAvatarRoster
 } = require('./passenger-avatar');
 
 const CLOUD_IN_QUERY_CHUNK_SIZE = 10;
@@ -152,6 +153,101 @@ class CloudStore {
 
   async getUser(actorId) {
     return this.getDocument('users', actorId);
+  }
+
+  async hydratePublicActivityAvatars(activities = []) {
+    const activityIds = [...new Set(activities.filter(Boolean).map((activity) => activity.id).filter(Boolean))];
+    const activeMembers = [];
+    for (let index = 0; index < activityIds.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
+      const chunk = activityIds.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
+      for (let offset = 0; ; offset += 100) {
+        const result = await this.db.collection('members')
+          .where({ activityId: this.command.in(chunk), status: MEMBER_STATUS.ACTIVE })
+          .skip(offset)
+          .limit(100)
+          .get();
+        const page = (result.data || []).map(entity);
+        activeMembers.push(...page);
+        if (page.length < 100) break;
+      }
+    }
+    activeMembers.sort((left, right) => {
+      if (left.role === 'OWNER' && right.role !== 'OWNER') return -1;
+      if (right.role === 'OWNER' && left.role !== 'OWNER') return 1;
+      return String(left.joinedAt || '').localeCompare(String(right.joinedAt || '')) || String(left.id).localeCompare(String(right.id));
+    });
+    const userIds = [...new Set(activeMembers.map((member) => member.userId).filter(Boolean))];
+    const users = [];
+    for (let index = 0; index < userIds.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
+      const chunk = userIds.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
+      const result = await this.db.collection('users')
+        .where({ _id: this.command.in(chunk) })
+        .limit(chunk.length)
+        .get();
+      users.push(...(result.data || []).map(entity));
+    }
+    const userById = new Map(users.map((user) => [user.id, user]));
+    const fileIDs = [...new Set(users.map((user) => {
+      const avatar = user.profile && user.profile.avatar;
+      return avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : '';
+    }).filter(Boolean))];
+    const displayUrlByFileID = new Map();
+    if (typeof this.cloud.getTempFileURL === 'function') {
+      try {
+        let failureCount = 0;
+        for (let index = 0; index < fileIDs.length; index += 50) {
+          const chunk = fileIDs.slice(index, index + 50);
+          const result = await this.cloud.getTempFileURL({ fileList: chunk });
+          let successCount = 0;
+          for (const item of result.fileList || []) {
+            if (item && item.status === 0 && item.fileID && typeof item.tempFileURL === 'string' && /^https:\/\//.test(item.tempFileURL)) {
+              displayUrlByFileID.set(item.fileID, item.tempFileURL);
+              successCount += 1;
+            }
+          }
+          failureCount += Math.max(0, chunk.length - successCount);
+        }
+        if (failureCount > 0) {
+          console.error('[pinba-public-avatar-url-partial]', {
+            activityCount: activityIds.length,
+            fileCount: fileIDs.length,
+            failureCount
+          });
+        }
+      } catch (error) {
+        console.error('[pinba-public-avatar-url]', {
+          activityCount: activityIds.length,
+          fileCount: fileIDs.length,
+          code: error && (error.errCode || error.code) || 'UNKNOWN'
+        });
+      }
+    }
+    const memberById = new Map(activeMembers.map((member) => [member.id, member]));
+    const rostersByActivity = {};
+    const profilesByMemberId = {};
+    for (const activity of activities.filter(Boolean)) {
+      const resolved = normalizeAvatarRoster(activity.avatarRoster)
+        .filter((item) => memberById.has(item.memberId));
+      const seen = new Set(resolved.map((item) => item.memberId));
+      for (const member of activeMembers) {
+        if (member.activityId === activity.id && !seen.has(member.id)) {
+          resolved.push({ memberId: member.id, avatarKind: member.avatarKind || null });
+          seen.add(member.id);
+        }
+      }
+      rostersByActivity[activity.id] = resolved.slice(0, 20);
+    }
+    for (const member of activeMembers) {
+      const user = userById.get(member.userId);
+      if (!user || user.status !== 'ACTIVE' || !user.profile) continue;
+      const avatar = user.profile.avatar;
+      const fileID = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : '';
+      profilesByMemberId[member.id] = {
+        gender: user.profile.gender || null,
+        avatarSrc: displayUrlByFileID.get(fileID) || ''
+      };
+    }
+    return { rostersByActivity, profilesByMemberId };
   }
 
   async updateProfile(actorId, profile, at) {
