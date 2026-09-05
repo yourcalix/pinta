@@ -84,7 +84,7 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   assert.match(editWxml, /class="controlled-avatar"[^>]*src="\{\{profileAvatarPath\}\}"/);
   assert.doesNotMatch(editWxml, /hero-campus\.png/);
   assert.doesNotMatch(editWxml, /ride-car-green\.png|driver-role-voxel\.png|我是司机/);
-  assert.match(editWxml, /关于我/);
+  assert.match(editWxml, /个性签名/);
   assert.match(editWxml, /data-field="interestsText"/);
   assert.doesNotMatch(editWxml, /所在城市|澳门|澳門/);
   assert.match(editWxss, /@media \(max-width: 340px\)/);

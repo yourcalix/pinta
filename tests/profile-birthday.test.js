@@ -95,7 +95,7 @@ test('生日滚轮限制成年上界并在大小月和闰年切换时夹紧日�
   assert.equal(adultLimit.days.at(-1), 5);
 });
 
-test('个人资料页包含生日行、三列滚轮、隐私说明和滚动锁', () => {
+test('个人资料页包含生日行、三列滚轮和滚动锁', () => {
   const root = path.join(__dirname, '../miniprogram/subpackages/profile/edit');
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8');
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
@@ -103,7 +103,6 @@ test('个人资料页包含生日行、三列滚轮、隐私说明和滚动锁',
   assert.match(template, /class="profile-row birthday-row"[^>]*bindtap="handleBirthdayOpen"/);
   assert.match(template, /<picker-view[^>]*bindchange="handleBirthdayChange"[^>]*bindpickstart="handleBirthdayPickStart"[^>]*bindpickend="handleBirthdayPickEnd"/);
   assert.equal((template.match(/<picker-view-column/g) || []).length, 3);
-  assert.match(template, /仅用于年龄核验与活动匹配，不对外公开/);
   assert.doesNotMatch(template, /年龄确认|adult-row/);
   assert.match(script, /'form\.adultConfirmed': true/);
   assert.doesNotMatch(template, /显示星座/);

@@ -71,10 +71,9 @@
     <view class="section-heading section-heading--spaced">搭子偏好</view>
     <view class="profile-card preference-card">
       <label class="profile-row preference-row">
-        <text class="row-label">关于我</text>
-        <input class="row-control" maxlength="80" cursor-spacing="140" adjust-position="{{true}}" placeholder="如羽毛球、美食、结伴出行" value="{{form.interestsText}}" data-field="interestsText" bindinput="handleInput" aria-label="关于我，选填" />
+        <text class="row-label">个性签名</text>
+        <input class="row-control" maxlength="80" cursor-spacing="140" adjust-position="{{true}}" placeholder="如羽毛球、美食、结伴出行" value="{{form.interestsText}}" data-field="interestsText" bindinput="handleInput" aria-label="个性签名，选填" />
       </label>
-      <view class="field-hint">最多填写 8 个偏好，可用逗号或空格分隔</view>
     </view>
 
     <view class="privacy-note">资料仅用于活动匹配，不会公开展示性别字段。</view>
@@ -120,7 +119,6 @@
           <view wx:for="{{birthdayDays}}" wx:key="*this" class="birthday-picker-item">{{item}}日</view>
         </picker-view-column>
       </picker-view>
-      <view class="birthday-privacy">🔒 仅用于年龄核验与活动匹配，不对外公开</view>
       <view class="birthday-safe-area" aria-hidden="true"></view>
     </view>
   </view>
