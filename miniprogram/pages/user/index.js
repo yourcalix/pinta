@@ -7,6 +7,7 @@ const { decorateActivity } = require('../../utils/display');
 const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { profileAvatarPath } = require('../../utils/passenger-avatar');
+const { profileImagePreviewPath } = require('../../utils/profile-image-preview');
 const {
   DEFAULT_PROFILE_COVER,
   DEFAULT_PROFILE_COVER_PATH,
@@ -189,21 +190,42 @@ Page({
   },
 
   previewProfileImage(imagePath, label) {
-    if (!imagePath || typeof wx === 'undefined' || typeof wx.previewImage !== 'function') return;
-    wx.previewImage({
-      current: imagePath,
-      urls: [imagePath],
+    if (this._isPreviewing || !imagePath || typeof wx === 'undefined' || typeof wx.previewImage !== 'function') return;
+    this._isPreviewing = true;
+    clearTimeout(this._previewUnlockTimer);
+    this._previewUnlockTimer = setTimeout(() => {
+      this._isPreviewing = false;
+      this._previewUnlockTimer = null;
+    }, 1000);
+    const showError = () => {
+      clearTimeout(this._previewUnlockTimer);
+      this._previewUnlockTimer = null;
+      this._isPreviewing = false;
+      wx.showToast({ title: `${label}暂时无法查看`, icon: 'none' });
+    };
+    const openPreview = (resolvedPath) => wx.previewImage({
+      current: resolvedPath,
+      urls: [resolvedPath],
       showmenu: false,
-      fail: () => wx.showToast({ title: `${label}暂时无法查看`, icon: 'none' })
+      fail: showError
+    });
+    if (typeof wx.getImageInfo !== 'function') {
+      openPreview(imagePath);
+      return;
+    }
+    wx.getImageInfo({
+      src: imagePath,
+      success: (result) => openPreview(result.path || imagePath),
+      fail: showError
     });
   },
 
   handleAvatarPreview() {
-    this.previewProfileImage(this.data.profileAvatarPath, '头像');
+    this.previewProfileImage(profileImagePreviewPath(this.data.profileAvatarPath), '头像');
   },
 
   handleBackgroundPreview() {
-    this.previewProfileImage(this.data.profileCoverPath, '背景');
+    this.previewProfileImage(profileImagePreviewPath(this.data.profileCoverPath), '背景');
   },
 
   handleProfile() { wx.navigateTo({ url: '/subpackages/profile/edit/index' }); },
@@ -226,5 +248,8 @@ Page({
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    clearTimeout(this._previewUnlockTimer);
+    this._previewUnlockTimer = null;
+    this._isPreviewing = false;
   }
 });

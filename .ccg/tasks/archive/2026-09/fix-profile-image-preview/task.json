@@ -1,0 +1,12 @@
+{
+  "id": "fix-profile-image-preview",
+  "title": "修复我的页图片预览并提交用户资料页改动",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交图片预览兼容修复",
+  "createdAt": "2026-09-05T19:20:00+08:00",
+  "branch": "main"
+}
