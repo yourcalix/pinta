@@ -1,73 +1,73 @@
-<view class="page profile-page global-background-host">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
-  <view class="global-page-background-tint" aria-hidden="true"></view>
-  <view class="surface profile-form-card">
-    <view class="profile-hero">
-      <view class="profile-hero-copy">
-        <view class="profile-hero-title">完成最小资料</view>
-        <view class="profile-hero-description">资料只用于活动匹配，无需授权精确位置或绑定手机号。</view>
-      </view>
-      <image class="profile-hero-art" src="../../../assets/images/discover/hero-campus.png" mode="aspectFit" aria-hidden="true" />
+<view class="profile-page" style="padding-top: {{contentTopInset}}px;">
+  <view class="profile-navigation" style="height: {{contentTopInset}}px;">
+    <view class="profile-nav-inner">
+      <button class="profile-nav-back" bindtap="handleBack" aria-label="返回上一页" hover-class="profile-nav-back--pressed">
+        <text aria-hidden="true">‹</text>
+      </button>
+      <view class="profile-nav-title">个人资料</view>
+      <view class="profile-nav-spacer" aria-hidden="true"></view>
     </view>
+  </view>
 
+  <view wx:if="{{loading}}" class="profile-loading" role="status" aria-label="个人资料加载中">
+    <view class="loading-line loading-line--short"></view>
+    <view class="loading-card"></view>
+    <view class="loading-line"></view>
+  </view>
+
+  <view wx:else class="profile-content">
     <view wx:if="{{errorMessage}}" class="error-banner" role="alert">{{errorMessage}}</view>
 
-    <view class="form-section">
-      <view class="section-title-row">
-        <image class="section-title-icon" src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
-        <text class="section-title">昵称</text>
-        <text class="required-mark">*</text>
+    <view class="section-heading">基本信息</view>
+    <view class="profile-card">
+      <view class="avatar-section" role="img" aria-label="当前受控个人头像">
+        <image class="controlled-avatar" src="{{profileAvatarPath}}" mode="aspectFill" aria-hidden="true" />
+        <view class="avatar-copy">
+          <view class="avatar-title">个人头像</view>
+          <view class="avatar-description">头像根据性别自动生成，暂不支持自定义上传</view>
+        </view>
       </view>
-      <input class="form-input" maxlength="20" cursor-spacing="100" adjust-position="true" placeholder="请输入 2—20 个字" value="{{form.nickname}}" data-field="nickname" bindinput="handleInput" aria-label="昵称，必填" />
-    </view>
 
-    <view class="form-section">
-      <view class="section-title-row">
-        <image class="section-title-icon" src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
-        <text class="section-title">性别</text>
-        <text class="required-mark">*</text>
-      </view>
-      <view class="gender-options {{genderError ? 'gender-options--error' : ''}}" role="radiogroup" aria-label="选择性别">
-        <button class="gender-option {{form.gender === 'MALE' ? 'gender-option--active' : ''}}" data-gender="MALE" bindtap="handleGender" role="radio" aria-checked="{{form.gender === 'MALE'}}" aria-label="男，使用乘客头像 A">
-          <view wx:if="{{form.gender === 'MALE'}}" class="selection-check" aria-hidden="true">✓</view>
-          <image class="gender-avatar" src="../../../assets/images/discover/avatar-passenger-a.png" mode="aspectFit" aria-hidden="true" />
-          <text class="gender-label">男</text>
-        </button>
-        <button class="gender-option {{form.gender === 'FEMALE' ? 'gender-option--active' : ''}}" data-gender="FEMALE" bindtap="handleGender" role="radio" aria-checked="{{form.gender === 'FEMALE'}}" aria-label="女，使用乘客头像 B">
-          <view wx:if="{{form.gender === 'FEMALE'}}" class="selection-check" aria-hidden="true">✓</view>
-          <image class="gender-avatar" src="../../../assets/images/discover/avatar-passenger-b.png" mode="aspectFit" aria-hidden="true" />
-          <text class="gender-label">女</text>
-        </button>
-      </view>
-      <view wx:if="{{genderError}}" class="gender-error-tip" role="alert">请选择性别</view>
-      <view class="field-hint">头像会自动用于“我的”和活动成员列表；不对其他成员公开性别字段。</view>
-    </view>
-
-    <view class="form-section">
-      <view class="section-title-row">
-        <image class="section-title-icon" src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" aria-hidden="true" />
-        <text class="section-title">兴趣标签</text>
-        <text class="optional-label">（选填）</text>
-      </view>
-      <input class="form-input" maxlength="80" cursor-spacing="100" adjust-position="true" placeholder="例如：结伴出行、羽毛球、美食等" value="{{form.interestsText}}" data-field="interestsText" bindinput="handleInput" aria-label="兴趣标签，选填" />
-    </view>
-
-    <checkbox-group bindchange="handleAdult">
-      <label class="adult-check">
-        <checkbox value="adult" checked="{{form.adultConfirmed}}" color="#16A36A" />
-        <text>我确认已年满18岁，并同意遵守<text class="agreement-link">平台安全规则</text>。</text>
+      <view class="profile-divider"></view>
+      <label class="profile-row">
+        <text class="row-label">昵称</text>
+        <input class="row-control" maxlength="20" cursor-spacing="140" adjust-position="{{true}}" placeholder="请输入 2—20 个字" value="{{form.nickname}}" data-field="nickname" bindinput="handleInput" aria-label="昵称，必填" />
       </label>
-    </checkbox-group>
 
-    <button class="primary-button save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="handleSave">{{saving ? '正在保存…' : '保存资料'}}</button>
+      <view class="profile-divider"></view>
+      <picker mode="selector" range="{{genderOptions}}" range-key="label" value="{{genderIndex}}" bindchange="handleGenderPick">
+        <view class="profile-row {{genderError ? 'profile-row--error' : ''}}" role="button" aria-label="性别，当前{{genderLabel}}">
+          <text class="row-label">性别</text>
+          <view class="row-value-group">
+            <text class="row-value {{form.gender ? '' : 'row-placeholder'}}">{{genderLabel}}</text>
+            <text class="row-chevron" aria-hidden="true">›</text>
+          </view>
+        </view>
+      </picker>
 
-    <view class="profile-decoration" aria-hidden="true">
-      <view class="decoration-line"></view>
-      <image src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" />
-      <image src="../../../assets/images/discover/node-start-blue.png" mode="aspectFit" />
-      <image class="decoration-car" src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" />
-      <image src="../../../assets/images/discover/node-start-green.png" mode="aspectFit" />
-      <image src="../../../assets/images/discover/brand-puzzle.png" mode="aspectFit" />
+      <view class="profile-divider"></view>
+      <button class="profile-row adult-row {{form.adultConfirmed ? 'adult-row--confirmed' : ''}}" bindtap="handleAdultConfirm" role="checkbox" aria-checked="{{form.adultConfirmed}}" aria-label="年龄确认，{{form.adultConfirmed ? '已确认年满18岁' : '点击确认已年满18岁'}}">
+        <text class="row-label">年龄确认</text>
+        <view class="row-value-group">
+          <text class="adult-status">{{form.adultConfirmed ? '已确认满18岁' : '请确认已满18岁'}}</text>
+          <text class="adult-checkmark" aria-hidden="true">{{form.adultConfirmed ? '✓' : '›'}}</text>
+        </view>
+      </button>
     </view>
+
+    <view class="section-heading section-heading--spaced">搭子偏好</view>
+    <view class="profile-card preference-card">
+      <label class="profile-row preference-row">
+        <text class="row-label">关于我</text>
+        <input class="row-control" maxlength="80" cursor-spacing="140" adjust-position="{{true}}" placeholder="如羽毛球、美食、结伴出行" value="{{form.interestsText}}" data-field="interestsText" bindinput="handleInput" aria-label="关于我，选填" />
+      </label>
+      <view class="field-hint">最多填写 8 个偏好，可用逗号或空格分隔</view>
+    </view>
+
+    <view class="privacy-note">资料仅用于活动匹配，不会公开展示性别字段。</view>
+  </view>
+
+  <view class="fixed-save-bar">
+    <button class="save-button" loading="{{saving}}" disabled="{{saving || loading}}" bindtap="handleSave" hover-class="save-button--pressed">{{saving ? '正在保存…' : '保存资料'}}</button>
   </view>
 </view>

@@ -1,0 +1,7 @@
+{"path":"miniprogram/subpackages/profile/edit/index.js","reason":"资料读取、受控头像联动、保存与返回逻辑"}
+{"path":"miniprogram/subpackages/profile/edit/index.wxml","reason":"参考图白灰卡片式个人资料页面结构"}
+{"path":"miniprogram/subpackages/profile/edit/index.wxss","reason":"自定义导航、行式表单、固定保存栏与窄屏适配"}
+{"path":"miniprogram/subpackages/profile/edit/index.json","reason":"自定义导航和白灰窗口配置"}
+{"path":"tests/profile-edit-reference-design.test.js","reason":"新增页面结构、真实字段、键盘与安全区回归测试"}
+{"path":"tests/profile-gender-avatar.test.js","reason":"更新受控头像和性别选择的既有测试契约"}
+{"path":"tests/global-background.test.js","reason":"将参考式白灰资料页纳入背景例外"}

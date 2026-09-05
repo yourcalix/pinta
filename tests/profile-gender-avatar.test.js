@@ -79,17 +79,19 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   const userJs = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.js'), 'utf8');
   const userWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.wxml'), 'utf8');
   const userWxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/user/index.wxss'), 'utf8');
-  assert.match(editWxml, /data-gender="MALE"/);
-  assert.match(editWxml, /data-gender="FEMALE"/);
-  assert.match(editWxml, /role="radiogroup"/);
-  assert.match(editWxml, /hero-campus\.png/);
+  assert.match(editWxml, /bindchange="handleGenderPick"/);
+  assert.match(editWxml, /range="\{\{genderOptions\}\}"/);
+  assert.match(editWxml, /class="controlled-avatar"[^>]*src="\{\{profileAvatarPath\}\}"/);
+  assert.doesNotMatch(editWxml, /hero-campus\.png/);
   assert.doesNotMatch(editWxml, /ride-car-green\.png|driver-role-voxel\.png|我是司机/);
-  assert.match(editWxml, /兴趣标签<\/text>\s*<text class="optional-label">（选填）/);
+  assert.match(editWxml, /关于我/);
+  assert.match(editWxml, /data-field="interestsText"/);
   assert.doesNotMatch(editWxml, /所在城市|澳门|澳門/);
   assert.match(editWxss, /@media \(max-width: 340px\)/);
-  assert.match(editWxss, /\.gender-options[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(editWxss, /\.profile-row\s*{[\s\S]*min-height:\s*104rpx/);
   assert.match(editJs, /gender: form\.gender/);
   assert.match(editJs, /city: PILOT_CITY/);
+  assert.match(editJs, /profileAvatarPath\(gender\)/);
   assert.match(userJs, /profileAvatarPath: profileAvatarPath\(user\.profile && user\.profile\.gender\)/);
   assert.match(userWxml, /shared-paper-bg\.webp/);
   assert.match(userWxml, /data-value="owned"[^>]*bindtap="handleMetricTap"/);
@@ -100,7 +102,7 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   assert.match(userWxss, /\.profile-content-sheet\s*{[\s\S]*padding-bottom:\s*calc\(164rpx \+ env\(safe-area-inset-bottom\)\)/);
   assert.doesNotMatch(userWxml, /喜欢散步|个人简介|个人签名/);
   assert.doesNotMatch(userJs, /u_driver|司机任务|司机认证/);
-  assert.match(editWxml, /gender-options--error/);
+  assert.match(editWxml, /profile-row--error/);
 });
 
 test('我的页面统计项具备按压反馈且点击后联动活动列表', () => {

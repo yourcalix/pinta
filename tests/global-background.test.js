@@ -24,10 +24,14 @@ function pageTemplates() {
   ].sort();
 }
 
-test('除参考式白底活动详情外，所有页面共用唯一拼图纸纹背景', () => {
+test('除参考式白底详情与资料页外，所有页面共用唯一拼图纸纹背景', () => {
   const templates = pageTemplates();
+  const whiteReferencePages = new Set([
+    'subpackages/activity/detail/index.wxml',
+    'subpackages/profile/edit/index.wxml'
+  ]);
   assert.equal(templates.length, 15);
-  templates.filter((relativePath) => relativePath !== 'subpackages/activity/detail/index.wxml').forEach((relativePath) => {
+  templates.filter((relativePath) => !whiteReferencePages.has(relativePath)).forEach((relativePath) => {
     const template = read(relativePath);
     assert.equal((template.match(/shared-paper-bg\.webp/g) || []).length, 1, relativePath);
     assert.match(template, /src="\/assets\/images\/shared\/shared-paper-bg\.webp"/, relativePath);
@@ -62,8 +66,12 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
   const configs = pageTemplates().map((template) => template.replace(/\.wxml$/, '.json'));
   configs.forEach((relativePath) => {
     const config = JSON.parse(read(relativePath));
-    if (relativePath === 'subpackages/activity/detail/index.json') {
-      assert.equal(config.backgroundColor, '#FFFFFF', relativePath);
+    const lightBackgrounds = {
+      'subpackages/activity/detail/index.json': '#FFFFFF',
+      'subpackages/profile/edit/index.json': '#F6F7F9'
+    };
+    if (lightBackgrounds[relativePath]) {
+      assert.equal(config.backgroundColor, lightBackgrounds[relativePath], relativePath);
       assert.equal(config.backgroundTextStyle, 'dark', relativePath);
       return;
     }
