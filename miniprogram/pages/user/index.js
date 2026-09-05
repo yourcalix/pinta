@@ -1,7 +1,6 @@
 'use strict';
 
 const api = require('../../services/api');
-const activityService = require('../../services/activity');
 const userService = require('../../services/user');
 const notificationRouter = require('../../services/notification-router');
 const { decorateActivity } = require('../../utils/display');
@@ -9,6 +8,26 @@ const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { profileAvatarPath } = require('../../utils/passenger-avatar');
 const { selectTab, refreshUnread } = require('../../utils/tab-bar');
+
+const PROFILE_COVERS = Object.freeze({
+  companion: '/assets/images/publish/publish-cover-companion.webp',
+  sport: '/assets/images/publish/publish-cover-sport.webp',
+  food: '/assets/images/publish/publish-cover-food.webp'
+});
+const WEEKDAYS = Object.freeze(['日', '一', '二', '三', '四', '五', '六']);
+
+function decorateProfileActivity(activity) {
+  const date = new Date(activity.startsAt);
+  const validDate = Number.isFinite(date.getTime());
+  const memberCount = Math.max(0, Number(activity.memberCount) || 0);
+  return {
+    ...activity,
+    profileCover: PROFILE_COVERS[activity.typeTone] || PROFILE_COVERS.sport,
+    timelineDate: validDate ? `${String(date.getMonth() + 1).padStart(2, '0')}月${String(date.getDate()).padStart(2, '0')}日` : '日期待定',
+    timelineDay: validDate ? `周${WEEKDAYS[date.getDay()]}` : '',
+    timelinePeopleLabel: memberCount > 1 ? `和${memberCount - 1}人一起拼` : '等待搭子加入'
+  };
+}
 
 Page({
   data: {
@@ -18,6 +37,8 @@ Page({
     user: null,
     profileAvatarPath: profileAvatarPath(null),
     profileGenderLabel: '性别未设置',
+    profileIntro: '添加兴趣标签，让搭子更快认识你',
+    hasProfileIntro: false,
     currentList: 'owned',
     owned: [], joined: [], formed: [], history: [], currentItems: [], tasks: [],
     isMock: api.isMock(),
@@ -54,16 +75,21 @@ Page({
         ? notificationResult.value || { items: [] }
         : { items: [] };
       if (seq !== this._loadSeq) return;
-      const owned = (mine.owned || []).map(decorateActivity);
-      const joined = (mine.joined || []).map(decorateActivity);
+      const owned = (mine.owned || []).map((item) => decorateProfileActivity(decorateActivity(item)));
+      const joined = (mine.joined || []).map((item) => decorateProfileActivity(decorateActivity(item)));
       const all = [...owned, ...joined];
       const formed = all.filter((item) => ['FORMED', 'IN_PROGRESS'].includes(item.status));
       const history = all.filter((item) => ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(item.status));
       const lists = { owned, joined, formed, history };
+      const interests = user.profile && Array.isArray(user.profile.interests)
+        ? user.profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+        : [];
       this.setData({
         user,
         profileAvatarPath: profileAvatarPath(user.profile && user.profile.gender),
         profileGenderLabel: user.profile && user.profile.gender === 'MALE' ? '男' : user.profile && user.profile.gender === 'FEMALE' ? '女' : '性别未设置',
+        profileIntro: interests.length ? interests.join(' · ') : '添加兴趣标签，让搭子更快认识你',
+        hasProfileIntro: interests.length > 0,
         owned,
         joined,
         formed,
@@ -95,6 +121,14 @@ Page({
 
   handleActivitySelect(event) {
     const id = event.detail && event.detail.id;
+    this.openActivity(id);
+  },
+
+  handleActivityTap(event) {
+    this.openActivity(event.currentTarget.dataset.id);
+  },
+
+  openActivity(id) {
     const item = [...this.data.owned, ...this.data.joined].find((activity) => activity.id === id);
     if (!item) return;
     const activityId = encodeURIComponent(item.id);

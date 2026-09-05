@@ -6,8 +6,6 @@
   "backgroundColorBottom": "#075AA7",
   "backgroundTextStyle": "light",
   "usingComponents": {
-    "activity-card": "/components/activity-card/index",
-    "status-badge": "/components/status-badge/index",
-    "empty-state": "/components/empty-state/index"
+    "status-badge": "/components/status-badge/index"
   }
 }
