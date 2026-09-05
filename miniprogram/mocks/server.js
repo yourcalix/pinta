@@ -78,6 +78,16 @@ const MAX_PUBLIC_SCAN = 500;
 const mockSensitiveHashSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 const PASSENGER_AVATAR_KINDS = Object.freeze(['PASSENGER_A', 'PASSENGER_B']);
 
+function isMockLocalAvatarPath(value) {
+  return typeof value === 'string'
+    && /^(?:wxfile:\/\/|http:\/\/(?:tmp|usr)\/|\/tmp\/|\/var\/)/.test(value.trim());
+}
+
+function isMockDisplayAvatarPath(value) {
+  return typeof value === 'string'
+    && (/^https:\/\//.test(value.trim()) || isMockLocalAvatarPath(value));
+}
+
 function avatarKindFromGender(gender) {
   if (gender === 'MALE') return 'PASSENGER_A';
   if (gender === 'FEMALE') return 'PASSENGER_B';
@@ -152,7 +162,7 @@ function publicAvatarSlots(roster, capacity = 7, profilesByMemberId = {}) {
     const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
       ? avatar.fileID.trim()
       : '';
-    const src = /^(?:https:\/\/|wxfile:\/\/|\/tmp\/|\/var\/)/.test(candidate)
+    const src = isMockDisplayAvatarPath(candidate)
       && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
       ? candidate
       : '';
@@ -1353,7 +1363,7 @@ function handle(action, input, idempotencyKey = '') {
     const upload = state.profileAvatarUploads.find((item) => item.id === input.uploadId);
     assert(upload && upload.userId === user.id && ['PREPARED', 'BOUND'].includes(upload.status), 'PROFILE_AVATAR_INVALID', '头像上传凭据无效');
     assert(Date.parse(upload.expiresAt) > Date.now(), 'PROFILE_AVATAR_INVALID', '头像上传凭据已失效');
-    assert(typeof input.fileID === 'string' && /^(wxfile:\/\/|http:\/\/tmp\/|\/tmp\/|\/var\/)/.test(input.fileID), 'PROFILE_AVATAR_INVALID', '演示头像文件无效');
+    assert(isMockLocalAvatarPath(input.fileID), 'PROFILE_AVATAR_INVALID', '演示头像文件无效');
     if (upload.status !== 'BOUND') {
       const revision = Math.max(0, Number(user.profile && user.profile.avatar && user.profile.avatar.revision) || 0) + 1;
       user.profile = { ...(user.profile || {}), avatar: { status: 'ACTIVE', fileID: input.fileID, revision, updatedAt: new Date().toISOString(), mockOnly: true } };

@@ -77,9 +77,11 @@ test('前端真实头像优先、旧像素枚举迁移为手绘默认且未知�
     { kind: 'CUSTOM', src: '/assets/images/discover/avatar-passenger-a.png', fallback: 'MALE_DEFAULT' },
     { kind: 'UNTRUSTED' },
     { kind: 'CUSTOM', src: 'cloud://private/avatar.jpg', fallback: 'FEMALE_DEFAULT' },
-    { kind: 'CUSTOM', src: 'http://cdn.example/avatar.jpg', fallback: 'MALE_DEFAULT' }
-  ], 7);
-  assert.equal(slots.length, 7);
+    { kind: 'CUSTOM', src: 'http://cdn.example/avatar.jpg', fallback: 'MALE_DEFAULT' },
+    { kind: 'CUSTOM', src: 'http://tmp/avatar.jpg', fallback: 'MALE_DEFAULT' },
+    { kind: 'CUSTOM', src: 'http://usr/avatar.jpg', fallback: 'FEMALE_DEFAULT' }
+  ], 8);
+  assert.equal(slots.length, 8);
   assert.equal(slots[0].kind, 'CUSTOM');
   assert.equal(slots[0].mode, 'aspectFill');
   assert.equal(slots[1].kind, 'DEFAULT');
@@ -89,8 +91,9 @@ test('前端真实头像优先、旧像素枚举迁移为手绘默认且未知�
   assert.equal(slots[3].kind, 'EMPTY');
   assert.equal(slots[4].kind, 'DEFAULT');
   assert.equal(slots[5].kind, 'DEFAULT');
-  assert.doesNotMatch(JSON.stringify(slots), /cloud:\/\/|http:\/\//);
-  assert.equal(slots[6].kind, 'EMPTY');
+  assert.equal(slots[6].kind, 'CUSTOM');
+  assert.equal(slots[7].kind, 'CUSTOM');
+  assert.doesNotMatch(JSON.stringify(slots.slice(0, 6)), /cloud:\/\/|http:\/\/cdn/);
   assert.equal(normalizeAvatarSlots([], 20).length, 20);
 });
 

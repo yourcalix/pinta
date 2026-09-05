@@ -43,7 +43,7 @@ function normalizeAvatarSlots(slots, total = 7) {
       : legacyFallback;
     const fallbackSrc = avatarPathFromKind(fallback);
     const customSrc = typeof raw.src === 'string' ? raw.src.trim() : '';
-    const safeCustomSrc = /^(?:https:\/\/|wxfile:\/\/|\/tmp\/|\/var\/)/.test(customSrc)
+    const safeCustomSrc = /^(?:https:\/\/|wxfile:\/\/|http:\/\/(?:tmp|usr)\/|\/tmp\/|\/var\/)/.test(customSrc)
       && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(customSrc);
     const custom = raw.kind === 'CUSTOM' && safeCustomSrc && Boolean(fallbackSrc);
     const isDefault = (raw.kind === 'DEFAULT' || Boolean(legacyFallback) || (raw.kind === 'CUSTOM' && !safeCustomSrc))

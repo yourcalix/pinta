@@ -35,6 +35,50 @@ test('Mock活动头像拒绝公开 cloud fileID 并降级为手绘默认头像',
   assert.equal(slots[0].fallback, 'MALE_DEFAULT');
   assert.doesNotMatch(JSON.stringify(slots), /cloud:\/\//);
 });
+
+test('Mock上传确认与活动DTO统一接受微信本地沙盒路径', () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  const { createRequire } = require('node:module');
+  const filename = require.resolve('../miniprogram/mocks/server');
+  const context = { require: createRequire(filename), module: { exports: {} }, console };
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports.reviewIsMockLocalAvatarPath = isMockLocalAvatarPath; module.exports.reviewPublicAvatarSlots = publicAvatarSlots;', context);
+  const roster = [{ memberId: 'member-owner', avatarKind: 'PASSENGER_A' }];
+  for (const src of ['http://tmp/avatar.jpg', 'http://usr/avatar.jpg', 'wxfile://usr/avatar.jpg', '/tmp/avatar.jpg', '/var/mobile/avatar.jpg']) {
+    assert.equal(context.module.exports.reviewIsMockLocalAvatarPath(src), true, src);
+    const slots = context.module.exports.reviewPublicAvatarSlots(roster, 1, {
+      'member-owner': { gender: 'MALE', avatar: { status: 'ACTIVE', fileID: src } }
+    });
+    assert.equal(slots[0].kind, 'CUSTOM', src);
+    assert.equal(slots[0].src, src);
+  }
+  for (const src of ['cloud://private/avatar.jpg', 'http://cdn.example/avatar.jpg', 'https://cdn.example/avatar.jpg']) {
+    assert.equal(context.module.exports.reviewIsMockLocalAvatarPath(src), false, src);
+  }
+});
+
+test('Mock保存自定义头像后活动详情立即返回该用户真实头像', async (t) => {
+  const mock = require('../miniprogram/mocks/server');
+  mock.reset();
+  t.after(() => mock.reset());
+  const prepared = await mock.call({
+    action: 'profile.avatar.prepare', data: {}, requestId: 'avatar-prepare', idempotencyKey: 'avatar-prepare'
+  });
+  assert.equal(prepared.ok, true);
+  const savedPath = 'http://usr/profile-avatar-owner.jpg';
+  const confirmed = await mock.call({
+    action: 'profile.avatar.confirm',
+    data: { uploadId: prepared.data.upload.id, fileID: savedPath },
+    requestId: 'avatar-confirm',
+    idempotencyKey: 'avatar-confirm'
+  });
+  assert.equal(confirmed.ok, true);
+  const detail = await mock.call({ action: 'activity.detail', data: { activityId: 'a_ride' }, requestId: 'avatar-detail' });
+  assert.equal(detail.ok, true);
+  assert.deepEqual(detail.data.activity.avatarSlots[0], {
+    kind: 'CUSTOM', src: savedPath, fallback: 'MALE_DEFAULT'
+  });
+});
 // In-memory transaction contract double; not a real CloudBase integration test.
 function harness() {
   const tables = { activities: {}, members: {}, applications: {}, users: {}, memberContacts: {} };
