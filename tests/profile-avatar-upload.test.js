@@ -8,6 +8,7 @@ const { createPinbaService, selfUser } = require('../cloudfunctions/api/lib/serv
 const { MemoryStore } = require('../cloudfunctions/api/lib/memory-store');
 const { createLocalModeration, createWechatModeration } = require('../cloudfunctions/api/lib/moderation');
 const { inspectProfileAvatar } = require('../cloudfunctions/api/lib/profile-avatar');
+const EDIT_PAGE_PATH = require.resolve('../miniprogram/subpackages/profile/edit/index');
 
 const PROFILE = { nickname: '小拼', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true };
 
@@ -25,6 +26,15 @@ function harness() {
   const service = createPinbaService({ store, moderation: createLocalModeration(), idGenerator: () => `avatar_${++sequence}`, clock: () => new Date('2026-09-05T12:00:00.000Z') });
   const call = async (action, data = {}) => service.execute({ action, data, idempotencyKey: `test_key_${++sequence}` }, { actorId: 'u1' });
   return { store, call };
+}
+
+function applyPagePatch(data, patch) {
+  Object.entries(patch).forEach(([key, value]) => {
+    const parts = key.split('.');
+    let target = data;
+    for (let index = 0; index < parts.length - 1; index += 1) target = target[parts[index]];
+    target[parts[parts.length - 1]] = value;
+  });
 }
 
 test('头像图片校验限制格式、体积与尺寸', () => {
@@ -94,7 +104,7 @@ test('本人DTO可返回头像但页面只在个人资料与我的页消费', ()
   ['miniprogram/pages/discover/index.js', 'miniprogram/pages/community/index.js'].forEach((file) => assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), /profile\.avatar|avatar\.fileID/));
 });
 
-test('个人资料头像行使用微信头像选择并覆盖上传状态与失败回退', () => {
+test('个人资料头像行只记录草稿并在保存资料时提交', () => {
   const root = path.join(__dirname, '../miniprogram/subpackages/profile/edit');
   const wxml = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8');
   const js = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
@@ -102,6 +112,60 @@ test('个人资料头像行使用微信头像选择并覆盖上传状态与失�
   assert.match(wxml, /avatarUploading/);
   assert.match(wxml, /binderror="handleAvatarImageError"/);
   assert.match(wxml, /handleRestoreAvatar/);
-  assert.match(js, /userService\.uploadAvatar\(filePath\)/);
-  assert.match(js, /userService\.clearAvatar\(\)/);
+  const chooseHandler = js.match(/handleChooseAvatar\(event\) \{([\s\S]*?)\n  \},\n\n  handleAvatarImageError/)[1];
+  const restoreHandler = js.match(/handleRestoreAvatar\(\) \{([\s\S]*?)\n  \},\n\n  handleSelectCover/)[1];
+  assert.doesNotMatch(chooseHandler, /userService\./);
+  assert.doesNotMatch(restoreHandler, /userService\./);
+  assert.match(chooseHandler, /avatarDraftAction: 'UPLOAD'/);
+  assert.match(restoreHandler, /avatarDraftAction: this\._savedAvatarHasCustom \? 'CLEAR' : ''/);
+  assert.match(js, /handleSave\(\)[\s\S]*userService\.uploadAvatar\(avatarDraftPath\)/);
+  assert.match(js, /handleSave\(\)[\s\S]*userService\.clearAvatar\(\)/);
+});
+
+test('选择头像后返回不写入，点击保存才依次保存资料和头像', async () => {
+  const userService = require('../miniprogram/services/user');
+  const original = { updateProfile: userService.updateProfile, uploadAvatar: userService.uploadAvatar, clearAvatar: userService.clearAvatar };
+  const previous = { Page: global.Page, wx: global.wx, getApp: global.getApp, getCurrentPages: global.getCurrentPages, setTimeout: global.setTimeout };
+  const calls = [];
+  let definition;
+  userService.updateProfile = async (profile) => { calls.push(['profile', profile]); return { user: { profile } }; };
+  userService.uploadAvatar = async (filePath) => { calls.push(['avatar', filePath]); return { user: { profile: { ...PROFILE, avatar: { fileID: 'cloud://env/avatar.jpg' } } } }; };
+  userService.clearAvatar = async () => { calls.push(['clear']); return { user: { profile: PROFILE } }; };
+  global.Page = (value) => { definition = value; };
+  global.wx = { showToast() {}, navigateBack() {}, redirectTo() {}, switchTab() {}, hideKeyboard() {} };
+  global.getApp = () => ({ globalData: {} });
+  global.getCurrentPages = () => [{}, {}];
+  global.setTimeout = (callback) => { callback(); return 1; };
+  delete require.cache[EDIT_PAGE_PATH];
+  require(EDIT_PAGE_PATH);
+  const page = {
+    ...definition,
+    data: structuredClone(definition.data),
+    setData(patch, callback) { applyPagePatch(this.data, patch); if (callback) callback(); }
+  };
+  page.data.loading = false;
+  page.data.form = { ...PROFILE, birthDate: '2000-01-01', interestsText: '', adultConfirmed: true };
+  try {
+    page.handleChooseAvatar({ detail: { avatarUrl: 'wxfile://tmp/new-avatar.jpg' } });
+    assert.deepEqual(calls, []);
+    assert.equal(page.data.avatarDraftAction, 'UPLOAD');
+    assert.equal(page.data.profileAvatarPath, 'wxfile://tmp/new-avatar.jpg');
+
+    await page.handleSave();
+    assert.deepEqual(calls.map(([kind]) => kind), ['profile', 'avatar']);
+    assert.equal(calls[1][1], 'wxfile://tmp/new-avatar.jpg');
+  } finally {
+    Object.assign(userService, original);
+    delete require.cache[EDIT_PAGE_PATH];
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete global[key]; else global[key] = value;
+    }
+  }
+});
+
+test('文字资料已保存但头像失败时保留草稿并给出准确重试提示', async () => {
+  const script = fs.readFileSync(path.join(__dirname, '../miniprogram/subpackages/profile/edit/index.js'), 'utf8');
+  assert.match(script, /let profileSaved = false;[\s\S]*profileSaved = true;/);
+  assert.match(script, /profileSaved && this\.data\.avatarDraftAction[\s\S]*文字资料已保存，头像保存失败，请再次点击保存重试/);
+  assert.match(script, /catch \(error\) \{\s*if \(this\._disposed\) return;/);
 });

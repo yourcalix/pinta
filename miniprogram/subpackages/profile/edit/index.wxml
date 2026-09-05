@@ -20,18 +20,18 @@
 
     <view class="section-heading">基本信息</view>
     <view class="profile-card">
-      <button class="avatar-section" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{avatarUploading}}" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="个人头像，当前为{{hasCustomAvatar ? '自定义头像' : '默认手绘头像'}}，点击更换头像">
+      <button class="avatar-section" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar" disabled="{{saving}}" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="个人头像，当前为{{hasCustomAvatar ? '自定义头像' : '默认手绘头像'}}，点击更换头像">
         <view class="controlled-avatar-shell">
           <image class="controlled-avatar" src="{{profileAvatarPath}}" mode="aspectFill" binderror="handleAvatarImageError" aria-hidden="true" />
           <view wx:if="{{avatarUploading}}" class="avatar-upload-mask" aria-hidden="true"><view class="avatar-spinner"></view></view>
         </view>
         <view class="avatar-copy">
           <view class="avatar-title">个人头像</view>
-          <view class="avatar-description {{avatarUploadError ? 'avatar-description--error' : ''}}" aria-live="polite">{{avatarUploading ? '正在上传新头像…' : avatarUploadError || (hasCustomAvatar ? '点击更换 · 仅主页展示' : '点击更换 · 仅主页展示')}}</view>
+          <view class="avatar-description {{avatarUploadError ? 'avatar-description--error' : ''}}" aria-live="polite">{{avatarUploading ? '正在保存新头像…' : avatarUploadError || (avatarDraftAction ? '已选择 · 保存资料后生效' : '点击更换 · 仅主页展示')}}</view>
         </view>
         <text wx:if="{{!avatarUploading}}" class="row-chevron avatar-chevron" aria-hidden="true">›</text>
       </button>
-      <button wx:if="{{hasCustomAvatar}}" class="restore-avatar-button" bindtap="handleRestoreAvatar" disabled="{{avatarUploading}}" hover-class="restore-avatar-button--pressed">恢复默认手绘头像</button>
+      <button wx:if="{{hasCustomAvatar}}" class="restore-avatar-button" bindtap="handleRestoreAvatar" disabled="{{saving}}" hover-class="restore-avatar-button--pressed">恢复默认手绘头像</button>
 
       <view class="profile-divider"></view>
       <button class="profile-row nickname-row" bindtap="handleNicknameOpen" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="修改昵称，当前为{{form.nickname || '未填写'}}">

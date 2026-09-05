@@ -1,0 +1,12 @@
+{
+  "id": "fix-avatar-save-draft",
+  "title": "头像仅在保存资料时提交",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交修复",
+  "createdAt": "2026-09-05T21:10:00+08:00",
+  "branch": "main"
+}

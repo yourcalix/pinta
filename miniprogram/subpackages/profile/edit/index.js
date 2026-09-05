@@ -56,6 +56,8 @@ Page({
     profileAvatarPath: profileAvatarPath(null),
     avatarFallbackPath: profileAvatarPath(null),
     hasCustomAvatar: false,
+    avatarDraftAction: '',
+    avatarDraftPath: '',
     customAvatarLoadFailed: false,
     avatarUploading: false,
     avatarUploadError: '',
@@ -96,6 +98,7 @@ Page({
 
   onLoad(options) {
     this._disposed = false;
+    this._savedAvatarHasCustom = false;
     this.nextUrl = options.next ? decodeURIComponent(options.next) : '';
     const cover = resolveProfileCover(readProfileCover(wx), this.data.profileAvatarPath);
     let windowWidth = 375;
@@ -137,12 +140,15 @@ Page({
       }
       const gender = profile.gender || '';
       const avatar = resolveProfileAvatar(profile);
+      this._savedAvatarHasCustom = avatar.custom;
       const cover = resolveProfileCover(readProfileCover(wx), avatar.path);
       this.setData({
         loading: false,
         profileAvatarPath: avatar.path,
         avatarFallbackPath: avatar.fallbackPath,
         hasCustomAvatar: avatar.custom,
+        avatarDraftAction: '',
+        avatarDraftPath: '',
         customAvatarLoadFailed: false,
         currentCoverType: cover.key,
         currentCoverLabel: cover.label,
@@ -381,54 +387,26 @@ Page({
     });
   },
 
-  async handleChooseAvatar(event) {
+  handleChooseAvatar(event) {
     const filePath = event.detail && event.detail.avatarUrl;
-    if (!filePath || this.data.avatarUploading) return;
-    const previousPath = this.data.profileAvatarPath;
-    this.setData({ profileAvatarPath: filePath, customAvatarLoadFailed: false, avatarUploading: true, avatarUploadError: '' });
-    try {
-      const result = await userService.uploadAvatar(filePath);
-      if (this._disposed) return;
-      const profile = result.user && result.user.profile;
-      const avatar = resolveProfileAvatar(profile);
-      const cover = resolveProfileCover(this.data.currentCoverType, avatar.path);
-      getApp().globalData.user = result.user;
-      this.setData({
-        profileAvatarPath: avatar.path,
-        avatarFallbackPath: avatar.fallbackPath,
-        hasCustomAvatar: avatar.custom,
-        customAvatarLoadFailed: false,
-        avatarUploading: false,
-        currentCoverPath: cover.path
-      });
-      wx.showToast({ title: '头像已更换', icon: 'success' });
-    } catch (error) {
-      if (this._disposed) return;
-      this.setData({ profileAvatarPath: previousPath, customAvatarLoadFailed: false, avatarUploading: false, avatarUploadError: error.handled ? '账号暂时无法使用' : error.message || '上传失败，点击重试' });
-      wx.showToast({ title: '头像上传失败，请重试', icon: 'none' });
-    }
+    if (!filePath || this.data.saving) return;
+    const cover = resolveProfileCover(this.data.currentCoverType, filePath);
+    this.setData({ profileAvatarPath: filePath, hasCustomAvatar: true, avatarDraftAction: 'UPLOAD', avatarDraftPath: filePath, customAvatarLoadFailed: false, avatarUploadError: '', currentCoverPath: cover.path });
   },
 
   handleAvatarImageError() {
     if (this.data.profileAvatarPath === this.data.avatarFallbackPath) return;
+    if (this.data.avatarDraftAction === 'UPLOAD') {
+      this.setData({ profileAvatarPath: this.data.avatarFallbackPath, hasCustomAvatar: this._savedAvatarHasCustom, avatarDraftAction: '', avatarDraftPath: '', customAvatarLoadFailed: true, avatarUploadError: '所选头像无法读取，请重新选择' });
+      return;
+    }
     this.setData({ profileAvatarPath: this.data.avatarFallbackPath, customAvatarLoadFailed: true, avatarUploadError: '头像加载失败，点击重新选择' });
   },
 
-  async handleRestoreAvatar() {
-    if (!this.data.hasCustomAvatar || this.data.avatarUploading) return;
-    this.setData({ avatarUploading: true, avatarUploadError: '' });
-    try {
-      const result = await userService.clearAvatar();
-      if (this._disposed) return;
-      const avatar = resolveProfileAvatar(result.user && result.user.profile);
-      const cover = resolveProfileCover(this.data.currentCoverType, avatar.path);
-      getApp().globalData.user = result.user;
-      this.setData({ profileAvatarPath: avatar.path, avatarFallbackPath: avatar.fallbackPath, hasCustomAvatar: false, customAvatarLoadFailed: false, avatarUploading: false, currentCoverPath: cover.path });
-      wx.showToast({ title: '已恢复默认头像', icon: 'success' });
-    } catch (error) {
-      if (this._disposed) return;
-      this.setData({ avatarUploading: false, avatarUploadError: error.handled ? '账号暂时无法使用' : error.message || '恢复失败，请重试' });
-    }
+  handleRestoreAvatar() {
+    if (!this.data.hasCustomAvatar || this.data.saving) return;
+    const cover = resolveProfileCover(this.data.currentCoverType, this.data.avatarFallbackPath);
+    this.setData({ profileAvatarPath: this.data.avatarFallbackPath, hasCustomAvatar: false, avatarDraftAction: this._savedAvatarHasCustom ? 'CLEAR' : '', avatarDraftPath: '', customAvatarLoadFailed: false, avatarUploadError: '', currentCoverPath: cover.path });
   },
 
   handleSelectCover() {
@@ -467,7 +445,10 @@ Page({
     if (!['MALE', 'FEMALE'].includes(form.gender)) return this.setData({ genderError: true, errorMessage: '请选择性别' });
     if (!form.adultConfirmed) return this.setData({ errorMessage: '请选择生日完成年龄核验' });
     this.setData({ saving: true, errorMessage: '' });
+    let profileSaved = false;
     try {
+      const avatarAction = this.data.avatarDraftAction;
+      const avatarDraftPath = this.data.avatarDraftPath;
       const profileInput = {
         nickname: form.nickname.trim(),
         gender: form.gender,
@@ -476,17 +457,32 @@ Page({
         adultConfirmed: true
       };
       if (form.birthDate) profileInput.birthDate = form.birthDate;
-      const result = await userService.updateProfile(profileInput);
+      let result = await userService.updateProfile(profileInput);
+      profileSaved = true;
+      if (avatarAction === 'UPLOAD') {
+        if (!this._disposed) this.setData({ avatarUploading: true });
+        result = await userService.uploadAvatar(avatarDraftPath);
+      } else if (avatarAction === 'CLEAR') {
+        if (!this._disposed) this.setData({ avatarUploading: true });
+        result = await userService.clearAvatar();
+      }
+      if (this._disposed) return;
       getApp().globalData.user = result.user;
+      this.setData({ avatarUploading: false, avatarDraftAction: '', avatarDraftPath: '' });
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => {
         if (this.nextUrl) wx.redirectTo({ url: this.nextUrl });
         else wx.navigateBack();
       }, 350);
     } catch (error) {
+      if (this._disposed) return;
+      const partialSaveMessage = profileSaved && this.data.avatarDraftAction
+        ? '文字资料已保存，头像保存失败，请再次点击保存重试'
+        : '';
       this.setData({
         saving: false,
-        errorMessage: error.handled ? '账号暂时无法使用' : error.message || '保存失败，请重试'
+        avatarUploading: false,
+        errorMessage: partialSaveMessage || (error.handled ? '账号暂时无法使用' : error.message || '保存失败，请重试')
       });
     }
   }
