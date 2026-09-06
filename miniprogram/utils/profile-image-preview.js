@@ -1,10 +1,10 @@
 'use strict';
 
 const PREVIEW_PATHS = Object.freeze({
-  '/assets/images/profile/profile-default-cover.webp': '/assets/images/profile/profile-default-cover-preview.jpg',
-  '/assets/images/profile/profile-avatar-male-painted.webp': '/assets/images/profile/profile-avatar-male-painted-preview.jpg',
-  '/assets/images/profile/profile-avatar-female-painted.webp': '/assets/images/profile/profile-avatar-female-painted-preview.jpg',
-  '/assets/images/profile/profile-avatar-neutral-painted.webp': '/assets/images/profile/profile-avatar-neutral-painted-preview.jpg'
+  '/assets/images/profile/profile-default-cover.jpg': '/assets/images/profile/profile-default-cover.jpg',
+  '/assets/images/profile/profile-avatar-male-painted.png': '/assets/images/profile/profile-avatar-male-painted.png',
+  '/assets/images/profile/profile-avatar-female-painted.png': '/assets/images/profile/profile-avatar-female-painted.png',
+  '/assets/images/profile/profile-avatar-neutral-painted.png': '/assets/images/profile/profile-avatar-neutral-painted.png'
 });
 const PREVIEW_ASSETS = new Set(Object.values(PREVIEW_PATHS));
 const DEFAULT_TIMEOUT_MS = 8000;
@@ -93,11 +93,7 @@ async function resolvePreviewImagePath(rawPath, platform, options = {}) {
   }
 
   if (PREVIEW_ASSETS.has(source)) {
-    if (typeof platform.getImageInfo !== 'function') throw previewError('PREVIEW_IMAGE_INFO_UNAVAILABLE');
-    const result = await invokeWithTimeout((resolve, reject) => {
-      platform.getImageInfo({ src: source, success: resolve, fail: reject });
-    }, timeoutMs, 'PREVIEW_IMAGE_INFO_TIMEOUT');
-    return assertLocalFile(platform, result && result.path, timeoutMs);
+    return source;
   }
 
   throw previewError('PREVIEW_SOURCE_UNSUPPORTED');

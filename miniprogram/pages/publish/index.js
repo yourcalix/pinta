@@ -9,21 +9,21 @@ const TYPE_META = Object.freeze({
     title: '拼同行',
     description: '找同路伙伴，一起商量出发方式',
     tone: 'companion',
-    image: '../../assets/images/publish/publish-cover-companion.webp',
+    image: '../../assets/images/publish/publish-cover-companion.png',
     ariaLabel: '发起拼同行，寻找同路伙伴，一起商量出发方式，点击进入发布表单'
   },
   sport: {
     title: '拼运动',
     description: '约球、跑步或组队，凑齐就开局',
     tone: 'sport',
-    image: '../../assets/images/publish/publish-cover-sport.webp',
+    image: '../../assets/images/publish/publish-cover-sport.png',
     ariaLabel: '发起拼运动，约球、跑步或组队，点击进入发布表单'
   },
   food: {
     title: '拼饭桌',
     description: '约饭拼桌，一起探索附近好味道',
     tone: 'food',
-    image: '../../assets/images/publish/publish-cover-food.webp',
+    image: '../../assets/images/publish/publish-cover-food.png',
     ariaLabel: '发起拼饭桌，约饭拼桌，一起探索附近好味道，点击进入发布表单'
   }
 });

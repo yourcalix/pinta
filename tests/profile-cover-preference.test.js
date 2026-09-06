@@ -37,12 +37,12 @@ test('背景写入只保存白名单键且失败时不伪造成功', () => {
 });
 
 test('背景展示配置固定为本地资产或受控头像路径', () => {
-  const defaultCover = resolveProfileCover('bad-value', '/avatar.webp');
+  const defaultCover = resolveProfileCover('bad-value', '/avatar.png');
   assert.equal(defaultCover.key, 'macao_seascape');
-  assert.equal(defaultCover.path, '/assets/images/profile/profile-default-cover.webp');
+  assert.equal(defaultCover.path, '/assets/images/profile/profile-default-cover.jpg');
   assert.equal(defaultCover.usesAvatar, false);
-  const avatarCover = resolveProfileCover('avatar_ambient', '/avatar.webp');
-  assert.equal(avatarCover.path, '/avatar.webp');
+  const avatarCover = resolveProfileCover('avatar_ambient', '/avatar.png');
+  assert.equal(avatarCover.path, '/avatar.png');
   assert.equal(avatarCover.usesAvatar, true);
 });
 

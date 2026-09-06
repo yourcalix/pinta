@@ -1,15 +1,15 @@
 'use strict';
 
 const AVATAR_PATHS = Object.freeze({
-  MALE_DEFAULT: '/assets/images/profile/profile-avatar-male-painted.webp',
-  FEMALE_DEFAULT: '/assets/images/profile/profile-avatar-female-painted.webp',
-  NEUTRAL_DEFAULT: '/assets/images/profile/profile-avatar-neutral-painted.webp'
+  MALE_DEFAULT: '/assets/images/profile/profile-avatar-male-painted.png',
+  FEMALE_DEFAULT: '/assets/images/profile/profile-avatar-female-painted.png',
+  NEUTRAL_DEFAULT: '/assets/images/profile/profile-avatar-neutral-painted.png'
 });
 
 const PROFILE_AVATAR_PATHS = Object.freeze({
-  MALE: '/assets/images/profile/profile-avatar-male-painted.webp',
-  FEMALE: '/assets/images/profile/profile-avatar-female-painted.webp',
-  EMPTY: '/assets/images/profile/profile-avatar-neutral-painted.webp'
+  MALE: '/assets/images/profile/profile-avatar-male-painted.png',
+  FEMALE: '/assets/images/profile/profile-avatar-female-painted.png',
+  EMPTY: '/assets/images/profile/profile-avatar-neutral-painted.png'
 });
 
 function avatarKindFromGender(gender) {

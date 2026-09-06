@@ -89,7 +89,7 @@ test('我的页面顶部与其他一级页面共用清晰纸纹背景且不叠�
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxml'), 'utf8');
   const pageStyle = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxss'), 'utf8');
 
-  assert.match(template, /class="global-page-background"[^>]*shared-paper-bg\.webp/);
+  assert.match(template, /class="global-page-background"[^>]*shared-paper-bg\.jpg/);
   assert.match(template, /class="global-page-background-tint"/);
   assert.doesNotMatch(template, /profile-status-mask/);
   assert.doesNotMatch(pageStyle, /\.profile-status-mask/);

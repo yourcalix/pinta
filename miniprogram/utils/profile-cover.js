@@ -3,7 +3,7 @@
 const PROFILE_COVER_STORAGE_KEY = 'pinba_user_cover_preference';
 const DEFAULT_PROFILE_COVER = 'macao_seascape';
 const AVATAR_AMBIENT_COVER = 'avatar_ambient';
-const DEFAULT_PROFILE_COVER_PATH = '/assets/images/profile/profile-default-cover.webp';
+const DEFAULT_PROFILE_COVER_PATH = '/assets/images/profile/profile-default-cover.jpg';
 
 const PROFILE_COVER_OPTIONS = Object.freeze([
   Object.freeze({ key: DEFAULT_PROFILE_COVER, label: '澳门海景（推荐）' }),

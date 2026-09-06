@@ -18,9 +18,9 @@ const {
 const { selectTab, refreshUnread } = require('../../utils/tab-bar');
 
 const PROFILE_COVERS = Object.freeze({
-  companion: '/assets/images/publish/publish-cover-companion.webp',
-  sport: '/assets/images/publish/publish-cover-sport.webp',
-  food: '/assets/images/publish/publish-cover-food.webp'
+  companion: '/assets/images/publish/publish-cover-companion.png',
+  sport: '/assets/images/publish/publish-cover-sport.png',
+  food: '/assets/images/publish/publish-cover-food.png'
 });
 const WEEKDAYS = Object.freeze(['日', '一', '二', '三', '四', '五', '六']);
 
@@ -46,6 +46,24 @@ function decorateProfileActivity(activity) {
     timelineDay: validDate ? `周${WEEKDAYS[date.getDay()]}` : '',
     timelinePeopleLabel: memberCount > 1 ? `和${memberCount - 1}人一起拼` : '等待搭子加入'
   };
+}
+
+function dataValueEqual(current, next) {
+  if (current === next) return true;
+  if (!current || !next || typeof current !== 'object' || typeof next !== 'object') return false;
+  try { return JSON.stringify(current) === JSON.stringify(next); } catch (error) { return false; }
+}
+
+function changedViewData(current, next) {
+  return Object.keys(next).reduce((changes, key) => {
+    if (!dataValueEqual(current[key], next[key])) changes[key] = next[key];
+    return changes;
+  }, {});
+}
+
+function setChangedData(page, next) {
+  const changes = changedViewData(page.data, next);
+  if (Object.keys(changes).length) page.setData(changes);
 }
 
 Page({
@@ -100,7 +118,7 @@ Page({
 
   async loadDashboard() {
     const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
-    this.setData({ loading: true, error: '' });
+    setChangedData(this, { loading: !this.data.user, error: '' });
     try {
       const user = await userService.login();
       const [mineResult, notificationResult] = await Promise.allSettled([
@@ -124,7 +142,7 @@ Page({
         : [];
       const avatar = resolveProfileAvatar(user.profile);
       const cover = resolveProfileCover(readProfileCover(wx), avatar.path);
-      this.setData({
+      setChangedData(this, {
         user,
         profileAvatarPath: avatar.path,
         avatarFallbackPath: avatar.fallbackPath,
@@ -146,13 +164,15 @@ Page({
       });
     } catch (error) {
       if (seq !== this._loadSeq) return;
-      this.setData({ loading: false, error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试' });
+      setChangedData(this, this.data.user
+        ? { loading: false }
+        : { loading: false, error: error.handled ? '账号暂时无法使用' : error.message || '加载失败，请重试' });
     }
   },
 
   refreshProfileCover() {
     const cover = resolveProfileCover(readProfileCover(typeof wx === 'undefined' ? null : wx), this.data.profileAvatarPath);
-    this.setData({
+    setChangedData(this, {
       currentCoverType: cover.key,
       profileCoverPath: cover.path,
       profileCoverUsesAvatar: cover.usesAvatar

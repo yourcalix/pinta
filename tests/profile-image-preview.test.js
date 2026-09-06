@@ -34,14 +34,16 @@ test('我的页面头像与背景分别打开对应的单图预览', () => {
   assert.match(style, /\.profile-avatar-shell--pressed/);
 });
 
-test('预览资源由WebP白名单映射到原生预览兼容的JPEG', () => {
+test('展示资源由 PNG/JPEG 白名单映射到原生预览兼容资源', () => {
   for (const [displayPath, previewPath] of Object.entries(PREVIEW_PATHS)) {
-    assert.match(displayPath, /\.webp$/);
-    assert.match(previewPath, /-preview\.jpg$/);
+    assert.match(displayPath, /\.(png|jpg)$/);
+    assert.match(previewPath, /\.(png|jpg)$/);
     assert.equal(profileImagePreviewPath(displayPath), previewPath);
     const absolutePath = path.join(__dirname, '../miniprogram', previewPath);
     const file = fs.readFileSync(absolutePath);
-    assert.deepEqual([...file.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+    const isJpeg = file.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+    const isPng = file.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    assert.equal(isJpeg || isPng, true);
     assert.ok(file.length > 1024);
   }
   assert.equal(profileImagePreviewPath('https://cdn.example.com/profile/avatar.jpg'), 'https://cdn.example.com/profile/avatar.jpg');
@@ -67,16 +69,19 @@ function createPlatform(overrides = {}) {
   };
 }
 
-test('真机预览解析器将包内图片解析并校验为本地路径', async () => {
-  let accessed = '';
+test('包内白名单 PNG/JPEG 直接交给预览，避免 iOS 对包路径二次探活误判', async () => {
+  let getImageInfoCalled = false;
+  let accessCalled = false;
   const platform = createPlatform({
+    getImageInfo() { getImageInfoCalled = true; },
     getFileSystemManager() {
-      return { access({ path: filePath, success }) { accessed = filePath; success(); } };
+      return { access() { accessCalled = true; } };
     }
   });
-  const result = await resolvePreviewImagePath('/assets/images/profile/profile-default-cover-preview.jpg', platform);
-  assert.equal(result, 'wxfile://resolved/profile-default-cover-preview.jpg');
-  assert.equal(accessed, result);
+  const result = await resolvePreviewImagePath('/assets/images/profile/profile-default-cover.jpg', platform);
+  assert.equal(result, '/assets/images/profile/profile-default-cover.jpg');
+  assert.equal(getImageInfoCalled, false);
+  assert.equal(accessCalled, false);
 });
 
 test('真机预览解析器下载 cloud 与 https 图片后校验临时路径', async () => {

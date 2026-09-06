@@ -34,7 +34,7 @@ test('发现专用变体默认关闭，三类封面白名单且不接受任意UR
   assert.equal(h.definition.properties.variant.value, 'compact');
   for (const type of ['companion', 'sport', 'food']) {
     h.update({ id: type, typeTone: type, cover: 'https://untrusted.invalid/picture' });
-    assert.equal(h.instance.data.coverSrc, `/assets/images/publish/publish-cover-${type}.webp`);
+    assert.equal(h.instance.data.coverSrc, `/assets/images/publish/publish-cover-${type}.png`);
     assert.ok(fs.existsSync(path.join(root, h.instance.data.coverSrc)));
   }
   for (const typeTone of ['unknown', 'toString', '__proto__']) {
@@ -104,14 +104,14 @@ test('真实头像失败只降级一次到本地手绘头像', () => {
     typeTone: 'sport',
     visibleAvatarSlots: [{
       id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/avatar.jpg',
-      fallbackSrc: '/assets/images/profile/profile-avatar-female-painted.webp',
+      fallbackSrc: '/assets/images/profile/profile-avatar-female-painted.png',
       custom: true, failed: false, mode: 'aspectFill', empty: false
     }]
   });
   h.instance.handleAvatarError({ currentTarget: { dataset: { index: 0, slotId: 'slot-1', src: 'https://example.test/avatar.jpg' } } });
   assert.equal(h.instance.data.avatarSlots[0].kind, 'DEFAULT');
   assert.equal(h.instance.data.avatarSlots[0].failed, true);
-  assert.match(h.instance.data.avatarSlots[0].src, /profile-avatar-female-painted\.webp$/);
+  assert.match(h.instance.data.avatarSlots[0].src, /profile-avatar-female-painted\.png$/);
   const once = h.instance.data.avatarSlots[0];
   h.instance.handleAvatarError({ currentTarget: { dataset: { index: 0, slotId: 'slot-1', src: 'https://example.test/avatar.jpg' } } });
   assert.equal(h.instance.data.avatarSlots[0], once);
@@ -120,10 +120,10 @@ test('真实头像失败只降级一次到本地手绘头像', () => {
 test('头像错误事件在卡片复用后不修改同索引的新头像', () => {
   const h = component();
   h.update({ id: 'first', typeTone: 'sport', visibleAvatarSlots: [{
-    id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/old.jpg', fallbackSrc: '/assets/images/profile/profile-avatar-male-painted.webp', custom: true, failed: false, mode: 'aspectFill', empty: false
+    id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/old.jpg', fallbackSrc: '/assets/images/profile/profile-avatar-male-painted.png', custom: true, failed: false, mode: 'aspectFill', empty: false
   }] });
   h.update({ id: 'second', typeTone: 'sport', visibleAvatarSlots: [{
-    id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/new.jpg', fallbackSrc: '/assets/images/profile/profile-avatar-female-painted.webp', custom: true, failed: false, mode: 'aspectFill', empty: false
+    id: 'slot-1', kind: 'CUSTOM', src: 'https://example.test/new.jpg', fallbackSrc: '/assets/images/profile/profile-avatar-female-painted.png', custom: true, failed: false, mode: 'aspectFill', empty: false
   }] });
   h.instance.handleAvatarError({ currentTarget: { dataset: { index: 0, slotId: 'slot-1', src: 'https://example.test/old.jpg' } } });
   assert.equal(h.instance.data.avatarSlots[0].src, 'https://example.test/new.jpg');

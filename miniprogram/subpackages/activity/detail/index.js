@@ -69,7 +69,7 @@ function presentation(activity) {
   const terminal = ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(activity.status);
   const ownerPublishedLabel = publishedDateLabel(activity.createdAt);
   return {
-    coverSrc: supported ? `/assets/images/publish/publish-cover-${activity.typeTone}.webp` : '',
+    coverSrc: supported ? `/assets/images/publish/publish-cover-${activity.typeTone}.png` : '',
     coverFailed: false,
     deadlineLabel: formatDateTime(activity.deadlineAt),
     detailSlots: slots.slice(0, 6),

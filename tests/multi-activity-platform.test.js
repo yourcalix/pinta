@@ -308,7 +308,7 @@ test('三类发布表单共用沉浸式自定义导航、纸纹卡片和完整�
   assert.match(template, /class="form-navigation"/);
   assert.match(template, /aria-label="返回上一页"/);
   assert.doesNotMatch(template, /class="form-navigation-title"/);
-  assert.match(template, /shared-paper-bg\.webp/);
+  assert.match(template, /shared-paper-bg\.jpg/);
   assert.doesNotMatch(template, /class="publish-hero/);
   assert.ok(textControls.length > 0);
   textControls.forEach((control) => {
@@ -385,9 +385,9 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.match(template, /class="type-grid"/);
   assert.doesNotMatch(template, /scroll-view[^>]*scroll-x/);
   assert.match(template, /class="type-card/);
-  assert.match(script, /publish-cover-companion\.webp/);
+  assert.match(script, /publish-cover-companion\.png/);
   assert.match(template, /wx:if="{{draft}}"/);
-  assert.match(template, /publish-draft-avatar\.webp/);
+  assert.match(template, /publish-draft-avatar\.png/);
   assert.match(template, /aria-label="{{item\.ariaLabel}}"/);
   assert.match(script, /pinba_publish_draft_/);
   assert.match(script, /hasMeaningfulDraft/);

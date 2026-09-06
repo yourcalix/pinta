@@ -3,9 +3,9 @@
 const { fallbackAvatarSlot } = require('../../utils/passenger-avatar');
 
 const COVERS = Object.freeze({
-  companion: '/assets/images/publish/publish-cover-companion.webp',
-  sport: '/assets/images/publish/publish-cover-sport.webp',
-  food: '/assets/images/publish/publish-cover-food.webp'
+  companion: '/assets/images/publish/publish-cover-companion.png',
+  sport: '/assets/images/publish/publish-cover-sport.png',
+  food: '/assets/images/publish/publish-cover-food.png'
 });
 
 Component({

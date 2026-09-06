@@ -49,11 +49,11 @@ test('发起人卡展示真实公开头像和活动事实，缺失头像安全�
   assert.deepEqual(Array.from(page.data.ownerPersonalTags, item => item.label), ['女 · 26岁', 'INFP']);
   assert.match(page.data.ownerAccessibilityLabel, /认识发起人.*小树.*发布时间9月1日/);
   page.handleOwnerAvatarError({ currentTarget: { dataset: { src: page.data.ownerAvatar.src } } });
-  assert.match(page.data.ownerAvatar.src, /profile-avatar-female-painted\.webp$/);
+  assert.match(page.data.ownerAvatar.src, /profile-avatar-female-painted\.png$/);
 
   const fallback = harness({ ...base, owner: { nickname: '拼友' }, ownerProfile: { nickname: '拼友', avatar: { kind: 'EMPTY' } } });
   await fallback.page.onShow();
-  assert.match(fallback.page.data.ownerAvatar.src, /profile-avatar-neutral-painted\.webp$/);
+  assert.match(fallback.page.data.ownerAvatar.src, /profile-avatar-neutral-painted\.png$/);
 });
 test('鉴权双击合并且页面卸载后不打开抽屉', async () => {
   let release, calls = 0;

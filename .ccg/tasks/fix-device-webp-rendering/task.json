@@ -1,0 +1,12 @@
+{
+  "id": "fix-device-webp-rendering",
+  "title": "修复真机页面 WebP 图片整体不显示",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-06T13:00:00+08:00",
+  "branch": "main"
+}

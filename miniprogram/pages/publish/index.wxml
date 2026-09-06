@@ -1,5 +1,5 @@
 <view class="page publish-page global-background-host" style="padding-top: {{contentTopInset}}px;">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.webp" mode="aspectFill" aria-hidden="true" />
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
   <view class="global-page-background-tint" aria-hidden="true"></view>
 
   <view class="publish-content">
@@ -21,7 +21,7 @@
     </view>
 
     <button wx:if="{{draft}}" class="draft-strip" hover-class="draft-strip--pressed" bindtap="handleContinueDraft" disabled="{{pending}}" role="button" aria-label="继续填写{{draft.typeTitle}}草稿，{{draft.title}}">
-      <image class="draft-art" src="../../assets/images/publish/publish-draft-avatar.webp" mode="aspectFit" aria-hidden="true" />
+      <image class="draft-art" src="../../assets/images/publish/publish-draft-avatar.png" mode="aspectFit" aria-hidden="true" />
       <view class="draft-copy">
         <view class="draft-heading"><text class="draft-badge">草稿</text><text class="draft-type">{{draft.typeTitle}}</text></view>
         <view class="draft-title">{{draft.title}}</view>

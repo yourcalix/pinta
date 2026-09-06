@@ -33,8 +33,8 @@ test('除参考式白底详情与资料页外，所有页面共用唯一拼图�
   assert.equal(templates.length, 15);
   templates.filter((relativePath) => !whiteReferencePages.has(relativePath)).forEach((relativePath) => {
     const template = read(relativePath);
-    assert.equal((template.match(/shared-paper-bg\.webp/g) || []).length, 1, relativePath);
-    assert.match(template, /src="\/assets\/images\/shared\/shared-paper-bg\.webp"/, relativePath);
+    assert.equal((template.match(/shared-paper-bg\.jpg/g) || []).length, 1, relativePath);
+    assert.match(template, /src="\/assets\/images\/shared\/shared-paper-bg\.jpg"/, relativePath);
     assert.match(template, /class="global-page-background"[^>]*mode="aspectFill"[^>]*aria-hidden="true"/, relativePath);
     assert.match(template, /class="global-page-background-tint"[^>]*aria-hidden="true"/, relativePath);
     assert.match(template, /global-background-host/, relativePath);
@@ -43,11 +43,10 @@ test('除参考式白底详情与资料页外，所有页面共用唯一拼图�
 });
 
 test('共享背景资产和全局样式满足主包、固定视口与对比度保护要求', () => {
-  const assetPath = path.join(root, 'assets/images/shared/shared-paper-bg.webp');
+  const assetPath = path.join(root, 'assets/images/shared/shared-paper-bg.jpg');
   const asset = fs.readFileSync(assetPath);
   const style = read('app.wxss');
-  assert.equal(asset.subarray(0, 4).toString('ascii'), 'RIFF');
-  assert.equal(asset.subarray(8, 12).toString('ascii'), 'WEBP');
+  assert.deepEqual([...asset.subarray(0, 3)], [0xff, 0xd8, 0xff]);
   assert.ok(asset.length <= 200 * 1024, `背景图超过 200KB：${asset.length}`);
   assert.match(style, /\.global-page-background,[\s\S]*position:\s*fixed[\s\S]*width:\s*100vw[\s\S]*height:\s*100vh/);
   assert.match(style, /\.global-page-background\s*{[\s\S]*opacity:\s*0\.88/);

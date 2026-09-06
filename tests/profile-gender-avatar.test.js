@@ -68,9 +68,9 @@ test('活动头像名册只公开受控头像类型并支持最多二十人容�
 });
 
 test('前端真实头像优先、旧像素枚举迁移为手绘默认且未知头像为空位', () => {
-  assert.match(profileAvatarPath('MALE'), /profile-avatar-male-painted\.webp$/);
-  assert.match(profileAvatarPath('FEMALE'), /profile-avatar-female-painted\.webp$/);
-  assert.match(profileAvatarPath(null), /profile-avatar-neutral-painted\.webp$/);
+  assert.match(profileAvatarPath('MALE'), /profile-avatar-male-painted\.png$/);
+  assert.match(profileAvatarPath('FEMALE'), /profile-avatar-female-painted\.png$/);
+  assert.match(profileAvatarPath(null), /profile-avatar-neutral-painted\.png$/);
   const slots = normalizeAvatarSlots([
     { kind: 'CUSTOM', src: 'https://cdn.example/avatar.jpg', fallback: 'FEMALE_DEFAULT' },
     { kind: 'PASSENGER_A' },
@@ -85,7 +85,7 @@ test('前端真实头像优先、旧像素枚举迁移为手绘默认且未知�
   assert.equal(slots[0].kind, 'CUSTOM');
   assert.equal(slots[0].mode, 'aspectFill');
   assert.equal(slots[1].kind, 'DEFAULT');
-  assert.match(slots[1].src, /profile-avatar-male-painted\.webp$/);
+  assert.match(slots[1].src, /profile-avatar-male-painted\.png$/);
   assert.equal(slots[2].kind, 'DEFAULT');
   assert.doesNotMatch(slots[2].src, /avatar-passenger/);
   assert.equal(slots[3].kind, 'EMPTY');
@@ -119,7 +119,7 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   assert.match(editJs, /profileAvatarPath\(gender\)/);
   assert.match(userJs, /const avatar = resolveProfileAvatar\(user\.profile\)/);
   assert.match(userJs, /profileAvatarPath: avatar\.path/);
-  assert.match(userWxml, /shared-paper-bg\.webp/);
+  assert.match(userWxml, /shared-paper-bg\.jpg/);
   assert.match(userWxml, /data-value="owned"[^>]*bindtap="handleMetricTap"/);
   assert.match(userWxml, /data-value="joined"[^>]*bindtap="handleMetricTap"/);
   assert.match(userWxml, /data-value="formed"[^>]*bindtap="handleMetricTap"/);
