@@ -22,6 +22,24 @@ const STATUS_META = Object.freeze({
   SUSPENDED: { label: '已下架', tone: 'danger' }
 });
 
+const WEEKDAY_LABELS = Object.freeze(['周日', '周一', '周二', '周三', '周四', '周五', '周六']);
+
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
+function editorialDateParts(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return { editorialDate: '--.--', editorialWeekday: '时间待定', editorialTime: '--:--' };
+  }
+  return {
+    editorialDate: `${pad2(date.getMonth() + 1)}.${pad2(date.getDate())}`,
+    editorialWeekday: WEEKDAY_LABELS[date.getDay()],
+    editorialTime: `${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+  };
+}
+
 function legacyLocation(typeData = {}) {
   const origin = typeData.origin && typeData.origin.label || typeData.originLabel || '';
   const destination = typeData.destination && typeData.destination.label || typeData.destinationLabel || '';
@@ -50,8 +68,10 @@ function decorateActivity(activity) {
   const canApply = !(activity.legacy && activity.legacy.readOnly) && activity.status === 'RECRUITING' && remaining > 0
     && (activity.viewerRole === 'guest' || (activity.viewerRole === 'applicant' && canReapply));
   const summary = typeSummary(activity);
-  const ownerNickname = String(activity.owner && activity.owner.nickname || '拼吧用户').trim() || '拼吧用户';
+  const ownerNickname = String(activity.ownerProfile && activity.ownerProfile.nickname || activity.owner && activity.owner.nickname || '拼吧用户').trim() || '拼吧用户';
   const slots = normalizeAvatarSlots(activity.avatarSlots, maxMembers);
+  const editorialDate = editorialDateParts(activity.startsAt);
+  const displayDescription = typeof activity.description === 'string' ? activity.description.trim() : '';
   const visibleLimit = maxMembers <= 4 ? maxMembers : maxMembers <= 7 ? 3 : 2;
   const visibleAvatarSlots = slots.slice(0, visibleLimit).map((slot, index) => ({ ...slot, delay: index * 45, layer: visibleLimit - index }));
   const hiddenMemberCount = slots.slice(visibleLimit).filter((slot) => !slot.empty).length;
@@ -64,6 +84,8 @@ function decorateActivity(activity) {
     statusLabel,
     statusTone: statusMeta.tone,
     displayTime: formatDateTime(activity.startsAt),
+    ...editorialDate,
+    displayDescription,
     sceneLine: summary,
     memberCount,
     maxMembers,

@@ -1,0 +1,12 @@
+{
+  "id": "redesign-discover-activity-cards",
+  "title": "参考图片重构发现页活动卡片",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交已通过审查的发现页活动卡重构",
+  "createdAt": "2026-09-06T20:05:00+08:00",
+  "branch": "main"
+}

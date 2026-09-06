@@ -38,5 +38,5 @@ test('发现页窄屏收紧面板和图文卡但保留四类横向筛选', () =>
 
   assert.match(pageStyle, /@media \(max-width: 340px\)[\s\S]*\.discover-hero\s*\{[^}]*min-height:\s*300rpx;/);
   assert.match(pageStyle, /@media \(max-width: 340px\)[\s\S]*\.discover-sheet\s*\{[^}]*padding-right:\s*20rpx;[^}]*padding-left:\s*20rpx;/);
-  assert.match(cardStyle, /@media \(max-width: 340px\)[\s\S]*\.card-cover\s*\{[^}]*width:\s*140rpx;[^}]*height:\s*140rpx;/);
+  assert.match(cardStyle, /@media \(max-width: 340px\)[\s\S]*\.activity-card--discover \.card-cover\s*\{[^}]*flex-basis:\s*42%;[^}]*width:\s*42%;[^}]*min-height:\s*300rpx;/);
 });

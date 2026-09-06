@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { createRequire } = require('node:module');
+const { decorateActivity } = require('../miniprogram/utils/display');
 const root = path.join(__dirname, '../miniprogram');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
@@ -85,16 +86,53 @@ test('发现启用图文变体与骨架，我的保持默认，图片区懒加�
   assert.match(read('components/activity-card/index.wxss'), /\.activity-card--discover/);
 });
 
-test('发现卡恢复真实头像槽位、折叠容量与一次性成员入场动效', () => {
+test('发现卡使用左右画报分栏、大日期、真实发起人与可选说明', () => {
   const template = read('components/activity-card/index.wxml');
   const style = read('components/activity-card/index.wxss');
+  const discoverTemplate = template.split('<view wx:elif')[0];
+  assert.match(discoverTemplate, /class="card-cover-type/);
+  assert.match(discoverTemplate, /class="card-cover-scrim/);
+  assert.match(discoverTemplate, /item\.editorialDate/);
+  assert.match(discoverTemplate, /item\.editorialWeekday/);
+  assert.match(discoverTemplate, /item\.editorialTime/);
+  assert.match(discoverTemplate, /class="owner-line"/);
+  assert.match(discoverTemplate, /wx:if="\{\{item\.displayDescription\}\}"[^>]*class="activity-description"/);
   assert.match(template, /wx:for="\{\{avatarSlots\}\}"/);
   assert.match(template, /class="member-avatar-slot[^\"]*member-avatar-slot--\{\{slot\.empty \? 'empty' : 'filled'\}\}/);
   assert.match(template, /wx:if="\{\{item\.hiddenMemberCount > 0\}\}"[^>]*>\+\{\{item\.hiddenMemberCount\}\}/);
-  assert.doesNotMatch(template.split('<view wx:elif')[0], /class="owner-line"/);
+  assert.match(style, /\.activity-card--discover\s*\{[^}]*align-items:\s*stretch;[^}]*min-height:\s*320rpx;/s);
+  assert.match(style, /\.activity-card--discover \.card-cover\s*\{[^}]*flex:\s*0 0 44%;[^}]*min-height:\s*320rpx;/s);
+  assert.match(style, /\.activity-card--discover\.activity-card--large-text\s*\{[^}]*flex-direction:\s*column;/s);
   assert.match(style, /@keyframes member-avatar-enter/);
   assert.doesNotMatch(style, /capacity-progress-enter|capacity-arrow-nudge/);
   assert.match(style, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none;/);
+});
+
+test('活动装饰层只从真实开始时间生成单点日期并清洗可选说明', () => {
+  const item = decorateActivity({
+    id: 'editorial', type: 'sport', title: '周末羽毛球', description: '  新手友好  ',
+    startsAt: '2026-09-06T19:30:00+08:00', memberCount: 1, maxMembers: 4,
+    status: 'RECRUITING', placeLabel: '附近体育馆', owner: { nickname: '旧名称' },
+    ownerProfile: { nickname: '小拼', avatar: { kind: 'DEFAULT', fallback: 'FEMALE_DEFAULT' } },
+    avatarSlots: [], typeData: { category: '羽毛球', venue: '附近体育馆' }
+  });
+  assert.match(item.editorialDate, /^\d{2}\.\d{2}$/);
+  assert.match(item.editorialWeekday, /^周[日一二三四五六]$/);
+  assert.match(item.editorialTime, /^\d{2}:\d{2}$/);
+  assert.equal(item.displayDescription, '新手友好');
+  assert.equal(item.ownerNickname, '小拼');
+  assert.doesNotMatch(`${item.editorialDate}${item.editorialTime}`, /[-–—]/);
+});
+
+test('发现卡优先渲染发起人真实公开头像', () => {
+  const h = component();
+  h.update({
+    id: 'owner-profile-avatar', typeTone: 'food', visibleAvatarSlots: [],
+    ownerProfile: { avatar: { kind: 'DEFAULT', fallback: 'FEMALE_DEFAULT' } }
+  });
+  assert.equal(h.instance.data.ownerAvatar.kind, 'DEFAULT');
+  assert.match(h.instance.data.ownerAvatar.src, /profile-avatar-female-painted\.png$/);
+  assert.equal(h.instance.data.ownerAvatar.id, 'owner-avatar');
 });
 
 test('真实头像失败只降级一次到本地手绘头像', () => {
