@@ -8,7 +8,7 @@ const { formatDateTime } = require('../../utils/date');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { profileAvatarPath, fallbackAvatarSlot } = require('../../utils/passenger-avatar');
 const { resolveProfileAvatar } = require('../../utils/profile-avatar');
-const { profileImagePreviewPath } = require('../../utils/profile-image-preview');
+const { profileImagePreviewPath, resolvePreviewImagePath } = require('../../utils/profile-image-preview');
 const {
   DEFAULT_PROFILE_COVER,
   DEFAULT_PROFILE_COVER_PATH,
@@ -77,6 +77,10 @@ Page({
   },
 
   onLoad() {
+    this._disposed = false;
+    this._previewSeq = 0;
+    this._isPreviewing = false;
+    this._previewLoadingVisible = false;
     const platform = typeof wx === 'undefined' ? null : wx;
     const actionPosition = profileActionPosition(platform);
     this.setData({
@@ -87,6 +91,7 @@ Page({
   },
 
   onShow() {
+    this._disposed = false;
     this.refreshProfileCover();
     selectTab(this, 4);
     refreshUnread(this);
@@ -208,39 +213,50 @@ Page({
     wx.navigateTo({ url });
   },
 
-  previewProfileImage(imagePath, label) {
+  async previewProfileImage(imagePath, label, fallbackPath = '') {
     if (this._isPreviewing || !imagePath || typeof wx === 'undefined' || typeof wx.previewImage !== 'function') return;
+    const previewSeq = ++this._previewSeq;
     this._isPreviewing = true;
-    clearTimeout(this._previewUnlockTimer);
-    this._previewUnlockTimer = setTimeout(() => {
+    this._previewLoadingVisible = true;
+    if (typeof wx.showLoading === 'function') wx.showLoading({ title: '加载大图...', mask: true });
+    try {
+      let resolvedPath;
+      try {
+        resolvedPath = await resolvePreviewImagePath(imagePath, wx);
+      } catch (error) {
+        if (!fallbackPath || fallbackPath === imagePath) throw error;
+        resolvedPath = await resolvePreviewImagePath(fallbackPath, wx);
+      }
+      if (this._disposed || previewSeq !== this._previewSeq) return;
+      if (this._previewLoadingVisible && typeof wx.hideLoading === 'function') wx.hideLoading();
+      this._previewLoadingVisible = false;
+      await new Promise((resolve, reject) => {
+        wx.previewImage({
+          current: resolvedPath,
+          urls: [resolvedPath],
+          showmenu: false,
+          success: resolve,
+          fail: reject
+        });
+      });
+    } catch (error) {
+      if (!this._disposed && previewSeq === this._previewSeq && typeof wx.showToast === 'function') {
+        wx.showToast({ title: `${label}暂时无法查看`, icon: 'none' });
+      }
+    } finally {
+      if (previewSeq !== this._previewSeq) return;
+      if (this._previewLoadingVisible && typeof wx.hideLoading === 'function') wx.hideLoading();
+      this._previewLoadingVisible = false;
       this._isPreviewing = false;
-      this._previewUnlockTimer = null;
-    }, 1000);
-    const showError = () => {
-      clearTimeout(this._previewUnlockTimer);
-      this._previewUnlockTimer = null;
-      this._isPreviewing = false;
-      wx.showToast({ title: `${label}暂时无法查看`, icon: 'none' });
-    };
-    const openPreview = (resolvedPath) => wx.previewImage({
-      current: resolvedPath,
-      urls: [resolvedPath],
-      showmenu: false,
-      fail: showError
-    });
-    if (typeof wx.getImageInfo !== 'function') {
-      openPreview(imagePath);
-      return;
     }
-    wx.getImageInfo({
-      src: imagePath,
-      success: (result) => openPreview(result.path || imagePath),
-      fail: showError
-    });
   },
 
   handleAvatarPreview() {
-    this.previewProfileImage(profileImagePreviewPath(this.data.profileAvatarPath), '头像');
+    this.previewProfileImage(
+      profileImagePreviewPath(this.data.profileAvatarPath),
+      '头像',
+      profileImagePreviewPath(this.data.avatarFallbackPath)
+    );
   },
 
   handleAvatarImageError() {
@@ -250,7 +266,17 @@ Page({
   },
 
   handleBackgroundPreview() {
-    this.previewProfileImage(profileImagePreviewPath(this.data.profileCoverPath), '背景');
+    const fallbackPath = this.data.profileCoverUsesAvatar
+      ? profileImagePreviewPath(this.data.avatarFallbackPath)
+      : profileImagePreviewPath(DEFAULT_PROFILE_COVER_PATH);
+    this.previewProfileImage(profileImagePreviewPath(this.data.profileCoverPath), '背景', fallbackPath);
+  },
+
+  cancelImagePreview() {
+    this._previewSeq = (this._previewSeq || 0) + 1;
+    this._isPreviewing = false;
+    if (this._previewLoadingVisible && typeof wx !== 'undefined' && typeof wx.hideLoading === 'function') wx.hideLoading();
+    this._previewLoadingVisible = false;
   },
 
   handleProfile() { wx.navigateTo({ url: '/subpackages/profile/edit/index' }); },
@@ -268,13 +294,13 @@ Page({
   },
 
   onHide() {
+    this.cancelImagePreview();
     this._loadSeq = (this._loadSeq || 0) + 1;
   },
 
   onUnload() {
+    this._disposed = true;
+    this.cancelImagePreview();
     this._loadSeq = (this._loadSeq || 0) + 1;
-    clearTimeout(this._previewUnlockTimer);
-    this._previewUnlockTimer = null;
-    this._isPreviewing = false;
   }
 });
