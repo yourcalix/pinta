@@ -1,0 +1,12 @@
+{
+  "id": "align-hot-pinba-heading",
+  "title": "将发现页活动标题改为热门拼吧并对齐成团记忆排版",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交已通过验证的章节标题调整",
+  "createdAt": "2026-09-06T20:40:00+08:00",
+  "branch": "main"
+}

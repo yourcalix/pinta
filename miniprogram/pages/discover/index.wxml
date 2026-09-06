@@ -56,10 +56,10 @@
       </scroll-view>
     </view>
 
-    <view class="session-heading">
-      <view class="session-heading-watermark" aria-hidden="true">ACTIVE SESSIONS</view>
+    <view class="session-heading memory-section-heading" role="heading" aria-label="{{hasActiveFilters ? '筛选结果' : '热门拼吧'}}">
+      <view class="session-heading-watermark memory-heading-watermark" aria-hidden="true">HOT PINBA</view>
+      <view class="session-heading-title memory-title">{{hasActiveFilters ? '筛选结果' : '热门拼吧'}}</view>
       <view class="list-heading">
-        <view class="list-heading-title"><text class="list-heading-mark" aria-hidden="true"></text><text class="session-heading-title">{{hasActiveFilters ? '筛选结果' : '正在组队'}}</text></view>
         <view class="list-heading-meta"><text class="list-count" wx:if="{{!loading}}">{{activities.length}} 个活动</text><button wx:if="{{hasActiveFilters}}" class="clear-filter-button" bindtap="handleClearFilters">清除筛选</button></view>
       </view>
     </view>

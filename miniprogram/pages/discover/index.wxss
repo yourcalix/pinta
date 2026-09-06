@@ -471,20 +471,18 @@
 }
 
 .list-heading {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
   min-height: 72rpx;
-  margin: 0;
-  padding-top: 16rpx;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8rpx 16rpx;
-  color: #111827;
-  font-size: 30rpx;
-  font-weight: 700;
+  justify-content: flex-end;
 }
 
 .list-heading-title { gap: 12rpx; }
 .list-heading-mark { width: 8rpx; height: 34rpx; background: #16a36a; border-radius: 999rpx; }
 .session-heading-title { color: #111827; font-size: 32rpx; font-weight: 760; }
+.session-heading.memory-section-heading { margin-top: 40rpx; padding-top: 0; }
 
 .list-heading-meta {
   justify-content: flex-end;
@@ -836,9 +834,8 @@
   .filter-track { gap: 4rpx; }
   .filter-chip { padding-right: 4rpx; padding-left: 4rpx; font-size: 20rpx; }
   .chip-icon-box { flex-basis: 42rpx; width: 42rpx; height: 42rpx; margin-right: 4rpx; }
-  .session-heading { min-height: 90rpx; margin-bottom: 14rpx; }
-  .session-heading-watermark { left: 26rpx; font-size: 21rpx; }
-  .session-heading-title { font-size: 29rpx; }
+  .session-heading { min-height: 90rpx; }
+  .session-heading.memory-section-heading { margin-top: 32rpx; }
   .skeleton-card { gap: 16rpx; padding: 16rpx; }
   .skeleton-cover { flex-basis: 140rpx; width: 140rpx; height: 140rpx; }
   .memory-section { margin-top: 32rpx; }
