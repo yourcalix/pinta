@@ -37,6 +37,19 @@ function adultBirthLimit(now = new Date()) {
   return { year: today.year - 18, month: today.month, day: today.day };
 }
 
+function compareCalendarDate(left, right) {
+  return left.year - right.year || left.month - right.month || left.day - right.day;
+}
+
+function calculateAgeOnMacauDate(value, now = new Date()) {
+  const birthDate = parseBirthDate(value);
+  const today = macauCalendarDate(now);
+  if (!birthDate || !Number.isInteger(today.year) || compareCalendarDate(birthDate, today) > 0) return null;
+  let age = today.year - birthDate.year;
+  if (today.month < birthDate.month || (today.month === birthDate.month && today.day < birthDate.day)) age -= 1;
+  return age >= 0 && age <= 150 ? age : null;
+}
+
 function formatBirthDate(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
@@ -80,6 +93,7 @@ module.exports = {
   DEFAULT_BIRTH_DATE,
   getDaysInMonth,
   parseBirthDate,
+  calculateAgeOnMacauDate,
   adultBirthLimit,
   buildBirthDatePicker,
   updateBirthDatePicker

@@ -9,6 +9,10 @@ const { resolveDetailError } = require('../../../utils/detail-error');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { normalizeAvatarSlots, fallbackAvatarSlot, profileAvatarPath } = require('../../../utils/passenger-avatar');
 const { formatDateTime } = require('../../../utils/date');
+const OWNER_MBTI_TYPES = new Set([
+  'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
+  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'
+]);
 
 function publishedDateLabel(value) {
   const date = new Date(value);
@@ -32,6 +36,17 @@ function ownerAvatarPresentation(activity) {
   };
 }
 
+function ownerPersonalTags(profile) {
+  const source = profile || {};
+  const gender = source.gender === 'MALE' ? '男' : source.gender === 'FEMALE' ? '女' : '';
+  const age = Number.isInteger(source.age) && source.age >= 18 && source.age <= 150 ? `${source.age}岁` : '';
+  const tags = [];
+  const identity = [gender, age].filter(Boolean).join(' · ');
+  if (identity) tags.push({ key: 'identity', label: identity });
+  if (OWNER_MBTI_TYPES.has(source.mbti)) tags.push({ key: 'mbti', label: source.mbti });
+  return tags;
+}
+
 function presentation(activity) {
   const slots = normalizeAvatarSlots(activity.avatarSlots, activity.maxMembers);
   const supported = ['companion', 'sport', 'food'].includes(activity.typeTone);
@@ -50,6 +65,7 @@ function presentation(activity) {
   else if (activity.status === 'RECRUITING' && activity.remaining === 0) primaryLabel = '活动已满员';
   const needed = Math.max(0, activity.minMembers - activity.memberCount);
   const ownerNickname = String(activity.ownerProfile && activity.ownerProfile.nickname || activity.ownerNickname || '拼吧用户').trim() || '拼吧用户';
+  const ownerTags = ownerPersonalTags(activity.ownerProfile);
   const terminal = ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(activity.status);
   const ownerPublishedLabel = publishedDateLabel(activity.createdAt);
   return {
@@ -62,6 +78,7 @@ function presentation(activity) {
     detailRows: fields.filter(([key]) => typeof data[key] === 'string' && data[key].trim()).map(([key, label]) => ({ key, label, value: data[key] })),
     ownerAvatar: ownerAvatarPresentation(activity),
     ownerNickname,
+    ownerPersonalTags: ownerTags,
     ownerFacts: [
       { key: 'type', label: '活动类型', value: activity.typeLabel },
       { key: 'capacity', label: '成团规模', value: `${activity.minMembers}–${activity.maxMembers} 人` },
@@ -70,7 +87,7 @@ function presentation(activity) {
     ownerDutyText: terminal
       ? '活动已结束，历史记录仅供查看。'
       : '发起人负责本场成员确认与安排沟通，成团后可进入成员空间。',
-    ownerAccessibilityLabel: `认识发起人，发起人${ownerNickname}，角色活动发起人，活动类型${activity.typeLabel}，成团规模${activity.minMembers}至${activity.maxMembers}人，发布时间${ownerPublishedLabel}`,
+    ownerAccessibilityLabel: `认识发起人，发起人${ownerNickname}，角色活动发起人${ownerTags.length ? `，${ownerTags.map(item => item.label).join('，')}` : ''}，活动类型${activity.typeLabel}，成团规模${activity.minMembers}至${activity.maxMembers}人，发布时间${ownerPublishedLabel}`,
     primaryAction, primaryLabel,
     groupEnabled: ['owner', 'member'].includes(activity.viewerRole),
     consultEnabled: activity.viewerRole !== 'owner' && ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status)
@@ -79,7 +96,7 @@ function presentation(activity) {
 
 Page({
   data: { id: '', activity: null, detailRows: [], loading: true, error: '', errorCode: '', applying: false, note: '', showApply: false,
-    contentTopInset: 88, navTop: 36, singlePage: true, navSolid: false, coverSrc: '', coverFailed: false, detailSlots: [], hiddenMembers: 0, ownerAvatar: null, ownerNickname: '', ownerFacts: [], ownerDutyText: '', ownerAccessibilityLabel: '', primaryAction: '', primaryLabel: '', opening: false, groupEnabled: false, consultEnabled: false, consulting: false },
+    contentTopInset: 88, navTop: 36, singlePage: true, navSolid: false, coverSrc: '', coverFailed: false, detailSlots: [], hiddenMembers: 0, ownerAvatar: null, ownerNickname: '', ownerPersonalTags: [], ownerFacts: [], ownerDutyText: '', ownerAccessibilityLabel: '', primaryAction: '', primaryLabel: '', opening: false, groupEnabled: false, consultEnabled: false, consulting: false },
   onLoad(options = {}) {
     this._disposed = false;
     const contentTopInset = calculateContentTopInset(typeof wx === 'undefined' ? null : wx);

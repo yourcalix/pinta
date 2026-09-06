@@ -79,6 +79,27 @@ test('Mock保存自定义头像后活动详情立即返回该用户真实头像'
     kind: 'CUSTOM', src: savedPath, fallback: 'MALE_DEFAULT'
   });
 });
+
+test('Mock公开发起人年龄与正式服务保持18岁下限', () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  const { createRequire } = require('node:module');
+  const filename = require.resolve('../miniprogram/mocks/server');
+  const context = { require: createRequire(filename), module: { exports: {} }, console };
+  vm.runInNewContext(
+    fs.readFileSync(filename, 'utf8')
+      + '\nmodule.exports.reviewPublicActivity = publicActivity;'
+      + '\nmodule.exports.reviewSetBirthDate = (userId, value) => { userById(userId).profile.birthDate = value; };'
+      + '\nmodule.exports.reviewActivityById = activityById;',
+    context
+  );
+  context.module.exports.reviewSetBirthDate('u_owner', '2010-01-01');
+  const dto = context.module.exports.reviewPublicActivity(
+    context.module.exports.reviewActivityById('a_ride'),
+    { anonymous: true, at: '2026-09-06T04:00:00.000Z' }
+  );
+  assert.equal(dto.ownerProfile.age, null);
+});
 // In-memory transaction contract double; not a real CloudBase integration test.
 function harness() {
   const tables = { activities: {}, members: {}, applications: {}, users: {}, memberContacts: {} };

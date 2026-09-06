@@ -67,6 +67,9 @@
               </view>
               <view class="owner-name">{{ownerNickname}}</view>
               <view class="owner-role">Host · 活动发起人</view>
+              <view wx:if="{{ownerPersonalTags.length}}" class="owner-personal-tags" aria-hidden="true">
+                <text wx:for="{{ownerPersonalTags}}" wx:key="key" class="owner-personal-tag">{{item.label}}</text>
+              </view>
             </view>
             <view class="owner-facts">
               <view wx:for="{{ownerFacts}}" wx:key="key" class="owner-fact">

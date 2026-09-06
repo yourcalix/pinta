@@ -133,6 +133,7 @@
           <view wx:for="{{birthdayDays}}" wx:key="*this" class="birthday-picker-item">{{item}}日</view>
         </picker-view-column>
       </picker-view>
+      <view class="profile-visibility-note">🔒 完整生日仅自己可见，活动中将公开展示年龄（如 24岁）。</view>
       <view class="birthday-safe-area" aria-hidden="true"></view>
     </view>
   </view>
@@ -150,6 +151,7 @@
           <button wx:for="{{mbtiOptions}}" wx:key="*this" class="mbti-option {{mbtiDraft === item ? 'mbti-option--selected' : ''}}" data-value="{{item}}" bindtap="handleMbtiSelect" hover-class="mbti-option--pressed" aria-label="{{item}}{{mbtiDraft === item ? '，已选择' : ''}}" aria-pressed="{{mbtiDraft === item}}">{{item}}</button>
         </view>
         <button class="mbti-clear {{mbtiDraft ? '' : 'mbti-clear--active'}}" bindtap="handleMbtiClear" hover-class="mbti-clear--pressed">暂不设置 MBTI</button>
+        <view class="profile-visibility-note">设置后将在你发起的活动名片中展示；清空后不展示。</view>
       </view>
     </view>
   </view>

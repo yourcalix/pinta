@@ -86,7 +86,7 @@ test('旧客户端更新保留 MBTI，新客户端可修改或清空', async () 
   assert.equal((await store.getUser('self')).profile.mbti, null);
 });
 
-test('MBTI 只进入本人资料，不进入公开活动 DTO', () => {
+test('活动快照中的MBTI不可穿透，只有水合后的受控值可公开', () => {
   const privateDto = selfUser({ role: 'user', status: 'ACTIVE', profile: { ...PROFILE, mbti: 'ENFJ' } });
   assert.equal(privateDto.profile.mbti, 'ENFJ');
   const publicDto = publicActivity({
@@ -95,7 +95,7 @@ test('MBTI 只进入本人资料，不进入公开活动 DTO', () => {
     minMembers: 2, maxMembers: 4, targetMembers: 4, memberCount: 1, status: 'RECRUITING', rules: '',
     owner: { nickname: '发起人', mbti: 'ENFJ' }, typeData: { sportType: '羽毛球', venue: '体育馆', level: 'ANY', intensity: 'LIGHT' }
   }, {}, NOW.toISOString());
-  assert.equal(JSON.stringify(publicDto).includes('mbti'), false);
+  assert.equal(publicDto.ownerProfile.mbti, null);
   assert.equal(JSON.stringify(publicDto).includes('ENFJ'), false);
 });
 
@@ -110,6 +110,7 @@ test('MBTI 行与四列选择抽屉符合草稿保存边界', () => {
   assert.match(style, /\.mbti-grid\s*{[^}]*grid-template-columns:\s*repeat\(4/);
   assert.match(style, /\.mbti-option--selected\s*{[^}]*border-color:\s*#16a36a/);
   assert.match(script, /mbti:\s*form\.mbti \|\| null/);
+  assert.match(template, /设置后将在你发起的活动名片中展示/);
   const selectionHandlers = script.match(/handleMbtiSelect\(event\) \{([\s\S]*?)\n  \},[\s\S]*?handleMbtiConfirm\(\) \{([\s\S]*?)\n  \},/);
   assert.doesNotMatch(selectionHandlers[0], /userService\./);
 });

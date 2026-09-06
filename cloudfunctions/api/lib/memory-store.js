@@ -13,8 +13,11 @@ const {
   RIDE_PICKUP_SLOT_MINUTES,
   MEMBER_LUGGAGE_TYPES,
   PASSENGER_AVATAR_KINDS,
+  USER_GENDERS,
+  USER_MBTI_TYPES,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
+const { calculateAgeOnMacauDate } = require('./profile-birth-date');
 const { stableEntityId } = require('./ids');
 const {
   COMMUNITY_POST_STATUS,
@@ -124,7 +127,7 @@ class MemoryStore {
     return clone(this.users.get(actorId) || null);
   }
 
-  async hydratePublicActivityAvatars(activities = []) {
+  async hydratePublicActivityAvatars(activities = [], at = new Date()) {
     const activityIds = new Set(activities.filter(Boolean).map((activity) => activity.id));
     const activeMembers = [...this.members.values()]
       .filter((member) => activityIds.has(member.activityId) && member.status === MEMBER_STATUS.ACTIVE)
@@ -169,8 +172,20 @@ class MemoryStore {
       const candidates = ownerMembersByActivity.get(activity.id) || [];
       const ownerMember = activity.ownerId
         ? candidates.find((member) => member.userId === activity.ownerId)
+          || activeMembers.find((member) => member.activityId === activity.id && member.userId === activity.ownerId)
         : candidates[0];
-      ownerProfilesByActivity[activity.id] = ownerMember ? profilesByMemberId[ownerMember.id] || null : null;
+      const ownerUserId = activity.ownerId || ownerMember && ownerMember.userId;
+      const user = ownerUserId ? this.users.get(ownerUserId) : null;
+      const profile = user && user.status === 'ACTIVE' ? user.profile : null;
+      const avatar = profile && profile.avatar;
+      ownerProfilesByActivity[activity.id] = profile
+        ? {
+            gender: USER_GENDERS.includes(profile.gender) ? profile.gender : null,
+            age: calculateAgeOnMacauDate(profile.birthDate, at),
+            mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
+            avatarSrc: avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : ''
+          }
+        : null;
     }
     return clone({ rostersByActivity, profilesByMemberId, ownerProfilesByActivity });
   }

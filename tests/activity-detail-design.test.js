@@ -37,7 +37,7 @@ test('发起人卡展示真实公开头像和活动事实，缺失头像安全�
   const activity = {
     ...base,
     owner: { nickname: '小树' },
-    ownerProfile: { nickname: '小树', avatar: { kind: 'CUSTOM', src: 'https://img.example/owner.jpg', fallback: 'FEMALE_DEFAULT' } },
+    ownerProfile: { nickname: '小树', avatar: { kind: 'CUSTOM', src: 'https://img.example/owner.jpg', fallback: 'FEMALE_DEFAULT' }, gender: 'FEMALE', age: 26, mbti: 'INFP' },
     createdAt: '2026-09-01T10:00:00.000Z'
   };
   const { page } = harness(activity);
@@ -46,6 +46,7 @@ test('发起人卡展示真实公开头像和活动事实，缺失头像安全�
   assert.deepEqual(Array.from(page.data.ownerFacts, item => item.label), ['活动类型', '成团规模', '发布时间']);
   assert.match(page.data.ownerFacts[1].value, /2.*20.*人/);
   assert.equal(page.data.ownerFacts[2].value, '9月1日');
+  assert.deepEqual(Array.from(page.data.ownerPersonalTags, item => item.label), ['女 · 26岁', 'INFP']);
   assert.match(page.data.ownerAccessibilityLabel, /认识发起人.*小树.*发布时间9月1日/);
   page.handleOwnerAvatarError({ currentTarget: { dataset: { src: page.data.ownerAvatar.src } } });
   assert.match(page.data.ownerAvatar.src, /profile-avatar-female-painted\.webp$/);
@@ -72,6 +73,8 @@ test('详情布局采用大幅封面、白色连续面板、四段底栏并保�
   assert.match(template, /cursor-spacing="40"/); assert.match(template, /maxlength="120"/);
   assert.match(template, /认识发起人/); assert.match(template, /Host · 活动发起人/);
   assert.match(template, /ownerAvatar\.src/); assert.match(template, /binderror="handleOwnerAvatarError"/);
+  assert.match(template, /ownerPersonalTags/);
+  assert.match(template, /class="owner-personal-tags" aria-hidden="true"/);
   assert.doesNotMatch(template, /评分|职业|宠物|认证房东/);
   assert.match(style, /height:\s*calc\(75vh \+ 48rpx\)/); assert.match(style, /background:\s*#fff/);
   assert.match(style, /\.footer-tool\s*\{[^}]*min-width:\s*88rpx[^}]*min-height:\s*88rpx/);
@@ -79,5 +82,6 @@ test('详情布局采用大幅封面、白色连续面板、四段底栏并保�
   assert.match(style, /background:\s*#181818/); assert.match(style, /color:\s*#2cff9a/);
   assert.match(style, /min-height:\s*44px/); assert.match(style, /safe-area-inset-bottom/);
   assert.match(style, /\.owner-profile-card\s*\{/);
+  assert.match(style, /\.owner-personal-tags\s*\{[^}]*flex-wrap:\s*wrap/);
   assert.match(style, /\.owner-avatar\s*\{[^}]*width:\s*120rpx[^}]*height:\s*120rpx/);
 });

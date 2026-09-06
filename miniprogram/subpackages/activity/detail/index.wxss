@@ -54,6 +54,8 @@ button::after { display: none; }
 .owner-avatar image { display: block; width: 100%; height: 100%; border-radius: 50%; }
 .owner-name { max-width: 220rpx; margin-top: 14rpx; overflow: hidden; color: #111827; font-size: 32rpx; font-weight: 800; line-height: 1.25; white-space: nowrap; text-overflow: ellipsis; }
 .owner-role { max-width: 100%; margin-top: 8rpx; padding: 5rpx 12rpx; box-sizing: border-box; border-radius: 16rpx; background: #e8f8f0; color: #08785c; font-size: 21rpx; line-height: 1.35; white-space: nowrap; }
+.owner-personal-tags { display: flex; max-width: 100%; margin-top: 12rpx; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8rpx; }
+.owner-personal-tag { display: inline-flex; min-height: 40rpx; padding: 2rpx 10rpx; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 10rpx; background: #f6f7f9; color: #4b5563; font-size: 24rpx; font-weight: 600; line-height: 1.35; white-space: nowrap; }
 .owner-facts { flex: 0 0 260rpx; width: 260rpx; }
 .owner-fact { display: flex; min-height: 78rpx; padding: 12rpx 0; box-sizing: border-box; flex-direction: column; justify-content: center; border-bottom: 1rpx solid #e5e7eb; }
 .owner-fact:last-child { border-bottom: 0; }
@@ -108,6 +110,8 @@ button::after { display: none; }
   .owner-avatar { flex-basis: 100rpx; width: 100rpx; height: 100rpx; }
   .owner-name { max-width: 190rpx; font-size: 28rpx; }
   .owner-role { padding-left: 8rpx; padding-right: 8rpx; font-size: 19rpx; }
+  .owner-personal-tags { margin-top: 8rpx; gap: 6rpx; }
+  .owner-personal-tag { min-height: 38rpx; padding: 2rpx 6rpx; font-size: 24rpx; }
   .owner-facts { flex-basis: 220rpx; width: 220rpx; }
   .owner-fact-value { font-size: 24rpx; }
 }

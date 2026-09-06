@@ -7,6 +7,8 @@ const {
   ACTIVITY_TYPES,
   ACTIVITY_STATUS,
   APPLICATION_STATUS,
+  USER_GENDERS,
+  USER_MBTI_TYPES,
   LEGACY_ACTIVITY_TYPE_MAP
 } = require('./constants');
 const {
@@ -151,6 +153,7 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
   activity = normalizeRideCapacity(activity);
   const maxPassengers = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
   const minPassengers = activity.minMembers || activity.minPassengers || activity.targetMembers;
+  const ownerFacts = avatarHydration.ownerProfile || {};
   const result = {
     id: activity.id,
     type: LEGACY_ACTIVITY_TYPE_MAP[storedType] || storedType,
@@ -206,7 +209,10 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
       nickname: activity.owner && activity.owner.nickname
         ? String(activity.owner.nickname)
         : '拼吧用户',
-      avatar: publicAvatarSlot(avatarHydration.ownerProfile)
+      avatar: publicAvatarSlot(ownerFacts),
+      gender: USER_GENDERS.includes(ownerFacts.gender) ? ownerFacts.gender : null,
+      age: Number.isInteger(ownerFacts.age) && ownerFacts.age >= 18 && ownerFacts.age <= 150 ? ownerFacts.age : null,
+      mbti: USER_MBTI_TYPES.includes(ownerFacts.mbti) ? ownerFacts.mbti : null
     },
     createdAt: activity.createdAt,
     updatedAt: activity.updatedAt
@@ -328,7 +334,7 @@ function createPinbaService(options) {
     let hydration = { rostersByActivity: {}, profilesByMemberId: {}, ownerProfilesByActivity: {} };
     if (typeof store.hydratePublicActivityAvatars === 'function') {
       try {
-        hydration = await store.hydratePublicActivityAvatars(items);
+        hydration = await store.hydratePublicActivityAvatars(items, at);
       } catch (error) {
         console.error('[pinba-public-avatar-hydration]', {
           activityCount: items.length,
@@ -356,7 +362,10 @@ function createPinbaService(options) {
         nickname: data.activity.ownerProfile && data.activity.ownerProfile.nickname
           || data.activity.owner && data.activity.owner.nickname
           || '拼吧用户',
-        avatar: publicAvatarSlot(null)
+        avatar: publicAvatarSlot(null),
+        gender: null,
+        age: null,
+        mbti: null
       };
       return { ...data, activity: { ...data.activity, avatarSlots: publicAvatarSlots([], capacity), ownerProfile } };
     };

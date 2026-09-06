@@ -521,6 +521,21 @@ page {
   border-radius: 18rpx;
 }
 
+.profile-visibility-note {
+  margin: 8rpx 0 4rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: #f6f7f9;
+  color: #72777f;
+  font-size: 24rpx;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.birthday-sheet > .profile-visibility-note {
+  margin: 4rpx 32rpx 18rpx;
+}
+
 .birthday-safe-area {
   height: env(safe-area-inset-bottom);
 }

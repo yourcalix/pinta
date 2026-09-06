@@ -6,7 +6,7 @@ const {
   RIDE_ROUTES,
   getRideRoute
 } = require('../config/locations');
-const { parseBirthDate, adultBirthLimit } = require('../utils/profile-birth-date');
+const { parseBirthDate, adultBirthLimit, calculateAgeOnMacauDate } = require('../utils/profile-birth-date');
 
 const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
 const LEGACY_ACTIVITY_TYPE_MAP = Object.freeze({ ride: 'companion', buddy: 'sport', product: 'food' });
@@ -844,6 +844,7 @@ function publicActivity(activity, options = {}) {
   // Normalize legacy capacity even for callers that bypass the public list/detail readers.
   activity = normalizeActivityForRead(activity);
   const anonymous = options && options.anonymous === true;
+  const publicAt = options && options.at || new Date();
   const viewerApplication = anonymous
     ? null
     : state.applications
@@ -886,11 +887,23 @@ function publicActivity(activity, options = {}) {
   };
   if (result.owner) result.owner = { nickname: String(result.owner.nickname || '') };
   const ownerMember = activeMembers.find((member) => member.activityId === activity.id && member.role === 'OWNER'
-    && (!activity.ownerId || member.userId === activity.ownerId));
-  const ownerUser = ownerMember ? userById(ownerMember.userId) : null;
+    && (!activity.ownerId || member.userId === activity.ownerId))
+    || activeMembers.find((member) => member.activityId === activity.id && member.userId === activity.ownerId);
+  const ownerUser = activity.ownerId ? userById(activity.ownerId) : ownerMember ? userById(ownerMember.userId) : null;
+  const ownerAge = calculateAgeOnMacauDate(
+    ownerUser && ownerUser.status === 'ACTIVE' && ownerUser.profile && ownerUser.profile.birthDate,
+    publicAt
+  );
   result.ownerProfile = {
     nickname: result.owner && result.owner.nickname || '拼吧用户',
-    avatar: publicAvatarSlot(ownerUser && ownerUser.status === 'ACTIVE' ? ownerUser.profile : null)
+    avatar: publicAvatarSlot(ownerUser && ownerUser.status === 'ACTIVE' ? ownerUser.profile : null),
+    gender: ownerUser && ownerUser.status === 'ACTIVE' && ['MALE', 'FEMALE'].includes(ownerUser.profile && ownerUser.profile.gender)
+      ? ownerUser.profile.gender
+      : null,
+    age: Number.isInteger(ownerAge) && ownerAge >= 18 && ownerAge <= 150 ? ownerAge : null,
+    mbti: ownerUser && ownerUser.status === 'ACTIVE' && USER_MBTI_TYPES.includes(ownerUser.profile && ownerUser.profile.mbti)
+      ? ownerUser.profile.mbti
+      : null
   };
   if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) result.legacy = { sourceType: storedType, readOnly: true };
   if (viewerApplication) result.viewerApplication = publicApplication(viewerApplication);
@@ -1093,7 +1106,7 @@ function listActivities(input) {
     if (['RECRUITING', 'FORMED'].includes(activity.status) && keywordMatch) {
       if (items.length === limit) {
         return {
-          items: items.map((item) => publicActivity(item, { anonymous: true })),
+          items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
           nextCursor: String(candidateOffset)
         };
       }
@@ -1102,7 +1115,7 @@ function listActivities(input) {
   }
 
   return {
-    items: items.map((item) => publicActivity(item, { anonymous: true })),
+    items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
     nextCursor: rawOffset < candidates.length ? String(rawOffset) : null
   };
 }
@@ -1508,10 +1521,11 @@ function handle(action, input, idempotencyKey = '') {
   }
   if (action === 'activity.list') return listActivities(input);
   if (action === 'activity.detail') {
-    const activity = normalizeActivityForRead(activityById(input.activityId), new Date().toISOString());
+    const now = new Date().toISOString();
+    const activity = normalizeActivityForRead(activityById(input.activityId), now);
     assert(activity, 'NOT_FOUND', '活动不存在或已失效');
     assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
-    return { activity: publicActivity(activity) };
+    return { activity: publicActivity(activity, { at: now }) };
   }
   if (action === 'activity.question.list') return listActivityQuestions(input);
   if (action === 'activity.question.ask') return askActivityQuestion(input);

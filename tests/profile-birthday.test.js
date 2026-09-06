@@ -10,6 +10,7 @@ const { createPinbaService, selfUser, publicActivity } = require('../cloudfuncti
 const { MemoryStore } = require('../cloudfunctions/api/lib/memory-store');
 const {
   getDaysInMonth,
+  calculateAgeOnMacauDate,
   adultBirthLimit,
   buildBirthDatePicker,
   updateBirthDatePicker
@@ -48,6 +49,16 @@ test('18岁边界在澳门自然日零点切换而不是服务器UTC零点', () 
   assert.equal(validateProfileInput({ ...BASE_PROFILE, birthDate: '2008-09-05' }, new Date('2026-09-04T16:00:00.000Z')).birthDate, '2008-09-05');
 });
 
+test('公开年龄按澳门自然日服务端派生且不泄露生日', () => {
+  assert.equal(calculateAgeOnMacauDate('2000-09-05', new Date('2026-09-04T15:59:59.000Z')), 25);
+  assert.equal(calculateAgeOnMacauDate('2000-09-05', new Date('2026-09-04T16:00:00.000Z')), 26);
+  assert.equal(calculateAgeOnMacauDate('2000-02-29', new Date('2025-02-28T12:00:00.000Z')), 24);
+  assert.equal(calculateAgeOnMacauDate('2000-02-29', new Date('2025-03-01T00:00:00.000Z')), 25);
+  assert.equal(calculateAgeOnMacauDate('', NOW), null);
+  assert.equal(calculateAgeOnMacauDate('2099-01-01', NOW), null);
+  assert.equal(calculateAgeOnMacauDate('2000-01-01', new Date('invalid')), null);
+});
+
 test('历史用户可无生日且旧客户端更新不会抹掉已有生日', async () => {
   const withoutBirthDate = validateProfileInput(BASE_PROFILE, NOW);
   assert.equal(Object.hasOwn(withoutBirthDate, 'birthDate'), false);
@@ -66,7 +77,7 @@ test('历史用户可无生日且旧客户端更新不会抹掉已有生日', as
   assert.equal((await store.getUser('self')).profile.birthDate, '1998-06-12');
 });
 
-test('完整生日只进入本人资料 DTO，不进入公开活动 DTO', () => {
+test('完整生日只进入本人资料 DTO，公开活动只允许服务端派生年龄', () => {
   const privateDto = selfUser({ role: 'user', status: 'ACTIVE', profile: { ...BASE_PROFILE, birthDate: '1998-06-12' } });
   assert.equal(privateDto.profile.birthDate, '1998-06-12');
   const publicDto = publicActivity({
@@ -75,6 +86,7 @@ test('完整生日只进入本人资料 DTO，不进入公开活动 DTO', () => 
     minMembers: 2, maxMembers: 4, targetMembers: 4, memberCount: 1, status: 'RECRUITING', rules: '',
     owner: { nickname: '发起人', birthDate: '1998-06-12' }, typeData: { sportType: '羽毛球', venue: '体育馆', level: 'ANY', intensity: 'LIGHT' }
   }, {}, NOW.toISOString());
+  assert.equal(publicDto.ownerProfile.age, null);
   assert.equal(JSON.stringify(publicDto).includes('birthDate'), false);
   assert.equal(JSON.stringify(publicDto).includes('1998-06-12'), false);
 });
@@ -106,6 +118,7 @@ test('个人资料页包含生日行、三列滚轮和滚动锁', () => {
   assert.doesNotMatch(template, /年龄确认|adult-row/);
   assert.match(script, /'form\.adultConfirmed': true/);
   assert.doesNotMatch(template, /显示星座/);
+  assert.match(template, /完整生日仅自己可见[^<]*活动中将公开展示年龄/);
   assert.match(script, /if \(form\.birthDate\) profileInput\.birthDate = form\.birthDate/);
   assert.match(style, /\.birthday-picker\s*{[^}]*height:\s*400rpx/);
   assert.match(style, /\.birthday-picker-item\s*{[^}]*height:\s*88rpx/);

@@ -14,8 +14,11 @@ const {
   RIDE_PICKUP_SLOT_MINUTES,
   MEMBER_LUGGAGE_TYPES,
   PASSENGER_AVATAR_KINDS,
+  USER_GENDERS,
+  USER_MBTI_TYPES,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
+const { calculateAgeOnMacauDate } = require('./profile-birth-date');
 const { stableEntityId } = require('./ids');
 const {
   COMMUNITY_POST_STATUS,
@@ -155,7 +158,7 @@ class CloudStore {
     return this.getDocument('users', actorId);
   }
 
-  async hydratePublicActivityAvatars(activities = []) {
+  async hydratePublicActivityAvatars(activities = [], at = new Date()) {
     const activityIds = [...new Set(activities.filter(Boolean).map((activity) => activity.id).filter(Boolean))];
     const activeMembers = [];
     for (let index = 0; index < activityIds.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
@@ -176,7 +179,10 @@ class CloudStore {
       if (right.role === 'OWNER' && left.role !== 'OWNER') return 1;
       return String(left.joinedAt || '').localeCompare(String(right.joinedAt || '')) || String(left.id).localeCompare(String(right.id));
     });
-    const userIds = [...new Set(activeMembers.map((member) => member.userId).filter(Boolean))];
+    const userIds = [...new Set([
+      ...activeMembers.map((member) => member.userId),
+      ...activities.filter(Boolean).map((activity) => activity.ownerId)
+    ].filter(Boolean))];
     const users = [];
     for (let index = 0; index < userIds.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
       const chunk = userIds.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
@@ -187,7 +193,7 @@ class CloudStore {
       users.push(...(result.data || []).map(entity));
     }
     const userById = new Map(users.map((user) => [user.id, user]));
-    const fileIDs = [...new Set(users.map((user) => {
+    const fileIDs = [...new Set(users.filter((user) => user.status === 'ACTIVE' && user.profile).map((user) => {
       const avatar = user.profile && user.profile.avatar;
       return avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : '';
     }).filter(Boolean))];
@@ -259,8 +265,21 @@ class CloudStore {
       const candidates = ownerMembersByActivity.get(activity.id) || [];
       const ownerMember = activity.ownerId
         ? candidates.find((member) => member.userId === activity.ownerId)
+          || activeMembers.find((member) => member.activityId === activity.id && member.userId === activity.ownerId)
         : candidates[0];
-      ownerProfilesByActivity[activity.id] = ownerMember ? profilesByMemberId[ownerMember.id] || null : null;
+      const ownerUserId = activity.ownerId || ownerMember && ownerMember.userId;
+      const user = ownerUserId ? userById.get(ownerUserId) : null;
+      const profile = user && user.status === 'ACTIVE' ? user.profile : null;
+      const avatar = profile && profile.avatar;
+      const avatarFileID = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : '';
+      ownerProfilesByActivity[activity.id] = profile
+        ? {
+            gender: USER_GENDERS.includes(profile.gender) ? profile.gender : null,
+            age: calculateAgeOnMacauDate(profile.birthDate, at),
+            mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
+            avatarSrc: displayUrlByFileID.get(avatarFileID) || ''
+          }
+        : null;
     }
     return { rostersByActivity, profilesByMemberId, ownerProfilesByActivity };
   }
