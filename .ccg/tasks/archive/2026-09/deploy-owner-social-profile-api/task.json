@@ -1,0 +1,12 @@
+{
+  "id": "deploy-owner-social-profile-api",
+  "title": "部署发起人公开资料 API 云函数",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档部署记录",
+  "createdAt": "2026-09-06T00:00:00+08:00",
+  "branch": "main"
+}
