@@ -221,7 +221,7 @@ test('发现页使用沉浸式深蓝头部和连续白色面板，不再渲染�
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxss'), 'utf8');
   assert.match(template, /shared-paper-bg\.jpg/);
-  assert.match(template, /拼吧 · 发现/);
+  assert.match(template, /discover-art-title-base">拼吧 · <\/text><text class="discover-art-title-accent">发现/);
   assert.match(template, /<scroll-view[^>]*scroll-x/);
   assert.match(template, /enhanced="\{\{true\}\}"/);
   assert.match(template, /show-scrollbar="\{\{false\}\}"/);
@@ -232,7 +232,7 @@ test('发现页使用沉浸式深蓝头部和连续白色面板，不再渲染�
   assert.match(template, /class="discover-sheet"/);
   assert.ok(template.indexOf('class="discover-hero"') < template.indexOf('class="discover-sheet"'));
   assert.ok(template.indexOf('class="discover-sheet"') < template.indexOf('class="search-row"'));
-  assert.match(style, /\.discover-sheet\s*\{[^}]*width:\s*100vw;[^}]*min-height:\s*calc\(100vh - 304rpx\);[^}]*background:\s*#fff;/s);
+  assert.match(style, /\.discover-sheet\s*\{[^}]*width:\s*100vw;[^}]*min-height:\s*calc\(100vh - 340rpx\);[^}]*background:\s*#fff;/s);
   assert.match(style, /\.discover-sheet\s*\{[^}]*padding-bottom:\s*calc\(180rpx \+ env\(safe-area-inset-bottom\)\)/s);
   assert.match(style, /background:\s*#075aa7/i);
   assert.match(style, /\.search-clear-button[\s\S]*min-(?:width|height):\s*88rpx/);

@@ -5,11 +5,11 @@
   <view class="global-page-background-tint" aria-hidden="true"></view>
 
   <view class="discover-hero">
-    <view class="discover-header">
+    <view class="discover-header" role="heading" aria-label="拼吧发现，发现附近正在发生的拼单">
       <view class="discover-header-copy">
-        <view class="discover-eyebrow">PINBA DISCOVER</view>
-        <view class="discover-title">拼吧 · 发现</view>
-        <view class="discover-subtitle">发现附近正在发生的拼单</view>
+        <view class="discover-eyebrow" aria-hidden="true">PINBA DISCOVER</view>
+        <view class="discover-art-title" aria-hidden="true"><text class="discover-art-title-base">拼吧 · </text><text class="discover-art-title-accent">发现</text></view>
+        <view class="discover-subtitle" aria-hidden="true">发现附近正在发生的拼单</view>
       </view>
       <view class="header-doodle" aria-hidden="true"><view class="header-doodle-line"></view><view class="header-doodle-leaf header-doodle-leaf--left"></view><view class="header-doodle-leaf header-doodle-leaf--right"></view></view>
     </view>
@@ -38,25 +38,30 @@
       </view>
     </view>
 
-    <view class="search-row">
-      <view class="search-symbol" aria-hidden="true"><view class="search-glyph"><view class="search-glyph-handle"></view></view></view>
-      <input class="search-input" value="{{keyword}}" placeholder="搜索活动、地点或发起人" placeholder-class="search-placeholder" confirm-type="search" aria-label="搜索活动、地点或发起人" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
-      <button wx:if="{{keyword}}" class="search-clear-button" bindtap="handleClearKeyword" aria-label="清空搜索关键词"><text aria-hidden="true">×</text></button>
-      <button class="search-submit-button" bindtap="handleSearch" aria-label="执行搜索">搜索</button>
+    <view class="directory-tools">
+      <view class="search-row">
+        <view class="search-symbol" aria-hidden="true"><view class="search-glyph"><view class="search-glyph-handle"></view></view></view>
+        <input class="search-input" value="{{keyword}}" placeholder="搜索活动、地点或发起人" placeholder-class="search-placeholder" confirm-type="search" aria-label="搜索活动、地点或发起人" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        <button wx:if="{{keyword}}" class="search-clear-button" bindtap="handleClearKeyword" hover-class="search-clear--pressed" hover-stay-time="80" aria-label="清空搜索关键词"><text aria-hidden="true">×</text></button>
+        <button class="search-submit-button" bindtap="handleSearch" aria-label="执行搜索">搜索</button>
+      </view>
+
+      <scroll-view class="filter-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" role="tablist" aria-label="选择拼单类型">
+        <view class="filter-track">
+          <button wx:for="{{typeOptions}}" wx:key="value" class="filter-chip filter-chip--{{item.value || 'all'}} {{type === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">
+            <view class="chip-icon-box" aria-hidden="true"><image class="chip-icon-img" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" /></view>
+            <text class="chip-label">{{item.label}}</text>
+          </button>
+        </view>
+      </scroll-view>
     </view>
 
-    <scroll-view class="filter-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" role="tablist" aria-label="选择拼单类型">
-      <view class="filter-track">
-        <button wx:for="{{typeOptions}}" wx:key="value" class="filter-chip filter-chip--{{item.value || 'all'}} {{type === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">
-          <view class="chip-icon-box" aria-hidden="true"><image class="chip-icon-img" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" /></view>
-          <text class="chip-label">{{item.label}}</text>
-        </button>
+    <view class="session-heading">
+      <view class="session-heading-watermark" aria-hidden="true">ACTIVE SESSIONS</view>
+      <view class="list-heading">
+        <view class="list-heading-title"><text class="list-heading-mark" aria-hidden="true"></text><text class="session-heading-title">{{hasActiveFilters ? '筛选结果' : '正在组队'}}</text></view>
+        <view class="list-heading-meta"><text class="list-count" wx:if="{{!loading}}">{{activities.length}} 个活动</text><button wx:if="{{hasActiveFilters}}" class="clear-filter-button" bindtap="handleClearFilters">清除筛选</button></view>
       </view>
-    </scroll-view>
-
-    <view class="list-heading">
-      <view class="list-heading-title"><text class="list-heading-mark" aria-hidden="true"></text><text>{{hasActiveFilters ? '筛选结果' : '正在组队'}}</text></view>
-      <view class="list-heading-meta"><text class="list-count" wx:if="{{!loading}}">{{activities.length}} 个活动</text><button wx:if="{{hasActiveFilters}}" class="clear-filter-button" bindtap="handleClearFilters">清除筛选</button></view>
     </view>
 
     <view wx:if="{{loading}}" class="skeleton-list" aria-label="正在加载活动"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"><view class="skeleton-line skeleton-line--short"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-line--medium"></view></view></view></view>

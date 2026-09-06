@@ -1,0 +1,12 @@
+{
+  "id": "redesign-discover-editorial",
+  "title": "以成团记忆画报风格重排发现页",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交",
+  "createdAt": "2026-09-06T18:10:00+08:00",
+  "branch": "main"
+}

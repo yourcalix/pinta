@@ -25,7 +25,8 @@ test('发现页现代视觉令牌不再使用奶油纸片和厚重蓝色投影',
   const pageStyle = read('pages/discover/index.wxss');
   const cardStyle = read('components/activity-card/index.wxss');
 
-  assert.match(pageStyle, /\.search-row\s*\{[^}]*background:\s*#f3f4f6;[^}]*border-radius:\s*20rpx;/s);
+  assert.match(pageStyle, /\.directory-tools\s*\{[^}]*background:\s*#f8fafc;[^}]*border-radius:\s*24rpx;/s);
+  assert.match(pageStyle, /\.search-row\s*\{[^}]*background:\s*#fff;[^}]*border-radius:\s*18rpx;/s);
   assert.doesNotMatch(pageStyle, /#fff8ee|0 10rpx 0 rgba\(4, 48, 104/);
   assert.match(cardStyle, /\.activity-card--discover\s*\{[^}]*box-shadow:\s*0 4rpx 16rpx rgba\(15, 23, 42, 0\.04\)/s);
   assert.match(cardStyle, /\.activity-card--discover \.activity-title\s*\{[^}]*color:\s*#111827;/s);

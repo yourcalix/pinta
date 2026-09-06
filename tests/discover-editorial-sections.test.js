@@ -73,6 +73,29 @@ test('发现页按 Banner、搜索、筛选、活动流、成团记忆顺序渲�
   assert.match(template, /wx:if="{{memories\.length}}"[^>]*class="memory-section/s);
 });
 
+test('发现页以成团记忆为视觉母版统一艺术标题、目录工具带和活动章节', () => {
+  const template = read('pages/discover/index.wxml');
+  const style = read('pages/discover/index.wxss');
+
+  assert.match(template, /class="discover-header"[^>]*role="heading"[^>]*aria-label="拼吧发现/);
+  assert.match(template, /class="discover-art-title"/);
+  assert.match(template, /class="discover-art-title-base">拼吧 · <\/text>/);
+  assert.match(template, /class="discover-art-title-accent">发现<\/text>/);
+  assert.match(template, /class="directory-tools"[\s\S]*class="search-row"[\s\S]*class="filter-scroll"/);
+  assert.match(template, /class="search-clear-button"[^>]*hover-class="search-clear--pressed"[^>]*hover-stay-time="80"/);
+  assert.match(template, /class="session-heading-watermark"[^>]*>ACTIVE SESSIONS<\/view>/);
+  assert.match(template, /class="session-heading-title">\{\{hasActiveFilters \? '筛选结果' : '正在组队'\}\}<\/text>/);
+
+  assert.match(style, /\.discover-hero\s*\{[^}]*min-height:\s*340rpx;/s);
+  assert.match(style, /\.discover-art-title\s*\{[^}]*transform:\s*rotate\(-3deg\);/s);
+  assert.match(style, /\.discover-art-title-accent\s*\{[^}]*color:\s*#ffe600;/s);
+  assert.match(style, /\.directory-tools\s*\{[^}]*background:\s*#f8fafc;[^}]*border-radius:\s*24rpx;/s);
+  assert.match(style, /\.search-submit-button\s*\{[^}]*min-width:\s*88rpx;/s);
+  assert.match(style, /\.filter-chip\s*\{[^}]*min-height:\s*88rpx;/s);
+  assert.match(style, /\.session-heading-watermark\s*\{[^}]*letter-spacing:\s*4rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.discover-hero\s*\{[^}]*min-height:\s*300rpx;/s);
+});
+
 test('发现页 Banner 和成团记忆使用既有 PNG、受控跳转与 1+2 拼贴样式', () => {
   const script = read('pages/discover/index.js');
   const style = read('pages/discover/index.wxss');
