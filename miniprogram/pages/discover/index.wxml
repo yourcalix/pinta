@@ -77,13 +77,13 @@
 
     <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : '去发起拼单')}}" bindaction="handleEmptyAction" /></view>
 
-    <view wx:if="{{memories.length}}" class="memory-section memory-section--ready">
+    <view class="memory-section memory-section--teaser" role="region" aria-label="成团记忆，分享功能即将开放，敬请期待">
       <view class="memory-section-heading">
-        <view class="memory-heading-watermark" aria-hidden="true">FORMED STORIES</view>
-        <view class="memory-title">成团记忆</view>
+        <view class="memory-heading-watermark" aria-hidden="true">OUR STORIES</view>
+        <view class="memory-title" aria-hidden="true">成团记忆</view>
       </view>
 
-      <view class="memory-panel memory-panel--layout-{{memoryLayout}} {{memoriesExpanded ? 'memory-panel--expanded' : ''}}">
+      <view class="memory-panel memory-panel--teaser" aria-hidden="true">
         <image class="memory-panel-background" src="/assets/images/discover/formed-memory-editorial-bg.jpg" mode="aspectFill" lazy-load="{{true}}" aria-hidden="true" />
         <view class="memory-panel-background-shade" aria-hidden="true"></view>
         <view class="memory-panel-glow" aria-hidden="true"></view>
@@ -94,48 +94,20 @@
           </view>
           <view class="memory-panel-masthead-sub">每一次顺利成团，都值得被记住</view>
         </view>
-        <view class="memory-grid memory-grid--{{memoryLayout}}">
-          <view wx:for="{{featuredMemories}}" wx:key="id" class="memory-card memory-card--{{item.memoryPosition}} memory-card--{{item.typeTone}}" data-id="{{item.id}}" bindtap="handleMemorySelect" hover-class="memory-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.memoryFact}}，双击查看活动详情">
-            <view class="memory-art" aria-hidden="true">
-              <view wx:if="{{item.memoryCoverFailed}}" class="memory-art-fallback">✦</view>
-              <image wx:else class="memory-image" src="{{item.memoryCoverSrc}}" mode="aspectFit" lazy-load="{{true}}" data-id="{{item.id}}" binderror="handleMemoryCoverError" aria-hidden="true" />
-            </view>
-            <view class="memory-card-copy memory-card-copy--{{item.memoryPosition}}">
-              <view class="memory-card-title">{{item.title}}</view>
-              <view class="memory-type"># {{item.typeLabel}}</view>
-              <view wx:if="{{memoryLayout !== 3 || item.memoryPosition === 'lead'}}" class="memory-owner-row">
-                <image wx:if="{{item.memoryOwnerAvatar}}" class="memory-owner-avatar" src="{{item.memoryOwnerAvatar}}" mode="aspectFill" aria-hidden="true" />
-                <view wx:else class="memory-owner-initial" aria-hidden="true">{{item.ownerInitial}}</view>
-                <text class="memory-owner-name">{{item.ownerNickname}}</text>
-              </view>
-              <view class="memory-card-footer">
-                <text class="memory-fact">{{item.memoryFact}}</text>
-              </view>
-            </view>
-          </view>
-          <view wx:if="{{featuredMemories.length < 2}}" class="memory-placeholder memory-placeholder--top" aria-hidden="true">
+        <view class="memory-grid memory-grid--3">
+          <view class="memory-placeholder memory-placeholder--lead">
             <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
-            <view class="memory-placeholder-copy">虚位以待<text>等你成团</text></view>
+            <view class="memory-placeholder-copy memory-placeholder-copy--lead">成团故事<text>分享功能即将开放</text></view>
           </view>
-          <view wx:if="{{featuredMemories.length < 3}}" class="memory-placeholder memory-placeholder--bottom" aria-hidden="true">
+          <view class="memory-placeholder memory-placeholder--top">
             <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
-            <view class="memory-placeholder-copy">虚位以待<text>等你成团</text></view>
+            <view class="memory-placeholder-copy">虚位以待<text>敬请期待</text></view>
+          </view>
+          <view class="memory-placeholder memory-placeholder--bottom">
+            <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
+            <view class="memory-placeholder-copy">等你来分享<text>记录精彩瞬间</text></view>
           </view>
         </view>
-
-        <view wx:if="{{extraMemories.length}}" class="memory-extra-list">
-          <view wx:for="{{extraMemories}}" wx:key="id" class="memory-extra-card memory-card--{{item.typeTone}}" data-id="{{item.id}}" bindtap="handleMemorySelect" hover-class="memory-card--pressed" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.memoryFact}}，双击查看活动详情">
-            <view class="memory-art" aria-hidden="true">
-              <image wx:if="{{!item.memoryCoverFailed}}" src="{{item.memoryCoverSrc}}" mode="aspectFit" data-id="{{item.id}}" binderror="handleMemoryCoverError" aria-hidden="true" />
-              <text wx:else>✦</text>
-            </view>
-            <view class="memory-extra-copy"><view class="memory-extra-title">{{item.title}}</view><view class="memory-type"># {{item.typeLabel}}</view><view class="memory-extra-fact">{{item.memoryFact}}</view></view>
-          </view>
-        </view>
-
-        <button wx:if="{{hasMoreMemories}}" class="memory-more-button" bindtap="handleToggleMemories" aria-label="{{memoriesExpanded ? '收起更多成团活动' : '展开更多成团活动'}}">
-          {{memoriesExpanded ? '收起成团记忆' : '查看更多'}} <text aria-hidden="true">{{memoriesExpanded ? '⌃' : '›'}}</text>
-        </button>
       </view>
     </view>
   </view>

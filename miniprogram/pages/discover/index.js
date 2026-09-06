@@ -24,7 +24,7 @@ const { selectTab } = require('../../utils/tab-bar');
 
 const PAGE_SIZE = 10;
 const BANNER_ROUTE_WHITELIST = new Set(['/pages/publish/index']);
-const MEMORY_COVERS = Object.freeze({
+const CAMPAIGN_ART = Object.freeze({
   companion: '/assets/images/publish/publish-cover-companion.png',
   sport: '/assets/images/publish/publish-cover-sport.png',
   food: '/assets/images/publish/publish-cover-food.png'
@@ -36,7 +36,7 @@ const CAMPAIGN_BANNERS = Object.freeze([
     eyebrow: '周末提案',
     title: '周末羽毛球新人局',
     subtitle: '新手友好 · 一起轻松开打',
-    imageSrc: MEMORY_COVERS.sport,
+    imageSrc: CAMPAIGN_ART.sport,
     action: { kind: 'filter', value: 'sport' }
   },
   {
@@ -45,7 +45,7 @@ const CAMPAIGN_BANNERS = Object.freeze([
     eyebrow: '结伴探索',
     title: '发现城市里的新路线',
     subtitle: '周末漫步 · 找到同频搭子',
-    imageSrc: MEMORY_COVERS.companion,
+    imageSrc: CAMPAIGN_ART.companion,
     action: { kind: 'filter', value: 'companion' }
   },
   {
@@ -54,44 +54,13 @@ const CAMPAIGN_BANNERS = Object.freeze([
     eyebrow: '拼吧指南',
     title: '第一次发起拼单？',
     subtitle: '填写真实信息 · 安心结伴同行',
-    imageSrc: MEMORY_COVERS.food,
+    imageSrc: CAMPAIGN_ART.food,
     action: { kind: 'route', value: '/pages/publish/index' }
   }
 ]);
 
 function hasActiveFilters(filters) {
   return Boolean(filters.type || filters.appliedKeyword);
-}
-
-function memoryDate(value) {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return '';
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
-}
-
-function decorateMemory(activity, index) {
-  const decorated = decorateActivity(activity);
-  const formedDate = memoryDate(activity.formedAt || activity.updatedAt || activity.startsAt);
-  const ownerSlot = decorated.visibleAvatarSlots.find((slot) => !slot.empty) || null;
-  return {
-    ...decorated,
-    memoryCoverSrc: MEMORY_COVERS[decorated.typeTone] || MEMORY_COVERS.sport,
-    memoryCoverFailed: false,
-    memoryFact: `${decorated.memberCount}人成团${formedDate ? ` · ${formedDate}` : ''}`,
-    memoryOwnerAvatar: ownerSlot && ownerSlot.src || '',
-    memoryPosition: index === 0 ? 'lead' : index === 1 ? 'top' : index === 2 ? 'bottom' : 'extra'
-  };
-}
-
-function memoryViewState(memories, expanded) {
-  const visibleMemories = expanded ? memories : memories.slice(0, 3);
-  return {
-    visibleMemories,
-    featuredMemories: visibleMemories.slice(0, 3),
-    extraMemories: visibleMemories.slice(3),
-    memoryLayout: memories.length ? 3 : 0,
-    hasMoreMemories: memories.length > 3
-  };
 }
 
 Page({
@@ -116,13 +85,6 @@ Page({
     loadingMore: false,
     loadMoreError: '',
     error: '',
-    memories: [],
-    visibleMemories: [],
-    featuredMemories: [],
-    extraMemories: [],
-    memoryLayout: 0,
-    hasMoreMemories: false,
-    memoriesExpanded: false,
     contentTopInset: 88,
     launchSplashVisible: false,
     launchSplashExiting: false,
@@ -137,7 +99,7 @@ Page({
     this.startLaunchSplash();
     const activities = Promise.resolve(this.fetchActivities({ mode: 'replace' }))
       .finally(() => this.markLaunchSplashReady());
-    return Promise.allSettled([activities, this.fetchMemories()]);
+    return activities;
   },
 
   onShow() {
@@ -146,63 +108,26 @@ Page({
       this._skipFirstShow = false;
       return;
     }
-    return Promise.allSettled([
-      this.fetchActivities({ mode: 'replace', keepContent: true }),
-      this.fetchMemories({ keepContent: true })
-    ]);
+    return this.fetchActivities({ mode: 'replace', keepContent: true });
   },
 
   onHide() {
     this._loadSeq = (this._loadSeq || 0) + 1;
-    this._memorySeq = (this._memorySeq || 0) + 1;
     this.clearExpirationTimer();
     this.teardownLaunchSplash(true);
   },
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
-    this._memorySeq = (this._memorySeq || 0) + 1;
     this.clearExpirationTimer();
     this.teardownLaunchSplash(false);
   },
 
   async onPullDownRefresh() {
     try {
-      await Promise.allSettled([
-        this.fetchActivities({ mode: 'replace', keepContent: true, notifyFailure: true }),
-        this.fetchMemories({ keepContent: true })
-      ]);
+      await this.fetchActivities({ mode: 'replace', keepContent: true, notifyFailure: true });
     } finally {
       wx.stopPullDownRefresh();
-    }
-  },
-
-  async fetchMemories(options = {}) {
-    const requestSeq = (this._memorySeq = (this._memorySeq || 0) + 1);
-    try {
-      const result = await activityService.memories();
-      if (requestSeq !== this._memorySeq) return false;
-      const memories = safetyService
-        .filterHiddenActivities(result.items || [])
-        .filter((item) => item && item.status === 'FORMED')
-        .map(decorateMemory);
-      const memoriesExpanded = options.keepContent === true && this.data.memoriesExpanded && memories.length > 3;
-      this.setData({
-        memories,
-        memoriesExpanded,
-        ...memoryViewState(memories, memoriesExpanded)
-      });
-      return true;
-    } catch (error) {
-      if (requestSeq !== this._memorySeq) return false;
-      if (!options.keepContent) {
-        this.setData({
-          memories: [],
-          memoriesExpanded: false,
-          ...memoryViewState([], false)
-        });
-      }
-      return false;
     }
   },
 
@@ -531,37 +456,6 @@ Page({
     wx.navigateTo({
       url: `/subpackages/activity/detail/index?id=${encodeURIComponent(event.detail.id)}`
     });
-  },
-
-  handleMemorySelect(event) {
-    const id = event.currentTarget.dataset.id;
-    if (!id) return;
-    wx.navigateTo({
-      url: `/subpackages/activity/detail/index?id=${encodeURIComponent(id)}`
-    });
-  },
-
-  handleMemoryCoverError(event) {
-    const id = event.currentTarget.dataset.id;
-    const index = this.data.memories.findIndex((item) => item.id === id);
-    if (index < 0 || this.data.memories[index].memoryCoverFailed) return;
-    const memories = this.data.memories.map((item, itemIndex) => itemIndex === index
-      ? { ...item, memoryCoverFailed: true }
-      : item);
-    this.setData({
-      memories,
-      ...memoryViewState(memories, this.data.memoriesExpanded)
-    });
-  },
-
-  handleToggleMemories() {
-    if (!this.data.hasMoreMemories) return false;
-    const memoriesExpanded = !this.data.memoriesExpanded;
-    this.setData({
-      memoriesExpanded,
-      ...memoryViewState(this.data.memories, memoriesExpanded)
-    });
-    return true;
   },
 
   handleEmptyAction() {
