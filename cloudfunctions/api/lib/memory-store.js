@@ -136,6 +136,13 @@ class MemoryStore {
     const memberById = new Map(activeMembers.map((member) => [member.id, member]));
     const rostersByActivity = {};
     const profilesByMemberId = {};
+    const ownerMembersByActivity = new Map();
+    for (const member of activeMembers) {
+      if (member.role !== 'OWNER') continue;
+      const owners = ownerMembersByActivity.get(member.activityId) || [];
+      owners.push(member);
+      ownerMembersByActivity.set(member.activityId, owners);
+    }
     for (const activity of activities.filter(Boolean)) {
       const resolved = normalizeAvatarRoster(activity.avatarRoster)
         .filter((item) => memberById.has(item.memberId));
@@ -157,7 +164,15 @@ class MemoryStore {
         avatarSrc: avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : ''
       };
     }
-    return clone({ rostersByActivity, profilesByMemberId });
+    const ownerProfilesByActivity = {};
+    for (const activity of activities.filter(Boolean)) {
+      const candidates = ownerMembersByActivity.get(activity.id) || [];
+      const ownerMember = activity.ownerId
+        ? candidates.find((member) => member.userId === activity.ownerId)
+        : candidates[0];
+      ownerProfilesByActivity[activity.id] = ownerMember ? profilesByMemberId[ownerMember.id] || null : null;
+    }
+    return clone({ rostersByActivity, profilesByMemberId, ownerProfilesByActivity });
   }
 
   async updateProfile(actorId, profile, at) {

@@ -53,7 +53,7 @@ function cloudHarness(count = 11) {
       return { fileList: fileList.map((fileID) => ({ fileID, tempFileURL: 'https://temp.example/avatar.jpg', status: 0 })) };
     }
   };
-  return { store: new CloudStore(cloud), queryChunks };
+  return { store: new CloudStore(cloud), queryChunks, tables };
 }
 
 test('Cloud活动头像按十条分片批量水合且公共DTO不泄露身份字段', async () => {
@@ -74,7 +74,8 @@ test('Cloud活动头像按十条分片批量水合且公共DTO不泄露身份字
   assert.ok(queryChunks.some((item) => item.name === 'users' && item.size === 1));
   const dto = publicActivity(activities[0], {}, new Date().toISOString(), {
     roster: hydration.rostersByActivity['activity-0'],
-    profilesByMemberId: hydration.profilesByMemberId
+    profilesByMemberId: hydration.profilesByMemberId,
+    ownerProfile: hydration.ownerProfilesByActivity['activity-0']
   });
   assert.deepEqual(dto.avatarSlots[0], {
     kind: 'CUSTOM',
@@ -83,6 +84,11 @@ test('Cloud活动头像按十条分片批量水合且公共DTO不泄露身份字
   });
   const serialized = JSON.stringify(dto.avatarSlots);
   assert.doesNotMatch(serialized, /member-0|user-0|cloudPath|uploadId|revision/);
+  assert.deepEqual(dto.ownerProfile, {
+    nickname: '拼吧用户',
+    avatar: { kind: 'CUSTOM', src: 'https://temp.example/avatar.jpg', fallback: 'MALE_DEFAULT' }
+  });
+  assert.doesNotMatch(JSON.stringify(dto.ownerProfile), /birthDate|mbti|interests|adultConfirmed|cloud:\/\//);
 });
 
 test('Cloud SDK无法签发临时URL时不公开原始fileID', async () => {
@@ -95,8 +101,29 @@ test('Cloud SDK无法签发临时URL时不公开原始fileID', async () => {
   const hydration = await store.hydratePublicActivityAvatars([activity]);
   const dto = publicActivity(activity, {}, new Date().toISOString(), {
     roster: hydration.rostersByActivity['activity-0'],
-    profilesByMemberId: hydration.profilesByMemberId
+    profilesByMemberId: hydration.profilesByMemberId,
+    ownerProfile: hydration.ownerProfilesByActivity['activity-0']
   });
   assert.deepEqual(dto.avatarSlots[0], { kind: 'DEFAULT', fallback: 'MALE_DEFAULT' });
+  assert.deepEqual(dto.ownerProfile.avatar, { kind: 'DEFAULT', fallback: 'MALE_DEFAULT' });
   assert.doesNotMatch(JSON.stringify(dto.avatarSlots), /cloud:\/\//);
+});
+
+test('发起人头像按ownerId精确选择且公开DTO只保留白名单字段', async () => {
+  const { store, tables } = cloudHarness(2);
+  tables.members[0].activityId = 'activity-1';
+  const activity = {
+    id: 'activity-1', ownerId: 'user-1', owner: { nickname: '小树' }, type: 'sport', title: '周末运动',
+    maxMembers: 4, minMembers: 2, memberCount: 2, status: 'RECRUITING',
+    avatarRoster: [{ memberId: 'member-0' }, { memberId: 'member-1' }]
+  };
+  const hydration = await store.hydratePublicActivityAvatars([activity]);
+  const dto = publicActivity(activity, {}, new Date().toISOString(), {
+    roster: hydration.rostersByActivity[activity.id],
+    profilesByMemberId: hydration.profilesByMemberId,
+    ownerProfile: hydration.ownerProfilesByActivity[activity.id]
+  });
+  assert.equal(dto.ownerProfile.nickname, '小树');
+  assert.deepEqual(dto.ownerProfile.avatar, { kind: 'DEFAULT', fallback: 'FEMALE_DEFAULT' });
+  assert.deepEqual(Object.keys(dto.ownerProfile).sort(), ['avatar', 'nickname']);
 });

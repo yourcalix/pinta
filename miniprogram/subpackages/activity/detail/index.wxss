@@ -46,11 +46,21 @@ button::after { display: none; }
 .arrangement-row { display: flex; gap: 22rpx; padding: 13rpx 0; color: #333; font-size: 27rpx; line-height: 1.65; }
 .arrangement-label { flex: 0 0 124rpx; color: #777; }
 .arrangement-value { flex: 1; min-width: 0; overflow-wrap: anywhere; word-break: break-all; }
-.owner-card { display: flex; align-items: center; gap: 18rpx; }
-.owner-avatar { display: flex; flex: 0 0 68rpx; width: 68rpx; height: 68rpx; align-items: center; justify-content: center; border-radius: 50%; background: #161616; color: #fff; font-size: 30rpx; }
-.owner-copy { min-width: 0; }
-.owner-label { color: #888; font-size: 23rpx; }
-.owner-name { margin-top: 5rpx; font-size: 28rpx; font-weight: 700; overflow-wrap: anywhere; }
+.owner-section { padding-top: 44rpx; }
+.owner-profile-card { overflow: hidden; padding: 28rpx 24rpx 24rpx; border: 1rpx solid #f3f4f6; border-radius: 28rpx; background: #fff; box-shadow: 0 10rpx 30rpx rgba(17,24,39,.08); }
+.owner-profile-main { display: flex; align-items: center; gap: 24rpx; }
+.owner-identity { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; }
+.owner-avatar { display: flex; flex: 0 0 120rpx; width: 120rpx; height: 120rpx; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; border: 2rpx solid #e5e7eb; border-radius: 50%; background: #f3f4f6; box-shadow: 0 4rpx 16rpx rgba(17,24,39,.12); }
+.owner-avatar image { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.owner-name { max-width: 220rpx; margin-top: 14rpx; overflow: hidden; color: #111827; font-size: 32rpx; font-weight: 800; line-height: 1.25; white-space: nowrap; text-overflow: ellipsis; }
+.owner-role { max-width: 100%; margin-top: 8rpx; padding: 5rpx 12rpx; box-sizing: border-box; border-radius: 16rpx; background: #e8f8f0; color: #08785c; font-size: 21rpx; line-height: 1.35; white-space: nowrap; }
+.owner-facts { flex: 0 0 260rpx; width: 260rpx; }
+.owner-fact { display: flex; min-height: 78rpx; padding: 12rpx 0; box-sizing: border-box; flex-direction: column; justify-content: center; border-bottom: 1rpx solid #e5e7eb; }
+.owner-fact:last-child { border-bottom: 0; }
+.owner-fact-label { min-width: 0; color: #9ca3af; font-size: 21rpx; line-height: 1.25; }
+.owner-fact-value { display: block; min-width: 0; margin-top: 5rpx; overflow: hidden; color: #17191c; font-size: 27rpx; font-weight: 750; line-height: 1.25; white-space: nowrap; text-overflow: ellipsis; }
+.owner-duty { display: flex; gap: 12rpx; margin-top: 24rpx; padding: 20rpx; border-radius: 18rpx; background: #f9fafb; color: #59616d; font-size: 22rpx; line-height: 1.65; }
+.owner-duty-mark { flex: 0 0 auto; color: #16a36a; font-size: 18rpx; }
 .safety-card { margin: 36rpx 8rpx 0; padding: 28rpx; border-radius: 20rpx; background: #f1f8f5; color: #65706b; font-size: 24rpx; line-height: 1.7; }
 .safety-title { margin-bottom: 8rpx; color: #183c31; font-size: 27rpx; font-weight: 750; }
 .report-link { min-height: 44px; margin: 18rpx 0 0; padding: 12rpx; background: transparent; color: #888; font-size: 24rpx; }
@@ -93,4 +103,11 @@ button::after { display: none; }
   .detail-action-bar { padding-left: 12rpx; padding-right: 12rpx; }
   .footer-tool { flex-basis: 88rpx; min-width: 88rpx; }
   .primary-button { padding-left: 12rpx; padding-right: 12rpx; font-size: 24rpx; }
+  .owner-profile-card { padding-left: 18rpx; padding-right: 18rpx; }
+  .owner-profile-main { gap: 16rpx; }
+  .owner-avatar { flex-basis: 100rpx; width: 100rpx; height: 100rpx; }
+  .owner-name { max-width: 190rpx; font-size: 28rpx; }
+  .owner-role { padding-left: 8rpx; padding-right: 8rpx; font-size: 19rpx; }
+  .owner-facts { flex-basis: 220rpx; width: 220rpx; }
+  .owner-fact-value { font-size: 24rpx; }
 }

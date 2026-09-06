@@ -41,6 +41,7 @@ const {
 } = require('./ride-policy');
 const {
   avatarKindFromGender,
+  publicAvatarSlot,
   publicAvatarSlots,
   isCompleteRideProfile
 } = require('./passenger-avatar');
@@ -201,6 +202,12 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
     owner: activity.owner && activity.owner.nickname
       ? { nickname: activity.owner.nickname }
       : null,
+    ownerProfile: {
+      nickname: activity.owner && activity.owner.nickname
+        ? String(activity.owner.nickname)
+        : '拼吧用户',
+      avatar: publicAvatarSlot(avatarHydration.ownerProfile)
+    },
     createdAt: activity.createdAt,
     updatedAt: activity.updatedAt
   };
@@ -318,7 +325,7 @@ function createPinbaService(options) {
 
   async function publicActivities(activities, viewers, at) {
     const items = (activities || []).filter(Boolean);
-    let hydration = { rostersByActivity: {}, profilesByMemberId: {} };
+    let hydration = { rostersByActivity: {}, profilesByMemberId: {}, ownerProfilesByActivity: {} };
     if (typeof store.hydratePublicActivityAvatars === 'function') {
       try {
         hydration = await store.hydratePublicActivityAvatars(items);
@@ -331,7 +338,8 @@ function createPinbaService(options) {
     }
     return items.map((activity, index) => publicActivity(activity, Array.isArray(viewers) ? viewers[index] || {} : viewers || {}, at, {
       roster: hydration.rostersByActivity && hydration.rostersByActivity[activity.id],
-      profilesByMemberId: hydration.profilesByMemberId || {}
+      profilesByMemberId: hydration.profilesByMemberId || {},
+      ownerProfile: hydration.ownerProfilesByActivity && hydration.ownerProfilesByActivity[activity.id]
     }));
   }
 
@@ -344,7 +352,13 @@ function createPinbaService(options) {
     if (!data || !data.activity || !data.activity.id) return data;
     const emptyCachedAvatarSlots = () => {
       const capacity = data.activity.maxMembers || data.activity.maxPassengers || data.activity.targetMembers;
-      return { ...data, activity: { ...data.activity, avatarSlots: publicAvatarSlots([], capacity) } };
+      const ownerProfile = {
+        nickname: data.activity.ownerProfile && data.activity.ownerProfile.nickname
+          || data.activity.owner && data.activity.owner.nickname
+          || '拼吧用户',
+        avatar: publicAvatarSlot(null)
+      };
+      return { ...data, activity: { ...data.activity, avatarSlots: publicAvatarSlots([], capacity), ownerProfile } };
     };
     try {
       const stored = normalizeActivityForRead(await store.getActivity(data.activity.id), at);

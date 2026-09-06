@@ -54,6 +54,7 @@
 ## 数据与隐私
 
 - 三类新活动头像名册不得公开内部 memberId。公开转换必须按活动页批量读取 `ACTIVE` 成员及其当前资料，CloudBase `command.in` 每批不超过 10 条；已有名册用于稳定排序，名册缺失时只可依据成员事实重建，绝不按聚合人数伪造头像。旧 `PASSENGER_A/B` 仅作为内部迁移提示，不得再出现在公共活动 DTO。历史 ride 只读 DTO 必须在公开转换入口归一七人容量，包括 Mock 的聚合页直接入口，不依赖 list/detail 上游预处理。
+- 公开发起人资料必须从当前活动的 `ACTIVE + OWNER` 成员事实显式水合；活动存在 `ownerId` 时必须精确匹配对应 `userId`，不得假设头像名册首位就是发起人。公开 `ownerProfile` 仅允许昵称快照与公开头像槽，不得透传生日、MBTI、兴趣、成年确认、用户 ID 或原始 cloud fileID；Mock、Memory 与 Cloud 必须保持同构降级。
 
 - 公开 DTO 不得包含 `contactInfo`、完整 openid、内部风控字段或运营备注。
 - 公开列表与游客详情不得暴露成员个人行李；只可在当前用户自己的 `viewerMembership` 或经授权的成团/管理成员视图中按需返回。

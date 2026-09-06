@@ -7,8 +7,30 @@ const { decorateActivity } = require('../../../utils/display');
 const { decodeActivityId } = require('../../../utils/activity-route');
 const { resolveDetailError } = require('../../../utils/detail-error');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
-const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../../utils/passenger-avatar');
+const { normalizeAvatarSlots, fallbackAvatarSlot, profileAvatarPath } = require('../../../utils/passenger-avatar');
 const { formatDateTime } = require('../../../utils/date');
+
+function publishedDateLabel(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return '时间待确认';
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function ownerAvatarPresentation(activity) {
+  const raw = activity.ownerProfile && activity.ownerProfile.avatar;
+  const slot = normalizeAvatarSlots(raw ? [raw] : [], 1)[0];
+  if (!slot.empty) return { ...slot, id: 'owner-avatar' };
+  const src = profileAvatarPath(null);
+  return {
+    ...slot,
+    id: 'owner-avatar',
+    kind: 'DEFAULT',
+    src,
+    fallbackSrc: src,
+    mode: 'aspectFit',
+    empty: false
+  };
+}
 
 function presentation(activity) {
   const slots = normalizeAvatarSlots(activity.avatarSlots, activity.maxMembers);
@@ -27,6 +49,9 @@ function presentation(activity) {
   else if (activity.status === 'RECRUITING' && activity.viewerRole === 'member') { primaryAction = 'group'; primaryLabel = '已加入 · 去空间'; }
   else if (activity.status === 'RECRUITING' && activity.remaining === 0) primaryLabel = '活动已满员';
   const needed = Math.max(0, activity.minMembers - activity.memberCount);
+  const ownerNickname = String(activity.ownerProfile && activity.ownerProfile.nickname || activity.ownerNickname || '拼吧用户').trim() || '拼吧用户';
+  const terminal = ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(activity.status);
+  const ownerPublishedLabel = publishedDateLabel(activity.createdAt);
   return {
     coverSrc: supported ? `/assets/images/publish/publish-cover-${activity.typeTone}.webp` : '',
     coverFailed: false,
@@ -35,6 +60,17 @@ function presentation(activity) {
     hiddenMembers: slots.slice(6).filter(slot => !slot.empty).length,
     groupHint: activity.status === 'RECRUITING' && needed > 0 ? `还差 ${needed} 人达到成团人数` : `${activity.minMembers} 人成团 · 最多 ${activity.maxMembers} 人`,
     detailRows: fields.filter(([key]) => typeof data[key] === 'string' && data[key].trim()).map(([key, label]) => ({ key, label, value: data[key] })),
+    ownerAvatar: ownerAvatarPresentation(activity),
+    ownerNickname,
+    ownerFacts: [
+      { key: 'type', label: '活动类型', value: activity.typeLabel },
+      { key: 'capacity', label: '成团规模', value: `${activity.minMembers}–${activity.maxMembers} 人` },
+      { key: 'published', label: '发布时间', value: ownerPublishedLabel }
+    ],
+    ownerDutyText: terminal
+      ? '活动已结束，历史记录仅供查看。'
+      : '发起人负责本场成员确认与安排沟通，成团后可进入成员空间。',
+    ownerAccessibilityLabel: `认识发起人，发起人${ownerNickname}，角色活动发起人，活动类型${activity.typeLabel}，成团规模${activity.minMembers}至${activity.maxMembers}人，发布时间${ownerPublishedLabel}`,
     primaryAction, primaryLabel,
     groupEnabled: ['owner', 'member'].includes(activity.viewerRole),
     consultEnabled: activity.viewerRole !== 'owner' && ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status)
@@ -43,7 +79,7 @@ function presentation(activity) {
 
 Page({
   data: { id: '', activity: null, detailRows: [], loading: true, error: '', errorCode: '', applying: false, note: '', showApply: false,
-    contentTopInset: 88, navTop: 36, singlePage: true, navSolid: false, coverSrc: '', coverFailed: false, detailSlots: [], hiddenMembers: 0, primaryAction: '', primaryLabel: '', opening: false, groupEnabled: false, consultEnabled: false, consulting: false },
+    contentTopInset: 88, navTop: 36, singlePage: true, navSolid: false, coverSrc: '', coverFailed: false, detailSlots: [], hiddenMembers: 0, ownerAvatar: null, ownerNickname: '', ownerFacts: [], ownerDutyText: '', ownerAccessibilityLabel: '', primaryAction: '', primaryLabel: '', opening: false, groupEnabled: false, consultEnabled: false, consulting: false },
   onLoad(options = {}) {
     this._disposed = false;
     const contentTopInset = calculateContentTopInset(typeof wx === 'undefined' ? null : wx);
@@ -86,6 +122,19 @@ Page({
     const next = fallbackAvatarSlot(current);
     if (!next || next === current) return;
     this.setData({ [`detailSlots[${index}]`]: next });
+  },
+  handleOwnerAvatarError(event) {
+    const src = event && event.currentTarget && event.currentTarget.dataset && event.currentTarget.dataset.src;
+    const current = this.data.ownerAvatar;
+    if (!current || current.src !== src) return;
+    const next = fallbackAvatarSlot(current);
+    if (next && next !== current) {
+      this.setData({ ownerAvatar: next });
+      return;
+    }
+    const fallbackSrc = profileAvatarPath(null);
+    if (current.failed || current.src === fallbackSrc) return;
+    this.setData({ ownerAvatar: { ...current, kind: 'DEFAULT', src: fallbackSrc, fallbackSrc, custom: false, failed: true, mode: 'aspectFit', empty: false } });
   },
   async loadDetail() {
     const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);

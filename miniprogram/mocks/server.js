@@ -171,24 +171,26 @@ function upsertAvatarRoster(roster, memberId, avatarKind) {
 
 function publicAvatarSlots(roster, capacity = 7, profilesByMemberId = {}) {
   const total = Math.max(1, Math.min(20, Math.floor(Number(capacity)) || 7));
-  const slots = normalizeAvatarRoster(roster).slice(0, total).map((item) => {
-    const profile = profilesByMemberId[item.memberId];
-    const fallback = profile && profile.gender === 'MALE'
-      ? 'MALE_DEFAULT'
-      : profile && profile.gender === 'FEMALE' ? 'FEMALE_DEFAULT' : '';
-    if (!fallback) return { kind: 'EMPTY' };
-    const avatar = profile.avatar;
-    const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
-      ? avatar.fileID.trim()
-      : '';
-    const src = isMockDisplayAvatarPath(candidate)
-      && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
-      ? candidate
-      : '';
-    return src ? { kind: 'CUSTOM', src, fallback } : { kind: 'DEFAULT', fallback };
-  });
+  const slots = normalizeAvatarRoster(roster).slice(0, total)
+    .map((item) => publicAvatarSlot(profilesByMemberId[item.memberId]));
   while (slots.length < total) slots.push({ kind: 'EMPTY' });
   return slots;
+}
+
+function publicAvatarSlot(profile) {
+  const fallback = profile && profile.gender === 'MALE'
+    ? 'MALE_DEFAULT'
+    : profile && profile.gender === 'FEMALE' ? 'FEMALE_DEFAULT' : '';
+  if (!fallback) return { kind: 'EMPTY' };
+  const avatar = profile.avatar;
+  const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
+    ? avatar.fileID.trim()
+    : '';
+  const src = isMockDisplayAvatarPath(candidate)
+    && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
+    ? candidate
+    : '';
+  return src ? { kind: 'CUSTOM', src, fallback } : { kind: 'DEFAULT', fallback };
 }
 
 function resolveNotificationTarget(type) {
@@ -883,6 +885,13 @@ function publicActivity(activity, options = {}) {
     viewerRole
   };
   if (result.owner) result.owner = { nickname: String(result.owner.nickname || '') };
+  const ownerMember = activeMembers.find((member) => member.activityId === activity.id && member.role === 'OWNER'
+    && (!activity.ownerId || member.userId === activity.ownerId));
+  const ownerUser = ownerMember ? userById(ownerMember.userId) : null;
+  result.ownerProfile = {
+    nickname: result.owner && result.owner.nickname || '拼吧用户',
+    avatar: publicAvatarSlot(ownerUser && ownerUser.status === 'ACTIVE' ? ownerUser.profile : null)
+  };
   if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) result.legacy = { sourceType: storedType, readOnly: true };
   if (viewerApplication) result.viewerApplication = publicApplication(viewerApplication);
   if (viewerMember) {

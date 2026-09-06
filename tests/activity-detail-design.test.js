@@ -33,6 +33,27 @@ test('详情最多六个独立头像加隐藏实人数量，旧数据不伪造',
   await page.onShow(); assert.equal(page.data.detailSlots.length, 6); assert.equal(page.data.hiddenMembers, 6);
   const old = harness(base); await old.page.onShow(); assert.equal(old.page.data.hiddenMembers, 0); assert.ok(old.page.data.detailSlots.every(s => s.empty));
 });
+test('发起人卡展示真实公开头像和活动事实，缺失头像安全回退', async () => {
+  const activity = {
+    ...base,
+    owner: { nickname: '小树' },
+    ownerProfile: { nickname: '小树', avatar: { kind: 'CUSTOM', src: 'https://img.example/owner.jpg', fallback: 'FEMALE_DEFAULT' } },
+    createdAt: '2026-09-01T10:00:00.000Z'
+  };
+  const { page } = harness(activity);
+  await page.onShow();
+  assert.equal(page.data.ownerAvatar.src, 'https://img.example/owner.jpg');
+  assert.deepEqual(Array.from(page.data.ownerFacts, item => item.label), ['活动类型', '成团规模', '发布时间']);
+  assert.match(page.data.ownerFacts[1].value, /2.*20.*人/);
+  assert.equal(page.data.ownerFacts[2].value, '9月1日');
+  assert.match(page.data.ownerAccessibilityLabel, /认识发起人.*小树.*发布时间9月1日/);
+  page.handleOwnerAvatarError({ currentTarget: { dataset: { src: page.data.ownerAvatar.src } } });
+  assert.match(page.data.ownerAvatar.src, /profile-avatar-female-painted\.webp$/);
+
+  const fallback = harness({ ...base, owner: { nickname: '拼友' }, ownerProfile: { nickname: '拼友', avatar: { kind: 'EMPTY' } } });
+  await fallback.page.onShow();
+  assert.match(fallback.page.data.ownerAvatar.src, /profile-avatar-neutral-painted\.webp$/);
+});
 test('鉴权双击合并且页面卸载后不打开抽屉', async () => {
   let release, calls = 0;
   const { page } = harness(base, 1, { login: () => { calls++; return new Promise(resolve => { release = resolve; }); } });
@@ -49,9 +70,14 @@ test('详情布局采用大幅封面、白色连续面板、四段底栏并保�
   assert.match(template, /class="hero-art"[^>]*mode="aspectFit"/); assert.match(template, />群聊</); assert.match(template, />聊下</);
   assert.match(template, /加入成团/); assert.match(template, /审核通过才会加入成团/);
   assert.match(template, /cursor-spacing="40"/); assert.match(template, /maxlength="120"/);
+  assert.match(template, /认识发起人/); assert.match(template, /Host · 活动发起人/);
+  assert.match(template, /ownerAvatar\.src/); assert.match(template, /binderror="handleOwnerAvatarError"/);
+  assert.doesNotMatch(template, /评分|职业|宠物|认证房东/);
   assert.match(style, /height:\s*calc\(75vh \+ 48rpx\)/); assert.match(style, /background:\s*#fff/);
   assert.match(style, /\.footer-tool\s*\{[^}]*min-width:\s*88rpx[^}]*min-height:\s*88rpx/);
   assert.match(style, /\.primary-label\s*\{[^}]*white-space:\s*nowrap[^}]*text-overflow:\s*ellipsis/);
   assert.match(style, /background:\s*#181818/); assert.match(style, /color:\s*#2cff9a/);
   assert.match(style, /min-height:\s*44px/); assert.match(style, /safe-area-inset-bottom/);
+  assert.match(style, /\.owner-profile-card\s*\{/);
+  assert.match(style, /\.owner-avatar\s*\{[^}]*width:\s*120rpx[^}]*height:\s*120rpx/);
 });

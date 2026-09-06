@@ -57,9 +57,26 @@
         <text class="detail-description" user-select="true">{{activity.rules}}</text>
       </view>
 
-      <view class="content-section owner-card">
-        <view class="owner-avatar" aria-hidden="true">{{activity.ownerInitial}}</view>
-        <view class="owner-copy"><view class="owner-label">活动发起人</view><view class="owner-name">{{activity.ownerNickname}}</view></view>
+      <view class="content-section owner-section">
+        <view class="section-title">认识发起人</view>
+        <view class="owner-profile-card" aria-label="{{ownerAccessibilityLabel}}">
+          <view class="owner-profile-main">
+            <view class="owner-identity">
+              <view class="owner-avatar">
+                <image wx:if="{{ownerAvatar}}" src="{{ownerAvatar.src}}" mode="{{ownerAvatar.mode}}" data-src="{{ownerAvatar.src}}" binderror="handleOwnerAvatarError" aria-hidden="true" />
+              </view>
+              <view class="owner-name">{{ownerNickname}}</view>
+              <view class="owner-role">Host · 活动发起人</view>
+            </view>
+            <view class="owner-facts">
+              <view wx:for="{{ownerFacts}}" wx:key="key" class="owner-fact">
+                <text class="owner-fact-label">{{item.label}}</text>
+                <text class="owner-fact-value">{{item.value}}</text>
+              </view>
+            </view>
+          </view>
+          <view class="owner-duty"><text class="owner-duty-mark" aria-hidden="true">◆</text><text>{{ownerDutyText}}</text></view>
+        </view>
       </view>
       <view class="safety-card"><view class="safety-title">参与更安心</view><view>成团后请在成员空间核验身份并自行确认安排；平台不提供运输、配送、担保或预订服务。</view></view>
       <button class="report-link" bindtap="handleReport" hover-class="utility-button--pressed">举报活动</button>
