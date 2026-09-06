@@ -1,0 +1,12 @@
+{
+  "id": "deploy-profile-mbti-api",
+  "title": "部署支持 MBTI 资料字段的 api 云函数",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-06T00:00:00+08:00",
+  "branch": "main"
+}
