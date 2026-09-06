@@ -52,13 +52,13 @@ test('筛选图标放大后透明融入Chip并保留触控穿透和窄屏保护'
   assert.match(styles, /@media \(max-width: 340px\)[\s\S]*\.chip-icon-box\s*\{[^}]*width:\s*42rpx;[^}]*height:\s*42rpx;/);
 });
 
-test('筛选文字保持黑色、图标保持原色且所有选中态使用浅绿色', () => {
+test('筛选图标保持原色且所有选中态使用翡翠绿浅色反馈', () => {
   const styles = read('pages/discover/index.wxss');
-  assert.match(styles, /\.filter-chip\s*\{[^}]*color:\s*#111;/s);
-  assert.match(styles, /\.filter-chip--active\s*\{[^}]*color:\s*#111;/s);
-  assert.match(styles, /\.filter-chip--active::before\s*\{[^}]*background:\s*#e4f6ea;/s);
+  assert.match(styles, /\.filter-chip\s*\{[^}]*color:\s*#4b5563;/s);
+  assert.match(styles, /\.filter-chip--active\s*\{[^}]*color:\s*#16a36a;/s);
+  assert.match(styles, /\.filter-chip--active::before\s*\{[^}]*background:\s*rgba\(22,\s*163,\s*106,\s*0\.1\);/s);
   assert.doesNotMatch(styles, /\.filter-chip--(?:companion|sport|food)\.filter-chip--active/);
   assert.doesNotMatch(styles, /\.chip-icon-img\s*\{[^}]*filter:/s);
   assert.match(styles, /\.filter-chip\s*\{[^}]*min-height:\s*88rpx;[^}]*background:\s*transparent;/s);
-  assert.match(styles, /\.filter-chip::before\s*\{[^}]*top:\s*8rpx;[^}]*bottom:\s*8rpx;/s);
+  assert.match(styles, /\.filter-chip::before\s*\{[^}]*top:\s*12rpx;[^}]*bottom:\s*12rpx;/s);
 });

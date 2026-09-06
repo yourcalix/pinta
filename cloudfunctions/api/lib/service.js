@@ -14,6 +14,7 @@ const {
 const {
   validateActivityInput,
   validateActivityListInput,
+  validateActivityMemoriesInput,
   validateApplicationInput,
   validateProfileInput,
   validateProfileAvatarConfirmInput,
@@ -177,6 +178,9 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
     ),
     remainingCapacity: Math.max(0, Number(maxPassengers) - Number(activity.memberCount || 0)),
     status: activity.status,
+    formedAt: activity.status === ACTIVITY_STATUS.FORMED && Number.isFinite(Date.parse(activity.formedAt))
+      ? activity.formedAt
+      : null,
     rules: activity.rules,
     typeData: storedType === 'ride'
       ? {
@@ -589,6 +593,12 @@ function createPinbaService(options) {
         items: await publicActivities(page.items, {}, at),
         nextCursor: page.nextCursor || null
       };
+    }
+
+    if (action === 'activity.memories') {
+      const { limit } = validateActivityMemoriesInput(input);
+      const items = await store.listActivityMemories(limit, at);
+      return { items: await publicActivities(items, {}, at) };
     }
 
     if (action === 'activity.detail') {

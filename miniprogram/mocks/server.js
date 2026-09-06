@@ -69,6 +69,7 @@ const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
 ]);
 const PUBLIC_ACTIONS = new Set([
   'activity.list',
+  'activity.memories',
   'activity.detail',
   'activity.question.list',
   'community.post.list',
@@ -883,6 +884,9 @@ function publicActivity(activity, options = {}) {
     avatarSlots: publicAvatarSlots(resolvedRoster, capacity, profilesByMemberId),
     remainingCapacity: Math.max(0, Number(capacity) - Number(activity.memberCount || 0)),
     status: activity.status,
+    formedAt: activity.status === 'FORMED' && Number.isFinite(Date.parse(activity.formedAt))
+      ? activity.formedAt
+      : null,
     viewerRole
   };
   if (result.owner) result.owner = { nickname: String(result.owner.nickname || '') };
@@ -1118,6 +1122,20 @@ function listActivities(input) {
     items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
     nextCursor: rawOffset < candidates.length ? String(rawOffset) : null
   };
+}
+
+function listActivityMemories(input = {}) {
+  const keys = Object.keys(input || {});
+  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
+  assert(keys.every((key) => key === 'limit'), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
+  const limit = input.limit === undefined ? 6 : Number(input.limit);
+  assert(Number.isInteger(limit) && limit >= 1 && limit <= 6, 'VALIDATION_ERROR', '展示数量无效');
+  const items = [...state.activities]
+    .filter((activity) => activity.status === 'FORMED' && Number.isFinite(Date.parse(activity.formedAt)))
+    .sort((left, right) => Date.parse(right.formedAt) - Date.parse(left.formedAt) || String(right.id).localeCompare(String(left.id)))
+    .slice(0, limit)
+    .map((activity) => publicActivity(activity, { anonymous: true, at: new Date().toISOString() }));
+  return { items };
 }
 
 function createActivity(input) {
@@ -1520,6 +1538,7 @@ function handle(action, input, idempotencyKey = '') {
     return { application: publicDriverApplication(application) };
   }
   if (action === 'activity.list') return listActivities(input);
+  if (action === 'activity.memories') return listActivityMemories(input);
   if (action === 'activity.detail') {
     const now = new Date().toISOString();
     const activity = normalizeActivityForRead(activityById(input.activityId), now);

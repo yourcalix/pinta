@@ -137,6 +137,15 @@ function validateActivityListInput(input) {
   };
 }
 
+function validateActivityMemoriesInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  const keys = Object.keys(input);
+  invariant(keys.every((key) => key === 'limit'), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
+  return {
+    limit: integerValue(input.limit === undefined ? 6 : input.limit, '展示数量', 1, 6)
+  };
+}
+
 function validateApplicationInput(input) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   invariant(input.autoJoinConsent === true, 'VALIDATION_ERROR', '请确认获批后自动加入并占用名额', { field: 'autoJoinConsent' });
@@ -317,6 +326,7 @@ function requireIdempotencyKey(value) {
 module.exports = {
   validateActivityInput,
   validateActivityListInput,
+  validateActivityMemoriesInput,
   validateApplicationInput,
   validateProfileInput,
   validateProfileAvatarConfirmInput,

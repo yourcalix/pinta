@@ -4,7 +4,7 @@
   <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
   <view class="global-page-background-tint" aria-hidden="true"></view>
 
-  <view class="discover-content">
+  <view class="discover-hero">
     <view class="discover-header">
       <view class="discover-header-copy">
         <view class="discover-eyebrow">PINBA DISCOVER</view>
@@ -12,6 +12,30 @@
         <view class="discover-subtitle">发现附近正在发生的拼单</view>
       </view>
       <view class="header-doodle" aria-hidden="true"><view class="header-doodle-line"></view><view class="header-doodle-leaf header-doodle-leaf--left"></view><view class="header-doodle-leaf header-doodle-leaf--right"></view></view>
+    </view>
+  </view>
+
+  <view class="discover-sheet">
+    <view class="campaign-shell" aria-label="拼吧官方推荐">
+      <swiper class="campaign-swiper" current="{{currentBanner}}" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" interval="4500" duration="400" bindchange="handleBannerChange">
+        <swiper-item wx:for="{{banners}}" wx:key="id">
+          <view class="campaign-card campaign-card--{{item.tone}}" data-id="{{item.id}}" bindtap="handleBannerTap" hover-class="campaign-card--pressed" hover-stay-time="80" role="button" aria-label="运营推荐，{{item.title}}，{{item.subtitle}}，点击查看详情">
+            <view class="campaign-copy">
+              <view class="campaign-eyebrow"><text class="campaign-pin" aria-hidden="true">●</text><text>{{item.eyebrow}}</text></view>
+              <view class="campaign-title">{{item.title}}</view>
+              <view class="campaign-subtitle">{{item.subtitle}}</view>
+              <view class="campaign-action">去看看 <text aria-hidden="true">›</text></view>
+            </view>
+            <view class="campaign-art" aria-hidden="true">
+              <view wx:if="{{item.failed}}" class="campaign-art-fallback">✦</view>
+              <image wx:else class="campaign-image" src="{{item.imageSrc}}" mode="aspectFit" data-id="{{item.id}}" binderror="handleBannerImageError" aria-hidden="true" />
+            </view>
+          </view>
+        </swiper-item>
+      </swiper>
+      <view wx:if="{{banners.length > 1}}" class="campaign-dots" aria-hidden="true">
+        <view wx:for="{{banners}}" wx:key="id" class="campaign-dot {{currentBanner === index ? 'campaign-dot--active' : ''}}"></view>
+      </view>
     </view>
 
     <view class="search-row">
@@ -42,10 +66,56 @@
       <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" aria-role="status">
         <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多…</text></view>
         <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载更多失败，点击重试</button>
-        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底了 —</view>
+        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底啦 · 拼吧 —</view>
       </view>
     </view>
 
     <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : '去发起拼单')}}" bindaction="handleEmptyAction" /></view>
+
+    <view wx:if="{{memories.length}}" class="memory-section memory-section--ready">
+      <view class="memory-section-heading">
+        <view>
+          <view class="memory-kicker">FORMED STORIES</view>
+          <view class="memory-title"><text class="memory-spark" aria-hidden="true">✦</text><text>成团记忆</text></view>
+        </view>
+        <view class="memory-count">{{memories.length}} 个故事</view>
+      </view>
+
+      <view class="memory-panel">
+        <view class="memory-panel-glow" aria-hidden="true"></view>
+        <view class="memory-grid memory-grid--{{memoryLayout}}">
+          <view wx:for="{{featuredMemories}}" wx:key="id" class="memory-card memory-card--{{item.memoryPosition}} memory-card--{{item.typeTone}}" data-id="{{item.id}}" bindtap="handleMemorySelect" hover-class="memory-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.memoryFact}}，双击查看活动详情">
+            <view class="memory-art" aria-hidden="true">
+              <view wx:if="{{item.memoryCoverFailed}}" class="memory-art-fallback">✦</view>
+              <image wx:else class="memory-image" src="{{item.memoryCoverSrc}}" mode="aspectFit" lazy-load="{{true}}" data-id="{{item.id}}" binderror="handleMemoryCoverError" aria-hidden="true" />
+            </view>
+            <view class="memory-card-copy">
+              <view class="memory-type">✓ {{item.typeLabel}}</view>
+              <view class="memory-card-title">{{item.title}}</view>
+              <view class="memory-card-footer">
+                <image wx:if="{{item.memoryOwnerAvatar}}" class="memory-owner-avatar" src="{{item.memoryOwnerAvatar}}" mode="aspectFill" aria-hidden="true" />
+                <view wx:else class="memory-owner-initial" aria-hidden="true">{{item.ownerInitial}}</view>
+                <text class="memory-fact">{{item.memoryFact}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{extraMemories.length}}" class="memory-extra-list">
+          <view wx:for="{{extraMemories}}" wx:key="id" class="memory-extra-card" data-id="{{item.id}}" bindtap="handleMemorySelect" hover-class="memory-card--pressed" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.memoryFact}}，双击查看活动详情">
+            <view class="memory-extra-art memory-extra-art--{{item.typeTone}}" aria-hidden="true">
+              <image wx:if="{{!item.memoryCoverFailed}}" src="{{item.memoryCoverSrc}}" mode="aspectFit" data-id="{{item.id}}" binderror="handleMemoryCoverError" aria-hidden="true" />
+              <text wx:else>✦</text>
+            </view>
+            <view class="memory-extra-copy"><view class="memory-extra-title">{{item.title}}</view><view class="memory-extra-fact">{{item.memoryFact}}</view></view>
+            <text class="memory-extra-arrow" aria-hidden="true">›</text>
+          </view>
+        </view>
+
+        <button wx:if="{{hasMoreMemories}}" class="memory-more-button" bindtap="handleToggleMemories" aria-label="{{memoriesExpanded ? '收起更多成团活动' : '展开更多成团活动'}}">
+          {{memoriesExpanded ? '收起成团故事' : '看看搭子们都拼了什么'}} <text aria-hidden="true">{{memoriesExpanded ? '⌃' : '›'}}</text>
+        </button>
+      </view>
+    </view>
   </view>
 </view>

@@ -1,0 +1,12 @@
+{
+  "id": "align-discover-with-profile",
+  "title": "统一发现页与我的页视觉风格",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交代码",
+  "createdAt": "2026-09-06T14:30:00+08:00",
+  "branch": "main"
+}

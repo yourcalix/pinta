@@ -4,6 +4,7 @@ const api = require('./api');
 
 module.exports = {
   list: (filters) => api.invoke('activity.list', filters),
+  memories: () => api.invoke('activity.memories', { limit: 6 }),
   detail: (activityId) => api.invoke('activity.detail', { activityId }),
   mine: () => api.invoke('activity.mine'),
   create: (payload, idempotencyKey) => api.invoke('activity.create', payload, { mutating: true, idempotencyKey }),

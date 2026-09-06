@@ -23,13 +23,81 @@ const {
 const { selectTab } = require('../../utils/tab-bar');
 
 const PAGE_SIZE = 10;
+const BANNER_ROUTE_WHITELIST = new Set(['/pages/publish/index']);
+const MEMORY_COVERS = Object.freeze({
+  companion: '/assets/images/publish/publish-cover-companion.png',
+  sport: '/assets/images/publish/publish-cover-sport.png',
+  food: '/assets/images/publish/publish-cover-food.png'
+});
+const CAMPAIGN_BANNERS = Object.freeze([
+  {
+    id: 'weekend-sport',
+    tone: 'sport',
+    eyebrow: '周末提案',
+    title: '周末羽毛球新人局',
+    subtitle: '新手友好 · 一起轻松开打',
+    imageSrc: MEMORY_COVERS.sport,
+    action: { kind: 'filter', value: 'sport' }
+  },
+  {
+    id: 'city-walk',
+    tone: 'companion',
+    eyebrow: '结伴探索',
+    title: '发现城市里的新路线',
+    subtitle: '周末漫步 · 找到同频搭子',
+    imageSrc: MEMORY_COVERS.companion,
+    action: { kind: 'filter', value: 'companion' }
+  },
+  {
+    id: 'publish-guide',
+    tone: 'guide',
+    eyebrow: '拼吧指南',
+    title: '第一次发起拼单？',
+    subtitle: '填写真实信息 · 安心结伴同行',
+    imageSrc: MEMORY_COVERS.food,
+    action: { kind: 'route', value: '/pages/publish/index' }
+  }
+]);
 
 function hasActiveFilters(filters) {
   return Boolean(filters.type || filters.appliedKeyword);
 }
 
+function memoryDate(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function decorateMemory(activity, index) {
+  const decorated = decorateActivity(activity);
+  const formedDate = memoryDate(activity.formedAt || activity.updatedAt || activity.startsAt);
+  const ownerSlot = decorated.visibleAvatarSlots.find((slot) => !slot.empty) || null;
+  return {
+    ...decorated,
+    memoryCoverSrc: MEMORY_COVERS[decorated.typeTone] || MEMORY_COVERS.sport,
+    memoryCoverFailed: false,
+    memoryFact: `${decorated.memberCount}人成团${formedDate ? ` · ${formedDate}` : ''}`,
+    memoryOwnerAvatar: ownerSlot && ownerSlot.src || '',
+    memoryPosition: index === 0 ? 'lead' : index === 1 ? 'top' : index === 2 ? 'bottom' : 'extra'
+  };
+}
+
+function memoryViewState(memories, expanded) {
+  const visibleMemories = expanded ? memories : memories.slice(0, 3);
+  return {
+    visibleMemories,
+    featuredMemories: visibleMemories.slice(0, 3),
+    extraMemories: visibleMemories.slice(3),
+    memoryLayout: Math.min(memories.length, 3),
+    hasMoreMemories: memories.length > 3
+  };
+}
+
 Page({
   data: {
+    banners: CAMPAIGN_BANNERS.map((item) => ({ ...item, failed: false })),
+    currentBanner: 0,
     typeOptions: [
       { value: '', label: '全部', iconSrc: '/assets/images/discover/filter-all.png' },
       { value: 'companion', label: '拼同行', iconSrc: '/assets/images/discover/filter-companion.png' },
@@ -48,6 +116,13 @@ Page({
     loadingMore: false,
     loadMoreError: '',
     error: '',
+    memories: [],
+    visibleMemories: [],
+    featuredMemories: [],
+    extraMemories: [],
+    memoryLayout: 0,
+    hasMoreMemories: false,
+    memoriesExpanded: false,
     contentTopInset: 88,
     launchSplashVisible: false,
     launchSplashExiting: false,
@@ -60,8 +135,9 @@ Page({
     });
     this._skipFirstShow = true;
     this.startLaunchSplash();
-    return Promise.resolve(this.fetchActivities({ mode: 'replace' }))
+    const activities = Promise.resolve(this.fetchActivities({ mode: 'replace' }))
       .finally(() => this.markLaunchSplashReady());
+    return Promise.allSettled([activities, this.fetchMemories()]);
   },
 
   onShow() {
@@ -70,26 +146,63 @@ Page({
       this._skipFirstShow = false;
       return;
     }
-    return this.fetchActivities({ mode: 'replace', keepContent: true });
+    return Promise.allSettled([
+      this.fetchActivities({ mode: 'replace', keepContent: true }),
+      this.fetchMemories({ keepContent: true })
+    ]);
   },
 
   onHide() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this._memorySeq = (this._memorySeq || 0) + 1;
     this.clearExpirationTimer();
     this.teardownLaunchSplash(true);
   },
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this._memorySeq = (this._memorySeq || 0) + 1;
     this.clearExpirationTimer();
     this.teardownLaunchSplash(false);
   },
 
   async onPullDownRefresh() {
     try {
-      await this.fetchActivities({ mode: 'replace', keepContent: true, notifyFailure: true });
+      await Promise.allSettled([
+        this.fetchActivities({ mode: 'replace', keepContent: true, notifyFailure: true }),
+        this.fetchMemories({ keepContent: true })
+      ]);
     } finally {
       wx.stopPullDownRefresh();
+    }
+  },
+
+  async fetchMemories(options = {}) {
+    const requestSeq = (this._memorySeq = (this._memorySeq || 0) + 1);
+    try {
+      const result = await activityService.memories();
+      if (requestSeq !== this._memorySeq) return false;
+      const memories = safetyService
+        .filterHiddenActivities(result.items || [])
+        .filter((item) => item && item.status === 'FORMED')
+        .map(decorateMemory);
+      const memoriesExpanded = options.keepContent === true && this.data.memoriesExpanded && memories.length > 3;
+      this.setData({
+        memories,
+        memoriesExpanded,
+        ...memoryViewState(memories, memoriesExpanded)
+      });
+      return true;
+    } catch (error) {
+      if (requestSeq !== this._memorySeq) return false;
+      if (!options.keepContent) {
+        this.setData({
+          memories: [],
+          memoriesExpanded: false,
+          ...memoryViewState([], false)
+        });
+      }
+      return false;
     }
   },
 
@@ -354,6 +467,33 @@ Page({
     return this.fetchActivities({ mode: 'replace' });
   },
 
+  handleBannerChange(event) {
+    const currentBanner = Math.max(0, Number(event.detail && event.detail.current) || 0);
+    if (currentBanner !== this.data.currentBanner) this.setData({ currentBanner });
+  },
+
+  handleBannerTap(event) {
+    const banner = this.data.banners.find((item) => item.id === event.currentTarget.dataset.id);
+    if (!banner || !banner.action) return false;
+    if (banner.action.kind === 'filter' && ['', 'companion', 'sport', 'food'].includes(banner.action.value)) {
+      const type = banner.action.value;
+      this.setData({ type, hasActiveFilters: hasActiveFilters({ ...this.data, type }) });
+      return this.fetchActivities({ mode: 'replace' });
+    }
+    if (banner.action.kind === 'route' && BANNER_ROUTE_WHITELIST.has(banner.action.value)) {
+      wx.switchTab({ url: banner.action.value });
+      return true;
+    }
+    return false;
+  },
+
+  handleBannerImageError(event) {
+    const id = event.currentTarget.dataset.id;
+    const index = this.data.banners.findIndex((item) => item.id === id);
+    if (index < 0 || this.data.banners[index].failed) return;
+    this.setData({ [`banners[${index}].failed`]: true });
+  },
+
   handleKeywordInput(event) {
     this.setData({ keyword: event.detail.value });
   },
@@ -391,6 +531,37 @@ Page({
     wx.navigateTo({
       url: `/subpackages/activity/detail/index?id=${encodeURIComponent(event.detail.id)}`
     });
+  },
+
+  handleMemorySelect(event) {
+    const id = event.currentTarget.dataset.id;
+    if (!id) return;
+    wx.navigateTo({
+      url: `/subpackages/activity/detail/index?id=${encodeURIComponent(id)}`
+    });
+  },
+
+  handleMemoryCoverError(event) {
+    const id = event.currentTarget.dataset.id;
+    const index = this.data.memories.findIndex((item) => item.id === id);
+    if (index < 0 || this.data.memories[index].memoryCoverFailed) return;
+    const memories = this.data.memories.map((item, itemIndex) => itemIndex === index
+      ? { ...item, memoryCoverFailed: true }
+      : item);
+    this.setData({
+      memories,
+      ...memoryViewState(memories, this.data.memoriesExpanded)
+    });
+  },
+
+  handleToggleMemories() {
+    if (!this.data.hasMoreMemories) return false;
+    const memoriesExpanded = !this.data.memoriesExpanded;
+    this.setData({
+      memoriesExpanded,
+      ...memoryViewState(this.data.memories, memoriesExpanded)
+    });
+    return true;
   },
 
   handleEmptyAction() {

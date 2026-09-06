@@ -692,6 +692,18 @@ class CloudStore {
     });
   }
 
+  async listActivityMemories(limit = 6) {
+    const result = await this.db.collection('activities')
+      .where({ status: ACTIVITY_STATUS.FORMED })
+      .orderBy('formedAt', 'desc')
+      .limit(Math.max(24, limit * 4))
+      .get();
+    return (result.data || [])
+      .map(entity)
+      .filter((activity) => activity.status === ACTIVITY_STATUS.FORMED && Number.isFinite(Date.parse(activity.formedAt)))
+      .slice(0, limit);
+  }
+
   async findOne(collection, where) {
     return first(await this.db.collection(collection).where(where).limit(1).get());
   }

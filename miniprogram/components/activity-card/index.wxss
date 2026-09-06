@@ -155,18 +155,24 @@
   align-items: center;
   gap: 20rpx;
   box-sizing: border-box;
-  min-height: 300rpx;
-  padding: 18rpx;
+  min-height: 204rpx;
+  margin-bottom: 20rpx;
+  padding: 20rpx;
+  background: #fff;
+  border: 1.5rpx solid #f3f4f6;
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.04);
 }
+.activity-card--discover.activity-card--pressed { background: #f9fafb; box-shadow: 0 2rpx 10rpx rgba(15, 23, 42, 0.05); transform: scale(0.995); }
 .activity-card--discover::before { display: none; }
 .card-cover {
   position: relative;
-  flex: 0 0 200rpx;
-  width: 200rpx;
-  height: 254rpx;
+  flex: 0 0 160rpx;
+  width: 160rpx;
+  height: 160rpx;
   overflow: hidden;
-  background: #eee9df;
-  border-radius: 20rpx 17rpx 22rpx 18rpx;
+  background: #f6f7f9;
+  border-radius: 18rpx;
   pointer-events: none;
 }
 .card-cover--companion { background: #edf4fd; }
@@ -193,13 +199,14 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
   margin-top: 12rpx;
+  color: #111827;
   font-size: 30rpx;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 .archive-prefix { font-size: 24rpx; color: #65675f; font-weight: 500; }
 .activity-card--discover .meta-list { margin-top: 12rpx; }
-.activity-card--discover .meta-item { gap: 6rpx; font-size: 24rpx; }
+.activity-card--discover .meta-item { gap: 6rpx; color: #6b7280; font-size: 24rpx; }
 .activity-card--discover .meta-icon { flex-basis: 24rpx; width: 24rpx; }
 .activity-card--discover .meta-text { flex: 1; }
 .activity-card--discover .meta-text--place { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -212,10 +219,10 @@
   white-space: nowrap;
 }
 .member-avatar-group { display: flex; align-items: center; flex-shrink: 0; pointer-events: none; }
-.member-avatar-slot { display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 36rpx; height: 36rpx; border: 2rpx solid #fff8ee; border-radius: 50%; background: #f5f6f8; }
+.member-avatar-slot { display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 36rpx; height: 36rpx; border: 2rpx solid #fff; border-radius: 50%; background: #f5f6f8; }
 .member-avatar-slot + .member-avatar-slot { margin-left: -10rpx; }
 .member-avatar-slot image { display: block; width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
-.member-avatar-slot--empty { border: 2rpx dashed #c7beaf; background: #eee8dd; color: #807867; }
+.member-avatar-slot--empty { border: 2rpx dashed #d8dde3; background: #f6f7f9; color: #9ca3af; }
 .member-avatar-slot--filled { animation: member-avatar-enter 220ms ease-out both; }
 .member-avatar-more { margin-left: 6rpx; color: #596975; font-size: 24rpx; white-space: nowrap; }
 .activity-card--discover.activity-card--large-text { align-items: flex-start; }
@@ -225,8 +232,8 @@
 .activity-card--large-text .owner-name { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 340px) {
   .activity-card--discover { gap: 16rpx; padding: 16rpx; }
-  .card-cover { flex-basis: 170rpx; width: 170rpx; height: 230rpx; }
-  .activity-card--discover .activity-title { font-size: 30rpx; }
+  .card-cover { flex-basis: 140rpx; width: 140rpx; height: 140rpx; border-radius: 14rpx; }
+  .activity-card--discover .activity-title { font-size: 27rpx; }
   .member-avatar-slot { width: 30rpx; height: 30rpx; }
   .member-avatar-slot + .member-avatar-slot { margin-left: -8rpx; }
 }

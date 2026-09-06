@@ -444,6 +444,14 @@ class MemoryStore {
     return { items: clone(page.items), nextCursor: page.nextCursor };
   }
 
+  async listActivityMemories(limit = 6) {
+    return [...this.activities.values()]
+      .filter((activity) => activity.status === ACTIVITY_STATUS.FORMED && Number.isFinite(Date.parse(activity.formedAt)))
+      .sort((left, right) => Date.parse(right.formedAt) - Date.parse(left.formedAt) || String(right.id).localeCompare(String(left.id)))
+      .slice(0, limit)
+      .map(clone);
+  }
+
   async getViewerContext(activityId, actorId) {
     const activity = this.activities.get(activityId);
     if (!activity) return {};
