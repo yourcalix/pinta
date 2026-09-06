@@ -68,10 +68,9 @@
 
     <view wx:elif="{{activities.length}}">
       <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" bindselect="handleCardSelect" />
-      <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" aria-role="status">
+      <view wx:if="{{loadingMore || loadMoreError}}" class="list-footer" aria-role="status">
         <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多…</text></view>
-        <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载更多失败，点击重试</button>
-        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底啦 · 拼吧 —</view>
+        <button wx:else class="footer-retry-button" bindtap="handleRetryLoadMore">加载更多失败，点击重试</button>
       </view>
     </view>
 
@@ -110,5 +109,7 @@
         </view>
       </view>
     </view>
+
+    <view wx:if="{{activities.length && !loading && !hasMore}}" class="page-end-marker footer-state footer-state--end" aria-role="status">— 已经到底啦 · 拼吧 —</view>
   </view>
 </view>

@@ -562,6 +562,8 @@
 
 .footer-state--end { color: #c4c9d0; }
 
+.page-end-marker { margin-top: 36rpx; }
+
 .footer-spinner {
   width: 24rpx;
   height: 24rpx;

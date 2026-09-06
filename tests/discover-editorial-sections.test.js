@@ -10,7 +10,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('发现页按 Banner、搜索、筛选、活动流、成团记忆顺序渲染', () => {
   const template = read('pages/discover/index.wxml');
-  const markers = ['campaign-swiper', 'search-row', 'filter-scroll', 'list-heading', 'memory-section'];
+  const markers = ['campaign-swiper', 'search-row', 'filter-scroll', 'list-heading', 'memory-section', 'page-end-marker'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
@@ -18,6 +18,7 @@ test('发现页按 Banner、搜索、筛选、活动流、成团记忆顺序渲�
   assert.match(template, /interval="4500"/);
   assert.match(template, /duration="400"/);
   assert.match(template, /class="memory-section memory-section--teaser"/);
+  assert.match(template, /wx:if="{{activities\.length && !loading && !hasMore}}" class="page-end-marker footer-state footer-state--end"[^>]*>— 已经到底啦 · 拼吧 —/);
 });
 
 test('发现页以成团记忆为视觉母版统一艺术标题、目录工具带和活动章节', () => {

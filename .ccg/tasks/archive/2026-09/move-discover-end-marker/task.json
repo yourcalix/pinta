@@ -1,0 +1,12 @@
+{
+  "id": "move-discover-end-marker",
+  "title": "将发现页到底提示移至全页底部",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交任务",
+  "createdAt": "2026-09-06T19:40:00+08:00",
+  "branch": "main"
+}
