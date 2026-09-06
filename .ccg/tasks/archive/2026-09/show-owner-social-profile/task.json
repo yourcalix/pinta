@@ -1,0 +1,12 @@
+{
+  "id": "show-owner-social-profile",
+  "title": "在活动详情发起人卡展示性别年龄MBTI和头像",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交代码",
+  "createdAt": "2026-09-06T00:00:00+08:00",
+  "branch": "main"
+}
