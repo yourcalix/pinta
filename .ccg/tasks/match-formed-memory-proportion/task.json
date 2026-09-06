@@ -1,0 +1,12 @@
+{
+  "id": "match-formed-memory-proportion",
+  "title": "校准成团记忆专题板比例",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交代码",
+  "createdAt": "2026-09-06T16:30:00+08:00",
+  "branch": "main"
+}

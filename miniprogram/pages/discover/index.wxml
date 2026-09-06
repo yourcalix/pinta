@@ -78,7 +78,7 @@
         <view class="memory-title">成团记忆</view>
       </view>
 
-      <view class="memory-panel memory-panel--layout-{{memoryLayout}}">
+      <view class="memory-panel memory-panel--layout-{{memoryLayout}} {{memoriesExpanded ? 'memory-panel--expanded' : ''}}">
         <view class="memory-panel-glow" aria-hidden="true"></view>
         <view class="memory-panel-masthead" aria-hidden="true">
           <view class="memory-panel-masthead-main"><text>分享你的</text><text class="memory-panel-masthead-accent">成团记忆</text><view class="memory-camera"><view class="memory-camera-lens"></view></view></view>

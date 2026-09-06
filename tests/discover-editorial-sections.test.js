@@ -92,7 +92,7 @@ test('成团记忆严格采用参考式居中标题、亮蓝画报、左大右�
   const style = read('pages/discover/index.wxss');
   assert.match(template, /class="memory-heading-watermark"[^>]*>FORMED STORIES/);
   assert.match(template, /class="memory-title">成团记忆/);
-  assert.match(template, /class="memory-panel memory-panel--layout-\{\{memoryLayout\}\}"/);
+  assert.match(template, /class="memory-panel memory-panel--layout-\{\{memoryLayout\}\} \{\{memoriesExpanded \? 'memory-panel--expanded' : ''\}\}"/);
   assert.match(template, /class="memory-camera"/);
   assert.match(template, /memory-card-copy--\{\{item\.memoryPosition\}\}/);
   assert.match(template, /wx:if="\{\{memoryLayout !== 3 \|\| item\.memoryPosition === 'lead'\}\}" class="memory-owner-row"/);
@@ -109,6 +109,18 @@ test('成团记忆严格采用参考式居中标题、亮蓝画报、左大右�
   assert.match(style, /\.memory-more-button\s*\{[^}]*min-height:\s*88rpx;[^}]*color:\s*#111827;[^}]*background:\s*#ffc72c;/s);
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.memory-grid--3\s*\{[^}]*grid-template-rows:\s*229rpx 229rpx;/s);
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.memory-grid--3 \.memory-card--lead\s*\{[^}]*height:\s*470rpx;/s);
+});
+
+test('成团记忆专题板保持参考图纵向比例并允许展开内容自然增高', () => {
+  const template = read('pages/discover/index.wxml');
+  const style = read('pages/discover/index.wxss');
+  assert.match(template, /memoriesExpanded \? 'memory-panel--expanded' : ''/);
+  assert.match(style, /\.memory-panel\s*\{[^}]*min-height:\s*860rpx;[^}]*aspect-ratio:\s*347\s*\/\s*430;/s);
+  assert.match(style, /\.memory-panel--expanded\s*\{[^}]*aspect-ratio:\s*auto;/s);
+  assert.match(style, /\.memory-panel-masthead\s*\{[^}]*min-height:\s*190rpx;/s);
+  assert.match(style, /\.memory-grid--1 \.memory-card\s*\{[^}]*height:\s*600rpx;/s);
+  assert.match(style, /\.memory-grid--2 \.memory-card\s*\{[^}]*height:\s*600rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.memory-panel\s*\{[^}]*min-height:\s*744rpx;/s);
 });
 
 test('成团记忆独立加载，失败不污染活动列表且离屏晚到响应失效', async () => {
