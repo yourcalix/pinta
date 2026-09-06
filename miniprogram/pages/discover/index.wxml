@@ -79,9 +79,14 @@
       </view>
 
       <view class="memory-panel memory-panel--layout-{{memoryLayout}} {{memoriesExpanded ? 'memory-panel--expanded' : ''}}">
+        <image class="memory-panel-background" src="/assets/images/discover/formed-memory-editorial-bg.jpg" mode="aspectFill" lazy-load="{{true}}" aria-hidden="true" />
+        <view class="memory-panel-background-shade" aria-hidden="true"></view>
         <view class="memory-panel-glow" aria-hidden="true"></view>
         <view class="memory-panel-masthead" aria-hidden="true">
-          <view class="memory-panel-masthead-main"><text>分享你的</text><text class="memory-panel-masthead-accent">成团记忆</text><view class="memory-camera"><view class="memory-camera-lens"></view></view></view>
+          <view class="memory-art-title">
+            <view class="memory-art-title-first">分享你的</view>
+            <view class="memory-art-title-second"><text class="memory-panel-masthead-accent">成团</text><text>记忆</text><view class="memory-camera"><view class="memory-camera-lens"></view></view></view>
+          </view>
           <view class="memory-panel-masthead-sub">每一次顺利成团，都值得被记住</view>
         </view>
         <view class="memory-grid memory-grid--{{memoryLayout}}">
@@ -102,6 +107,14 @@
                 <text class="memory-fact">{{item.memoryFact}}</text>
               </view>
             </view>
+          </view>
+          <view wx:if="{{featuredMemories.length < 2}}" class="memory-placeholder memory-placeholder--top" aria-hidden="true">
+            <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
+            <view class="memory-placeholder-copy">虚位以待<text>等你成团</text></view>
+          </view>
+          <view wx:if="{{featuredMemories.length < 3}}" class="memory-placeholder memory-placeholder--bottom" aria-hidden="true">
+            <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
+            <view class="memory-placeholder-copy">虚位以待<text>等你成团</text></view>
           </view>
         </view>
 

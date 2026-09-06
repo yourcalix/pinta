@@ -1,0 +1,12 @@
+{
+  "id": "add-formed-memory-background",
+  "title": "生成并接入成团记忆背景图",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-06T17:00:00+08:00",
+  "branch": "main"
+}

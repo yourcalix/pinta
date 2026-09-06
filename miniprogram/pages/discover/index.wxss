@@ -594,6 +594,24 @@
 
 .memory-panel--expanded { aspect-ratio: auto; }
 
+.memory-panel-background,
+.memory-panel-background-shade {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.memory-panel-background {
+  opacity: 0.62;
+}
+
+.memory-panel-background-shade {
+  background: linear-gradient(180deg, rgba(32, 123, 229, 0.04) 0%, rgba(32, 123, 229, 0.16) 42%, rgba(15, 91, 177, 0.36) 100%);
+}
+
 .memory-panel-glow {
   position: absolute;
   z-index: 0;
@@ -610,62 +628,77 @@
   position: relative;
   z-index: 1;
   box-sizing: border-box;
-  min-height: 190rpx;
-  padding: 10rpx 14rpx 20rpx;
+  min-height: 196rpx;
+  padding: 0 14rpx 20rpx;
 }
 
-.memory-panel-masthead-main {
+.memory-art-title {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: 2rpx;
+  text-shadow: 0 4rpx 16rpx rgba(12, 60, 130, 0.45), 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
+  transform: rotate(-3deg);
+  transform-origin: left center;
+}
+
+.memory-art-title-first {
+  font-size: 42rpx;
+  line-height: 1.15;
+}
+
+.memory-art-title-second {
   display: flex;
   align-items: center;
-  gap: 10rpx;
-  font-size: 38rpx;
-  font-weight: 780;
-  line-height: 1.22;
-  letter-spacing: 1rpx;
-  text-shadow: 0 3rpx 12rpx rgba(0, 68, 150, 0.2);
+  margin-top: -2rpx;
+  font-size: 52rpx;
+  line-height: 1.08;
 }
 
-.memory-panel-masthead-accent { color: #fff279; }
+.memory-panel-masthead-accent { color: #ffe600; }
 
 .memory-camera {
   position: relative;
   box-sizing: border-box;
-  flex: 0 0 34rpx;
-  width: 34rpx;
-  height: 25rpx;
-  margin-left: 4rpx;
-  border: 3rpx solid rgba(255, 255, 255, 0.9);
-  border-radius: 5rpx;
-  transform: rotate(7deg);
+  flex: 0 0 44rpx;
+  width: 44rpx;
+  height: 36rpx;
+  margin-left: 14rpx;
+  border: 2rpx solid #fff;
+  border-radius: 6rpx;
+  transform: rotate(12deg) translateY(2rpx);
 }
 
 .memory-camera::before {
   position: absolute;
-  top: -9rpx;
-  left: 5rpx;
-  width: 13rpx;
+  top: -8rpx;
+  left: 7rpx;
+  width: 15rpx;
   height: 7rpx;
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
   border-radius: 3rpx 3rpx 0 0;
   content: '';
 }
 
 .memory-camera-lens {
   position: absolute;
-  top: 4rpx;
-  left: 10rpx;
+  top: 8rpx;
+  left: 15rpx;
   box-sizing: border-box;
   width: 10rpx;
   height: 10rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.9);
+  border: 2rpx solid #fff;
   border-radius: 50%;
 }
 
 .memory-panel-masthead-sub {
-  margin-top: 8rpx;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 20rpx;
-  line-height: 1.35;
+  margin-top: 10rpx;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 22rpx;
+  line-height: 1.4;
+  text-shadow: 0 2rpx 8rpx rgba(12, 60, 130, 0.35);
 }
 
 .memory-grid {
@@ -677,7 +710,7 @@
 
 .memory-grid--1 { display: block; }
 .memory-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.memory-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 252rpx 252rpx; }
+.memory-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 286rpx 286rpx; }
 
 .memory-card {
   position: relative;
@@ -695,9 +728,68 @@
 
 .memory-grid--1 .memory-card { width: 100%; height: 600rpx; }
 .memory-grid--2 .memory-card { height: 600rpx; }
-.memory-grid--3 .memory-card--lead { grid-row: 1 / 3; height: 520rpx; }
+.memory-grid--3 .memory-card--lead { grid-row: 1 / 3; height: 588rpx; }
 .memory-grid--3 .memory-card--top,
-.memory-grid--3 .memory-card--bottom { height: 252rpx; }
+.memory-grid--3 .memory-card--bottom { height: 286rpx; }
+
+.memory-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 286rpx;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.12);
+  border: 2rpx dashed rgba(255, 255, 255, 0.35);
+  border-radius: 22rpx;
+  pointer-events: none;
+}
+
+.memory-placeholder--top { grid-column: 2; grid-row: 1; }
+.memory-placeholder--bottom { grid-column: 2; grid-row: 2; }
+
+.memory-placeholder-camera {
+  position: relative;
+  box-sizing: border-box;
+  width: 36rpx;
+  height: 29rpx;
+  border: 2rpx dashed rgba(255, 255, 255, 0.62);
+  border-radius: 6rpx;
+  transform: rotate(-4deg);
+}
+
+.memory-placeholder-camera::before {
+  position: absolute;
+  top: -7rpx;
+  left: 6rpx;
+  width: 12rpx;
+  height: 6rpx;
+  border: 2rpx dashed rgba(255, 255, 255, 0.62);
+  border-bottom: 0;
+  border-radius: 4rpx 4rpx 0 0;
+  content: '';
+}
+
+.memory-placeholder-lens {
+  position: absolute;
+  top: 7rpx;
+  left: 12rpx;
+  box-sizing: border-box;
+  width: 10rpx;
+  height: 10rpx;
+  border: 2rpx dashed rgba(255, 255, 255, 0.62);
+  border-radius: 50%;
+}
+
+.memory-placeholder-copy {
+  margin-top: 16rpx;
+  font-size: 20rpx;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.memory-placeholder-copy text { display: block; margin-top: 3rpx; }
 
 .memory-card--pressed { opacity: 0.9; transform: scale(0.99); }
 
@@ -953,14 +1045,18 @@
   .memory-heading-watermark { font-size: 22rpx; }
   .memory-title { padding-top: 23rpx; font-size: 30rpx; }
   .memory-panel { min-height: 744rpx; padding: 18rpx; border-radius: 24rpx; }
-  .memory-panel-masthead { min-height: 166rpx; padding: 8rpx 10rpx 16rpx; }
-  .memory-panel-masthead-main { font-size: 31rpx; }
-  .memory-panel-masthead-sub { font-size: 18rpx; }
+  .memory-panel-masthead { min-height: 200rpx; padding: 0 10rpx 14rpx; }
+  .memory-art-title-first { font-size: 36rpx; }
+  .memory-art-title-second { font-size: 44rpx; }
+  .memory-camera { flex-basis: 36rpx; width: 36rpx; height: 30rpx; }
+  .memory-camera-lens { top: 6rpx; left: 12rpx; }
+  .memory-panel-masthead-sub { font-size: 20rpx; }
   .memory-grid { gap: 12rpx; }
-  .memory-grid--3 { grid-template-rows: 229rpx 229rpx; }
-  .memory-grid--3 .memory-card--lead { height: 470rpx; }
+  .memory-grid--3 { grid-template-rows: 248rpx 248rpx; }
+  .memory-grid--3 .memory-card--lead { height: 508rpx; }
   .memory-grid--3 .memory-card--top,
-  .memory-grid--3 .memory-card--bottom { height: 229rpx; }
+  .memory-grid--3 .memory-card--bottom,
+  .memory-placeholder { height: 248rpx; border-radius: 18rpx; }
   .memory-card { height: 540rpx; border-radius: 18rpx; }
   .memory-grid--1 .memory-card,
   .memory-grid--2 .memory-card { height: 540rpx; }

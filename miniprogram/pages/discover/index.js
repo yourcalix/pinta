@@ -89,7 +89,7 @@ function memoryViewState(memories, expanded) {
     visibleMemories,
     featuredMemories: visibleMemories.slice(0, 3),
     extraMemories: visibleMemories.slice(3),
-    memoryLayout: Math.min(memories.length, 3),
+    memoryLayout: memories.length ? 3 : 0,
     hasMoreMemories: memories.length > 3
   };
 }
