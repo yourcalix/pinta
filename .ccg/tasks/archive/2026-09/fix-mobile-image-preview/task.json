@@ -1,0 +1,12 @@
+{
+  "id": "fix-mobile-image-preview",
+  "title": "修复手机端头像与背景图片预览不显示",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并在 iOS / Android 真机验证图片打开与缩放",
+  "createdAt": "2026-09-06T00:00:00+08:00",
+  "branch": "main"
+}
