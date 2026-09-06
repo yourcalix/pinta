@@ -1,0 +1,12 @@
+{
+  "id": "redesign-formed-memories-reference",
+  "title": "严格按参考图重构成团记忆排版",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交代码",
+  "createdAt": "2026-09-06T16:00:00+08:00",
+  "branch": "main"
+}

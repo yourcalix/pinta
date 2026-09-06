@@ -74,27 +74,31 @@
 
     <view wx:if="{{memories.length}}" class="memory-section memory-section--ready">
       <view class="memory-section-heading">
-        <view>
-          <view class="memory-kicker">FORMED STORIES</view>
-          <view class="memory-title"><text class="memory-spark" aria-hidden="true">✦</text><text>成团记忆</text></view>
-        </view>
-        <view class="memory-count">{{memories.length}} 个故事</view>
+        <view class="memory-heading-watermark" aria-hidden="true">FORMED STORIES</view>
+        <view class="memory-title">成团记忆</view>
       </view>
 
-      <view class="memory-panel">
+      <view class="memory-panel memory-panel--layout-{{memoryLayout}}">
         <view class="memory-panel-glow" aria-hidden="true"></view>
+        <view class="memory-panel-masthead" aria-hidden="true">
+          <view class="memory-panel-masthead-main"><text>分享你的</text><text class="memory-panel-masthead-accent">成团记忆</text><view class="memory-camera"><view class="memory-camera-lens"></view></view></view>
+          <view class="memory-panel-masthead-sub">每一次顺利成团，都值得被记住</view>
+        </view>
         <view class="memory-grid memory-grid--{{memoryLayout}}">
           <view wx:for="{{featuredMemories}}" wx:key="id" class="memory-card memory-card--{{item.memoryPosition}} memory-card--{{item.typeTone}}" data-id="{{item.id}}" bindtap="handleMemorySelect" hover-class="memory-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.memoryFact}}，双击查看活动详情">
             <view class="memory-art" aria-hidden="true">
               <view wx:if="{{item.memoryCoverFailed}}" class="memory-art-fallback">✦</view>
               <image wx:else class="memory-image" src="{{item.memoryCoverSrc}}" mode="aspectFit" lazy-load="{{true}}" data-id="{{item.id}}" binderror="handleMemoryCoverError" aria-hidden="true" />
             </view>
-            <view class="memory-card-copy">
-              <view class="memory-type">✓ {{item.typeLabel}}</view>
+            <view class="memory-card-copy memory-card-copy--{{item.memoryPosition}}">
               <view class="memory-card-title">{{item.title}}</view>
-              <view class="memory-card-footer">
+              <view class="memory-type"># {{item.typeLabel}}</view>
+              <view wx:if="{{memoryLayout !== 3 || item.memoryPosition === 'lead'}}" class="memory-owner-row">
                 <image wx:if="{{item.memoryOwnerAvatar}}" class="memory-owner-avatar" src="{{item.memoryOwnerAvatar}}" mode="aspectFill" aria-hidden="true" />
                 <view wx:else class="memory-owner-initial" aria-hidden="true">{{item.ownerInitial}}</view>
+                <text class="memory-owner-name">{{item.ownerNickname}}</text>
+              </view>
+              <view class="memory-card-footer">
                 <text class="memory-fact">{{item.memoryFact}}</text>
               </view>
             </view>
@@ -102,18 +106,17 @@
         </view>
 
         <view wx:if="{{extraMemories.length}}" class="memory-extra-list">
-          <view wx:for="{{extraMemories}}" wx:key="id" class="memory-extra-card" data-id="{{item.id}}" bindtap="handleMemorySelect" hover-class="memory-card--pressed" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.memoryFact}}，双击查看活动详情">
-            <view class="memory-extra-art memory-extra-art--{{item.typeTone}}" aria-hidden="true">
+          <view wx:for="{{extraMemories}}" wx:key="id" class="memory-extra-card memory-card--{{item.typeTone}}" data-id="{{item.id}}" bindtap="handleMemorySelect" hover-class="memory-card--pressed" role="button" aria-label="{{item.typeLabel}}，{{item.title}}，{{item.memoryFact}}，双击查看活动详情">
+            <view class="memory-art" aria-hidden="true">
               <image wx:if="{{!item.memoryCoverFailed}}" src="{{item.memoryCoverSrc}}" mode="aspectFit" data-id="{{item.id}}" binderror="handleMemoryCoverError" aria-hidden="true" />
               <text wx:else>✦</text>
             </view>
-            <view class="memory-extra-copy"><view class="memory-extra-title">{{item.title}}</view><view class="memory-extra-fact">{{item.memoryFact}}</view></view>
-            <text class="memory-extra-arrow" aria-hidden="true">›</text>
+            <view class="memory-extra-copy"><view class="memory-extra-title">{{item.title}}</view><view class="memory-type"># {{item.typeLabel}}</view><view class="memory-extra-fact">{{item.memoryFact}}</view></view>
           </view>
         </view>
 
         <button wx:if="{{hasMoreMemories}}" class="memory-more-button" bindtap="handleToggleMemories" aria-label="{{memoriesExpanded ? '收起更多成团活动' : '展开更多成团活动'}}">
-          {{memoriesExpanded ? '收起成团故事' : '看看搭子们都拼了什么'}} <text aria-hidden="true">{{memoriesExpanded ? '⌃' : '›'}}</text>
+          {{memoriesExpanded ? '收起成团记忆' : '查看更多'}} <text aria-hidden="true">{{memoriesExpanded ? '⌃' : '›'}}</text>
         </button>
       </view>
     </view>

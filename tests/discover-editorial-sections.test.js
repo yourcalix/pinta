@@ -87,6 +87,30 @@ test('发现页 Banner 和成团记忆使用既有 PNG、受控跳转与 1+2 拼
   assert.match(style, /@media \(max-width: 340px\)[\s\S]*\.campaign-swiper/);
 });
 
+test('成团记忆严格采用参考式居中标题、亮蓝画报、左大右双与黄色按钮', () => {
+  const template = read('pages/discover/index.wxml');
+  const style = read('pages/discover/index.wxss');
+  assert.match(template, /class="memory-heading-watermark"[^>]*>FORMED STORIES/);
+  assert.match(template, /class="memory-title">成团记忆/);
+  assert.match(template, /class="memory-panel memory-panel--layout-\{\{memoryLayout\}\}"/);
+  assert.match(template, /class="memory-camera"/);
+  assert.match(template, /memory-card-copy--\{\{item\.memoryPosition\}\}/);
+  assert.match(template, /wx:if="\{\{memoryLayout !== 3 \|\| item\.memoryPosition === 'lead'\}\}" class="memory-owner-row"/);
+  assert.match(template, /class="memory-more-button"[\s\S]*\{\{memoriesExpanded \? '收起成团记忆' : '查看更多'\}\}/);
+
+  assert.match(style, /\.memory-section-heading\s*\{[^}]*position:\s*relative;[^}]*height:\s*100rpx;[^}]*text-align:\s*center;/s);
+  assert.match(style, /\.memory-heading-watermark\s*\{[^}]*font-size:\s*26rpx;[^}]*letter-spacing:\s*4rpx;/s);
+  assert.match(style, /\.memory-panel\s*\{[^}]*padding:\s*24rpx;[^}]*background:\s*linear-gradient\(180deg,\s*#4fa4f8 0%,\s*#207be5 100%\)/is);
+  assert.match(style, /\.memory-panel\s*\{[^}]*margin-bottom:\s*24rpx;/s);
+  assert.match(style, /\.memory-art::before\s*\{[^}]*radial-gradient\(circle at 65% 40%/s);
+  assert.match(style, /\.memory-grid--3\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[^}]*grid-template-rows:\s*252rpx 252rpx;/s);
+  assert.match(style, /\.memory-grid--3 \.memory-card--lead\s*\{[^}]*grid-row:\s*1 \/ 3;[^}]*height:\s*520rpx;/s);
+  assert.match(style, /\.memory-card::after\s*\{[^}]*rgba\(0,\s*0,\s*0,\s*0\.85\) 100%/s);
+  assert.match(style, /\.memory-more-button\s*\{[^}]*min-height:\s*88rpx;[^}]*color:\s*#111827;[^}]*background:\s*#ffc72c;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.memory-grid--3\s*\{[^}]*grid-template-rows:\s*229rpx 229rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.memory-grid--3 \.memory-card--lead\s*\{[^}]*height:\s*470rpx;/s);
+});
+
 test('成团记忆独立加载，失败不污染活动列表且离屏晚到响应失效', async () => {
   const originalMemories = activityService.memories;
   let resolveLate;

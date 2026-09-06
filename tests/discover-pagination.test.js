@@ -233,7 +233,7 @@ test('发现页使用沉浸式深蓝头部和连续白色面板，不再渲染�
   assert.ok(template.indexOf('class="discover-hero"') < template.indexOf('class="discover-sheet"'));
   assert.ok(template.indexOf('class="discover-sheet"') < template.indexOf('class="search-row"'));
   assert.match(style, /\.discover-sheet\s*\{[^}]*width:\s*100vw;[^}]*min-height:\s*calc\(100vh - 304rpx\);[^}]*background:\s*#fff;/s);
-  assert.match(style, /\.discover-sheet\s*\{[^}]*padding-bottom:\s*calc\(160rpx \+ env\(safe-area-inset-bottom\)\)/s);
+  assert.match(style, /\.discover-sheet\s*\{[^}]*padding-bottom:\s*calc\(180rpx \+ env\(safe-area-inset-bottom\)\)/s);
   assert.match(style, /background:\s*#075aa7/i);
   assert.match(style, /\.search-clear-button[\s\S]*min-(?:width|height):\s*88rpx/);
   assert.match(style, /\.search-clear-button[^}]*margin-right:\s*12rpx/);
