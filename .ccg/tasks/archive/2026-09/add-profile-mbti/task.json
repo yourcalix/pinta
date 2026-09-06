@@ -1,0 +1,12 @@
+{
+  "id": "add-profile-mbti",
+  "title": "在编辑主页中加入 MBTI 选项",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-06T00:00:00+08:00",
+  "branch": "main"
+}
