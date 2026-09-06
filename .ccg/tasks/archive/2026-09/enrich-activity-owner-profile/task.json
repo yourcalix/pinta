@@ -1,0 +1,12 @@
+{
+  "id": "enrich-activity-owner-profile",
+  "title": "丰富活动详情页的活动发起人资料卡",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已实现、验证并完成双模型复审",
+  "createdAt": "2026-09-06T00:00:00+08:00",
+  "branch": "main"
+}
