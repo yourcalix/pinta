@@ -37,8 +37,9 @@ test('编辑主页只呈现真实资料字段且受控头像随性别联动', ()
   assert.doesNotMatch(template, /年龄确认|已确认满18岁|请确认已满18岁/);
   assert.match(template, /data-field="interestsText"/);
   assert.match(template, />个性签名</);
+  assert.match(template, /class="profile-row mbti-row"[^>]*bindtap="handleMbtiOpen"/);
   assert.match(script, /profileAvatarPath\(gender\)/);
-  assert.doesNotMatch(template, /MBTI|手机号|常用报名|切换账号|1\/20|class="avatar-add"/);
+  assert.doesNotMatch(template, /手机号|常用报名|切换账号|1\/20|class="avatar-add"/);
 });
 
 test('行式编辑保留窄屏、键盘、错误与生日年龄核验能力', () => {

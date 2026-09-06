@@ -63,6 +63,15 @@
       </button>
 
       <view class="profile-divider"></view>
+      <button class="profile-row mbti-row" bindtap="handleMbtiOpen" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="选择 MBTI，当前为{{form.mbti || '暂未设置'}}">
+        <text class="row-label">MBTI</text>
+        <view class="row-value-group">
+          <text class="row-value {{form.mbti ? '' : 'row-placeholder'}}">{{form.mbti || '暂未设置'}}</text>
+          <text class="row-chevron" aria-hidden="true">›</text>
+        </view>
+      </button>
+
+      <view class="profile-divider"></view>
       <button class="profile-row cover-row" bindtap="handleSelectCover" hover-class="profile-row--pressed" hover-stay-time="70" aria-label="更换内置背景，当前为{{currentCoverLabel}}">
         <text class="row-label">更换背景</text>
         <view class="row-value-group">
@@ -125,6 +134,23 @@
         </picker-view-column>
       </picker-view>
       <view class="birthday-safe-area" aria-hidden="true"></view>
+    </view>
+  </view>
+
+  <view wx:if="{{mbtiSheetMounted}}" class="nickname-dialog" catchtouchmove="preventScroll" role="dialog" aria-modal="true" aria-label="选择 MBTI">
+    <view class="nickname-backdrop {{mbtiSheetOpen ? 'nickname-backdrop--open' : ''}}" bindtap="handleMbtiClose" catchtouchmove="preventScroll"></view>
+    <view class="nickname-sheet mbti-sheet {{mbtiSheetOpen ? 'nickname-sheet--open' : ''}}" catchtouchmove="preventScroll">
+      <view class="nickname-sheet-header">
+        <button class="nickname-sheet-action nickname-sheet-cancel" bindtap="handleMbtiClose" hover-class="nickname-sheet-action--pressed">取消</button>
+        <view class="nickname-sheet-title">选择 MBTI</view>
+        <button class="nickname-sheet-action nickname-sheet-confirm" bindtap="handleMbtiConfirm" hover-class="nickname-sheet-action--pressed">确定</button>
+      </view>
+      <view class="mbti-sheet-body">
+        <view class="mbti-grid" role="radiogroup" aria-label="MBTI 类型">
+          <button wx:for="{{mbtiOptions}}" wx:key="*this" class="mbti-option {{mbtiDraft === item ? 'mbti-option--selected' : ''}}" data-value="{{item}}" bindtap="handleMbtiSelect" hover-class="mbti-option--pressed" aria-label="{{item}}{{mbtiDraft === item ? '，已选择' : ''}}" aria-pressed="{{mbtiDraft === item}}">{{item}}</button>
+        </view>
+        <button class="mbti-clear {{mbtiDraft ? '' : 'mbti-clear--active'}}" bindtap="handleMbtiClear" hover-class="mbti-clear--pressed">暂不设置 MBTI</button>
+      </view>
     </view>
   </view>
 </view>

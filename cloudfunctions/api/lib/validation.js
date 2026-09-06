@@ -14,7 +14,8 @@ const {
   SPORT_LEVELS,
   SPORT_INTENSITIES,
   REPORT_REASONS,
-  USER_GENDERS
+  USER_GENDERS,
+  USER_MBTI_TYPES
 } = require('./constants');
 
 function optionalFilterString(value, field, max) {
@@ -164,6 +165,16 @@ function validateProfileInput(input, now = new Date()) {
     invariant(birthDate, 'VALIDATION_ERROR', '生日格式无效', { field: 'birthDate' });
     invariant(compareCalendarDate(birthDate, adultBirthLimit(now)) <= 0, 'VALIDATION_ERROR', '用户须年满18岁', { field: 'birthDate' });
     profile.birthDate = input.birthDate;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'mbti') && input.mbti !== undefined) {
+    if (input.mbti === null || (typeof input.mbti === 'string' && !input.mbti.trim())) {
+      profile.mbti = null;
+    } else {
+      invariant(typeof input.mbti === 'string', 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
+      const mbti = input.mbti.trim().toUpperCase();
+      invariant(USER_MBTI_TYPES.includes(mbti), 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
+      profile.mbti = mbti;
+    }
   }
   return profile;
 }

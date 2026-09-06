@@ -23,6 +23,13 @@ const GENDER_OPTIONS = Object.freeze([
   { label: '女', value: 'FEMALE' }
 ]);
 
+const MBTI_OPTIONS = Object.freeze([
+  'INTJ', 'INTP', 'ENTJ', 'ENTP',
+  'INFJ', 'INFP', 'ENFJ', 'ENFP',
+  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
+  'ISTP', 'ISFP', 'ESTP', 'ESFP'
+]);
+
 const NICKNAME_MIN_LENGTH = 2;
 const NICKNAME_MAX_LENGTH = 20;
 
@@ -83,10 +90,15 @@ Page({
     birthdayPickerValue: [0, 0, 0],
     birthdayDraft: '',
     birthdayIndicatorStyle: 'height: 88rpx; border-top: 2rpx solid rgba(22, 163, 106, 0.45); border-bottom: 2rpx solid rgba(22, 163, 106, 0.45);',
+    mbtiOptions: MBTI_OPTIONS,
+    mbtiSheetMounted: false,
+    mbtiSheetOpen: false,
+    mbtiDraft: '',
     form: {
       nickname: '',
       gender: '',
       birthDate: '',
+      mbti: '',
       city: PILOT_CITY,
       interestsText: '',
       adultConfirmed: false
@@ -120,12 +132,14 @@ Page({
   onHide() {
     this.dismissNicknameSheetImmediately();
     this.dismissBirthdaySheetImmediately();
+    this.dismissMbtiSheetImmediately();
   },
 
   onUnload() {
     this._disposed = true;
     this.clearNicknameTimers();
     this.clearBirthdayTimers();
+    this.clearMbtiTimers();
     if (typeof wx !== 'undefined' && typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
   },
 
@@ -159,6 +173,7 @@ Page({
           nickname: profile.nickname || '',
           gender,
           birthDate: profile.birthDate || '',
+          mbti: MBTI_OPTIONS.includes(profile.mbti) ? profile.mbti : '',
           city: profile.city || PILOT_CITY,
           interestsText: (profile.interests || []).join('、'),
           adultConfirmed: profile.adultConfirmed === true
@@ -365,6 +380,63 @@ Page({
     });
   },
 
+  clearMbtiTimers() {
+    clearTimeout(this._mbtiOpenTimer);
+    clearTimeout(this._mbtiCloseTimer);
+    this._mbtiOpenTimer = null;
+    this._mbtiCloseTimer = null;
+  },
+
+  handleMbtiOpen() {
+    if (this.data.loading || this.data.saving || (this.data.mbtiSheetMounted && this.data.mbtiSheetOpen)) return;
+    this.dismissNicknameSheetImmediately();
+    this.dismissBirthdaySheetImmediately();
+    this.clearMbtiTimers();
+    this.setData({
+      mbtiSheetMounted: true,
+      mbtiSheetOpen: false,
+      mbtiDraft: MBTI_OPTIONS.includes(this.data.form.mbti) ? this.data.form.mbti : ''
+    });
+    this._mbtiOpenTimer = setTimeout(() => {
+      if (this.data.mbtiSheetMounted) this.setData({ mbtiSheetOpen: true });
+    }, 16);
+  },
+
+  handleMbtiSelect(event) {
+    const value = event.currentTarget.dataset.value;
+    if (!MBTI_OPTIONS.includes(value)) return;
+    this.setData({ mbtiDraft: this.data.mbtiDraft === value ? '' : value });
+  },
+
+  handleMbtiClear() {
+    this.setData({ mbtiDraft: '' });
+  },
+
+  handleMbtiConfirm() {
+    if (!this.data.mbtiSheetMounted) return;
+    this.setData({
+      'form.mbti': MBTI_OPTIONS.includes(this.data.mbtiDraft) ? this.data.mbtiDraft : '',
+      errorMessage: ''
+    });
+    this.handleMbtiClose();
+  },
+
+  handleMbtiClose() {
+    if (!this.data.mbtiSheetMounted) return;
+    this.clearMbtiTimers();
+    this.setData({ mbtiSheetOpen: false });
+    this._mbtiCloseTimer = setTimeout(() => {
+      if (this.data.mbtiSheetOpen) return;
+      this.setData({ mbtiSheetMounted: false, mbtiDraft: '' });
+    }, 200);
+  },
+
+  dismissMbtiSheetImmediately() {
+    this.clearMbtiTimers();
+    if (!this.data.mbtiSheetMounted) return;
+    this.setData({ mbtiSheetMounted: false, mbtiSheetOpen: false, mbtiDraft: '' });
+  },
+
   preventScroll() {},
 
   handleGenderPick(event) {
@@ -454,6 +526,7 @@ Page({
         gender: form.gender,
         city: PILOT_CITY,
         interests: form.interestsText.split(/[、,，\s]+/).map((item) => item.trim()).filter(Boolean).slice(0, 8),
+        mbti: form.mbti || null,
         adultConfirmed: true
       };
       if (form.birthDate) profileInput.birthDate = form.birthDate;

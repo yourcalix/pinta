@@ -54,6 +54,12 @@ const MEMBER_STATUS = Object.freeze({
   REMOVED: 'REMOVED'
 });
 const USER_GENDERS = Object.freeze(['MALE', 'FEMALE']);
+const USER_MBTI_TYPES = Object.freeze([
+  'INTJ', 'INTP', 'ENTJ', 'ENTP',
+  'INFJ', 'INFP', 'ENFJ', 'ENFP',
+  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
+  'ISTP', 'ISFP', 'ESTP', 'ESFP'
+]);
 const PASSENGER_AVATAR_KINDS = Object.freeze(['PASSENGER_A', 'PASSENGER_B']);
 const MEMBER_LUGGAGE_TYPES = Object.freeze(['NONE', 'SMALL', 'LARGE']);
 const COMPANION_TIME_FLEXIBILITY = Object.freeze(['ON_TIME', 'WITHIN_30_MIN', 'WITHIN_60_MIN']);
@@ -82,6 +88,7 @@ module.exports = {
   APPLICATION_STATUS,
   MEMBER_STATUS,
   USER_GENDERS,
+  USER_MBTI_TYPES,
   PASSENGER_AVATAR_KINDS,
   MEMBER_LUGGAGE_TYPES,
   COMPANION_TIME_FLEXIBILITY,

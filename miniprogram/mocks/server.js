@@ -98,6 +98,13 @@ function completeRideProfile(profile) {
   return Boolean(profile && profile.adultConfirmed === true && ['MALE', 'FEMALE'].includes(profile.gender));
 }
 
+const USER_MBTI_TYPES = Object.freeze([
+  'INTJ', 'INTP', 'ENTJ', 'ENTP',
+  'INFJ', 'INFP', 'ENFJ', 'ENFP',
+  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
+  'ISTP', 'ISFP', 'ESTP', 'ESFP'
+]);
+
 function compareCalendarDate(left, right) {
   return left.year - right.year || left.month - right.month || left.day - right.day;
 }
@@ -124,6 +131,18 @@ function validateMockProfile(input, currentProfile) {
     profile.birthDate = input.birthDate;
   } else if (currentProfile && currentProfile.birthDate) {
     profile.birthDate = currentProfile.birthDate;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'mbti') && input.mbti !== undefined) {
+    if (input.mbti === null || (typeof input.mbti === 'string' && !input.mbti.trim())) {
+      profile.mbti = null;
+    } else {
+      assert(typeof input.mbti === 'string', 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
+      const mbti = input.mbti.trim().toUpperCase();
+      assert(USER_MBTI_TYPES.includes(mbti), 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
+      profile.mbti = mbti;
+    }
+  } else if (currentProfile && Object.prototype.hasOwnProperty.call(currentProfile, 'mbti')) {
+    profile.mbti = currentProfile.mbti;
   }
   return profile;
 }
@@ -751,6 +770,7 @@ function selfUser(user) {
       city: user.profile.city,
       interests: clone(user.profile.interests || []),
       birthDate: user.profile.birthDate || null,
+      mbti: user.profile.mbti || null,
       adultConfirmed: user.profile.adultConfirmed === true,
       avatar: user.profile.avatar && user.profile.avatar.status === 'ACTIVE' ? clone(user.profile.avatar) : null
     } : null,

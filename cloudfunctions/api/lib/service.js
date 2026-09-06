@@ -136,6 +136,7 @@ function selfUser(user) {
           city: user.profile.city,
           interests: user.profile.interests || [],
           birthDate: user.profile.birthDate || null,
+          mbti: user.profile.mbti || null,
           adultConfirmed: user.profile.adultConfirmed === true,
           avatar: safeSelfAvatar(user.profile.avatar)
         }
@@ -483,6 +484,9 @@ function createPinbaService(options) {
       const profile = validateProfileInput(input, at);
       if (!Object.prototype.hasOwnProperty.call(input, 'birthDate') && currentUser.profile && currentUser.profile.birthDate) {
         profile.birthDate = currentUser.profile.birthDate;
+      }
+      if ((!Object.prototype.hasOwnProperty.call(input, 'mbti') || input.mbti === undefined) && currentUser.profile && Object.prototype.hasOwnProperty.call(currentUser.profile, 'mbti')) {
+        profile.mbti = currentUser.profile.mbti;
       }
       if (currentUser.profile && currentUser.profile.avatar) profile.avatar = currentUser.profile.avatar;
       const user = await store.updateProfile(actorId, profile, at);
