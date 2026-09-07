@@ -9,7 +9,7 @@ const { calculateContentTopInset } = require('../miniprogram/utils/navigation-la
 
 const root = path.join(__dirname, '..');
 
-test('四个 Tab 页面统一使用 custom navigation 与深色沉浸状态栏', () => {
+test('四个 Tab 页面使用 custom navigation，社区浅色背景切换黑色状态栏', () => {
   const discover = require('../miniprogram/pages/discover/index.json');
   const community = require('../miniprogram/pages/community/index.json');
   const publish = require('../miniprogram/pages/publish/index.json');
@@ -26,9 +26,9 @@ test('四个 Tab 页面统一使用 custom navigation 与深色沉浸状态栏',
   assert.equal(discover.backgroundTextStyle, 'light');
   assert.equal(community.navigationStyle, 'custom');
   assert.equal(community.navigationBarTitleText, undefined);
-  assert.equal(community.navigationBarTextStyle, 'white');
-  assert.equal(community.backgroundColorTop, '#075AA7');
-  assert.equal(community.backgroundTextStyle, 'light');
+  assert.equal(community.navigationBarTextStyle, 'black');
+  assert.equal(community.backgroundColorTop, '#FCFAFA');
+  assert.equal(community.backgroundTextStyle, 'dark');
   assert.equal(publish.navigationStyle, 'custom');
   assert.equal(publish.navigationBarTitleText, undefined);
   assert.equal(publish.navigationBarTextStyle, 'white');

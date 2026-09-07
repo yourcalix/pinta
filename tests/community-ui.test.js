@@ -17,6 +17,7 @@ test('底部导航按发现、社区、发布、消息、我的排列', () => {
 test('社区首页按参考论坛骨架展示居中标题、社区提示、双快捷卡和最新讨论', () => {
   const template = read('pages/community/index.wxml');
   const style = read('pages/community/index.wxss');
+  const pageConfig = JSON.parse(read('pages/community/index.json'));
   const markers = ['community-navigation', 'community-notice', 'community-shortcuts', 'discussion-tabs', 'post-list'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
@@ -28,7 +29,8 @@ test('社区首页按参考论坛骨架展示居中标题、社区提示、双�
   assert.match(template, /class="shortcut-card shortcut-card--rules"[\s\S]*bindtap="handleGuidelines"/);
   assert.match(template, /class="discussion-tab discussion-tab--active"[^>]*>最新讨论</);
   assert.match(template, /class="discussion-sort"[^>]*>按发布时间</);
-  assert.match(template, /shared-paper-bg\.jpg/);
+  assert.match(template, /class="community-fixed-background"[^>]*community-ambient-bg\.jpg/);
+  assert.doesNotMatch(template, /shared-paper-bg\.jpg|global-page-background-tint/);
   assert.doesNotMatch(template, /新回|我发|我回|我赞|热门话题|分配对象|联系墙墙/);
   assert.doesNotMatch(template, /class="[^"]*fab/);
   assert.match(style, /\.community-nav-inner\s*\{[^}]*height:\s*88rpx/s);
@@ -40,6 +42,20 @@ test('社区首页按参考论坛骨架展示居中标题、社区提示、双�
   assert.match(style, /word-break:\s*break-word/);
   assert.match(style, /overflow-wrap:\s*anywhere/);
   assert.match(style, /padding-bottom:\s*calc\([^;]*safe-area-inset-bottom/);
+  assert.match(style, /\.community-fixed-background\s*\{[^}]*position:\s*fixed[^}]*width:\s*100vw[^}]*height:\s*100vh[^}]*pointer-events:\s*none[^}]*transform:\s*translateZ\(0\)/s);
+  assert.match(style, /\.community-page\s*\{[^}]*background:\s*#eff4fa/i);
+  assert.match(style, /\.community-nav-title\s*\{[^}]*color:\s*#0f172a/i);
+  assert.match(style, /\.discussion-tab\s*\{[^}]*color:\s*#0f172a/i);
+  assert.equal(pageConfig.navigationBarTextStyle, 'black');
+  assert.equal(pageConfig.backgroundColor, '#EFF4FA');
+});
+
+test('社区柔焦背景为本地 Baseline JPEG 且不依赖 WebP', () => {
+  const backgroundPath = path.join(root, 'assets/images/community/community-ambient-bg.jpg');
+  const background = fs.readFileSync(backgroundPath);
+  assert.deepEqual([...background.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+  assert.ok(background.length < 120 * 1024);
+  assert.doesNotMatch(read('pages/community/index.wxml'), /\.webp/);
 });
 
 test('社区空状态与帖子卡使用白色圆角卡、CSS 图标和受控单字头像', () => {

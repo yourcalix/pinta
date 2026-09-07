@@ -24,14 +24,15 @@ function pageTemplates() {
   ].sort();
 }
 
-test('除参考式白底详情与资料页外，所有页面共用唯一拼图纸纹背景', () => {
+test('除参考式详情、资料与社区柔焦页外，其余页面共用唯一拼图纸纹背景', () => {
   const templates = pageTemplates();
-  const whiteReferencePages = new Set([
+  const referenceBackgroundPages = new Set([
+    'pages/community/index.wxml',
     'subpackages/activity/detail/index.wxml',
     'subpackages/profile/edit/index.wxml'
   ]);
   assert.equal(templates.length, 15);
-  templates.filter((relativePath) => !whiteReferencePages.has(relativePath)).forEach((relativePath) => {
+  templates.filter((relativePath) => !referenceBackgroundPages.has(relativePath)).forEach((relativePath) => {
     const template = read(relativePath);
     assert.equal((template.match(/shared-paper-bg\.jpg/g) || []).length, 1, relativePath);
     assert.match(template, /src="\/assets\/images\/shared\/shared-paper-bg\.jpg"/, relativePath);
@@ -66,6 +67,7 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
   configs.forEach((relativePath) => {
     const config = JSON.parse(read(relativePath));
     const lightBackgrounds = {
+      'pages/community/index.json': '#EFF4FA',
       'subpackages/activity/detail/index.json': '#FFFFFF',
       'subpackages/profile/edit/index.json': '#F6F7F9'
     };
