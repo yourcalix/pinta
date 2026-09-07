@@ -28,8 +28,8 @@ test('发现页现代视觉令牌不再使用奶油纸片和厚重蓝色投影',
   assert.match(pageStyle, /\.directory-tools\s*\{[^}]*background:\s*#f8fafc;[^}]*border-radius:\s*24rpx;/s);
   assert.match(pageStyle, /\.search-row\s*\{[^}]*background:\s*#fff;[^}]*border-radius:\s*18rpx;/s);
   assert.doesNotMatch(pageStyle, /#fff8ee|0 10rpx 0 rgba\(4, 48, 104/);
-  assert.match(cardStyle, /\.activity-card--discover\s*\{[^}]*box-shadow:\s*0 4rpx 16rpx rgba\(15, 23, 42, 0\.04\)/s);
-  assert.match(cardStyle, /\.activity-card--discover \.activity-title\s*\{[^}]*color:\s*#111827;/s);
+  assert.match(cardStyle, /\.activity-card--discover\s*\{[^}]*box-shadow:\s*0 6rpx 20rpx rgba\(15, 23, 42, 0\.04\)/s);
+  assert.match(cardStyle, /\.activity-card--discover \.activity-title\s*\{[^}]*color:\s*#0f172a;/s);
 });
 
 test('发现页窄屏收紧面板和图文卡但保留四类横向筛选', () => {
@@ -38,5 +38,7 @@ test('发现页窄屏收紧面板和图文卡但保留四类横向筛选', () =>
 
   assert.match(pageStyle, /@media \(max-width: 340px\)[\s\S]*\.discover-hero\s*\{[^}]*min-height:\s*300rpx;/);
   assert.match(pageStyle, /@media \(max-width: 340px\)[\s\S]*\.discover-sheet\s*\{[^}]*padding-right:\s*20rpx;[^}]*padding-left:\s*20rpx;/);
-  assert.match(cardStyle, /@media \(max-width: 340px\)[\s\S]*\.activity-card--discover \.card-cover\s*\{[^}]*flex-basis:\s*42%;[^}]*width:\s*42%;[^}]*min-height:\s*300rpx;/);
+  assert.match(cardStyle, /@media \(max-width: 340px\)[\s\S]*\.activity-card--discover\s*\{[^}]*min-height:\s*350rpx;/);
+  assert.match(cardStyle, /@media \(max-width: 340px\)[\s\S]*\.activity-card--discover \.card-cover\s*\{[^}]*flex-basis:\s*43%;[^}]*width:\s*43%;[^}]*min-height:\s*350rpx;/);
+  assert.match(cardStyle, /@media \(max-width: 340px\)[\s\S]*\.activity-card--discover \.card-cover-image\s*\{[^}]*top:\s*38rpx;[^}]*width:\s*190rpx;[^}]*height:\s*190rpx;/);
 });

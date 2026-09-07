@@ -1,0 +1,12 @@
+{
+  "id": "pixel-align-hot-pinba-cards",
+  "title": "严格对齐参考图中热门拼吧卡片的图片比例与文字排版",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-06T21:00:00+08:00",
+  "branch": "main"
+}
