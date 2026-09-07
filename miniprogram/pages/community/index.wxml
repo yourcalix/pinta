@@ -2,29 +2,38 @@
   <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
   <view class="global-page-background-tint" aria-hidden="true"></view>
 
-  <view class="community-content">
-    <view class="community-header">
-      <view class="header-copy">
-        <text class="header-eyebrow">PINBA COMMUNITY</text>
-        <text class="header-title">拼吧 · 社区</text>
-        <text class="header-subtitle">聊兴趣，也分享互助经验</text>
-      </view>
-      <view class="header-doodle" aria-hidden="true"><view class="header-doodle-line"></view><view class="header-doodle-leaf header-doodle-leaf--left"></view><view class="header-doodle-leaf header-doodle-leaf--right"></view></view>
+  <view class="community-navigation" style="height: {{contentTopInset}}px;">
+    <view class="community-nav-inner">
+      <view class="community-nav-title" role="heading" aria-level="1">拼吧社区</view>
     </view>
+  </view>
 
-    <button class="compose-strip" hover-class="compose-strip--pressed" bindtap="handleCompose" role="button" aria-label="发起新讨论，最近有什么想和大家聊聊，点击进入发帖">
-      <view class="compose-pencil" aria-hidden="true"><view class="compose-pencil-tip"></view></view>
-      <text class="compose-placeholder">最近有什么想和大家聊聊？</text>
-      <view class="compose-action" aria-hidden="true"><text>发起</text><text class="compose-action-mark">✎</text></view>
+  <view class="community-content">
+    <button class="community-notice" bindtap="handleGuidelines" hover-class="community-control--pressed" hover-stay-time="80" aria-label="社区规范，友善交流，共建安全拼单社区，点击查看">
+      <view class="notice-symbol" aria-hidden="true"><view class="notice-symbol-mouth"></view></view>
+      <view class="notice-copy"><text class="notice-label">社区规范</text><text class="notice-title">友善交流，共建安全拼单社区</text></view>
+      <text class="notice-badge" aria-hidden="true">指南</text>
+      <text class="notice-chevron" aria-hidden="true">›</text>
     </button>
 
-    <view class="section-heading">
-      <view class="section-title-group"><view class="section-mark" aria-hidden="true"></view><text class="section-title-text">最新讨论</text></view>
-      <text class="section-count" wx:if="{{!loading}}">{{posts.length}} 条</text>
+    <view class="community-shortcuts" aria-label="社区快捷入口">
+      <button class="shortcut-card shortcut-card--compose" bindtap="handleCompose" hover-class="community-control--pressed" hover-stay-time="80" aria-label="发起讨论，分享问题与互助经验">
+        <view class="shortcut-copy"><text class="shortcut-title">发起讨论</text><text class="shortcut-subtitle">分享问题与互助经验</text></view>
+        <view class="shortcut-icon shortcut-icon--compose" aria-hidden="true"><view class="shortcut-pencil"></view></view>
+      </button>
+      <button class="shortcut-card shortcut-card--rules" bindtap="handleGuidelines" hover-class="community-control--pressed" hover-stay-time="80" aria-label="社区守则，查看安全、隐私与友善表达规范">
+        <view class="shortcut-copy"><text class="shortcut-title">社区守则</text><text class="shortcut-subtitle">安全、隐私与友善表达</text></view>
+        <view class="shortcut-icon shortcut-icon--rules" aria-hidden="true"><view class="shortcut-shield"><view class="shortcut-shield-check"></view></view></view>
+      </button>
     </view>
 
-    <view wx:if="{{loading}}" class="skeleton-list">
-      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card">
+    <view class="discussion-tabs" aria-label="社区讨论栏目">
+      <view class="discussion-tab discussion-tab--active" role="heading" aria-level="2">最新讨论</view>
+      <text class="discussion-sort">按发布时间</text>
+    </view>
+
+    <view wx:if="{{loading}}" class="skeleton-list" role="status" aria-label="正在加载社区讨论">
+      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card" aria-hidden="true">
         <view class="skeleton-head"><view class="skeleton-avatar"></view><view class="skeleton-author"><view class="skeleton-line skeleton-line--name"></view><view class="skeleton-line skeleton-line--time"></view></view></view>
         <view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--short"></view>
       </view>
@@ -38,24 +47,23 @@
           <text class="post-time">{{item.timeLabel}}</text>
         </view>
         <text class="post-preview">{{item.content}}</text>
-        <view class="post-footer">
-          <view class="post-metrics"><view class="like-count"><text aria-hidden="true">♡</text><text>{{item.likeCount}} 赞</text></view><view class="reply-count"><view class="reply-bubble" aria-hidden="true"></view><text>{{item.replyCount}} 讨论</text></view></view>
-          <view class="post-open"><text>查看</text><text class="post-arrow" aria-hidden="true">›</text></view>
+        <view class="post-footer" aria-hidden="true">
+          <view class="post-metrics"><view class="like-count"><view class="like-symbol">♡</view><text>{{item.likeCount}}</text></view><view class="reply-count"><view class="reply-bubble"></view><text>{{item.replyCount}}</text></view></view>
         </view>
       </view>
 
       <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" aria-role="status">
-        <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多…</text></view>
-        <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载更多失败，点击重试</button>
-        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经看完全部讨论啦 —</view>
+        <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多讨论…</text></view>
+        <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载失败，点击重试</button>
+        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底啦 · 拼吧社区 —</view>
       </view>
     </view>
 
     <view wx:else class="empty-card">
       <view class="empty-bubble" aria-hidden="true"><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view></view>
       <text class="empty-title">{{error ? '讨论加载失败' : '暂无社区讨论'}}</text>
-      <text class="empty-description">{{error || '分享一个话题、问题或互助经验，和大家聊聊。'}}</text>
-      <button wx:if="{{!error}}" class="empty-action" hover-class="empty-action--pressed" bindtap="handleCompose">发起第一条讨论</button>
+      <text class="empty-description">{{error || '来分享第一个问题或互助经验吧。'}}</text>
+      <button wx:if="{{!error}}" class="empty-action" hover-class="empty-action--pressed" bindtap="handleCompose">去发帖</button>
       <button wx:else class="empty-action empty-action--retry" hover-class="empty-action--pressed" bindtap="handleRetry">点击重试</button>
     </view>
   </view>

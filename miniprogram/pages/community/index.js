@@ -111,6 +111,17 @@ Page({
     wx.navigateTo({ url: `/subpackages/community/detail/index?id=${encodeURIComponent(event.currentTarget.dataset.id)}` });
   },
 
+  handleGuidelines() {
+    if (typeof wx === 'undefined' || typeof wx.showModal !== 'function') return;
+    wx.showModal({
+      title: '拼吧社区守则',
+      content: '请友善交流并保护个人隐私；不要发布联系方式、二维码、外链、引流、诈骗或其他违规内容。发现不当内容可进入详情举报。',
+      showCancel: false,
+      confirmText: '我知道了',
+      confirmColor: '#16A36A'
+    });
+  },
+
   handleRetry() { this.loadPosts(false); },
 
   handleRetryLoadMore() { this.loadPosts(true); }
