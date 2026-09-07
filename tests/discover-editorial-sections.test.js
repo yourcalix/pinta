@@ -46,6 +46,34 @@ test('发现页以成团记忆为视觉母版统一艺术标题、目录工具�
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.discover-hero\s*\{[^}]*min-height:\s*300rpx;/s);
 });
 
+test('热门拼吧使用低饱和画报底板承载五条活动与分页器', () => {
+  const template = read('pages/discover/index.wxml');
+  const style = read('pages/discover/index.wxss');
+  const headingAt = template.indexOf('id="hot-pinba-heading"');
+  const panelAt = template.indexOf('class="hot-pinba-panel"');
+  const activityAt = template.indexOf('<activity-card');
+  const paginationAt = template.indexOf('class="discover-pagination"');
+  const memoriesAt = template.indexOf('class="memory-section memory-section--teaser"');
+
+  assert.ok(headingAt >= 0 && panelAt > headingAt);
+  assert.ok(activityAt > panelAt && paginationAt > activityAt && memoriesAt > paginationAt);
+  assert.match(template, /class="hot-pinba-panel"[\s\S]*class="hot-pinba-panel-glow"[^>]*aria-hidden="true"[\s\S]*class="hot-pinba-panel-content"/);
+  assert.match(style, /\.hot-pinba-panel\s*\{[^}]*position:\s*relative;[^}]*padding:\s*20rpx 20rpx 24rpx;[^}]*background:\s*linear-gradient\(180deg,\s*#f0f7ff 0%,\s*#e8f2fd 40%,\s*#dcebfc 100%\);[^}]*border:\s*1\.5rpx solid rgba\(79,\s*164,\s*248,\s*0\.25\);[^}]*border-radius:\s*28rpx;/s);
+  assert.match(style, /\.hot-pinba-panel-glow\s*\{[^}]*height:\s*360rpx;[^}]*radial-gradient\(circle at 50% 0%,\s*rgba\(255,\s*255,\s*255,\s*0\.8\) 0%,\s*transparent 70%\);[^}]*pointer-events:\s*none;/s);
+  assert.match(style, /\.hot-pinba-panel-content\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.hot-pinba-panel\s*\{[^}]*padding:\s*16rpx 14rpx 20rpx;[^}]*border-radius:\s*24rpx;/s);
+});
+
+test('热门拼吧分页器融入专题底板但继续保持 88rpx 触控高度', () => {
+  const style = read('pages/discover/index.wxss');
+  const cardStyle = read('components/activity-card/index.wxss');
+
+  assert.match(style, /\.hot-pinba-panel \.discover-pagination\s*\{[^}]*margin:\s*6rpx 0 0;/s);
+  assert.match(style, /\.hot-pinba-panel \.pagination-button\s*\{[^}]*flex-basis:\s*196rpx;[^}]*min-height:\s*88rpx;[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid rgba\(79,\s*164,\s*248,\s*0\.28\);/s);
+  assert.match(style, /\.hot-pinba-panel \.pagination-button--disabled\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.5\);/s);
+  assert.match(cardStyle, /\.activity-card--discover\s*\{[^}]*margin-bottom:\s*18rpx;[^}]*border:\s*1\.5rpx solid #edf2f7;[^}]*border-radius:\s*22rpx;[^}]*box-shadow:\s*0 4rpx 14rpx rgba\(15,\s*23,\s*42,\s*0\.03\);/s);
+});
+
 test('发现页 Banner 使用既有 PNG 和受控跳转，成团记忆保持静态 1+2 拼贴', () => {
   const template = read('pages/discover/index.wxml');
   const script = read('pages/discover/index.js');

@@ -1,0 +1,12 @@
+{
+  "id": "redesign-hot-pinba-memory-style",
+  "title": "将热门拼吧设计为与成团记忆同源的画报背景风格",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付",
+  "createdAt": "2026-09-07T05:10:23Z",
+  "branch": "main"
+}

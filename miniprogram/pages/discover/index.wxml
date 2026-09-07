@@ -64,22 +64,27 @@
       </view>
     </view>
 
-    <view wx:if="{{loading}}" class="skeleton-list" aria-label="正在加载活动"><view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"><view class="skeleton-line skeleton-line--short"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-line--medium"></view></view></view></view>
+    <view class="hot-pinba-panel">
+      <view class="hot-pinba-panel-glow" aria-hidden="true"></view>
+      <view class="hot-pinba-panel-content">
+        <view wx:if="{{loading}}" class="skeleton-list" aria-label="正在加载活动"><view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"><view class="skeleton-line skeleton-line--short"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-line--medium"></view></view></view></view>
 
-    <view wx:elif="{{activities.length}}">
-      <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" bindselect="handleCardSelect" />
-    </view>
+        <view wx:elif="{{activities.length}}" class="hot-pinba-list">
+          <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" bindselect="handleCardSelect" />
+        </view>
 
-    <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : (hasNextPage ? '查看下一页' : '去发起拼单'))}}" bindaction="handleEmptyAction" /></view>
+        <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : (hasNextPage ? '查看下一页' : '去发起拼单'))}}" bindaction="handleEmptyAction" /></view>
 
-    <view wx:if="{{hasPagination}}" class="discover-pagination" role="navigation" aria-label="活动列表分页导航">
-      <button class="pagination-button {{currentPage <= 1 || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handlePrevPage" disabled="{{currentPage <= 1 || isPaging || refreshing}}" hover-class="pagination-button--pressed" hover-stay-time="80" aria-label="上一页，当前第{{currentPage}}页"><text class="pagination-arrow" aria-hidden="true">‹</text><text>上一页</text></button>
-      <view class="pagination-indicator" aria-current="page"><text class="pagination-indicator-label">第</text><text class="pagination-indicator-number">{{currentPage}}</text><text class="pagination-indicator-label">页</text></view>
-      <button class="pagination-button {{!hasNextPage || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handleNextPage" disabled="{{!hasNextPage || isPaging || refreshing}}" hover-class="pagination-button--pressed" hover-stay-time="80" aria-label="{{hasNextPage ? '下一页' : '已是末页'}}">
-        <view wx:if="{{isPaging}}" class="pagination-loading"><view class="pagination-spinner" aria-hidden="true"></view><text>加载中</text></view>
-        <block wx:elif="{{hasNextPage}}"><text>下一页</text><text class="pagination-arrow" aria-hidden="true">›</text></block>
-        <text wx:else>已是末页</text>
-      </button>
+        <view wx:if="{{hasPagination}}" class="discover-pagination" role="navigation" aria-label="活动列表分页导航">
+          <button class="pagination-button {{currentPage <= 1 || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handlePrevPage" disabled="{{currentPage <= 1 || isPaging || refreshing}}" hover-class="pagination-button--pressed" hover-stay-time="80" aria-label="上一页，当前第{{currentPage}}页"><text class="pagination-arrow" aria-hidden="true">‹</text><text>上一页</text></button>
+          <view class="pagination-indicator" aria-current="page"><text class="pagination-indicator-label">第</text><text class="pagination-indicator-number">{{currentPage}}</text><text class="pagination-indicator-label">页</text></view>
+          <button class="pagination-button {{!hasNextPage || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handleNextPage" disabled="{{!hasNextPage || isPaging || refreshing}}" hover-class="pagination-button--pressed" hover-stay-time="80" aria-label="{{hasNextPage ? '下一页' : '已是末页'}}">
+            <view wx:if="{{isPaging}}" class="pagination-loading"><view class="pagination-spinner" aria-hidden="true"></view><text>加载中</text></view>
+            <block wx:elif="{{hasNextPage}}"><text>下一页</text><text class="pagination-arrow" aria-hidden="true">›</text></block>
+            <text wx:else>已是末页</text>
+          </button>
+        </view>
+      </view>
     </view>
 
     <view class="memory-section memory-section--teaser" role="region" aria-label="成团记忆，分享功能即将开放，敬请期待">

@@ -336,6 +336,6 @@ test('活动卡片发现变体采用规整现代白卡且不依赖旧积木品�
   assert.match(template, /owner-avatar/);
   assert.match(template, /item\.ownerInitial/);
   assert.doesNotMatch(template, /brand-puzzle\.png|owner-puzzle/);
-  assert.match(style, /\.activity-card--discover\s*\{[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #f3f4f6;[^}]*border-radius:\s*24rpx;/s);
+  assert.match(style, /\.activity-card--discover\s*\{[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #edf2f7;[^}]*border-radius:\s*22rpx;/s);
   assert.match(style, /\.activity-card--pressed/);
 });

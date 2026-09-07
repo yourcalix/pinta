@@ -505,6 +505,37 @@
   line-height: 1.3;
 }
 
+.hot-pinba-panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 40rpx;
+  padding: 20rpx 20rpx 24rpx;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f0f7ff 0%, #e8f2fd 40%, #dcebfc 100%);
+  border: 1.5rpx solid rgba(79, 164, 248, 0.25);
+  border-radius: 28rpx;
+  box-shadow: 0 8rpx 24rpx rgba(32, 123, 229, 0.05);
+  isolation: isolate;
+}
+
+.hot-pinba-panel-glow {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 360rpx;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+  border-radius: 28rpx 28rpx 0 0;
+  pointer-events: none;
+}
+
+.hot-pinba-panel-content {
+  position: relative;
+  z-index: 1;
+}
+
 .skeleton-card,
 .empty-state-shell {
   box-sizing: border-box;
@@ -517,7 +548,7 @@
   display: flex;
   align-items: stretch;
   min-height: 390rpx;
-  margin-bottom: 24rpx;
+  margin-bottom: 18rpx;
   padding: 0;
   overflow: hidden;
   border-radius: 24rpx;
@@ -550,6 +581,25 @@
   width: 100%;
   min-height: 88rpx;
   margin: 28rpx auto 36rpx;
+}
+
+.hot-pinba-panel .discover-pagination { margin: 6rpx 0 0; }
+
+.hot-pinba-panel .pagination-button {
+  flex-basis: 196rpx;
+  min-height: 88rpx;
+  background: #fff;
+  border: 1.5rpx solid rgba(79, 164, 248, 0.28);
+  box-shadow: 0 4rpx 14rpx rgba(32, 123, 229, 0.04);
+}
+
+.hot-pinba-panel .pagination-button--pressed { background: #f8fbff; }
+
+.hot-pinba-panel .pagination-button--disabled {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(226, 232, 240, 0.6);
+  box-shadow: none;
 }
 
 .pagination-button {
@@ -869,12 +919,15 @@
   .chip-icon-box { flex-basis: 42rpx; width: 42rpx; height: 42rpx; margin-right: 4rpx; }
   .session-heading { min-height: 90rpx; }
   .session-heading.memory-section-heading { margin-top: 32rpx; }
-  .discover-pagination { margin-top: 20rpx; margin-bottom: 28rpx; }
+  .hot-pinba-panel { margin-bottom: 32rpx; padding: 16rpx 14rpx 20rpx; border-radius: 24rpx; }
+  .hot-pinba-panel-glow { height: 300rpx; border-radius: 24rpx 24rpx 0 0; }
+  .hot-pinba-panel .discover-pagination { margin: 6rpx 0 0; }
   .pagination-button { flex-basis: 176rpx; min-height: 88rpx; padding-right: 12rpx; padding-left: 12rpx; border-radius: 44rpx; font-size: 24rpx; }
+  .hot-pinba-panel .pagination-button { flex-basis: 166rpx; }
   .pagination-indicator { flex-basis: 150rpx; }
   .pagination-indicator-number { font-size: 26rpx; }
   .pagination-arrow { font-size: 28rpx; }
-  .skeleton-card { min-height: 350rpx; margin-bottom: 18rpx; }
+  .skeleton-card { min-height: 350rpx; margin-bottom: 14rpx; }
   .skeleton-cover { flex-basis: 43%; width: 43%; min-height: 350rpx; }
   .skeleton-copy { flex-basis: 57%; width: 57%; padding: 16rpx 16rpx 14rpx; }
   .memory-section { margin-top: 32rpx; }

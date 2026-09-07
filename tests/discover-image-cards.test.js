@@ -100,7 +100,7 @@ test('发现卡使用左右画报分栏、大日期、真实发起人与可选�
   assert.match(template, /wx:for="\{\{avatarSlots\}\}"/);
   assert.match(template, /class="member-avatar-slot[^\"]*member-avatar-slot--\{\{slot\.empty \? 'empty' : 'filled'\}\}/);
   assert.match(template, /wx:if="\{\{item\.hiddenMemberCount > 0\}\}"[^>]*>\+\{\{item\.hiddenMemberCount\}\}/);
-  assert.match(style, /\.activity-card--discover\s*\{[^}]*align-items:\s*stretch;[^}]*min-height:\s*390rpx;[^}]*box-shadow:\s*0 6rpx 20rpx/s);
+  assert.match(style, /\.activity-card--discover\s*\{[^}]*align-items:\s*stretch;[^}]*min-height:\s*390rpx;[^}]*box-shadow:\s*0 4rpx 14rpx/s);
   assert.match(style, /\.activity-card--discover \.card-cover\s*\{[^}]*flex:\s*0 0 46%;[^}]*min-height:\s*390rpx;/s);
   assert.match(style, /\.activity-card--discover \.card-cover-image\s*\{[^}]*top:\s*46rpx;[^}]*width:\s*230rpx;[^}]*height:\s*230rpx;/s);
   assert.match(style, /\.activity-card--discover \.card-copy\s*\{[^}]*flex:\s*0 0 54%;[^}]*width:\s*54%;[^}]*padding:\s*22rpx 20rpx 20rpx;/s);
