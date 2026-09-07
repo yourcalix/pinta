@@ -10,7 +10,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('发现页按 Banner、搜索、筛选、活动流、成团记忆顺序渲染', () => {
   const template = read('pages/discover/index.wxml');
-  const markers = ['campaign-swiper', 'search-row', 'filter-scroll', 'list-heading', 'class="memory-section memory-section--teaser"', 'page-end-marker'];
+  const markers = ['campaign-swiper', 'search-row', 'filter-scroll', 'list-heading', 'class="discover-pagination"', 'class="memory-section memory-section--teaser"', 'page-end-marker'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
@@ -18,7 +18,7 @@ test('发现页按 Banner、搜索、筛选、活动流、成团记忆顺序渲�
   assert.match(template, /interval="4500"/);
   assert.match(template, /duration="400"/);
   assert.match(template, /class="memory-section memory-section--teaser"/);
-  assert.match(template, /wx:if="{{activities\.length && !loading && !hasMore}}" class="page-end-marker footer-state footer-state--end"[^>]*>— 已经到底啦 · 拼吧 —/);
+  assert.match(template, /wx:if="{{activities\.length && !loading && !hasNextPage}}" class="page-end-marker footer-state footer-state--end"[^>]*>— 已经到底啦 · 拼吧 —/);
 });
 
 test('发现页以成团记忆为视觉母版统一艺术标题、目录工具带和活动章节', () => {
@@ -33,7 +33,7 @@ test('发现页以成团记忆为视觉母版统一艺术标题、目录工具�
   assert.match(template, /class="search-clear-button"[^>]*hover-class="search-clear--pressed"[^>]*hover-stay-time="80"/);
   assert.match(template, /class="session-heading-watermark memory-heading-watermark"[^>]*>HOT PINBA<\/view>/);
   assert.match(template, /class="session-heading-title memory-title">\{\{hasActiveFilters \? '筛选结果' : '热门拼吧'\}\}<\/view>/);
-  assert.match(template, /class="session-heading memory-section-heading"/);
+  assert.match(template, /class="session-heading memory-section-heading hot-pinba-heading"/);
 
   assert.match(style, /\.discover-hero\s*\{[^}]*min-height:\s*340rpx;/s);
   assert.match(style, /\.discover-art-title\s*\{[^}]*transform:\s*rotate\(-3deg\);/s);

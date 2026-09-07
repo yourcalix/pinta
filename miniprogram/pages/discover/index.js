@@ -5,7 +5,6 @@ const safetyService = require('../../services/safety');
 const { decorateActivity } = require('../../utils/display');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {
-  mergeActivitiesById,
   expirationSchedule,
   removeLocallyExpiredRecruiting
 } = require('../../utils/discover-list');
@@ -22,7 +21,8 @@ const {
 } = require('../../utils/launch-progress');
 const { selectTab } = require('../../utils/tab-bar');
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
+const MAX_HIDDEN_PAGE_SKIPS = 1;
 const BANNER_ROUTE_WHITELIST = new Set(['/pages/publish/index']);
 const CAMPAIGN_ART = Object.freeze({
   companion: '/assets/images/publish/publish-cover-companion.png',
@@ -78,12 +78,12 @@ Page({
     appliedKeyword: '',
     hasActiveFilters: false,
     activities: [],
-    nextCursor: '',
-    hasMore: true,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPagination: false,
+    isPaging: false,
     loading: true,
     refreshing: false,
-    loadingMore: false,
-    loadMoreError: '',
     error: '',
     contentTopInset: 88,
     launchSplashVisible: false,
@@ -131,103 +131,168 @@ Page({
     }
   },
 
-  onReachBottom() {
-    if (this.data.loading || this.data.refreshing || this.data.loadingMore || !this.data.hasMore || this.data.error) return;
-    this.fetchActivities({ mode: 'append' });
-  },
-
   async fetchActivities(options = {}) {
-    const mode = options.mode === 'append' ? 'append' : 'replace';
-    const isAppend = mode === 'append';
     const keepContent = options.keepContent === true;
     const allowAutoFill = options.allowAutoFill !== false;
-    if (isAppend && (
-      this.data.loading
-      || this.data.refreshing
-      || this.data.loadingMore
-      || !this.data.hasMore
-      || !this.data.nextCursor
-    )) return false;
-
-    let loadSeq;
-    let cursor;
-    if (isAppend) {
-      this._loadSeq = this._loadSeq || 0;
-      loadSeq = this._loadSeq;
-      cursor = this.data.nextCursor;
-      this.setData({
-        loading: this.data.activities.length === 0,
-        loadingMore: true,
-        loadMoreError: ''
-      });
-    } else {
-      loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
-      this.clearExpirationTimer();
-      const resetContent = !keepContent;
-      this.setData({
-        loading: resetContent || this.data.activities.length === 0,
-        refreshing: true,
-        loadingMore: false,
-        loadMoreError: '',
-        error: '',
-        ...(resetContent ? { activities: [], nextCursor: '', hasMore: true } : {})
-      });
-    }
+    const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
+    this.clearExpirationTimer();
+    const resetContent = !keepContent;
+    if (resetContent) this.resetPaginationCache();
+    this.setData({
+      loading: resetContent || this.data.activities.length === 0,
+      refreshing: true,
+      isPaging: false,
+      error: '',
+      ...(resetContent ? {
+        activities: [],
+        currentPage: 1,
+        hasNextPage: false,
+        hasPagination: false
+      } : {})
+    });
 
     try {
-      const result = await activityService.list({
-        type: this.data.type || undefined,
-        keyword: this.data.appliedKeyword || undefined,
-        limit: PAGE_SIZE,
-        cursor: isAppend ? cursor : undefined
-      });
+      const snapshot = await this.requestActivityPage(undefined, allowAutoFill);
       if (loadSeq !== this._loadSeq) return false;
 
-      const incoming = safetyService
-        .filterHiddenActivities(result.items || [])
-        .map(decorateActivity);
-      const nextCursor = result.nextCursor ? String(result.nextCursor) : '';
-      const hasMore = Boolean(nextCursor);
-      const activities = isAppend
-        ? mergeActivitiesById(this.data.activities, incoming)
-        : incoming;
+      this._pageCache = [snapshot];
+      this._pageCursors = [undefined];
+      if (snapshot.nextCursor) this._pageCursors[1] = snapshot.nextCursor;
+      const activities = snapshot.activities;
+      const hasNextPage = Boolean(snapshot.nextCursor);
       this.setData({
         activities,
-        nextCursor,
-        hasMore,
+        currentPage: 1,
+        hasNextPage,
+        hasPagination: hasNextPage,
         loading: false,
         refreshing: false,
-        loadingMore: false,
-        loadMoreError: '',
+        isPaging: false,
         error: ''
       });
-
-      if (activities.length === 0 && hasMore && allowAutoFill) {
-        return this.fetchActivities({ mode: 'append', allowAutoFill: false });
-      }
       this.scheduleExpirationRefresh(activities);
       return true;
     } catch (error) {
       if (loadSeq !== this._loadSeq) return false;
-      if (isAppend) {
-        this.setData({
-          loading: false,
-          loadingMore: false,
-          loadMoreError: '加载更多失败，请重试'
-        });
-        this.scheduleExpirationRefresh(this.data.activities);
-        return false;
-      }
-
       const hasContent = keepContent && this.data.activities.length > 0;
       this.setData({
         loading: false,
         refreshing: false,
+        isPaging: false,
         error: hasContent ? '' : '活动列表加载失败，请重试'
       });
       this.scheduleExpirationRefresh(this.data.activities);
       if (hasContent && options.notifyFailure && typeof wx.showToast === 'function') {
         wx.showToast({ title: '刷新失败，请稍后重试', icon: 'none' });
+      }
+      return false;
+    }
+  },
+
+  async requestActivityPage(cursor, allowAutoFill) {
+    let requestCursor = cursor || undefined;
+    let skips = 0;
+    while (true) {
+      const result = await activityService.list({
+        type: this.data.type || undefined,
+        keyword: this.data.appliedKeyword || undefined,
+        limit: PAGE_SIZE,
+        cursor: requestCursor
+      });
+      const activities = safetyService
+        .filterHiddenActivities(result.items || [])
+        .slice(0, PAGE_SIZE)
+        .map(decorateActivity);
+      const nextCursor = result.nextCursor ? String(result.nextCursor) : '';
+      if (activities.length || !nextCursor || !allowAutoFill || skips >= MAX_HIDDEN_PAGE_SKIPS) {
+        return { activities, nextCursor };
+      }
+      requestCursor = nextCursor;
+      skips += 1;
+    }
+  },
+
+  resetPaginationCache() {
+    this._pageCache = [];
+    this._pageCursors = [undefined];
+  },
+
+  applyPage(pageIndex, snapshot, shouldScroll) {
+    const currentPage = pageIndex + 1;
+    const hasNextPage = Boolean(snapshot.nextCursor || this._pageCache[pageIndex + 1]);
+    this.setData({
+      activities: snapshot.activities,
+      currentPage,
+      hasNextPage,
+      hasPagination: currentPage > 1 || hasNextPage,
+      isPaging: false,
+      error: ''
+    });
+    this.scheduleExpirationRefresh(snapshot.activities);
+    if (shouldScroll) this.scrollToHotPinba();
+  },
+
+  scrollToHotPinba() {
+    if (typeof wx === 'undefined' || typeof wx.pageScrollTo !== 'function') return;
+    wx.pageScrollTo({ selector: '#hot-pinba-heading', duration: 200 });
+  },
+
+  handlePrevPage() {
+    if (this.data.loading || this.data.refreshing || this.data.isPaging || this.data.currentPage <= 1) return false;
+    const pageIndex = this.data.currentPage - 2;
+    const snapshot = this._pageCache && this._pageCache[pageIndex];
+    if (!snapshot) return false;
+    this.applyPage(pageIndex, snapshot, true);
+    return true;
+  },
+
+  handleNextPage() {
+    if (this.data.loading || this.data.refreshing || this.data.isPaging || !this.data.hasNextPage) return false;
+    const pageIndex = this.data.currentPage;
+    const cached = this._pageCache && this._pageCache[pageIndex];
+    if (cached) {
+      this.applyPage(pageIndex, cached, true);
+      return true;
+    }
+
+    const cursor = this._pageCursors && this._pageCursors[pageIndex];
+    if (!cursor) return false;
+    this._loadSeq = this._loadSeq || 0;
+    const loadSeq = this._loadSeq;
+    this.setData({ isPaging: true });
+    return this.loadNextPage(pageIndex, cursor, loadSeq);
+  },
+
+  async loadNextPage(pageIndex, cursor, loadSeq) {
+    try {
+      const snapshot = await this.requestActivityPage(cursor, true);
+      if (loadSeq !== this._loadSeq) return false;
+      if (!snapshot.activities.length) {
+        this._pageCursors[pageIndex] = snapshot.nextCursor || undefined;
+        if (!snapshot.nextCursor) {
+          const currentIndex = this.data.currentPage - 1;
+          if (this._pageCache[currentIndex]) this._pageCache[currentIndex].nextCursor = '';
+          this.setData({ hasNextPage: false, hasPagination: this.data.currentPage > 1, isPaging: false });
+        } else {
+          this.setData({ isPaging: false });
+          if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
+            wx.showToast({ title: '本页暂无可显示活动，请继续翻页', icon: 'none' });
+          }
+        }
+        return false;
+      }
+
+      this._pageCache[pageIndex] = snapshot;
+      if (snapshot.nextCursor) this._pageCursors[pageIndex + 1] = snapshot.nextCursor;
+      else this._pageCursors.length = pageIndex + 1;
+      this.applyPage(pageIndex, snapshot, true);
+      return true;
+    } catch (error) {
+      if (loadSeq !== this._loadSeq) return false;
+      this.setData({ isPaging: false });
+      this.scheduleExpirationRefresh(this.data.activities);
+      if ((!error || !error.handled) && typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' });
       }
       return false;
     }
@@ -461,11 +526,7 @@ Page({
   handleEmptyAction() {
     if (this.data.error) return this.fetchActivities({ mode: 'replace' });
     if (this.data.hasActiveFilters) return this.handleClearFilters();
-    if (this.data.hasMore) return this.fetchActivities({ mode: 'append', allowAutoFill: false });
+    if (this.data.hasNextPage) return this.handleNextPage();
     wx.switchTab({ url: '/pages/publish/index' });
-  },
-
-  handleRetryLoadMore() {
-    this.fetchActivities({ mode: 'append', allowAutoFill: false });
   }
 });
