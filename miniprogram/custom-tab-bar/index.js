@@ -7,11 +7,11 @@ Component({
     unread: 0,
     unreadLabel: '',
     items: [
-      { pagePath: '/pages/discover/index', text: '首页', kind: 'home' },
-      { pagePath: '/pages/community/index', text: '发现', kind: 'discover' },
-      { pagePath: '/pages/publish/index', text: '发布', publish: true },
-      { pagePath: '/pages/messages/index', text: '消息', message: true },
-      { pagePath: '/pages/user/index', text: '我的', kind: 'user' }
+      { pagePath: '/pages/discover/index', text: '首页', kind: 'home', iconSrc: '/custom-tab-bar/assets/concept-a/tab-home.png' },
+      { pagePath: '/pages/community/index', text: '发现', kind: 'discover', iconSrc: '/custom-tab-bar/assets/concept-a/tab-discover.png' },
+      { pagePath: '/pages/publish/index', text: '发布', publish: true, iconSrc: '/custom-tab-bar/assets/concept-a/tab-publish-plus.png' },
+      { pagePath: '/pages/messages/index', text: '消息', message: true, iconSrc: '/custom-tab-bar/assets/concept-a/tab-message.png' },
+      { pagePath: '/pages/user/index', text: '我的', kind: 'user', iconSrc: '/custom-tab-bar/assets/concept-a/tab-user.png' }
     ]
   },
 

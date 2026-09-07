@@ -27,22 +27,27 @@ test('自定义 TabBar 为首页、发现、发布、消息、我的五等分', 
   assert.match(style, /\.unread-badge/);
 });
 
-test('普通入口使用单色 CSS 图标、激活黄点，发布入口使用黑色圆形加号', () => {
+test('普通入口使用受控 PNG 图标、激活黄点，发布入口使用黑色圆形 PNG 加号', () => {
   const app = JSON.parse(read('app.json'));
   const template = read('custom-tab-bar/index.wxml');
   const script = read('custom-tab-bar/index.js');
   const style = read('custom-tab-bar/index.wxss');
 
-  assert.match(template, /class="tab-icon tab-icon--\{\{item\.kind \|\| 'message'\}\}"/);
-  assert.match(template, /class="publish-circle"[\s\S]*class="publish-plus"/);
+  assert.match(template, /class="tab-icon-image"[^>]*src="\{\{item\.iconSrc\}\}"/);
+  assert.match(template, /class="publish-circle"[\s\S]*class="publish-plus-image"/);
   assert.match(template, /class="tab-selected-dot [^"]*"/);
   assert.match(template, /tab-selected-dot--hidden/);
-  assert.doesNotMatch(script, /activeIcon/);
-  assert.doesNotMatch(script, /iconPath|selectedIconPath/);
+  assert.match(script, /concept-a\/tab-home\.png/);
+  assert.match(script, /concept-a\/tab-discover\.png/);
+  assert.match(script, /concept-a\/tab-message\.png/);
+  assert.match(script, /concept-a\/tab-user\.png/);
+  assert.match(script, /concept-a\/tab-publish-plus\.png/);
   assert.match(style, /\.tab-item--selected\s*\{[^}]*color:\s*#111827/s);
+  assert.match(style, /\.tab-icon-image\s*\{[^}]*opacity:\s*0\.42;/s);
+  assert.match(style, /\.tab-item--selected \.tab-icon-image\s*\{[^}]*opacity:\s*1;/s);
   assert.match(style, /\.tab-selected-dot\s*\{[^}]*margin-top:\s*4rpx[^}]*background:\s*#f59e0b/s);
   assert.doesNotMatch(style, /\.tab-selected-dot\s*\{[^}]*position:\s*absolute/s);
-  assert.match(style, /\.publish-plus::before, \.publish-plus::after/);
+  assert.match(style, /\.publish-plus-image\s*\{[^}]*width:\s*40rpx;[^}]*height:\s*40rpx;/s);
   assert.deepEqual(app.tabBar.list.slice(0, 2).map((item) => item.pagePath), ['pages/discover/index', 'pages/community/index']);
 });
 

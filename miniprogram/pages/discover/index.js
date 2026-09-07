@@ -37,7 +37,11 @@ Page({
     greetingAvatarPath: DEFAULT_GREETING_AVATAR,
     greetingAvatarFallbackPath: DEFAULT_GREETING_AVATAR,
     searchPanelVisible: false,
-    shortcutIconPaths: { activities: '', memories: '', placeholder: '' },
+    shortcutIconPaths: {
+      activities: '/assets/images/home/shortcut-group.png',
+      memories: '/assets/images/home/shortcut-memory.png',
+      placeholder: '/assets/images/home/shortcut-placeholder.png'
+    },
     typeOptions: [
       { value: '', label: '全部', iconSrc: '/assets/images/discover/filter-all.png' },
       { value: 'companion', label: '拼同行', iconSrc: '/assets/images/discover/filter-companion.png' },
@@ -55,6 +59,7 @@ Page({
     refreshing: false,
     error: '',
     contentTopInset: 88,
+    largeTextMode: false,
     launchSplashVisible: false,
     launchSplashExiting: false,
     launchProgress: 0
@@ -64,6 +69,7 @@ Page({
     this.setData({
       contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx)
     });
+    this.syncTextSizeMode();
     this.syncGreetingProfile();
     this._skipFirstShow = true;
     this.startLaunchSplash();
@@ -74,6 +80,7 @@ Page({
 
   onShow() {
     selectTab(this, 0);
+    this.syncTextSizeMode();
     this.syncGreetingProfile();
     if (this._skipFirstShow) {
       this._skipFirstShow = false;
@@ -408,6 +415,20 @@ Page({
   handleGreetingAvatarError() {
     if (this.data.greetingAvatarPath === this.data.greetingAvatarFallbackPath) return;
     this.setData({ greetingAvatarPath: this.data.greetingAvatarFallbackPath });
+  },
+
+  syncTextSizeMode() {
+    let info = null;
+    try {
+      if (typeof wx !== 'undefined' && typeof wx.getAppBaseInfo === 'function') info = wx.getAppBaseInfo();
+      else if (typeof wx !== 'undefined' && typeof wx.getSystemInfoSync === 'function') info = wx.getSystemInfoSync();
+    } catch (error) {
+      info = null;
+    }
+    const fontSizeSetting = Number(info && info.fontSizeSetting);
+    const largeTextMode = Number.isFinite(fontSizeSetting) && fontSizeSetting > 16;
+    if (largeTextMode !== this.data.largeTextMode) this.setData({ largeTextMode });
+    return largeTextMode;
   },
 
   handleHeaderAction(event) {

@@ -16,7 +16,7 @@ test('首页按问候、生活方式 Hero、快捷入口、检索与活动流顺
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
   assert.match(template, /你好，\{\{greetingNickname\}\}/);
-  assert.match(template, /— 已经到底啦 · 拼吧 —/);
+  assert.match(template, /— 已展示全部附近活动 · 拼吧 —/);
 });
 test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨架', () => {
   const template = read('pages/discover/index.wxml');
@@ -25,9 +25,9 @@ test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨�
   assert.match(template, /class="hero-title"[\s\S]*你的搭子，[\s\S]*刚刚好/);
   assert.match(template, /class="home-shortcuts"[\s\S]*组队拼团[\s\S]*琐碎回忆[\s\S]*暂定/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2/s);
-  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*360rpx[^}]*border-radius:\s*32rpx/s);
+  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*560rpx[^}]*border-radius:\s*32rpx/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
-  assert.match(style, /\.home-shortcut\s*\{[^}]*height:\s*210rpx/s);
+  assert.match(style, /\.home-shortcut\s*\{[^}]*height:\s*220rpx/s);
   assert.doesNotMatch(template, /discover-art-title|HOT PINBA|memory-grid|memory-panel/);
   assert.doesNotMatch(style, /#075aa7|#207be5/i);
 });
@@ -35,12 +35,14 @@ test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨�
 test('活动流承载三条首屏、查看更多追加、真实活动卡与空态', () => {
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
-  assert.match(template, /<activity-card[^>]*variant="discover"[^>]*bindselect="handleCardSelect"/);
+  assert.match(template, /<activity-card[^>]*variant="home-preview"[^>]*bindselect="handleCardSelect"/);
+  assert.match(template, /class="home-activity-grid/);
   assert.match(template, /class="load-more-heading/);
   assert.match(template, /bindtap="handleLoadMore"/);
   assert.match(template, /wx:for="\{\{\[1,2,3\]\}\}"/);
   assert.doesNotMatch(template, /discover-pagination|handlePrevPage|handleNextPage|currentPage/);
   assert.match(style, /\.load-more-heading, \.clear-filter-button\s*\{[^}]*min-height:\s*88rpx/s);
+  assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, 220rpx\)/s);
 });
 
 test('首页不挂载未来成团记忆 UGC 模块且末页由终点文案收口', () => {

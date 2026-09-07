@@ -14,16 +14,11 @@
       aria-label="{{item.message && unread ? item.text + '，' + unreadLabel + '条未读' : item.publish ? '发布新拼单' : item.text}}"
     >
       <block wx:if="{{item.publish}}">
-        <view class="publish-circle" aria-hidden="true"><view class="publish-plus"></view></view>
+        <view class="publish-circle" aria-hidden="true"><image class="publish-plus-image" src="{{item.iconSrc}}" mode="aspectFit" /></view>
         <text class="publish-label">发布</text>
       </block>
       <block wx:else>
-        <view class="tab-icon tab-icon--{{item.kind || 'message'}}" aria-hidden="true">
-          <view wx:if="{{item.kind === 'home'}}" class="home-roof"></view>
-          <view wx:elif="{{item.kind === 'discover'}}" class="discover-needle"></view>
-          <view wx:elif="{{item.kind === 'user'}}" class="user-head"></view>
-          <view wx:elif="{{item.message}}" class="message-tail"></view>
-        </view>
+        <image class="tab-icon-image" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" />
         <view wx:if="{{item.message && unread}}" class="unread-badge" aria-hidden="true">{{unreadLabel}}</view>
         <text class="tab-label">{{item.text}}</text>
         <view class="tab-selected-dot {{selected === index ? '' : 'tab-selected-dot--hidden'}}" aria-hidden="true"></view>

@@ -16,7 +16,7 @@ function component(fontSizeSetting = 16, fail = false) {
     require: createRequire(path.join(root, 'components/activity-card/index.js')),
     wx: { getAppBaseInfo: () => { if (fail) throw new Error('unavailable'); return { fontSizeSetting }; } }
   });
-  const instance = { ...definition.methods, data: { ...definition.data, variant: 'discover' },
+  const instance = { ...definition.methods, data: { ...definition.data, variant: 'home-preview' },
     setData(patch) {
       for (const [key, value] of Object.entries(patch)) {
         const match = /^avatarSlots\[(\d+)\]$/.exec(key);
@@ -24,13 +24,13 @@ function component(fontSizeSetting = 16, fail = false) {
         else this.data[key] = value;
       }
     }, triggerEvent(name, detail) { this.event = { name, detail }; } };
-  return { definition, instance, update(item, variant = 'discover') {
+  return { definition, instance, update(item, variant = 'home-preview') {
     instance.data.item = item; instance.data.variant = variant;
     definition.observers['item, variant'].call(instance, item, variant);
   } };
 }
 
-test('发现专用变体默认关闭，三类封面白名单且不接受任意URL', () => {
+test('首页三列预览变体默认关闭，三类封面白名单且不接受任意URL', () => {
   const h = component();
   assert.equal(h.definition.properties.variant.value, 'compact');
   for (const type of ['companion', 'sport', 'food']) {
@@ -61,59 +61,43 @@ test('图片错误降级与属性更新隔离，整卡保持select事件', () =>
   assert.equal(h.instance.event.detail.id, 'b');
 });
 
-test('字体变大启用流式保护，获取系统信息异常安全降级', () => {
-  const h = component(20);
-  h.definition.lifetimes.attached.call(h.instance);
-  assert.equal(h.instance.data.largeText, true);
-  const unavailable = component(16, true);
-  unavailable.definition.lifetimes.attached.call(unavailable.instance);
-  assert.equal(unavailable.instance.data.largeText, true);
-  const normal = component(16);
-  normal.definition.lifetimes.attached.call(normal.instance);
-  assert.equal(normal.instance.data.largeText, false);
-  assert.match(read('components/activity-card/index.wxss'), /\.activity-card--discover\.activity-card--large-text\s*\{\s*align-items:\s*flex-start;/);
+test('首页预览卡通过显式属性启用大字流式保护', () => {
+  const h = component();
+  assert.equal(h.definition.properties.largeText.value, false);
+  assert.match(read('components/activity-card/index.wxss'), /\.activity-card--home-preview\.activity-card--large-text\s*\{[^}]*height:\s*auto;/s);
+  assert.match(read('pages/discover/index.wxml'), /large-text="\{\{largeTextMode\}\}"/);
 });
 
-test('发现启用图文变体与骨架，我的保持默认，图片区懒加载和语义隐藏', () => {
-  assert.match(read('pages/discover/index.wxml'), /<activity-card[^>]*variant="discover"/);
-  assert.doesNotMatch(read('pages/user/index.wxml'), /variant="discover"/);
+test('首页启用三列预览变体与同尺寸骨架，我的保持默认，图片区懒加载和语义隐藏', () => {
+  assert.match(read('pages/discover/index.wxml'), /<activity-card[^>]*variant="home-preview"/);
+  assert.doesNotMatch(read('pages/user/index.wxml'), /variant="home-preview"/);
   const template = read('components/activity-card/index.wxml');
   assert.match(template, /mode="aspectFit"/);
   assert.match(template, /lazy-load="{{true}}"/);
   assert.match(template, /binderror="handleCoverError"/);
-  assert.match(template, /card-cover[^>]*aria-hidden="true"/);
-  assert.match(read('pages/discover/index.wxml'), /skeleton-cover/);
-  assert.match(read('components/activity-card/index.wxss'), /\.activity-card--discover/);
+  assert.match(template, /home-preview-cover[^>]*aria-hidden="true"/);
+  assert.match(read('pages/discover/index.wxml'), /activity-skeleton-cover/);
+  assert.match(read('components/activity-card/index.wxss'), /\.activity-card--home-preview/);
 });
 
-test('发现卡使用左右画报分栏、大日期、真实发起人与可选说明', () => {
+test('首页三列卡使用发起人行、两行标题、固定插画封面和真实容量', () => {
   const template = read('components/activity-card/index.wxml');
   const style = read('components/activity-card/index.wxss');
-  const discoverTemplate = template.split('<view wx:elif')[0];
-  assert.match(discoverTemplate, /class="card-cover-type/);
-  assert.match(discoverTemplate, /class="card-cover-scrim/);
-  assert.match(discoverTemplate, /item\.editorialDate/);
-  assert.match(discoverTemplate, /item\.editorialWeekday/);
-  assert.match(discoverTemplate, /item\.editorialTime/);
-  assert.match(discoverTemplate, /class="owner-line"/);
-  assert.match(discoverTemplate, /wx:if="\{\{item\.displayDescription\}\}"[^>]*class="activity-description"/);
-  assert.match(template, /wx:for="\{\{avatarSlots\}\}"/);
-  assert.match(template, /class="member-avatar-slot[^\"]*member-avatar-slot--\{\{slot\.empty \? 'empty' : 'filled'\}\}/);
-  assert.match(template, /wx:if="\{\{item\.hiddenMemberCount > 0\}\}"[^>]*>\+\{\{item\.hiddenMemberCount\}\}/);
-  assert.match(style, /\.activity-card--discover\s*\{[^}]*align-items:\s*stretch;[^}]*min-height:\s*390rpx;[^}]*box-shadow:\s*0 5rpx 16rpx/s);
-  assert.match(style, /\.activity-card--discover \.card-cover\s*\{[^}]*flex:\s*0 0 46%;[^}]*min-height:\s*390rpx;/s);
-  assert.match(style, /\.activity-card--discover \.card-cover-image\s*\{[^}]*top:\s*46rpx;[^}]*width:\s*230rpx;[^}]*height:\s*230rpx;/s);
-  assert.match(style, /\.activity-card--discover \.card-copy\s*\{[^}]*flex:\s*0 0 54%;[^}]*width:\s*54%;[^}]*padding:\s*22rpx 20rpx 20rpx;/s);
-  assert.match(style, /\.card-cover-scrim\s*\{[^}]*height:\s*52%;[^}]*rgba\(6, 23, 42, 0\.85\)/s);
-  assert.match(style, /\.editorial-date\s*\{[^}]*font-size:\s*36rpx;[^}]*font-weight:\s*900;/s);
-  assert.match(style, /\.activity-description\s*\{[^}]*padding:\s*8rpx 14rpx;[^}]*background:\s*#faf7f2;[^}]*border:\s*1rpx solid #eee8de;/s);
+  const homePreview = template.split('<view wx:elif')[0];
+  assert.match(homePreview, /class="home-preview-owner"/);
+  assert.match(homePreview, /item\.ownerNickname/);
+  assert.match(homePreview, /item\.editorialDate/);
+  assert.match(homePreview, /class="home-preview-title"/);
+  assert.match(homePreview, /class="home-preview-cover home-preview-cover--\{\{item\.typeTone\}\}"/);
+  assert.match(homePreview, /class="home-preview-capacity"[^>]*>\{\{item\.capacityLabel\}\}/);
+  assert.doesNotMatch(homePreview, /item\.sceneLine|item\.displayDescription/);
+  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*height:\s*320rpx;[^}]*padding:\s*16rpx 14rpx 14rpx;[^}]*box-shadow:\s*0 6rpx 18rpx rgba\(15, 23, 42, 0\.055\)/s);
+  assert.match(style, /\.home-preview-cover\s*\{[^}]*height:\s*132rpx;[^}]*border-radius:\s*14rpx;/s);
+  assert.match(style, /\.home-preview-cover-image\s*\{[^}]*width:\s*114rpx;[^}]*height:\s*114rpx;/s);
+  assert.match(style, /\.home-preview-title\s*\{[^}]*-webkit-line-clamp:\s*2;[^}]*font-size:\s*24rpx;/s);
   const pageStyle = read('pages/discover/index.wxss');
-  assert.match(pageStyle, /\.skeleton-card\s*\{[^}]*min-height:\s*390rpx;[^}]*background:\s*#fff;[^}]*border-radius:\s*24rpx/s);
-  assert.match(pageStyle, /\.skeleton-cover\s*\{[^}]*flex:\s*0 0 46%;[^}]*background:\s*#ebe6de;/s);
-  assert.match(style, /\.activity-card--discover\.activity-card--large-text\s*\{[^}]*flex-direction:\s*column;/s);
-  assert.match(style, /@keyframes member-avatar-enter/);
-  assert.doesNotMatch(style, /capacity-progress-enter|capacity-arrow-nudge/);
-  assert.match(style, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none;/);
+  assert.match(pageStyle, /\.activity-skeleton-card\s*\{[^}]*height:\s*320rpx;[^}]*background:\s*#fff;[^}]*border-radius:\s*22rpx/s);
+  assert.match(style, /\.activity-card--home-preview\.activity-card--large-text\s*\{[^}]*height:\s*auto;/s);
 });
 
 test('活动装饰层只从真实开始时间生成单点日期并清洗可选说明', () => {

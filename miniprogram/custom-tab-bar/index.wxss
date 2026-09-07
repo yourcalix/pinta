@@ -13,25 +13,15 @@
 .tab-item { position: relative; display: flex; flex: 1 1 20%; width: 20%; min-width: 0; height: 116rpx; align-items: center; justify-content: center; flex-direction: column; box-sizing: border-box; color: #94a3b8; transition: opacity 120ms ease, transform 120ms ease, color 120ms ease; }
 .tab-item--selected { color: #111827; }
 .tab-item--pressed { opacity: 0.76; transform: scale(0.94); }
-.tab-icon { position: relative; box-sizing: border-box; width: 40rpx; height: 40rpx; color: currentColor; }
-.tab-icon--home { width: 34rpx; height: 28rpx; margin-top: 7rpx; background: currentColor; border-radius: 4rpx 4rpx 7rpx 7rpx; }
-.home-roof { position: absolute; top: -10rpx; left: 2rpx; width: 26rpx; height: 26rpx; background: currentColor; border-radius: 4rpx; transform: rotate(45deg); }
-.tab-icon--home::after { position: absolute; z-index: 1; right: 7rpx; bottom: 0; width: 8rpx; height: 15rpx; content: ''; background: #fff; border-radius: 3rpx 3rpx 0 0; }
-.tab-icon--discover { border: 3rpx solid currentColor; border-radius: 50%; }
-.discover-needle { position: absolute; top: 8rpx; left: 15rpx; width: 7rpx; height: 20rpx; background: currentColor; clip-path: polygon(50% 0, 100% 100%, 50% 72%, 0 100%); transform: rotate(42deg); }
-.tab-icon--message { width: 40rpx; height: 32rpx; border: 3rpx solid currentColor; border-radius: 14rpx; }
-.message-tail { position: absolute; bottom: -7rpx; left: 8rpx; width: 10rpx; height: 10rpx; border-left: 3rpx solid currentColor; transform: skew(-28deg); }
-.tab-icon--message::after { position: absolute; top: 12rpx; left: 9rpx; width: 4rpx; height: 4rpx; content: ''; background: currentColor; border-radius: 50%; box-shadow: 8rpx 0 currentColor, 16rpx 0 currentColor; }
-.tab-icon--user { width: 40rpx; height: 40rpx; border: 3rpx solid currentColor; border-top-color: transparent; border-radius: 18rpx 18rpx 12rpx 12rpx; }
-.user-head { position: absolute; top: -2rpx; left: 11rpx; width: 14rpx; height: 14rpx; border: 3rpx solid currentColor; border-radius: 50%; background: #fff; }
+.tab-icon-image { display: block; width: 40rpx; height: 40rpx; opacity: 0.42; pointer-events: none; transition: opacity 120ms ease; }
+.tab-item--selected .tab-icon-image { opacity: 1; }
 .tab-label { margin-top: 6rpx; font-size: 20rpx; font-weight: 520; line-height: 24rpx; white-space: nowrap; }
 .tab-item--selected .tab-label { font-weight: 750; }
 .tab-selected-dot { flex: 0 0 6rpx; width: 6rpx; height: 6rpx; margin-top: 4rpx; background: #f59e0b; border-radius: 50%; }
 .tab-selected-dot--hidden { opacity: 0; }
 .tab-item--publish { justify-content: flex-start; }
 .publish-circle { position: relative; display: flex; width: 92rpx; height: 92rpx; margin-top: -12rpx; align-items: center; justify-content: center; background: #111827; border: 6rpx solid #fff; border-radius: 50%; box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.22); transition: transform 120ms ease, opacity 120ms ease; }
-.publish-plus::before, .publish-plus::after { position: absolute; top: 50%; left: 50%; width: 38rpx; height: 5rpx; content: ''; background: #fff; border-radius: 4rpx; transform: translate(-50%, -50%); }
-.publish-plus::after { transform: translate(-50%, -50%) rotate(90deg); }
+.publish-plus-image { display: block; width: 40rpx; height: 40rpx; pointer-events: none; }
 .publish-label { margin-top: -4rpx; color: #111827; font-size: 20rpx; font-weight: 700; line-height: 24rpx; }
 .tab-item--publish.tab-item--pressed .publish-circle { opacity: 0.9; transform: scale(0.92); }
 .unread-badge { position: absolute; top: 5rpx; left: calc(50% + 9rpx); min-width: 30rpx; height: 30rpx; padding: 0 6rpx; box-sizing: border-box; color: #fff; background: #ef4444; border: 3rpx solid #fff; border-radius: 16rpx; font-size: 17rpx; font-weight: 700; line-height: 24rpx; text-align: center; }

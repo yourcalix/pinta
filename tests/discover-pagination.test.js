@@ -281,15 +281,29 @@ test('首页使用空插画 Hero、按需检索面板与温暖米白页面背景
   assert.match(template, /<scroll-view[^>]*scroll-x/);
   assert.doesNotMatch(template, /hero-campus\.png|class="hero surface"/);
   assert.match(style, /\.home-page\s*\{[^}]*padding-bottom:\s*calc\(200rpx \+ env\(safe-area-inset-bottom\)\)[^}]*background:\s*#f9f7f2/s);
-  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*360rpx/s);
+  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*560rpx/s);
 });
 
-test('活动卡片发现变体采用规整现代白卡且不依赖旧积木品牌图', () => {
+test('首页在系统大字设置下将三列活动卡切换为单列可读模式', () => {
+  const context = loadDiscoverPage();
+  try {
+    global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 20 });
+    assert.equal(context.page.syncTextSizeMode(), true);
+    assert.equal(context.page.data.largeTextMode, true);
+    global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 16 });
+    assert.equal(context.page.syncTextSizeMode(), false);
+    assert.equal(context.page.data.largeTextMode, false);
+  } finally {
+    unloadDiscoverPage(context);
+  }
+});
+
+test('活动卡片首页预览变体采用规整三列白卡且不依赖旧积木品牌图', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/components/activity-card/index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'miniprogram/components/activity-card/index.wxss'), 'utf8');
   assert.match(template, /owner-avatar/);
   assert.match(template, /item\.ownerInitial/);
   assert.doesNotMatch(template, /brand-puzzle\.png|owner-puzzle/);
-  assert.match(style, /\.activity-card--discover\s*\{[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #efece6;[^}]*border-radius:\s*24rpx;/s);
+  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*width:\s*100%;[^}]*height:\s*320rpx;[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #efece6;[^}]*border-radius:\s*22rpx;/s);
   assert.match(style, /\.activity-card--pressed/);
 });

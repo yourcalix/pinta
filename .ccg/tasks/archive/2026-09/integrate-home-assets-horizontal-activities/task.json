@@ -1,0 +1,12 @@
+{
+  "id": "integrate-home-assets-horizontal-activities",
+  "title": "接入首页视觉素材并将附近活动改为三列横向布局",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成视觉复核、全量验证并准备归档",
+  "createdAt": "2026-09-07T13:35:53Z",
+  "branch": "main"
+}
