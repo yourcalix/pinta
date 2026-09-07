@@ -5,9 +5,11 @@ const safetyService = require('../../services/safety');
 const { decorateActivity } = require('../../utils/display');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {
+  mergeActivitiesById,
   expirationSchedule,
   removeLocallyExpiredRecruiting
 } = require('../../utils/discover-list');
+const { resolveProfileAvatar } = require('../../utils/profile-avatar');
 const {
   TOTAL_BLOCKS,
   PRELOAD_BLOCKS,
@@ -21,43 +23,9 @@ const {
 } = require('../../utils/launch-progress');
 const { selectTab } = require('../../utils/tab-bar');
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 3;
 const MAX_HIDDEN_PAGE_SKIPS = 1;
-const BANNER_ROUTE_WHITELIST = new Set(['/pages/publish/index']);
-const CAMPAIGN_ART = Object.freeze({
-  companion: '/assets/images/publish/publish-cover-companion.png',
-  sport: '/assets/images/publish/publish-cover-sport.png',
-  food: '/assets/images/publish/publish-cover-food.png'
-});
-const CAMPAIGN_BANNERS = Object.freeze([
-  {
-    id: 'weekend-sport',
-    tone: 'sport',
-    eyebrow: '周末提案',
-    title: '周末羽毛球新人局',
-    subtitle: '新手友好 · 一起轻松开打',
-    imageSrc: CAMPAIGN_ART.sport,
-    action: { kind: 'filter', value: 'sport' }
-  },
-  {
-    id: 'city-walk',
-    tone: 'companion',
-    eyebrow: '结伴探索',
-    title: '发现城市里的新路线',
-    subtitle: '周末漫步 · 找到同频搭子',
-    imageSrc: CAMPAIGN_ART.companion,
-    action: { kind: 'filter', value: 'companion' }
-  },
-  {
-    id: 'publish-guide',
-    tone: 'guide',
-    eyebrow: '拼吧指南',
-    title: '第一次发起拼单？',
-    subtitle: '填写真实信息 · 安心结伴同行',
-    imageSrc: CAMPAIGN_ART.food,
-    action: { kind: 'route', value: '/pages/publish/index' }
-  }
-]);
+const DEFAULT_GREETING_AVATAR = '/assets/images/profile/profile-avatar-neutral-painted.png';
 
 function hasActiveFilters(filters) {
   return Boolean(filters.type || filters.appliedKeyword);
@@ -65,8 +33,11 @@ function hasActiveFilters(filters) {
 
 Page({
   data: {
-    banners: CAMPAIGN_BANNERS.map((item) => ({ ...item, failed: false })),
-    currentBanner: 0,
+    greetingNickname: '搭子',
+    greetingAvatarPath: DEFAULT_GREETING_AVATAR,
+    greetingAvatarFallbackPath: DEFAULT_GREETING_AVATAR,
+    searchPanelVisible: false,
+    shortcutIconPaths: { activities: '', memories: '', placeholder: '' },
     typeOptions: [
       { value: '', label: '全部', iconSrc: '/assets/images/discover/filter-all.png' },
       { value: 'companion', label: '拼同行', iconSrc: '/assets/images/discover/filter-companion.png' },
@@ -78,9 +49,7 @@ Page({
     appliedKeyword: '',
     hasActiveFilters: false,
     activities: [],
-    currentPage: 1,
     hasNextPage: false,
-    hasPagination: false,
     isPaging: false,
     loading: true,
     refreshing: false,
@@ -95,6 +64,7 @@ Page({
     this.setData({
       contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx)
     });
+    this.syncGreetingProfile();
     this._skipFirstShow = true;
     this.startLaunchSplash();
     const activities = Promise.resolve(this.fetchActivities({ mode: 'replace' }))
@@ -104,6 +74,7 @@ Page({
 
   onShow() {
     selectTab(this, 0);
+    this.syncGreetingProfile();
     if (this._skipFirstShow) {
       this._skipFirstShow = false;
       return;
@@ -145,9 +116,7 @@ Page({
       error: '',
       ...(resetContent ? {
         activities: [],
-        currentPage: 1,
-        hasNextPage: false,
-        hasPagination: false
+        hasNextPage: false
       } : {})
     });
 
@@ -155,16 +124,12 @@ Page({
       const snapshot = await this.requestActivityPage(undefined, allowAutoFill);
       if (loadSeq !== this._loadSeq) return false;
 
-      this._pageCache = [snapshot];
-      this._pageCursors = [undefined];
-      if (snapshot.nextCursor) this._pageCursors[1] = snapshot.nextCursor;
+      this._nextCursor = snapshot.nextCursor || undefined;
       const activities = snapshot.activities;
       const hasNextPage = Boolean(snapshot.nextCursor);
       this.setData({
         activities,
-        currentPage: 1,
         hasNextPage,
-        hasPagination: hasNextPage,
         loading: false,
         refreshing: false,
         isPaging: false,
@@ -213,23 +178,7 @@ Page({
   },
 
   resetPaginationCache() {
-    this._pageCache = [];
-    this._pageCursors = [undefined];
-  },
-
-  applyPage(pageIndex, snapshot, shouldScroll) {
-    const currentPage = pageIndex + 1;
-    const hasNextPage = Boolean(snapshot.nextCursor || this._pageCache[pageIndex + 1]);
-    this.setData({
-      activities: snapshot.activities,
-      currentPage,
-      hasNextPage,
-      hasPagination: currentPage > 1 || hasNextPage,
-      isPaging: false,
-      error: ''
-    });
-    this.scheduleExpirationRefresh(snapshot.activities);
-    if (shouldScroll) this.scrollToHotPinba();
+    this._nextCursor = undefined;
   },
 
   scrollToHotPinba() {
@@ -237,55 +186,37 @@ Page({
     wx.pageScrollTo({ selector: '#hot-pinba-heading', duration: 200 });
   },
 
-  handlePrevPage() {
-    if (this.data.loading || this.data.refreshing || this.data.isPaging || this.data.currentPage <= 1) return false;
-    const pageIndex = this.data.currentPage - 2;
-    const snapshot = this._pageCache && this._pageCache[pageIndex];
-    if (!snapshot) return false;
-    this.applyPage(pageIndex, snapshot, true);
-    return true;
-  },
-
-  handleNextPage() {
+  handleLoadMore() {
     if (this.data.loading || this.data.refreshing || this.data.isPaging || !this.data.hasNextPage) return false;
-    const pageIndex = this.data.currentPage;
-    const cached = this._pageCache && this._pageCache[pageIndex];
-    if (cached) {
-      this.applyPage(pageIndex, cached, true);
-      return true;
-    }
-
-    const cursor = this._pageCursors && this._pageCursors[pageIndex];
+    const cursor = this._nextCursor;
     if (!cursor) return false;
     this._loadSeq = this._loadSeq || 0;
     const loadSeq = this._loadSeq;
     this.setData({ isPaging: true });
-    return this.loadNextPage(pageIndex, cursor, loadSeq);
+    return this.loadMoreActivities(cursor, loadSeq);
   },
 
-  async loadNextPage(pageIndex, cursor, loadSeq) {
+  async loadMoreActivities(cursor, loadSeq) {
     try {
       const snapshot = await this.requestActivityPage(cursor, true);
       if (loadSeq !== this._loadSeq) return false;
+      this._nextCursor = snapshot.nextCursor || undefined;
       if (!snapshot.activities.length) {
-        this._pageCursors[pageIndex] = snapshot.nextCursor || undefined;
-        if (!snapshot.nextCursor) {
-          const currentIndex = this.data.currentPage - 1;
-          if (this._pageCache[currentIndex]) this._pageCache[currentIndex].nextCursor = '';
-          this.setData({ hasNextPage: false, hasPagination: this.data.currentPage > 1, isPaging: false });
-        } else {
-          this.setData({ isPaging: false });
-          if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
-            wx.showToast({ title: '本页暂无可显示活动，请继续翻页', icon: 'none' });
-          }
+        this.setData({ hasNextPage: Boolean(snapshot.nextCursor), isPaging: false });
+        if (snapshot.nextCursor && typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
+          wx.showToast({ title: '暂时没有更多活动，可再试一次', icon: 'none' });
         }
         return false;
       }
 
-      this._pageCache[pageIndex] = snapshot;
-      if (snapshot.nextCursor) this._pageCursors[pageIndex + 1] = snapshot.nextCursor;
-      else this._pageCursors.length = pageIndex + 1;
-      this.applyPage(pageIndex, snapshot, true);
+      const activities = mergeActivitiesById(this.data.activities, snapshot.activities);
+      this.setData({
+        activities,
+        hasNextPage: Boolean(snapshot.nextCursor),
+        isPaging: false,
+        error: ''
+      });
+      this.scheduleExpirationRefresh(activities);
       return true;
     } catch (error) {
       if (loadSeq !== this._loadSeq) return false;
@@ -457,31 +388,26 @@ Page({
     return this.fetchActivities({ mode: 'replace' });
   },
 
-  handleBannerChange(event) {
-    const currentBanner = Math.max(0, Number(event.detail && event.detail.current) || 0);
-    if (currentBanner !== this.data.currentBanner) this.setData({ currentBanner });
+  syncGreetingProfile() {
+    const app = typeof getApp === 'function' ? getApp() : null;
+    const profile = app && app.globalData && app.globalData.user && app.globalData.user.profile;
+    const nickname = String(profile && profile.nickname || '搭子').trim() || '搭子';
+    const avatar = resolveProfileAvatar(profile);
+    const next = {
+      greetingNickname: nickname,
+      greetingAvatarPath: avatar.path || DEFAULT_GREETING_AVATAR,
+      greetingAvatarFallbackPath: avatar.fallbackPath || DEFAULT_GREETING_AVATAR
+    };
+    if (
+      next.greetingNickname !== this.data.greetingNickname
+      || next.greetingAvatarPath !== this.data.greetingAvatarPath
+      || next.greetingAvatarFallbackPath !== this.data.greetingAvatarFallbackPath
+    ) this.setData(next);
   },
 
-  handleBannerTap(event) {
-    const banner = this.data.banners.find((item) => item.id === event.currentTarget.dataset.id);
-    if (!banner || !banner.action) return false;
-    if (banner.action.kind === 'filter' && ['', 'companion', 'sport', 'food'].includes(banner.action.value)) {
-      const type = banner.action.value;
-      this.setData({ type, hasActiveFilters: hasActiveFilters({ ...this.data, type }) });
-      return this.fetchActivities({ mode: 'replace' });
-    }
-    if (banner.action.kind === 'route' && BANNER_ROUTE_WHITELIST.has(banner.action.value)) {
-      wx.switchTab({ url: banner.action.value });
-      return true;
-    }
-    return false;
-  },
-
-  handleBannerImageError(event) {
-    const id = event.currentTarget.dataset.id;
-    const index = this.data.banners.findIndex((item) => item.id === id);
-    if (index < 0 || this.data.banners[index].failed) return;
-    this.setData({ [`banners[${index}].failed`]: true });
+  handleGreetingAvatarError() {
+    if (this.data.greetingAvatarPath === this.data.greetingAvatarFallbackPath) return;
+    this.setData({ greetingAvatarPath: this.data.greetingAvatarFallbackPath });
   },
 
   handleHeaderAction(event) {
@@ -490,8 +416,8 @@ Page({
       wx.switchTab({ url: '/pages/messages/index' });
       return true;
     }
-    if (action === 'search' && typeof wx !== 'undefined' && typeof wx.pageScrollTo === 'function') {
-      wx.pageScrollTo({ selector: '#home-directory-tools', duration: 200 });
+    if (action === 'search') {
+      this.setData({ searchPanelVisible: !this.data.searchPanelVisible });
       return true;
     }
     return false;
@@ -503,12 +429,10 @@ Page({
       this.scrollToHotPinba();
       return true;
     }
-    if (action === 'community') {
-      wx.switchTab({ url: '/pages/community/index' });
-      return true;
-    }
-    if (action === 'publish') {
-      wx.switchTab({ url: '/pages/publish/index' });
+    if (action === 'memories') {
+      if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
+        wx.showToast({ title: '成团分享功能即将上线', icon: 'none' });
+      }
       return true;
     }
     return false;
@@ -556,7 +480,7 @@ Page({
   handleEmptyAction() {
     if (this.data.error) return this.fetchActivities({ mode: 'replace' });
     if (this.data.hasActiveFilters) return this.handleClearFilters();
-    if (this.data.hasNextPage) return this.handleNextPage();
+    if (this.data.hasNextPage) return this.handleLoadMore();
     wx.switchTab({ url: '/pages/publish/index' });
   }
 });

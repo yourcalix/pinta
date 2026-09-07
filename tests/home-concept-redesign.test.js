@@ -28,18 +28,19 @@ test('自定义导航采用白色悬浮胶囊、黑色发布圆钮和黄色选�
 test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序排版', () => {
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
-  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-list'];
+  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-stream'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   assert.match(template, /你的搭子/);
   assert.match(template, /刚刚好/);
   assert.match(template, /data-action="activities"/);
-  assert.match(template, /data-action="community"/);
-  assert.match(template, /data-action="publish"/);
+  assert.match(template, /data-action="memories"/);
+  assert.match(template, /home-shortcut--placeholder/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2;/s);
-  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*340rpx;/s);
-  assert.match(style, /\.home-shortcut\s*\{[^}]*min-height:\s*180rpx;/s);
+  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*360rpx;/s);
+  assert.match(style, /\.home-shortcuts\s*\{[^}]*height:\s*210rpx;[^}]*margin-top:\s*-68rpx;/s);
+  assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
   assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
 });
 
