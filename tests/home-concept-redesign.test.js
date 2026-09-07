@@ -25,10 +25,10 @@ test('自定义导航采用白色悬浮胶囊、黑色发布圆钮和黄色选�
   assert.match(style, /\.tab-selected-dot\s*\{[^}]*background:\s*#f59e0b;/s);
 });
 
-test('新首页按问候、Lifestyle Hero、三快捷卡、搜索、活动和预告顺序排版', () => {
+test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序排版', () => {
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
-  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-list', 'story-teaser'];
+  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-list'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
@@ -40,7 +40,7 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索、活动和预
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2;/s);
   assert.match(style, /\.home-hero\s*\{[^}]*height:\s*340rpx;/s);
   assert.match(style, /\.home-shortcut\s*\{[^}]*min-height:\s*180rpx;/s);
-  assert.match(style, /\.story-teaser\s*\{[^}]*min-height:\s*160rpx;/s);
+  assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
 });
 
 test('新发现页只消费真实讨论并使用温暖生活方式内容流', () => {

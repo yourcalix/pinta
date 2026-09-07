@@ -11,7 +11,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 test('首页列表状态与分页器均收进温暖活动托盘', () => {
   const template = read('pages/discover/index.wxml');
   const listStart = template.indexOf('<view class="home-activity-list">');
-  const listEnd = template.indexOf('<view class="story-teaser"');
+  const listEnd = template.indexOf('<view wx:if="{{activities.length && !loading && !hasNextPage}}" class="page-end-marker"');
   for (const marker of ['skeleton-list', '<activity-card', 'empty-state-shell', 'discover-pagination']) {
     const index = template.indexOf(marker);
     assert.ok(index > listStart && index < listEnd, `${marker} 应位于活动托盘内`);

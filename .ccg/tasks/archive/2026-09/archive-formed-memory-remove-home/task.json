@@ -1,0 +1,12 @@
+{
+  "id": "archive-formed-memory-remove-home",
+  "title": "记录已定稿成团记忆设计并从当前首页移除",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交",
+  "createdAt": "2026-09-07T08:00:00Z",
+  "branch": "main"
+}

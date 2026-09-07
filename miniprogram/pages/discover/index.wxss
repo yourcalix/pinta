@@ -89,10 +89,7 @@ button::after { display: none; }
 .pagination-button--disabled { color: #b3aca3; background: rgba(255, 255, 255, 0.5); }
 .pagination-indicator { flex: 1; color: #948c82; font-size: 21rpx; text-align: center; white-space: nowrap; }.pagination-indicator text { color: #f59e0b; font-size: 27rpx; font-weight: 800; }
 
-.story-teaser { position: relative; display: flex; box-sizing: border-box; min-height: 160rpx; margin-top: 28rpx; padding: 24rpx 26rpx; overflow: hidden; align-items: center; background: linear-gradient(135deg, #fff5d8 0%, #ffebbc 100%); border: 1rpx solid #f2d28b; border-radius: 28rpx; }
-.story-copy { position: relative; z-index: 2; display: flex; max-width: 72%; flex-direction: column; }.story-eyebrow { color: #bc8e39; font-size: 15rpx; font-weight: 750; letter-spacing: 3rpx; }.story-title { margin-top: 5rpx; color: #2b251d; font-size: 30rpx; font-weight: 850; }.story-subtitle { margin-top: 7rpx; color: #846f4b; font-size: 20rpx; }
-.story-art { position: absolute; right: 22rpx; bottom: 5rpx; width: 120rpx; height: 120rpx; }.story-photo { position: absolute; width: 78rpx; height: 96rpx; background: #fff; border: 5rpx solid #fff; border-radius: 10rpx; box-shadow: 0 6rpx 14rpx rgba(105, 77, 31, 0.15); }.story-photo--back { top: 8rpx; left: 4rpx; background: linear-gradient(#aedbf2 55%, #77aa70 55%); transform: rotate(-11deg); }.story-photo--front { right: 0; bottom: 2rpx; background: linear-gradient(#ffd999 52%, #c98e56 52%); transform: rotate(9deg); }.story-sun { width: 18rpx; height: 18rpx; margin: 14rpx; background: #fff5c5; border-radius: 50%; }
-.page-end-marker { padding: 32rpx 0 4rpx; color: #aaa298; font-size: 21rpx; text-align: center; }
+.page-end-marker { margin: 28rpx auto 16rpx; color: #aaa298; font-size: 21rpx; line-height: 1.4; text-align: center; }
 @keyframes pulse { from { opacity: 0.55; } to { opacity: 1; } }
 
 @media (max-width: 340px) {
@@ -106,6 +103,5 @@ button::after { display: none; }
   .directory-tools { padding: 10rpx; }.filter-track { gap: 4rpx; }.filter-chip { min-width: 124rpx; min-height: 88rpx; font-size: 20rpx; }.filter-icon { width: 30rpx; height: 30rpx; }
   .home-activity-list { padding: 14rpx; border-radius: 24rpx; }.skeleton-card { min-height: 350rpx; }
   .pagination-button { flex-basis: 166rpx; min-height: 88rpx; font-size: 21rpx; }
-  .story-teaser { min-height: 150rpx; padding: 20rpx; }.story-subtitle { font-size: 18rpx; }
 }
 @media (prefers-reduced-motion: reduce) { .home-hero-card, .home-shortcut, .pagination-button { transition: none; }.skeleton-line { animation: none; } }

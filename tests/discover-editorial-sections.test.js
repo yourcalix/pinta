@@ -10,7 +10,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('首页按问候、生活方式 Hero、快捷入口、检索与活动流顺序渲染', () => {
   const template = read('pages/discover/index.wxml');
-  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-list', 'story-teaser', 'page-end-marker'];
+  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-list', 'page-end-marker'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
@@ -45,14 +45,13 @@ test('活动流继续承载五条游标分页、真实活动卡与空态', () =>
   assert.match(style, /\.pagination-button\s*\{[^}]*min-height:\s*88rpx/s);
 });
 
-test('成团记忆收敛为不冒充 UGC 的静态温暖预告条', () => {
+test('首页不挂载未来成团记忆 UGC 模块且末页由终点文案收口', () => {
   const template = read('pages/discover/index.wxml');
   const script = read('pages/discover/index.js');
   const style = read('pages/discover/index.wxss');
-  assert.match(template, /class="story-teaser"[^>]*aria-label="成团记忆，分享功能即将开放"/);
-  assert.match(template, /OUR STORIES/);
-  assert.match(template, /每一次同行，都值得被记住 · 即将开放/);
-  assert.doesNotMatch(template, /story-teaser[^>]*bindtap|查看更多/);
+  assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
+  assert.doesNotMatch(style, /\.story-(?:teaser|copy|eyebrow|title|subtitle|art|photo|sun)/);
   assert.doesNotMatch(script, /activityService\.memories|fetchMemories|handleMemorySelect|memoriesExpanded/);
-  assert.match(style, /\.story-teaser\s*\{[^}]*min-height:\s*160rpx[^}]*linear-gradient/s);
+  assert.match(template, /<\/view>\s*<view wx:if="\{\{activities\.length && !loading && !hasNextPage\}\}" class="page-end-marker"/);
+  assert.match(style, /\.page-end-marker\s*\{[^}]*margin:\s*28rpx auto 16rpx/s);
 });

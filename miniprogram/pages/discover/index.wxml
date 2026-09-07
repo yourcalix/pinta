@@ -75,11 +75,6 @@
       </view>
     </view>
 
-    <view class="story-teaser" role="region" aria-label="成团记忆，分享功能即将开放">
-      <view class="story-copy"><text class="story-eyebrow">OUR STORIES</text><text class="story-title">成团记忆</text><text class="story-subtitle">每一次同行，都值得被记住 · 即将开放</text></view>
-      <view class="story-art" aria-hidden="true"><view class="story-photo story-photo--back"></view><view class="story-photo story-photo--front"><view class="story-sun"></view></view></view>
-    </view>
-
     <view wx:if="{{activities.length && !loading && !hasNextPage}}" class="page-end-marker" aria-role="status">— 已经到底啦 · 拼吧 —</view>
   </view>
 </view>
