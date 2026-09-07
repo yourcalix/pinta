@@ -8,10 +8,10 @@ const path = require('node:path');
 const root = path.join(__dirname, '../miniprogram');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-test('自定义 TabBar 为五等分，发布居中且消息位于我的之前', () => {
+test('自定义 TabBar 为首页、发现、发布、消息、我的五等分', () => {
   const app = JSON.parse(read('app.json'));
   assert.equal(app.tabBar.custom, true);
-  assert.deepEqual(app.tabBar.list.map((item) => item.text), ['发现', '社区', '发布', '消息', '我的']);
+  assert.deepEqual(app.tabBar.list.map((item) => item.text), ['首页', '发现', '发布', '消息', '我的']);
   assert.equal(app.pages[3], 'pages/messages/index');
   assert.equal(app.subPackages.some((item) => item.root === 'subpackages/message' && item.pages.includes('chat/index')), true);
 
@@ -20,50 +20,30 @@ test('自定义 TabBar 为五等分，发布居中且消息位于我的之前', 
   assert.match(script, /wx\.switchTab/);
   assert.match(style, /flex:\s*1 1 20%/);
   assert.match(style, /width:\s*20%/);
-  assert.match(style, /\.publish-puzzle\s*\{[\s\S]*top:\s*-30rpx[\s\S]*width:\s*112rpx[\s\S]*height:\s*112rpx/);
+  assert.match(style, /\.tab-shell\s*\{[\s\S]*left:\s*24rpx[\s\S]*height:\s*116rpx/);
+  assert.match(style, /\.tab-paper\s*\{[^}]*background:\s*#fff[^}]*border-radius:\s*58rpx/s);
+  assert.match(style, /\.publish-circle\s*\{[^}]*width:\s*92rpx[^}]*height:\s*92rpx[^}]*background:\s*#111827/s);
   assert.match(style, /env\(safe-area-inset-bottom\)/);
   assert.match(style, /\.unread-badge/);
 });
 
-test('发布入口仅保留拼图图形，其余旧图标替换为单套油画棒透明资产', () => {
+test('普通入口使用单色 CSS 图标、激活黄点，发布入口使用黑色圆形加号', () => {
   const app = JSON.parse(read('app.json'));
   const template = read('custom-tab-bar/index.wxml');
   const script = read('custom-tab-bar/index.js');
   const style = read('custom-tab-bar/index.wxss');
-  const assets = [
-    'custom-tab-bar/assets/tab-discover-painted.png',
-    'custom-tab-bar/assets/tab-community-painted.png',
-    'custom-tab-bar/assets/tab-user-painted.png'
-  ];
 
-  assert.doesNotMatch(template, /publish-label|>发布<\/text>/);
-  assert.match(template, /item\.publish \? '发布活动'/);
+  assert.match(template, /class="tab-icon tab-icon--\{\{item\.kind \|\| 'message'\}\}"/);
+  assert.match(template, /class="publish-circle"[\s\S]*class="publish-plus"/);
+  assert.match(template, /class="tab-selected-dot [^"]*"/);
+  assert.match(template, /tab-selected-dot--hidden/);
   assert.doesNotMatch(script, /activeIcon/);
-  assert.doesNotMatch(script, /tab-(discover|community|user)-(inactive|active)\.png/);
-  assert.match(style, /filter:\s*saturate\(0\.2\)/);
-  assert.match(style, /\.tab-item--selected \.tab-icon\s*\{[\s\S]*scale\(1\.06\)/);
-
-  assets.forEach((relativePath) => {
-    const buffer = fs.readFileSync(path.join(root, relativePath));
-    assert.equal(buffer.subarray(1, 4).toString('ascii'), 'PNG');
-    assert.equal(buffer.readUInt32BE(16), 128);
-    assert.equal(buffer.readUInt32BE(20), 128);
-    assert.equal(buffer[25], 6, `${relativePath} 必须保留 RGBA 透明通道`);
-    assert.ok(buffer.length < 40 * 1024, `${relativePath} 必须小于微信 TabBar 图标 40KB 上限`);
-  });
-
-  const ordinaryItems = [app.tabBar.list[0], app.tabBar.list[1], app.tabBar.list[4]];
-  assert.deepEqual(ordinaryItems.map((item) => item.iconPath), assets);
-  ordinaryItems.forEach((item) => assert.equal(item.iconPath, item.selectedIconPath));
-});
-
-test('中央发布资产为真实透明 RGBA PNG 且有足够清晰度', () => {
-  const asset = path.join(root, 'custom-tab-bar/assets/tab-publish-puzzle.png');
-  const buffer = fs.readFileSync(asset);
-  assert.equal(buffer.subarray(1, 4).toString('ascii'), 'PNG');
-  assert.equal(buffer.readUInt32BE(16), 224);
-  assert.equal(buffer.readUInt32BE(20), 224);
-  assert.equal(buffer[25], 6, 'PNG 必须为 RGBA 透明色类型');
+  assert.doesNotMatch(script, /iconPath|selectedIconPath/);
+  assert.match(style, /\.tab-item--selected\s*\{[^}]*color:\s*#111827/s);
+  assert.match(style, /\.tab-selected-dot\s*\{[^}]*margin-top:\s*4rpx[^}]*background:\s*#f59e0b/s);
+  assert.doesNotMatch(style, /\.tab-selected-dot\s*\{[^}]*position:\s*absolute/s);
+  assert.match(style, /\.publish-plus::before, \.publish-plus::after/);
+  assert.deepEqual(app.tabBar.list.slice(0, 2).map((item) => item.pagePath), ['pages/discover/index', 'pages/community/index']);
 });
 
 test('五个 Tab 页在 onShow 同步选中态且页面为凸起按钮留出底部空间', () => {

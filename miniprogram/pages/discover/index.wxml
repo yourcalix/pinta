@@ -1,126 +1,85 @@
-<view class="page discover-page global-background-host" style="padding-top: {{contentTopInset}}px;">
+<view class="page home-page" style="padding-top: {{contentTopInset}}px;">
   <launch-splash wx:if="{{launchSplashVisible}}" progress="{{launchProgress}}" exiting="{{launchSplashExiting}}" bindasseterror="handleLaunchAssetError" />
 
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-  <view class="global-page-background-tint" aria-hidden="true"></view>
-
-  <view class="discover-hero">
-    <view class="discover-header" role="heading" aria-label="拼吧发现，发现附近正在发生的拼单">
-      <view class="discover-header-copy">
-        <view class="discover-eyebrow" aria-hidden="true">PINBA DISCOVER</view>
-        <view class="discover-art-title" aria-hidden="true"><text class="discover-art-title-base">拼吧 · </text><text class="discover-art-title-accent">发现</text></view>
-        <view class="discover-subtitle" aria-hidden="true">发现附近正在发生的拼单</view>
+  <view class="home-content">
+    <view class="home-greeting" role="heading" aria-level="1" aria-label="你好，搭子，欢迎回到拼吧">
+      <image class="greeting-avatar" src="/assets/images/profile/profile-avatar-neutral-painted.png" mode="aspectFit" aria-hidden="true" />
+      <view class="greeting-copy"><text class="greeting-title">你好，搭子 <text aria-hidden="true">👋</text></text><text class="greeting-subtitle">欢迎回到拼吧</text></view>
+      <view class="greeting-actions">
+        <button class="header-action header-action--search" data-action="search" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="搜索活动"><view class="header-search-glyph" aria-hidden="true"></view></button>
+        <button class="header-action header-action--message" data-action="messages" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="查看消息"><view class="header-message-glyph" aria-hidden="true"></view></button>
       </view>
-      <view class="header-doodle" aria-hidden="true"><view class="header-doodle-line"></view><view class="header-doodle-leaf header-doodle-leaf--left"></view><view class="header-doodle-leaf header-doodle-leaf--right"></view></view>
     </view>
-  </view>
 
-  <view class="discover-sheet">
-    <view class="campaign-shell" aria-label="拼吧官方推荐">
-      <swiper class="campaign-swiper" current="{{currentBanner}}" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" interval="4500" duration="400" bindchange="handleBannerChange">
-        <swiper-item wx:for="{{banners}}" wx:key="id">
-          <view class="campaign-card campaign-card--{{item.tone}}" data-id="{{item.id}}" bindtap="handleBannerTap" hover-class="campaign-card--pressed" hover-stay-time="80" role="button" aria-label="运营推荐，{{item.title}}，{{item.subtitle}}，点击查看详情">
-            <view class="campaign-copy">
-              <view class="campaign-eyebrow"><text class="campaign-pin" aria-hidden="true">●</text><text>{{item.eyebrow}}</text></view>
-              <view class="campaign-title">{{item.title}}</view>
-              <view class="campaign-subtitle">{{item.subtitle}}</view>
-              <view class="campaign-action">去看看 <text aria-hidden="true">›</text></view>
-            </view>
-            <view class="campaign-art" aria-hidden="true">
-              <view wx:if="{{item.failed}}" class="campaign-art-fallback">✦</view>
-              <image wx:else class="campaign-image" src="{{item.imageSrc}}" mode="aspectFit" data-id="{{item.id}}" binderror="handleBannerImageError" aria-hidden="true" />
-            </view>
+    <swiper class="home-hero" current="{{currentBanner}}" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" interval="4500" duration="400" bindchange="handleBannerChange" aria-label="拼吧生活方式推荐">
+      <swiper-item wx:for="{{banners}}" wx:key="id">
+        <view class="home-hero-card home-hero-card--{{item.tone}}" data-id="{{item.id}}" bindtap="handleBannerTap" hover-class="home-hero-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.title}}，{{item.subtitle}}，点击查看">
+          <view class="hero-copy">
+            <text class="hero-eyebrow">PINBA TOGETHER</text>
+            <view class="hero-title"><text>你的搭子，</text><text class="hero-title-accent">刚刚好。</text></view>
+            <text class="hero-subtitle">发现身边同频的人和活动</text>
+            <view class="hero-bubble"><text>{{item.title}}</text><text aria-hidden="true"> ›</text></view>
           </view>
-        </swiper-item>
-      </swiper>
-      <view wx:if="{{banners.length > 1}}" class="campaign-dots" aria-hidden="true">
-        <view wx:for="{{banners}}" wx:key="id" class="campaign-dot {{currentBanner === index ? 'campaign-dot--active' : ''}}"></view>
-      </view>
+          <view class="hero-art" aria-hidden="true">
+            <view class="hero-art-glow"></view>
+            <view wx:if="{{item.failed}}" class="hero-art-fallback">✦</view>
+            <image wx:else class="hero-image" src="{{item.imageSrc}}" mode="aspectFit" data-id="{{item.id}}" binderror="handleBannerImageError" aria-hidden="true" />
+          </view>
+        </view>
+      </swiper-item>
+    </swiper>
+    <view class="hero-dots" aria-hidden="true"><view wx:for="{{banners}}" wx:key="id" class="hero-dot {{currentBanner === index ? 'hero-dot--active' : ''}}"></view></view>
+
+    <view class="home-shortcuts" aria-label="首页快捷入口">
+      <button class="home-shortcut home-shortcut--activities" data-action="activities" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="组队拼单，查看运动、同行和饭桌活动">
+        <text class="shortcut-title">组队拼单</text><text class="shortcut-subtitle">运动 · 同行 · 干饭</text><view class="shortcut-art shortcut-art--target" aria-hidden="true"><view></view></view><view class="shortcut-arrow" aria-hidden="true">›</view>
+      </button>
+      <button class="home-shortcut home-shortcut--community" data-action="community" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="社区动态，看看大家在聊什么">
+        <text class="shortcut-title">社区动态</text><text class="shortcut-subtitle">看看大家聊什么</text><view class="shortcut-art shortcut-art--chat" aria-hidden="true"><view></view></view><view class="shortcut-arrow" aria-hidden="true">›</view>
+      </button>
+      <button class="home-shortcut home-shortcut--publish" data-action="publish" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="发起活动，快速发布拼单">
+        <text class="shortcut-title">发起活动</text><text class="shortcut-subtitle">快速发布拼单</text><view class="shortcut-art shortcut-art--plus" aria-hidden="true"><view></view></view><view class="shortcut-arrow" aria-hidden="true">›</view>
+      </button>
     </view>
 
-    <view class="directory-tools">
+    <view id="home-directory-tools" class="directory-tools">
       <view class="search-row">
-        <view class="search-symbol" aria-hidden="true"><view class="search-glyph"><view class="search-glyph-handle"></view></view></view>
+        <view class="search-symbol" aria-hidden="true"></view>
         <input class="search-input" value="{{keyword}}" placeholder="搜索活动、地点或发起人" placeholder-class="search-placeholder" confirm-type="search" aria-label="搜索活动、地点或发起人" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
-        <button wx:if="{{keyword}}" class="search-clear-button" bindtap="handleClearKeyword" hover-class="search-clear--pressed" hover-stay-time="80" aria-label="清空搜索关键词"><text aria-hidden="true">×</text></button>
-        <button class="search-submit-button" bindtap="handleSearch" aria-label="执行搜索">搜索</button>
+        <button wx:if="{{keyword}}" class="search-clear-button" bindtap="handleClearKeyword" hover-class="control--pressed" aria-label="清空搜索关键词">×</button>
+        <button class="search-submit-button" bindtap="handleSearch" hover-class="control--pressed" aria-label="执行搜索">搜索</button>
       </view>
-
       <scroll-view class="filter-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" role="tablist" aria-label="选择拼单类型">
         <view class="filter-track">
-          <button wx:for="{{typeOptions}}" wx:key="value" class="filter-chip filter-chip--{{item.value || 'all'}} {{type === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">
-            <view class="chip-icon-box" aria-hidden="true"><image class="chip-icon-img" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" /></view>
-            <text class="chip-label">{{item.label}}</text>
+          <button wx:for="{{typeOptions}}" wx:key="value" class="filter-chip {{type === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">
+            <image class="filter-icon" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" /><text>{{item.label}}</text>
           </button>
         </view>
       </scroll-view>
     </view>
 
-    <view id="hot-pinba-heading" class="session-heading memory-section-heading hot-pinba-heading" role="heading" aria-label="{{hasActiveFilters ? '筛选结果' : '热门拼吧'}}">
-      <view class="session-heading-watermark memory-heading-watermark" aria-hidden="true">HOT PINBA</view>
-      <view class="session-heading-title memory-title">{{hasActiveFilters ? '筛选结果' : '热门拼吧'}}</view>
-      <view class="list-heading">
-        <view class="list-heading-meta"><text class="list-count" wx:if="{{!loading}}">第 {{currentPage}} 页</text><button wx:if="{{hasActiveFilters}}" class="clear-filter-button" bindtap="handleClearFilters">清除筛选</button></view>
+    <view id="hot-pinba-heading" class="home-activity-heading" role="heading" aria-level="2">
+      <view><text class="section-kicker">NEARBY NOW</text><text class="section-title">{{hasActiveFilters ? '筛选结果' : '附近拼单 · 正在发生'}}</text></view>
+      <view class="heading-meta"><text wx:if="{{!loading}}">第 {{currentPage}} 页</text><button wx:if="{{hasActiveFilters}}" class="clear-filter-button" bindtap="handleClearFilters">清除</button></view>
+    </view>
+
+    <view class="home-activity-list">
+      <view wx:if="{{loading}}" class="skeleton-list" aria-label="正在加载活动"><view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"><view class="skeleton-line skeleton-line--short"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-line--medium"></view></view></view></view>
+      <view wx:elif="{{activities.length}}"><activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" bindselect="handleCardSelect" /></view>
+      <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : (hasNextPage ? '查看下一页' : '去发起拼单'))}}" bindaction="handleEmptyAction" /></view>
+
+      <view wx:if="{{hasPagination}}" class="discover-pagination" role="navigation" aria-label="活动列表分页导航">
+        <button class="pagination-button {{currentPage <= 1 || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handlePrevPage" disabled="{{currentPage <= 1 || isPaging || refreshing}}" hover-class="pagination-button--pressed" aria-label="上一页，当前第{{currentPage}}页"><text aria-hidden="true">‹ </text>上一页</button>
+        <view class="pagination-indicator" aria-current="page">第 <text>{{currentPage}}</text> 页</view>
+        <button class="pagination-button {{!hasNextPage || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handleNextPage" disabled="{{!hasNextPage || isPaging || refreshing}}" hover-class="pagination-button--pressed" aria-label="{{hasNextPage ? '下一页' : '已是末页'}}"><text wx:if="{{isPaging}}">加载中</text><text wx:elif="{{hasNextPage}}">下一页 ›</text><text wx:else>已是末页</text></button>
       </view>
     </view>
 
-    <view class="hot-pinba-panel">
-      <view class="hot-pinba-panel-glow" aria-hidden="true"></view>
-      <view class="hot-pinba-panel-content">
-        <view wx:if="{{loading}}" class="skeleton-list" aria-label="正在加载活动"><view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"><view class="skeleton-line skeleton-line--short"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line"></view><view class="skeleton-line skeleton-line--medium"></view></view></view></view>
-
-        <view wx:elif="{{activities.length}}" class="hot-pinba-list">
-          <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" bindselect="handleCardSelect" />
-        </view>
-
-        <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : (hasNextPage ? '查看下一页' : '去发起拼单'))}}" bindaction="handleEmptyAction" /></view>
-
-        <view wx:if="{{hasPagination}}" class="discover-pagination" role="navigation" aria-label="活动列表分页导航">
-          <button class="pagination-button {{currentPage <= 1 || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handlePrevPage" disabled="{{currentPage <= 1 || isPaging || refreshing}}" hover-class="pagination-button--pressed" hover-stay-time="80" aria-label="上一页，当前第{{currentPage}}页"><text class="pagination-arrow" aria-hidden="true">‹</text><text>上一页</text></button>
-          <view class="pagination-indicator" aria-current="page"><text class="pagination-indicator-label">第</text><text class="pagination-indicator-number">{{currentPage}}</text><text class="pagination-indicator-label">页</text></view>
-          <button class="pagination-button {{!hasNextPage || isPaging || refreshing ? 'pagination-button--disabled' : ''}}" bindtap="handleNextPage" disabled="{{!hasNextPage || isPaging || refreshing}}" hover-class="pagination-button--pressed" hover-stay-time="80" aria-label="{{hasNextPage ? '下一页' : '已是末页'}}">
-            <view wx:if="{{isPaging}}" class="pagination-loading"><view class="pagination-spinner" aria-hidden="true"></view><text>加载中</text></view>
-            <block wx:elif="{{hasNextPage}}"><text>下一页</text><text class="pagination-arrow" aria-hidden="true">›</text></block>
-            <text wx:else>已是末页</text>
-          </button>
-        </view>
-      </view>
+    <view class="story-teaser" role="region" aria-label="成团记忆，分享功能即将开放">
+      <view class="story-copy"><text class="story-eyebrow">OUR STORIES</text><text class="story-title">成团记忆</text><text class="story-subtitle">每一次同行，都值得被记住 · 即将开放</text></view>
+      <view class="story-art" aria-hidden="true"><view class="story-photo story-photo--back"></view><view class="story-photo story-photo--front"><view class="story-sun"></view></view></view>
     </view>
 
-    <view class="memory-section memory-section--teaser" role="region" aria-label="成团记忆，分享功能即将开放，敬请期待">
-      <view class="memory-section-heading">
-        <view class="memory-heading-watermark" aria-hidden="true">OUR STORIES</view>
-        <view class="memory-title" aria-hidden="true">成团记忆</view>
-      </view>
-
-      <view class="memory-panel memory-panel--teaser" aria-hidden="true">
-        <image class="memory-panel-background" src="/assets/images/discover/formed-memory-editorial-bg.jpg" mode="aspectFill" lazy-load="{{true}}" aria-hidden="true" />
-        <view class="memory-panel-background-shade" aria-hidden="true"></view>
-        <view class="memory-panel-glow" aria-hidden="true"></view>
-        <view class="memory-panel-masthead" aria-hidden="true">
-          <view class="memory-art-title">
-            <view class="memory-art-title-first">分享你的</view>
-            <view class="memory-art-title-second"><text class="memory-panel-masthead-accent">成团</text><text>记忆</text><view class="memory-camera"><view class="memory-camera-lens"></view></view></view>
-          </view>
-          <view class="memory-panel-masthead-sub">每一次顺利成团，都值得被记住</view>
-        </view>
-        <view class="memory-grid memory-grid--3">
-          <view class="memory-placeholder memory-placeholder--lead">
-            <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
-            <view class="memory-placeholder-copy memory-placeholder-copy--lead">成团故事<text>分享功能即将开放</text></view>
-          </view>
-          <view class="memory-placeholder memory-placeholder--top">
-            <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
-            <view class="memory-placeholder-copy">虚位以待<text>敬请期待</text></view>
-          </view>
-          <view class="memory-placeholder memory-placeholder--bottom">
-            <view class="memory-placeholder-camera"><view class="memory-placeholder-lens"></view></view>
-            <view class="memory-placeholder-copy">等你来分享<text>记录精彩瞬间</text></view>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <view wx:if="{{activities.length && !loading && !hasNextPage}}" class="page-end-marker footer-state footer-state--end" aria-role="status">— 已经到底啦 · 拼吧 —</view>
+    <view wx:if="{{activities.length && !loading && !hasNextPage}}" class="page-end-marker" aria-role="status">— 已经到底啦 · 拼吧 —</view>
   </view>
 </view>

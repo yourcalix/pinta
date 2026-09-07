@@ -1,69 +1,34 @@
 <view class="page community-page" style="padding-top: {{contentTopInset}}px;">
-  <image class="community-fixed-background" src="/assets/images/community/community-ambient-bg.jpg" mode="aspectFill" aria-hidden="true" />
-
-  <view class="community-navigation" style="height: {{contentTopInset}}px;">
-    <view class="community-nav-inner">
-      <view class="community-nav-title" role="heading" aria-level="1">拼吧社区</view>
-    </view>
-  </view>
-
   <view class="community-content">
-    <button class="community-notice" bindtap="handleGuidelines" hover-class="community-control--pressed" hover-stay-time="80" aria-label="社区规范，友善交流，共建安全拼单社区，点击查看">
+    <view class="discover-square-header">
+      <view class="discover-square-copy"><text class="discover-square-eyebrow">PINBA DISCOVER</text><text class="discover-square-title" role="heading" aria-level="1">发现</text><text class="discover-square-subtitle">看看附近正在发生的讨论</text></view>
+      <button class="discover-compose-button" bindtap="handleCompose" hover-class="community-control--pressed" hover-stay-time="80" aria-label="发起讨论"><view class="compose-pencil" aria-hidden="true"></view><text>发帖</text></button>
+    </view>
+
+    <button class="community-notice" bindtap="handleGuidelines" hover-class="community-control--pressed" hover-stay-time="80" aria-label="发现守则，友善交流，共建安全拼吧社区，点击查看">
       <view class="notice-symbol" aria-hidden="true"><view class="notice-symbol-mouth"></view></view>
-      <view class="notice-copy"><text class="notice-label">社区规范</text><text class="notice-title">友善交流，共建安全拼单社区</text></view>
-      <text class="notice-badge" aria-hidden="true">指南</text>
-      <text class="notice-chevron" aria-hidden="true">›</text>
+      <view class="notice-copy"><text class="notice-label">发现守则</text><text class="notice-title">友善交流，共建安全拼吧社区</text></view>
+      <text class="notice-badge" aria-hidden="true">指南</text><text class="notice-chevron" aria-hidden="true">›</text>
     </button>
 
-    <view class="community-shortcuts" aria-label="社区快捷入口">
-      <button class="shortcut-card shortcut-card--compose" bindtap="handleCompose" hover-class="community-control--pressed" hover-stay-time="80" aria-label="发起讨论，分享问题与互助经验">
-        <view class="shortcut-copy"><text class="shortcut-title">发起讨论</text><text class="shortcut-subtitle">寻找同频搭子</text></view>
-        <view class="shortcut-icon shortcut-icon--compose" aria-hidden="true"><view class="shortcut-pencil"></view></view>
-      </button>
-      <button class="shortcut-card shortcut-card--rules" bindtap="handleGuidelines" hover-class="community-control--pressed" hover-stay-time="80" aria-label="社区守则，查看安全、隐私与友善表达规范">
-        <view class="shortcut-copy"><text class="shortcut-title">社区守则</text><text class="shortcut-subtitle">友善发帖规范</text></view>
-        <view class="shortcut-icon shortcut-icon--rules" aria-hidden="true"><view class="shortcut-shield"><view class="shortcut-shield-check"></view></view></view>
-      </button>
+    <view class="discussion-tabs" aria-label="发现讨论栏目">
+      <view><text class="discussion-eyebrow">HAPPENING NOW</text><text class="discussion-tab discussion-tab--active" role="heading" aria-level="2">正在发生</text></view>
+      <view class="discussion-sort"><view class="discussion-live-dot" aria-hidden="true"></view><text>热门讨论</text></view>
     </view>
 
-    <view class="discussion-tabs" aria-label="社区讨论栏目">
-      <view class="discussion-tab discussion-tab--active" role="heading" aria-level="2">最新讨论</view>
-      <text class="discussion-sort">按发布时间</text>
-    </view>
-
-    <view wx:if="{{loading}}" class="skeleton-list" role="status" aria-label="正在加载社区讨论">
-      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card" aria-hidden="true">
-        <view class="skeleton-head"><view class="skeleton-avatar"></view><view class="skeleton-author"><view class="skeleton-line skeleton-line--name"></view><view class="skeleton-line skeleton-line--time"></view></view></view>
-        <view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--short"></view>
-      </view>
+    <view wx:if="{{loading}}" class="skeleton-list" role="status" aria-label="正在加载发现内容">
+      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-head"><view class="skeleton-avatar"></view><view class="skeleton-author"><view class="skeleton-line skeleton-line--name"></view><view class="skeleton-line skeleton-line--time"></view></view></view><view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--body"></view><view class="skeleton-line skeleton-line--short"></view></view>
     </view>
 
     <view wx:elif="{{posts.length}}" class="post-list">
-      <view wx:for="{{posts}}" wx:key="id" class="post-card" hover-class="post-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}" data-id="{{item.id}}" bindtap="handlePost">
-        <view class="post-author-row">
-          <view class="post-avatar post-avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
-          <view class="post-author-copy"><text class="post-author">{{item.authorNickname}}</text></view>
-          <text class="post-time">{{item.timeLabel}}</text>
-        </view>
+      <view wx:for="{{posts}}" wx:key="id" class="post-card post-card--{{item.avatarTone}}" hover-class="post-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}" data-id="{{item.id}}" bindtap="handlePost">
+        <view class="post-author-row"><view class="post-avatar post-avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view><view class="post-author-copy"><text class="post-author">{{item.authorNickname}}</text><text class="post-time">{{item.timeLabel}}</text></view><view class="post-more" aria-hidden="true">···</view></view>
         <text class="post-preview">{{item.content}}</text>
-        <view class="post-footer" aria-hidden="true">
-          <view class="post-metrics"><view class="like-count"><view class="like-symbol">♡</view><text>{{item.likeCount}}</text></view><view class="reply-count"><view class="reply-bubble"></view><text>{{item.replyCount}}</text></view></view>
-        </view>
+        <view class="post-footer" aria-hidden="true"><view class="post-metrics"><view class="like-count"><view class="like-symbol">♡</view><text>{{item.likeCount}}</text></view><view class="reply-count"><view class="reply-bubble"></view><text>{{item.replyCount}}</text></view></view></view>
       </view>
-
-      <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" aria-role="status">
-        <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多讨论…</text></view>
-        <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载失败，点击重试</button>
-        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底啦 · 拼吧社区 —</view>
-      </view>
+      <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" aria-role="status"><view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多讨论…</text></view><button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载失败，点击重试</button><view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底啦 · 拼吧发现 —</view></view>
     </view>
 
-    <view wx:else class="empty-card">
-      <view class="empty-bubble" aria-hidden="true"><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view></view>
-      <text class="empty-title">{{error ? '讨论加载失败' : '暂无社区讨论'}}</text>
-      <text class="empty-description">{{error || '来分享第一个问题或互助经验吧。'}}</text>
-      <button wx:if="{{!error}}" class="empty-action" hover-class="empty-action--pressed" bindtap="handleCompose">去发帖</button>
-      <button wx:else class="empty-action empty-action--retry" hover-class="empty-action--pressed" bindtap="handleRetry">点击重试</button>
-    </view>
+    <view wx:else class="empty-card"><view class="empty-bubble" aria-hidden="true"><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view><view class="empty-bubble-dot"></view></view><text class="empty-title">{{error ? '发现内容加载失败' : '这里还很安静'}}</text><text class="empty-description">{{error || '来分享第一个问题或结伴经验吧。'}}</text><button wx:if="{{!error}}" class="empty-action" hover-class="community-control--pressed" bindtap="handleCompose">发起讨论</button><button wx:else class="empty-action" hover-class="community-control--pressed" bindtap="handleRetry">点击重试</button></view>
   </view>
 </view>

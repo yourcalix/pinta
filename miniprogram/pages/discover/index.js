@@ -484,6 +484,36 @@ Page({
     this.setData({ [`banners[${index}].failed`]: true });
   },
 
+  handleHeaderAction(event) {
+    const action = event.currentTarget.dataset.action;
+    if (action === 'messages') {
+      wx.switchTab({ url: '/pages/messages/index' });
+      return true;
+    }
+    if (action === 'search' && typeof wx !== 'undefined' && typeof wx.pageScrollTo === 'function') {
+      wx.pageScrollTo({ selector: '#home-directory-tools', duration: 200 });
+      return true;
+    }
+    return false;
+  },
+
+  handleHomeShortcut(event) {
+    const action = event.currentTarget.dataset.action;
+    if (action === 'activities') {
+      this.scrollToHotPinba();
+      return true;
+    }
+    if (action === 'community') {
+      wx.switchTab({ url: '/pages/community/index' });
+      return true;
+    }
+    if (action === 'publish') {
+      wx.switchTab({ url: '/pages/publish/index' });
+      return true;
+    }
+    return false;
+  },
+
   handleKeywordInput(event) {
     this.setData({ keyword: event.detail.value });
   },

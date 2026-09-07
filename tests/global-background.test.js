@@ -24,9 +24,10 @@ function pageTemplates() {
   ].sort();
 }
 
-test('除参考式详情、资料与社区柔焦页外，其余页面共用唯一拼图纸纹背景', () => {
+test('除独立视觉首页、发现、详情与资料页外，其余页面共用拼图纸纹背景', () => {
   const templates = pageTemplates();
   const referenceBackgroundPages = new Set([
+    'pages/discover/index.wxml',
     'pages/community/index.wxml',
     'subpackages/activity/detail/index.wxml',
     'subpackages/profile/edit/index.wxml'
@@ -67,7 +68,8 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
   configs.forEach((relativePath) => {
     const config = JSON.parse(read(relativePath));
     const lightBackgrounds = {
-      'pages/community/index.json': '#EFF4FA',
+      'pages/discover/index.json': '#F9F7F2',
+      'pages/community/index.json': '#F9F7F2',
       'subpackages/activity/detail/index.json': '#FFFFFF',
       'subpackages/profile/edit/index.json': '#F6F7F9'
     };

@@ -155,14 +155,14 @@
   align-items: stretch;
   box-sizing: border-box;
   min-height: 390rpx;
-  margin-bottom: 18rpx;
+  margin-bottom: 20rpx;
   padding: 0;
   background: #fff;
-  border: 1.5rpx solid #edf2f7;
-  border-radius: 22rpx;
-  box-shadow: 0 4rpx 14rpx rgba(15, 23, 42, 0.03);
+  border: 1.5rpx solid #efece6;
+  border-radius: 24rpx;
+  box-shadow: 0 5rpx 16rpx rgba(83, 69, 50, 0.05);
 }
-.activity-card--discover.activity-card--pressed { background: #f9fafb; box-shadow: 0 2rpx 10rpx rgba(15, 23, 42, 0.05); transform: scale(0.995); }
+.activity-card--discover.activity-card--pressed { background: #fffdfa; box-shadow: 0 2rpx 10rpx rgba(83, 69, 50, 0.05); transform: scale(0.992); }
 .activity-card--discover::before { display: none; }
 .activity-card--discover .card-cover {
   position: relative;
@@ -172,12 +172,12 @@
   min-height: 390rpx;
   overflow: hidden;
   background: #f6f7f9;
-  border-radius: 21rpx 0 0 21rpx;
+  border-radius: 23rpx 0 0 23rpx;
   pointer-events: none;
 }
-.activity-card--discover .card-cover--companion { background: linear-gradient(150deg, #d9ecff 0%, #b9d9f3 52%, #70a8d1 100%); }
-.activity-card--discover .card-cover--sport { background: linear-gradient(150deg, #ebe7ff 0%, #d8d0f1 52%, #8379bd 100%); }
-.activity-card--discover .card-cover--food { background: linear-gradient(150deg, #fff0dd 0%, #f7d5b8 52%, #d88c61 100%); }
+.activity-card--discover .card-cover--companion { background: linear-gradient(150deg, #edf6ef 0%, #d8eadc 52%, #86b293 100%); }
+.activity-card--discover .card-cover--sport { background: linear-gradient(150deg, #f4f0ff 0%, #e2d9f3 52%, #a192c7 100%); }
+.activity-card--discover .card-cover--food { background: linear-gradient(150deg, #fff7e9 0%, #f8dfc1 52%, #dca678 100%); }
 .activity-card--discover .card-cover-image {
   position: absolute;
   z-index: 0;
@@ -348,8 +348,8 @@
   padding: 8rpx 14rpx;
   overflow: hidden;
   color: #475569;
-  background: #f8fafc;
-  border: 1rpx solid #edf1f5;
+  background: #faf7f2;
+  border: 1rpx solid #eee8de;
   border-radius: 10rpx;
   font-size: 24rpx;
   font-weight: 500;
@@ -373,8 +373,8 @@
 .activity-card--large-text .owner-line { flex-basis: 100%; }
 .activity-card--large-text .owner-name { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 340px) {
-  .activity-card--discover { min-height: 350rpx; margin-bottom: 14rpx; border-radius: 18rpx; }
-  .activity-card--discover .card-cover { flex-basis: 43%; width: 43%; min-height: 350rpx; border-radius: 17rpx 0 0 17rpx; }
+  .activity-card--discover { min-height: 350rpx; margin-bottom: 14rpx; border-radius: 20rpx; }
+  .activity-card--discover .card-cover { flex-basis: 43%; width: 43%; min-height: 350rpx; border-radius: 19rpx 0 0 19rpx; }
   .activity-card--discover .card-cover-image { top: 38rpx; width: 190rpx; height: 190rpx; }
   .activity-card--discover .card-copy { flex-basis: 57%; width: 57%; padding: 16rpx 16rpx 14rpx; }
   .editorial-date { font-size: 32rpx; }

@@ -9,7 +9,7 @@ const { calculateContentTopInset } = require('../miniprogram/utils/navigation-la
 
 const root = path.join(__dirname, '..');
 
-test('四个 Tab 页面使用 custom navigation，社区浅色背景切换黑色状态栏', () => {
+test('四个 Tab 页面使用 custom navigation，首页与发现页切换为暖白背景黑色状态栏', () => {
   const discover = require('../miniprogram/pages/discover/index.json');
   const community = require('../miniprogram/pages/community/index.json');
   const publish = require('../miniprogram/pages/publish/index.json');
@@ -21,13 +21,13 @@ test('四个 Tab 页面使用 custom navigation，社区浅色背景切换黑色
   assert.equal(user.backgroundTextStyle, 'light');
   assert.equal(discover.navigationStyle, 'custom');
   assert.equal(discover.navigationBarTitleText, undefined);
-  assert.equal(discover.navigationBarTextStyle, 'white');
-  assert.equal(discover.backgroundColorTop, '#075AA7');
-  assert.equal(discover.backgroundTextStyle, 'light');
+  assert.equal(discover.navigationBarTextStyle, 'black');
+  assert.equal(discover.backgroundColorTop, '#F9F7F2');
+  assert.equal(discover.backgroundTextStyle, 'dark');
   assert.equal(community.navigationStyle, 'custom');
   assert.equal(community.navigationBarTitleText, undefined);
   assert.equal(community.navigationBarTextStyle, 'black');
-  assert.equal(community.backgroundColorTop, '#FCFAFA');
+  assert.equal(community.backgroundColorTop, '#F9F7F2');
   assert.equal(community.backgroundTextStyle, 'dark');
   assert.equal(publish.navigationStyle, 'custom');
   assert.equal(publish.navigationBarTitleText, undefined);
@@ -55,11 +55,11 @@ test('胶囊零值、缺失或 API 抛错时降级为状态栏加 52px', () => {
   assert.equal(calculateContentTopInset(null), 72);
 });
 
-test('发现页正文动态避让顶部，但固定启动层继续覆盖完整视口', () => {
+test('首页正文动态避让顶部，但固定启动层继续覆盖完整视口', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const pageStyle = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxss'), 'utf8');
   const splashStyle = fs.readFileSync(path.join(root, 'miniprogram/components/launch-splash/index.wxss'), 'utf8');
-  const discoverRule = pageStyle.match(/\.discover-page\s*\{([^}]*)\}/);
+  const discoverRule = pageStyle.match(/\.home-page\s*\{([^}]*)\}/);
   const splashRule = splashStyle.match(/\.launch-splash\s*\{([^}]*)\}/);
   assert.match(template, /style="padding-top: \{\{contentTopInset\}\}px;"/);
   assert.ok(discoverRule);

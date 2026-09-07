@@ -22,12 +22,11 @@ test('发现页四个类型筛选使用受控英文图标路径', () => {
   assert.doesNotMatch(script, /模块图标|桌面|Desktop/);
 });
 
-test('筛选Chip在文字前呈现装饰图标且保留Tab语义', () => {
+test('筛选 Chip 在文字前呈现受控图标且保留 Tab 语义', () => {
   const template = read('pages/discover/index.wxml');
   assert.match(template, /role="tab"[^>]*aria-selected/);
-  assert.match(template, /chip-icon-box[^>]*aria-hidden="true"/);
-  assert.match(template, /chip-icon-img[^>]*src="\{\{item\.iconSrc\}\}"[^>]*aria-hidden="true"/);
-  assert.ok(template.indexOf('chip-icon-box') < template.indexOf('chip-label'));
+  assert.match(template, /class="filter-icon"[^>]*src="\{\{item\.iconSrc\}\}"[^>]*aria-hidden="true"/);
+  assert.ok(template.indexOf('class="filter-icon"') < template.indexOf('<text>{{item.label}}</text>'));
 });
 
 test('筛选图标为72像素小型PNG且总量不超过16KB', () => {
@@ -41,24 +40,16 @@ test('筛选图标为72像素小型PNG且总量不超过16KB', () => {
   assert.ok(totalBytes <= 16 * 1024, `筛选图标总量为 ${totalBytes} bytes`);
 });
 
-test('筛选图标放大后透明融入Chip并保留触控穿透和窄屏保护', () => {
+test('筛选图标透明融入暖灰工具带并保留窄屏尺寸保护', () => {
   const styles = read('pages/discover/index.wxss');
-  const iconBox = styles.match(/\.chip-icon-box\s*\{([^}]*)\}/s)?.[1] || '';
-  assert.match(iconBox, /width:\s*48rpx;/);
-  assert.match(iconBox, /height:\s*48rpx;/);
-  assert.match(iconBox, /pointer-events:\s*none;/);
-  assert.doesNotMatch(iconBox, /background:|border:|border-radius:|box-shadow:/);
-  assert.match(styles, /\.chip-icon-img\s*\{[^}]*pointer-events:\s*none;/s);
-  assert.match(styles, /@media \(max-width: 340px\)[\s\S]*\.chip-icon-box\s*\{[^}]*width:\s*42rpx;[^}]*height:\s*42rpx;/);
+  assert.match(styles, /\.filter-icon\s*\{[^}]*width:\s*34rpx;[^}]*height:\s*34rpx;/s);
+  assert.match(styles, /@media \(max-width:\s*340px\)[\s\S]*\.filter-icon\s*\{[^}]*width:\s*30rpx;[^}]*height:\s*30rpx;/s);
 });
 
-test('筛选图标保持原色且所有选中态使用翡翠绿浅色反馈', () => {
+test('筛选项使用暖灰默认态、白色选中态并保持 88rpx 触控高度', () => {
   const styles = read('pages/discover/index.wxss');
-  assert.match(styles, /\.filter-chip\s*\{[^}]*color:\s*#4b5563;/s);
-  assert.match(styles, /\.filter-chip--active\s*\{[^}]*color:\s*#16a36a;/s);
-  assert.match(styles, /\.filter-chip--active::before\s*\{[^}]*background:\s*rgba\(22,\s*163,\s*106,\s*0\.1\);/s);
+  assert.match(styles, /\.filter-chip\s*\{[^}]*min-height:\s*88rpx;[^}]*color:\s*#777168;[^}]*background:\s*transparent;/s);
+  assert.match(styles, /\.filter-chip--active\s*\{[^}]*color:\s*#111827;[^}]*background:\s*#fff;/s);
   assert.doesNotMatch(styles, /\.filter-chip--(?:companion|sport|food)\.filter-chip--active/);
-  assert.doesNotMatch(styles, /\.chip-icon-img\s*\{[^}]*filter:/s);
-  assert.match(styles, /\.filter-chip\s*\{[^}]*min-height:\s*88rpx;[^}]*background:\s*transparent;/s);
-  assert.match(styles, /\.filter-chip::before\s*\{[^}]*top:\s*12rpx;[^}]*bottom:\s*12rpx;/s);
+  assert.match(styles, /\.filter-icon\s*\{[^}]*filter:\s*saturate\(0\.6\);/s);
 });

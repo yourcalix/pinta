@@ -64,13 +64,13 @@
     "list": [
       {
         "pagePath": "pages/discover/index",
-        "text": "发现",
+        "text": "首页",
         "iconPath": "custom-tab-bar/assets/tab-discover-painted.png",
         "selectedIconPath": "custom-tab-bar/assets/tab-discover-painted.png"
       },
       {
         "pagePath": "pages/community/index",
-        "text": "社区",
+        "text": "发现",
         "iconPath": "custom-tab-bar/assets/tab-community-painted.png",
         "selectedIconPath": "custom-tab-bar/assets/tab-community-painted.png"
       },

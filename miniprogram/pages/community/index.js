@@ -90,7 +90,7 @@ Page({
         this.setData({ loadingMore: false, loadMoreError: '加载更多失败，请重试' });
         return;
       }
-      this.setData({ loading: false, loadingMore: false, error: '讨论加载失败，请检查网络' });
+      this.setData({ loading: false, loadingMore: false, error: '发现内容加载失败，请检查网络' });
     }
   },
 
@@ -114,7 +114,7 @@ Page({
   handleGuidelines() {
     if (typeof wx === 'undefined' || typeof wx.showModal !== 'function') return;
     wx.showModal({
-      title: '拼吧社区守则',
+      title: '拼吧发现守则',
       content: '请友善交流并保护个人隐私；不要发布联系方式、二维码、外链、引流、诈骗或其他违规内容。发现不当内容可进入详情举报。',
       showCancel: false,
       confirmText: '我知道了',

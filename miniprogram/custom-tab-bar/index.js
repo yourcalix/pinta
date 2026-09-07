@@ -7,11 +7,11 @@ Component({
     unread: 0,
     unreadLabel: '',
     items: [
-      { pagePath: '/pages/discover/index', text: '发现', icon: '/custom-tab-bar/assets/tab-discover-painted.png' },
-      { pagePath: '/pages/community/index', text: '社区', icon: '/custom-tab-bar/assets/tab-community-painted.png' },
+      { pagePath: '/pages/discover/index', text: '首页', kind: 'home' },
+      { pagePath: '/pages/community/index', text: '发现', kind: 'discover' },
       { pagePath: '/pages/publish/index', text: '发布', publish: true },
       { pagePath: '/pages/messages/index', text: '消息', message: true },
-      { pagePath: '/pages/user/index', text: '我的', icon: '/custom-tab-bar/assets/tab-user-painted.png' }
+      { pagePath: '/pages/user/index', text: '我的', kind: 'user' }
     ]
   },
 

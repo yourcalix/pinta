@@ -308,26 +308,20 @@ test('发现页模板提供无总页数的分页导航并移除触底追加', ()
   assert.doesNotMatch(config, /onReachBottomDistance/);
 });
 
-test('发现页使用沉浸式深蓝头部和连续白色面板，不再渲染旧校园 Hero', () => {
+test('首页使用温暖生活方式 Hero、横向筛选与米白页面背景', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxss'), 'utf8');
-  assert.match(template, /shared-paper-bg\.jpg/);
-  assert.match(template, /discover-art-title-base">拼吧 · <\/text><text class="discover-art-title-accent">发现/);
+  assert.match(template, /class="home-greeting"/);
+  assert.match(template, /class="home-hero"/);
+  assert.match(template, /你的搭子，/);
   assert.match(template, /<scroll-view[^>]*scroll-x/);
   assert.match(template, /enhanced="\{\{true\}\}"/);
   assert.match(template, /show-scrollbar="\{\{false\}\}"/);
   assert.match(template, /bindtap="handleClearKeyword"/);
   assert.doesNotMatch(template, /hero-campus\.png|brand-puzzle\.png|class="hero surface"/);
-  assert.match(template, /class="global-page-background"/);
-  assert.match(template, /class="discover-hero"/);
-  assert.match(template, /class="discover-sheet"/);
-  assert.ok(template.indexOf('class="discover-hero"') < template.indexOf('class="discover-sheet"'));
-  assert.ok(template.indexOf('class="discover-sheet"') < template.indexOf('class="search-row"'));
-  assert.match(style, /\.discover-sheet\s*\{[^}]*width:\s*100vw;[^}]*min-height:\s*calc\(100vh - 340rpx\);[^}]*background:\s*#fff;/s);
-  assert.match(style, /\.discover-sheet\s*\{[^}]*padding-bottom:\s*calc\(180rpx \+ env\(safe-area-inset-bottom\)\)/s);
-  assert.match(style, /background:\s*#075aa7/i);
-  assert.match(style, /\.search-clear-button[\s\S]*min-(?:width|height):\s*88rpx/);
-  assert.match(style, /\.search-clear-button[^}]*margin-right:\s*12rpx/);
+  assert.doesNotMatch(template, /class="global-page-background"|shared-paper-bg\.jpg/);
+  assert.match(style, /\.home-page\s*\{[^}]*padding-bottom:\s*calc\(200rpx \+ env\(safe-area-inset-bottom\)\)[^}]*background:\s*#f9f7f2/s);
+  assert.match(style, /\.search-clear-button\s*\{[^}]*width:\s*88rpx[^}]*height:\s*88rpx/s);
 });
 
 test('活动卡片发现变体采用规整现代白卡且不依赖旧积木品牌图', () => {
@@ -336,6 +330,6 @@ test('活动卡片发现变体采用规整现代白卡且不依赖旧积木品�
   assert.match(template, /owner-avatar/);
   assert.match(template, /item\.ownerInitial/);
   assert.doesNotMatch(template, /brand-puzzle\.png|owner-puzzle/);
-  assert.match(style, /\.activity-card--discover\s*\{[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #edf2f7;[^}]*border-radius:\s*22rpx;/s);
+  assert.match(style, /\.activity-card--discover\s*\{[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #efece6;[^}]*border-radius:\s*24rpx;/s);
   assert.match(style, /\.activity-card--pressed/);
 });

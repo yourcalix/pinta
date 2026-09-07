@@ -1,10 +1,10 @@
 {
   "navigationStyle": "custom",
-  "navigationBarTextStyle": "white",
-  "backgroundColor": "#075AA7",
-  "backgroundColorTop": "#075AA7",
-  "backgroundColorBottom": "#075AA7",
-  "backgroundTextStyle": "light",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#F9F7F2",
+  "backgroundColorTop": "#F9F7F2",
+  "backgroundColorBottom": "#F9F7F2",
+  "backgroundTextStyle": "dark",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "activity-card": "/components/activity-card/index",

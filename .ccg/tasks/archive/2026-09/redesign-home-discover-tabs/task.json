@@ -1,0 +1,12 @@
+{
+  "id": "redesign-home-discover-tabs",
+  "title": "重构首页与发现页并重新设计底部导航",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交代码",
+  "createdAt": "2026-09-07T06:30:00Z",
+  "branch": "main"
+}
