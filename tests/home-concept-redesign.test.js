@@ -56,10 +56,15 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.equal(config.disableScroll, true);
   assert.equal(config.enablePullDownRefresh, false);
   assert.match(style, /\.home-greeting\s*\{[^}]*transform:\s*translateY\(-44rpx\);/s);
-  assert.match(style, /\.greeting-actions\s*\{[^}]*margin-right:\s*168rpx;/s);
+  assert.doesNotMatch(template, /class="home-greeting"[\s\S]*?class="greeting-actions"/);
+  assert.match(template, /class="home-hero"[\s\S]*class="hero-actions"/);
+  assert.match(style, /\.hero-actions\s*\{[^}]*top:\s*40rpx;[^}]*right:\s*38rpx;[^}]*width:\s*144rpx;[^}]*height:\s*64rpx;[^}]*border-radius:\s*32rpx;/s);
+  assert.match(style, /\.header-action\s*\{[^}]*width:\s*72rpx;[^}]*height:\s*64rpx;/s);
+  assert.match(style, /\.header-action-icon\s*\{[^}]*width:\s*28rpx;[^}]*height:\s*28rpx;/s);
   assert.match(style, /\.home-hero\s*\{[^}]*height:\s*692rpx;[^}]*margin-top:\s*-36rpx;/s);
   assert.match(style, /\.home-content\s*\{[^}]*margin-top:\s*-48rpx;[^}]*padding:\s*0 24rpx 0;/s);
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.home-hero\s*\{[^}]*height:\s*632rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.hero-actions\s*\{[^}]*top:\s*30rpx;[^}]*right:\s*28rpx;[^}]*width:\s*132rpx;[^}]*height:\s*58rpx;/s);
   assert.match(style, /\.hero-title\s*\{[^}]*font-size:\s*52rpx;/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*height:\s*220rpx;[^}]*margin-top:\s*-98rpx;/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*margin-bottom:\s*8rpx;/s);

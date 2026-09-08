@@ -1,0 +1,12 @@
+{
+  "id": "move-home-actions-into-hero",
+  "title": "压扁通知搜索并移入 Hero 右上角",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-08T00:00:00Z",
+  "branch": "main"
+}
