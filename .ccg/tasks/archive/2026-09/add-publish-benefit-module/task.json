@@ -1,0 +1,12 @@
+{
+  "id": "add-publish-benefit-module",
+  "title": "在发布页新增拼享惠模块占位",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交发布页拼享惠模块",
+  "createdAt": "2026-09-08T00:00:00+08:00",
+  "branch": "main"
+}

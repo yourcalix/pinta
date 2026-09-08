@@ -11,12 +11,12 @@
     </view>
 
     <view class="type-grid" role="list" aria-label="选择要发布的拼单类型">
-      <button wx:for="{{types}}" wx:key="value" class="type-card type-card--{{item.tone}}" hover-class="type-card--pressed" hover-stay-time="120" data-type="{{item.value}}" bindtap="handleSelect" disabled="{{pending}}" role="button" aria-label="{{item.ariaLabel}}">
+      <button wx:for="{{types}}" wx:key="value" class="type-card type-card--{{item.tone}}" hover-class="{{item.available ? 'type-card--pressed' : 'none'}}" hover-stay-time="120" data-type="{{item.value}}" bindtap="handleSelect" disabled="{{pending}}" role="button" aria-disabled="{{!item.available || pending}}" aria-label="{{item.ariaLabel}}">
         <view class="type-card-kicker">发起拼单</view>
         <view class="type-card-title">{{item.title}}</view>
         <view class="type-card-description">{{item.description}}</view>
-        <image class="type-card-art type-card-art--{{item.tone}}" src="{{item.image}}" mode="aspectFit" aria-hidden="true" />
-        <view class="type-card-action" aria-hidden="true"><text>发起</text><text class="type-card-plus">＋</text></view>
+        <image wx:if="{{item.image}}" class="type-card-art type-card-art--{{item.tone}}" src="{{item.image}}" mode="aspectFit" aria-hidden="true" />
+        <view class="type-card-action" aria-hidden="true"><text>{{item.available ? '发起' : '筹备中'}}</text><text wx:if="{{item.available}}" class="type-card-plus">＋</text></view>
       </button>
     </view>
 

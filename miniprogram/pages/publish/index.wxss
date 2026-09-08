@@ -96,6 +96,9 @@
 .type-card--companion { background: #0d8f93 !important; }
 .type-card--sport { background: #4c3b9b !important; }
 .type-card--food { background: #e65d16 !important; }
+.type-card--benefit {
+  background: radial-gradient(circle at 72% 72%, rgba(255, 235, 151, .36), transparent 38%), #b7791f !important;
+}
 .type-card--pressed { transform: scale(.975); filter: brightness(.96); }
 .type-card-kicker {
   position: relative;

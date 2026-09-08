@@ -28,6 +28,18 @@ const TYPE_META = Object.freeze({
   }
 });
 const TYPE_VALUES = Object.freeze(Object.keys(TYPE_META));
+const PUBLISH_MODULES = Object.freeze([
+  ...TYPE_VALUES.map((value) => ({ value, ...TYPE_META[value], available: true })),
+  {
+    value: 'benefit',
+    title: '拼享惠',
+    description: '拼优惠券，省钱一起享',
+    tone: 'benefit',
+    image: '../../assets/images/publish/publish-cover-benefit.png',
+    available: false,
+    ariaLabel: '拼享惠，拼优惠券与折扣，功能筹备中，点击查看提示'
+  }
+]);
 const DRAFT_FIELDS = Object.freeze({
   companion: ['title', 'description', 'rules', 'startDate', 'startTime', 'originLabel', 'destinationLabel'],
   sport: ['title', 'description', 'rules', 'startDate', 'startTime', 'sportType', 'venue', 'equipment'],
@@ -68,7 +80,7 @@ function readLatestDraft(platform) {
 Page({
   data: {
     contentTopInset: 88,
-    types: TYPE_VALUES.map((value) => ({ value, ...TYPE_META[value] })),
+    types: PUBLISH_MODULES,
     draft: null,
     pending: false
   },
@@ -87,7 +99,14 @@ Page({
   },
 
   handleSelect(event) {
-    return this.openForm(event.currentTarget.dataset.type);
+    const type = event.currentTarget.dataset.type;
+    const item = this.data.types.find((candidate) => candidate.value === type);
+    if (!item) return Promise.resolve(false);
+    if (!item.available) {
+      wx.showToast({ title: '拼享惠功能筹备中', icon: 'none' });
+      return Promise.resolve(false);
+    }
+    return this.openForm(type);
   },
 
   handleContinueDraft() {

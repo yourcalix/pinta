@@ -401,6 +401,24 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.doesNotMatch(template, /搜索|推荐|type-panel|module-row/);
 });
 
+test('发布入口展示拼享惠筹备模块且不把未上线类型送入活动表单', () => {
+  const root = path.join(__dirname, '../miniprogram/pages/publish');
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8');
+  const style = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8');
+
+  assert.match(script, /title:\s*'拼享惠'/);
+  assert.match(script, /description:\s*'拼优惠券，省钱一起享'/);
+  assert.match(script, /publish-cover-benefit\.png/);
+  assert.match(script, /if \(!item\.available\)/);
+  assert.match(script, /功能筹备中/);
+  assert.match(template, /item\.available \? '发起' : '筹备中'/);
+  assert.match(template, /wx:if="\{\{item\.image\}\}"/);
+  assert.match(template, /aria-disabled="\{\{!item\.available \|\| pending\}\}"/);
+  assert.match(style, /\.type-card--benefit\s*\{/);
+  assert.doesNotMatch(script, /pinba_publish_draft_benefit/);
+});
+
 test('发布入口忽略空白草稿并只展示最近一次有效草稿', () => {
   const pagePath = require.resolve('../miniprogram/pages/publish/index');
   const previousPage = global.Page;
