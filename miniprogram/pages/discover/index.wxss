@@ -15,7 +15,7 @@ button::after { display: none; }
 .header-action + .header-action::before { position: absolute; top: 22rpx; bottom: 22rpx; left: 0; width: 1rpx; content: ''; background: #eee9e1; }
 .header-action-icon { display: block; width: 36rpx; height: 36rpx; opacity: 0.9; pointer-events: none; }
 
-.home-hero { position: relative; box-sizing: border-box; width: 100%; height: 640rpx; margin-top: -36rpx; padding: 40rpx 38rpx; overflow: visible; background: linear-gradient(145deg, #fff 0%, #fffdfa 58%, #f7efe3 100%); border: 1.5rpx solid #efece6; border-radius: 32rpx; box-shadow: 0 12rpx 34rpx rgba(180, 160, 130, 0.095); }
+.home-hero { position: relative; box-sizing: border-box; width: 100%; height: 692rpx; margin-top: -36rpx; padding: 40rpx 38rpx; overflow: visible; background: linear-gradient(145deg, #fff 0%, #fffdfa 58%, #f7efe3 100%); border: 1.5rpx solid #efece6; border-radius: 32rpx; box-shadow: 0 12rpx 34rpx rgba(180, 160, 130, 0.095); }
 .hero-copy { position: relative; z-index: 2; display: flex; width: 62%; flex-direction: column; align-items: flex-start; }
 .hero-title { display: flex; color: #111827; font-size: 52rpx; font-weight: 900; line-height: 1.18; flex-direction: column; letter-spacing: -1.5rpx; }
 .hero-title-accent::after { color: #f59e0b; content: '•'; margin-left: 6rpx; }
@@ -76,7 +76,7 @@ button::after { display: none; }
 @media (max-width: 340px) {
   .home-content { padding-right: 20rpx; padding-left: 20rpx; }
   .home-greeting { min-height: 88rpx; padding: 0 2rpx; }.greeting-avatar { flex-basis: 64rpx; width: 64rpx; height: 64rpx; margin-right: 11rpx; }.greeting-title { font-size: 28rpx; }.greeting-subtitle { font-size: 20rpx; }.greeting-actions { flex-basis: 176rpx; height: 88rpx; border-radius: 44rpx; }.header-action { width: 88rpx; height: 88rpx; }
-  .home-hero { height: 580rpx; padding: 30rpx 28rpx; border-radius: 26rpx; }.hero-copy { width: 64%; }.hero-title { font-size: 46rpx; }.hero-subtitle { font-size: 22rpx; }.hero-illustration-slot { right: 6rpx; bottom: 0; width: 320rpx; height: 320rpx; }
+  .home-hero { height: 632rpx; padding: 30rpx 28rpx; border-radius: 26rpx; }.hero-copy { width: 64%; }.hero-title { font-size: 46rpx; }.hero-subtitle { font-size: 22rpx; }.hero-illustration-slot { right: 6rpx; bottom: 0; width: 320rpx; height: 320rpx; }
   .home-shortcuts { height: 200rpx; margin-top: -86rpx; gap: 12rpx; }.home-shortcut { height: 200rpx; padding: 18rpx 13rpx; border-radius: 22rpx; }.shortcut-title { font-size: 23rpx; }.shortcut-subtitle { font-size: 18rpx; }.shortcut-icon-slot { right: 0; bottom: -4rpx; width: 110rpx; height: 110rpx; }.shortcut-arrow { bottom: 12rpx; left: 12rpx; width: 30rpx; height: 30rpx; font-size: 19rpx; }
   .directory-tools { padding: 10rpx; }.filter-track { gap: 4rpx; }.filter-chip { min-width: 124rpx; min-height: 88rpx; font-size: 20rpx; }.filter-icon { width: 30rpx; height: 30rpx; }
   .section-title { font-size: 27rpx; }.section-title-detail { font-size: 22rpx; }.load-more-heading, .clear-filter-button { min-width: 104rpx; font-size: 21rpx; }

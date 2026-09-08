@@ -1,0 +1,12 @@
+{
+  "id": "lower-nearby-toward-tabbar",
+  "title": "下移附近拼吧至悬浮 TabBar 上方",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-08T00:00:00Z",
+  "branch": "main"
+}
