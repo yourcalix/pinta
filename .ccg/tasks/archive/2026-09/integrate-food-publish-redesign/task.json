@@ -1,0 +1,12 @@
+{
+  "id": "integrate-food-publish-redesign",
+  "title": "接入拼饭桌发布页视觉升级",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付真机验证",
+  "createdAt": "2026-09-08T18:10:00+08:00",
+  "branch": "main"
+}
