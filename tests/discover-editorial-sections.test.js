@@ -42,7 +42,7 @@ test('活动流承载三条首屏、查看更多追加、真实活动卡与空�
   assert.match(template, /wx:for="\{\{\[1,2,3\]\}\}"/);
   assert.doesNotMatch(template, /discover-pagination|handlePrevPage|handleNextPage|currentPage/);
   assert.match(style, /\.load-more-heading, \.clear-filter-button\s*\{[^}]*min-height:\s*88rpx/s);
-  assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, 220rpx\)/s);
+  assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
 });
 
 test('首页不挂载未来成团记忆 UGC 模块且末页由终点文案收口', () => {

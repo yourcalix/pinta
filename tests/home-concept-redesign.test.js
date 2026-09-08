@@ -63,8 +63,8 @@ test('附近拼吧常规模式严格使用三列紧凑卡并每次追加三条',
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
   const script = read('pages/discover/index.js');
-  assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, 220rpx\);[^}]*gap:\s*21rpx;/s);
-  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, 192rpx\);[^}]*gap:\s*12rpx;/s);
+  assert.match(style, /\.home-activity-grid\s*\{[^}]*width:\s*100%;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*21rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*12rpx;/s);
   assert.match(template, /wx:if="\{\{isPaging\}\}"[\s\S]*wx:for="\{\{\[1,2,3\]\}\}"/);
   assert.match(template, /wx:if="\{\{hasNextPage\}\}" class="load-more-heading/);
   assert.match(script, /const PAGE_SIZE = 3;/);

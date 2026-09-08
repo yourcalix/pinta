@@ -1,0 +1,12 @@
+{
+  "id": "align-home-activity-grid",
+  "title": "将首页附近拼吧三列活动卡与 Hero 两侧对齐",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成弹性网格对齐、模拟器复核与全量验证",
+  "createdAt": "2026-09-08T00:00:00Z",
+  "branch": "main"
+}

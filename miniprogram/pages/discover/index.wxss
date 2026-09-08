@@ -57,8 +57,8 @@ button::after { display: none; }
 .load-more-heading, .clear-filter-button { min-width: 116rpx; min-height: 88rpx; padding: 0 8rpx; color: #64748b; background: transparent; border: 0; font-size: 24rpx; font-weight: 600; }
 .load-more-heading--pressed { opacity: 0.58; }.load-more-heading--disabled { color: #a8a29e; }
 .clear-filter-button { color: #9b6c18; font-size: 21rpx; }
-.home-activity-stream { width: 100%; }
-.home-activity-grid { display: grid; width: 100%; box-sizing: border-box; grid-template-columns: repeat(3, 220rpx); gap: 21rpx; align-items: start; justify-content: start; }
+.home-activity-stream { width: 100%; box-sizing: border-box; }
+.home-activity-grid { display: grid; width: 100%; box-sizing: border-box; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 21rpx; align-items: start; justify-content: stretch; }
 .home-activity-grid--large-text { grid-template-columns: minmax(0, 1fr); gap: 20rpx; }
 .activity-skeleton-card { display: flex; width: 100%; height: 320rpx; min-width: 0; box-sizing: border-box; flex-direction: column; padding: 16rpx 14rpx 14rpx; overflow: hidden; background: #fff; border: 1.5rpx solid #efece6; border-radius: 22rpx; box-shadow: 0 6rpx 18rpx rgba(15, 23, 42, 0.055); }
 .activity-skeleton-owner { display: flex; height: 40rpx; align-items: center; }
@@ -81,7 +81,7 @@ button::after { display: none; }
   .home-shortcuts { height: 200rpx; margin-top: -86rpx; gap: 12rpx; }.home-shortcut { height: 200rpx; padding: 18rpx 13rpx; border-radius: 22rpx; }.shortcut-title { font-size: 23rpx; }.shortcut-subtitle { font-size: 18rpx; }.shortcut-icon-slot { right: 0; bottom: -4rpx; width: 110rpx; height: 110rpx; }.shortcut-arrow { bottom: 12rpx; left: 12rpx; width: 30rpx; height: 30rpx; font-size: 19rpx; }
   .directory-tools { padding: 10rpx; }.filter-track { gap: 4rpx; }.filter-chip { min-width: 124rpx; min-height: 88rpx; font-size: 20rpx; }.filter-icon { width: 30rpx; height: 30rpx; }
   .section-title { font-size: 27rpx; }.section-title-detail { font-size: 22rpx; }.load-more-heading, .clear-filter-button { min-width: 104rpx; font-size: 21rpx; }
-  .home-activity-grid { grid-template-columns: repeat(3, 192rpx); gap: 12rpx; }
+  .home-activity-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12rpx; }
   .home-activity-grid--large-text { grid-template-columns: minmax(0, 1fr); gap: 16rpx; }
   .activity-skeleton-card { height: 286rpx; padding: 11rpx; border-radius: 18rpx; }
   .activity-skeleton-owner { height: 34rpx; }
