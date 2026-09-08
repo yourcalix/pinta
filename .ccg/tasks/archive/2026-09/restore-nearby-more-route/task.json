@@ -1,0 +1,12 @@
+{
+  "id": "restore-nearby-more-route",
+  "title": "补回附近拼吧发现更多并跳转全部活动页",
+  "status": "completed",
+  "risk": "low",
+  "domain": "frontend",
+  "complexity": "L",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-08T16:40:00+08:00",
+  "branch": "main"
+}

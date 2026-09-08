@@ -18,7 +18,7 @@ Component({
   observers: {
     'item, variant'(item, variant) {
       const tone = item && item.typeTone;
-      const coverSrc = variant === 'home-preview' && Object.prototype.hasOwnProperty.call(COVERS, tone) ? COVERS[tone] : '';
+      const coverSrc = ['home-preview', 'discover'].includes(variant) && Object.prototype.hasOwnProperty.call(COVERS, tone) ? COVERS[tone] : '';
       const avatarSlots = item && Array.isArray(item.visibleAvatarSlots)
         ? item.visibleAvatarSlots.map((slot) => {
             const copy = { ...slot };

@@ -12,6 +12,37 @@
     <view class="home-preview-capacity">{{item.capacityLabel}}</view>
   </view>
 </view>
+<view wx:elif="{{item && variant === 'discover'}}" class="activity-card activity-card--discover activity-card--{{item.typeTone}} {{largeText ? 'activity-card--large-text' : ''}}" bindtap="handleTap" hover-class="activity-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}">
+  <view class="card-cover card-cover--{{item.typeTone}}" aria-hidden="true">
+    <image wx:if="{{coverSrc && !coverFailed}}" class="card-cover-image" src="{{coverSrc}}" data-src="{{coverSrc}}" mode="aspectFit" lazy-load="{{true}}" binderror="handleCoverError" />
+    <view wx:else class="card-cover-fallback"><text class="cover-fallback-symbol">✦</text><text>{{item.typeLabel}}</text></view>
+    <view class="card-cover-type"># {{item.typeLabel}}</view>
+    <view class="card-cover-scrim"></view>
+    <view class="card-cover-footer">
+      <view class="member-avatar-group">
+        <view wx:for="{{avatarSlots}}" wx:key="id" wx:for-item="slot" class="member-avatar-slot {{slot.empty ? 'member-avatar-slot--empty' : 'member-avatar-slot--filled'}}" style="z-index: {{slot.layer}}; animation-delay: {{slot.delay}}ms;">
+          <image wx:if="{{!slot.empty}}" src="{{slot.src}}" mode="{{slot.mode}}" data-index="{{index}}" data-slot-id="{{slot.id}}" data-src="{{slot.src}}" lazy-load="{{true}}" binderror="handleAvatarError" />
+          <text wx:else>+</text>
+        </view>
+        <text wx:if="{{item.hiddenMemberCount}}" class="member-avatar-more">+{{item.hiddenMemberCount}}</text>
+      </view>
+      <view class="cover-capacity"><text>{{item.capacityLabel}}</text><text>›</text></view>
+    </view>
+  </view>
+  <view class="card-copy" aria-hidden="true">
+    <view class="editorial-date-row">
+      <view class="editorial-date-block"><text class="editorial-date">{{item.editorialDate}}</text><view class="editorial-date-meta"><text>{{item.editorialWeekday}}</text><text>{{item.editorialTime}}</text></view></view>
+      <view class="editorial-status"><status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" /></view>
+    </view>
+    <view class="activity-title"><text wx:if="{{item.legacy && item.legacy.readOnly}}" class="archive-prefix">历史 · </text>{{item.title}}</view>
+    <view class="meta-item editorial-place"><text class="meta-icon">⌖</text><text class="meta-text meta-text--place">{{item.sceneLine}}</text></view>
+    <view class="owner-line">
+      <image wx:if="{{ownerAvatar && !ownerAvatar.empty}}" class="owner-avatar-image" src="{{ownerAvatar.src}}" mode="{{ownerAvatar.mode}}" data-slot-id="{{ownerAvatar.id}}" data-src="{{ownerAvatar.src}}" lazy-load="{{true}}" binderror="handleOwnerAvatarError" />
+      <view wx:else class="owner-avatar">{{item.ownerInitial}}</view><text class="owner-name">{{item.ownerNickname}}</text><text class="owner-role">发起</text>
+    </view>
+    <view wx:if="{{item.displayDescription}}" class="activity-description"><text class="description-mark">“</text>{{item.displayDescription}}</view>
+  </view>
+</view>
 <view wx:elif="{{item}}" class="activity-card activity-card--{{item.typeTone}}" bindtap="handleTap" hover-class="activity-card--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}">
   <view class="card-head">
     <view class="card-tags">

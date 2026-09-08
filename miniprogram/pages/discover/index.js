@@ -5,7 +5,6 @@ const safetyService = require('../../services/safety');
 const { decorateActivity } = require('../../utils/display');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {
-  mergeActivitiesById,
   expirationSchedule,
   removeLocallyExpiredRecruiting
 } = require('../../utils/discover-list');
@@ -53,8 +52,6 @@ Page({
     appliedKeyword: '',
     hasActiveFilters: false,
     activities: [],
-    hasNextPage: false,
-    isPaging: false,
     loading: true,
     refreshing: false,
     error: '',
@@ -79,6 +76,7 @@ Page({
   },
 
   onShow() {
+    this._allActivitiesNavigationPending = false;
     selectTab(this, 0);
     this.syncTextSizeMode();
     this.syncGreetingProfile();
@@ -115,15 +113,12 @@ Page({
     const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
     this.clearExpirationTimer();
     const resetContent = !keepContent;
-    if (resetContent) this.resetPaginationCache();
     this.setData({
       loading: resetContent || this.data.activities.length === 0,
       refreshing: true,
-      isPaging: false,
       error: '',
       ...(resetContent ? {
-        activities: [],
-        hasNextPage: false
+        activities: []
       } : {})
     });
 
@@ -131,15 +126,11 @@ Page({
       const snapshot = await this.requestActivityPage(undefined, allowAutoFill);
       if (loadSeq !== this._loadSeq) return false;
 
-      this._nextCursor = snapshot.nextCursor || undefined;
       const activities = snapshot.activities;
-      const hasNextPage = Boolean(snapshot.nextCursor);
       this.setData({
         activities,
-        hasNextPage,
         loading: false,
         refreshing: false,
-        isPaging: false,
         error: ''
       });
       this.scheduleExpirationRefresh(activities);
@@ -150,7 +141,6 @@ Page({
       this.setData({
         loading: false,
         refreshing: false,
-        isPaging: false,
         error: hasContent ? '' : '活动列表加载失败，请重试'
       });
       this.scheduleExpirationRefresh(this.data.activities);
@@ -184,56 +174,9 @@ Page({
     }
   },
 
-  resetPaginationCache() {
-    this._nextCursor = undefined;
-  },
-
   scrollToHotPinba() {
     if (typeof wx === 'undefined' || typeof wx.pageScrollTo !== 'function') return;
     wx.pageScrollTo({ selector: '#hot-pinba-heading', duration: 200 });
-  },
-
-  handleLoadMore() {
-    if (this.data.loading || this.data.refreshing || this.data.isPaging || !this.data.hasNextPage) return false;
-    const cursor = this._nextCursor;
-    if (!cursor) return false;
-    this._loadSeq = this._loadSeq || 0;
-    const loadSeq = this._loadSeq;
-    this.setData({ isPaging: true });
-    return this.loadMoreActivities(cursor, loadSeq);
-  },
-
-  async loadMoreActivities(cursor, loadSeq) {
-    try {
-      const snapshot = await this.requestActivityPage(cursor, true);
-      if (loadSeq !== this._loadSeq) return false;
-      this._nextCursor = snapshot.nextCursor || undefined;
-      if (!snapshot.activities.length) {
-        this.setData({ hasNextPage: Boolean(snapshot.nextCursor), isPaging: false });
-        if (snapshot.nextCursor && typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
-          wx.showToast({ title: '暂时没有更多活动，可再试一次', icon: 'none' });
-        }
-        return false;
-      }
-
-      const activities = mergeActivitiesById(this.data.activities, snapshot.activities);
-      this.setData({
-        activities,
-        hasNextPage: Boolean(snapshot.nextCursor),
-        isPaging: false,
-        error: ''
-      });
-      this.scheduleExpirationRefresh(activities);
-      return true;
-    } catch (error) {
-      if (loadSeq !== this._loadSeq) return false;
-      this.setData({ isPaging: false });
-      this.scheduleExpirationRefresh(this.data.activities);
-      if ((!error || !error.handled) && typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
-        wx.showToast({ title: '加载失败，请重试', icon: 'none' });
-      }
-      return false;
-    }
   },
 
   scheduleExpirationRefresh(items) {
@@ -465,6 +408,16 @@ Page({
     return false;
   },
 
+  handleNavigateToAll() {
+    if (this._allActivitiesNavigationPending) return false;
+    this._allActivitiesNavigationPending = true;
+    wx.navigateTo({
+      url: '/subpackages/activity/list/index',
+      fail: () => { this._allActivitiesNavigationPending = false; }
+    });
+    return true;
+  },
+
   handleKeywordInput(event) {
     this.setData({ keyword: event.detail.value });
   },
@@ -507,7 +460,6 @@ Page({
   handleEmptyAction() {
     if (this.data.error) return this.fetchActivities({ mode: 'replace' });
     if (this.data.hasActiveFilters) return this.handleClearFilters();
-    if (this.data.hasNextPage) return this.handleLoadMore();
     wx.switchTab({ url: '/pages/publish/index' });
   }
 });

@@ -33,16 +33,16 @@ test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨�
   assert.doesNotMatch(style, /#075aa7|#207be5/i);
 });
 
-test('活动流承载三条首屏、查看更多追加、真实活动卡与空态', () => {
+test('活动流承载三条首屏、独立全部活动入口、真实活动卡与空态', () => {
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
   assert.match(template, /<activity-card[^>]*variant="home-preview"[^>]*bindselect="handleCardSelect"/);
   assert.match(template, /class="home-activity-grid/);
-  assert.match(template, /class="load-more-heading/);
-  assert.match(template, /bindtap="handleLoadMore"/);
+  assert.match(template, /class="home-section-more"/);
+  assert.match(template, /bindtap="handleNavigateToAll"/);
   assert.match(template, /wx:for="\{\{\[1,2,3\]\}\}"/);
   assert.doesNotMatch(template, /discover-pagination|handlePrevPage|handleNextPage|currentPage/);
-  assert.match(style, /\.load-more-heading, \.clear-filter-button\s*\{[^}]*min-height:\s*88rpx/s);
+  assert.match(style, /\.home-section-more\s*\{[^}]*min-width:\s*130rpx;[^}]*min-height:\s*88rpx/s);
   assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
 });
 

@@ -1,0 +1,31 @@
+<view class="all-activities-page">
+  <view class="activity-tools">
+    <view class="activity-search" role="search" aria-label="搜索全部活动">
+      <image class="activity-search-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" />
+      <input class="activity-search-input" value="{{keyword}}" placeholder="搜索活动、地点或发起人" placeholder-class="activity-search-placeholder" confirm-type="search" cursor-spacing="18" aria-label="输入活动、地点或发起人关键词" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+      <button wx:if="{{keyword}}" class="activity-search-clear" bindtap="handleClearKeyword" hover-class="control--pressed" aria-label="清空搜索内容">×</button>
+    </view>
+    <scroll-view class="activity-filter-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" role="tablist" aria-label="活动类型筛选">
+      <view class="activity-filter-track">
+        <button wx:for="{{typeOptions}}" wx:key="value" class="activity-filter-chip {{type === item.value ? 'activity-filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" hover-class="control--pressed" role="tab" aria-selected="{{type === item.value}}">{{item.label}}</button>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="activity-list-content">
+    <view wx:if="{{loading}}" class="all-activity-skeleton-list" role="status" aria-label="正在加载全部活动">
+      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="all-activity-skeleton" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"><view class="skeleton-line skeleton-line--date"></view><view class="skeleton-line skeleton-line--title"></view><view class="skeleton-line skeleton-line--title-short"></view><view class="skeleton-line skeleton-line--meta"></view></view></view>
+    </view>
+
+    <view wx:elif="{{activities.length}}" class="all-activity-list">
+      <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" large-text="{{largeTextMode}}" bindselect="handleCardSelect" />
+      <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="activity-list-footer" role="status">
+        <view wx:if="{{loadingMore}}" class="activity-footer-state"><view class="activity-footer-spinner" aria-hidden="true"></view><text>正在发现更多活动…</text></view>
+        <button wx:elif="{{loadMoreError}}" class="activity-footer-retry" bindtap="handleRetryLoadMore" hover-class="control--pressed">{{loadMoreError}}</button>
+        <view wx:elif="{{!hasMore}}" class="activity-footer-state activity-footer-state--end">— 已经到底啦 · 拼吧 —</view>
+      </view>
+    </view>
+
+    <view wx:else class="activity-empty-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error ? '全部活动加载失败' : (hasActiveFilters ? '没有找到相关活动' : '暂时还没有活动')}}" description="{{error || (hasActiveFilters ? '换个关键词或活动类型再试试。' : '发起一个活动，邀请同频伙伴加入。')}}" action-text="{{error ? '点击重试' : (hasActiveFilters ? '清除筛选' : '去发起活动')}}" bindaction="handleEmptyAction" /></view>
+  </view>
+</view>

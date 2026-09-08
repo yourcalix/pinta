@@ -47,8 +47,7 @@
 
     <view id="hot-pinba-heading" class="home-activity-heading" role="heading" aria-level="2">
       <view class="section-title-row"><text class="section-title">{{hasActiveFilters ? '筛选结果' : '附近拼吧'}}</text><text wx:if="{{!hasActiveFilters}}" class="section-title-detail">· 正在发生</text></view>
-      <button wx:if="{{hasNextPage}}" class="load-more-heading {{isPaging || refreshing ? 'load-more-heading--disabled' : ''}}" bindtap="handleLoadMore" disabled="{{isPaging || refreshing}}" hover-class="load-more-heading--pressed" aria-label="查看更多附近活动"><text>{{isPaging ? '正在发现...' : '查看更多'}}</text><text wx:if="{{!isPaging}}" aria-hidden="true"> ›</text></button>
-      <button wx:elif="{{hasActiveFilters}}" class="clear-filter-button" bindtap="handleClearFilters">清除筛选</button>
+      <button class="home-section-more" bindtap="handleNavigateToAll" hover-class="home-section-more--pressed" hover-stay-time="80" aria-label="发现更多，点击查看全部活动列表"><text>发现更多</text><text class="home-section-more-arrow" aria-hidden="true">›</text></button>
     </view>
 
     <view class="home-activity-stream">
@@ -57,9 +56,8 @@
       </view>
       <view wx:elif="{{activities.length}}" class="home-activity-grid {{largeTextMode ? 'home-activity-grid--large-text' : ''}}">
         <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="home-preview" large-text="{{largeTextMode}}" bindselect="handleCardSelect" />
-        <block wx:if="{{isPaging}}"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="activity-skeleton-card" aria-hidden="true"><view class="activity-skeleton-owner"><view class="activity-skeleton-avatar"></view><view class="activity-skeleton-line activity-skeleton-line--owner"></view></view><view class="activity-skeleton-line activity-skeleton-line--title"></view><view class="activity-skeleton-line activity-skeleton-line--title-short"></view><view class="activity-skeleton-cover"></view></view></block>
       </view>
-      <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : (hasNextPage ? '查看更多' : '去发起拼单'))}}" bindaction="handleEmptyAction" /></view>
+      <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试。' : (hasActiveFilters ? '换个关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : '去发起拼单')}}" bindaction="handleEmptyAction" /></view>
     </view>
 
   </view>

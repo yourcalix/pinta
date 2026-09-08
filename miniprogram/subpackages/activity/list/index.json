@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "全部活动",
+  "navigationBarBackgroundColor": "#F9F7F2",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#F9F7F2",
+  "backgroundTextStyle": "dark",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 160,
+  "usingComponents": {
+    "activity-card": "/components/activity-card/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

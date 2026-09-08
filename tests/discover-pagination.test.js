@@ -40,6 +40,7 @@ function loadDiscoverPage() {
   const timers = [];
   const scrollCalls = [];
   const toastCalls = [];
+  const navigateCalls = [];
   const originalSetTimeout = global.setTimeout;
   const originalClearTimeout = global.clearTimeout;
   const originalGetApp = global.getApp;
@@ -48,7 +49,7 @@ function loadDiscoverPage() {
   global.wx = {
     getStorageSync: () => [],
     stopPullDownRefresh() {},
-    navigateTo() {},
+    navigateTo(options) { navigateCalls.push(options); },
     switchTab() {},
     showToast(options) { toastCalls.push(options); },
     pageScrollTo(options) { scrollCalls.push(options); }
@@ -69,6 +70,7 @@ function loadDiscoverPage() {
     timers,
     scrollCalls,
     toastCalls,
+    navigateCalls,
     originalSetTimeout,
     originalClearTimeout,
     originalGetApp,
@@ -90,102 +92,43 @@ function unloadDiscoverPage(context) {
   global.clearTimeout = context.originalClearTimeout;
 }
 
-test('首页首屏与查看更多每次请求三条并把新活动追加到现有列表', async () => {
+test('首页只请求并展示三条活动预览，不消费后续游标', async () => {
   const originalList = activityService.list;
   const calls = [];
   activityService.list = async (filters) => {
     calls.push(filters);
-    if (!filters.cursor) return { items: ['a1', 'a2', 'a3'].map(dto), nextCursor: 'opaque-2' };
-    return { items: [dto('a4'), dto('a5')], nextCursor: null };
+    return { items: ['a1', 'a2', 'a3'].map(dto), nextCursor: 'opaque-2' };
   };
   const context = loadDiscoverPage();
   try {
     await context.page.fetchActivities({ mode: 'replace' });
+    assert.equal(calls.length, 1);
     assert.equal(calls[0].cursor, undefined);
     assert.equal(calls[0].limit, 3);
     assert.deepEqual(context.page.data.activities.map((item) => item.id), ['a1', 'a2', 'a3']);
-    assert.equal(context.page.data.hasNextPage, true);
-    await context.page.handleLoadMore();
-    assert.equal(calls[1].cursor, 'opaque-2');
-    assert.equal(calls[1].limit, 3);
-    assert.deepEqual(context.page.data.activities.map((item) => item.id), ['a1', 'a2', 'a3', 'a4', 'a5']);
-    assert.equal(context.page.data.hasNextPage, false);
-    assert.deepEqual(context.scrollCalls, []);
+    assert.equal(Object.hasOwn(context.page.data, 'hasNextPage'), false);
+    assert.equal(typeof context.page.handleLoadMore, 'undefined');
   } finally {
     activityService.list = originalList;
     unloadDiscoverPage(context);
   }
 });
 
-test('replace 抢占晚到的查看更多请求，旧响应不能污染新筛选结果', async () => {
-  const originalList = activityService.list;
-  let resolveAppend;
-  activityService.list = (filters) => {
-    if (filters.cursor) return new Promise((resolve) => { resolveAppend = resolve; });
-    return Promise.resolve({ items: [dto('replacement')], nextCursor: null });
-  };
+test('发现更多始终跳转全部活动页并阻止快速重复入栈', () => {
   const context = loadDiscoverPage();
   try {
-    context.page._nextCursor = 'next';
-    context.page.setData({ activities: [dto('old')], hasNextPage: true, loading: false, refreshing: false });
-    const append = context.page.handleLoadMore();
-    const replace = context.page.fetchActivities({ mode: 'replace' });
-    await replace;
-    resolveAppend({ items: [dto('stale')], nextCursor: null });
-    await append;
-    assert.deepEqual(context.page.data.activities.map((item) => item.id), ['replacement']);
-    assert.equal(context.page.data.isPaging, false);
+    assert.equal(context.page.handleNavigateToAll(), true);
+    assert.equal(context.page.handleNavigateToAll(), false);
+    assert.equal(context.navigateCalls.length, 1);
+    assert.equal(context.navigateCalls[0].url, '/subpackages/activity/list/index');
+    context.navigateCalls[0].fail();
+    assert.equal(context.page.handleNavigateToAll(), true);
   } finally {
-    activityService.list = originalList;
     unloadDiscoverPage(context);
   }
 });
 
-test('查看更多失败保留当前三张卡片并释放加载锁', async () => {
-  const originalList = activityService.list;
-  activityService.list = async () => { throw new Error('raw transport error'); };
-  const context = loadDiscoverPage();
-  try {
-    const kept = ['a1', 'a2', 'a3'].map(dto);
-    context.page._nextCursor = 'next';
-    context.page.setData({ activities: kept, hasNextPage: true, loading: false, refreshing: false });
-    await context.page.handleLoadMore();
-    assert.deepEqual(context.page.data.activities.map((item) => item.id), ['a1', 'a2', 'a3']);
-    assert.equal(context.page.data.isPaging, false);
-    assert.equal(JSON.stringify(context.page.data).includes('raw transport'), false);
-    assert.equal(context.toastCalls.at(-1).title, '加载失败，请重试');
-  } finally {
-    activityService.list = originalList;
-    unloadDiscoverPage(context);
-  }
-});
-
-test('快速双击查看更多只发出一次请求', async () => {
-  const originalList = activityService.list;
-  let resolveNext;
-  let calls = 0;
-  activityService.list = (filters) => {
-    calls += 1;
-    if (!filters.cursor) return Promise.resolve({ items: [dto('p1')], nextCursor: 'page-2' });
-    return new Promise((resolve) => { resolveNext = resolve; });
-  };
-  const context = loadDiscoverPage();
-  try {
-    await context.page.fetchActivities({ mode: 'replace' });
-    const first = context.page.handleLoadMore();
-    const second = context.page.handleLoadMore();
-    assert.equal(second, false);
-    assert.equal(calls, 2);
-    resolveNext({ items: [dto('p2')], nextCursor: null });
-    await first;
-    assert.deepEqual(context.page.data.activities.map((item) => item.id), ['p1', 'p2']);
-  } finally {
-    activityService.list = originalList;
-    unloadDiscoverPage(context);
-  }
-});
-
-test('切换活动类型会丢弃旧列表和旧游标并加载新查询首页', async () => {
+test('切换活动类型会丢弃旧列表并加载新查询首页', async () => {
   const originalList = activityService.list;
   const calls = [];
   activityService.list = async (filters) => {
@@ -194,13 +137,11 @@ test('切换活动类型会丢弃旧列表和旧游标并加载新查询首页',
   };
   const context = loadDiscoverPage();
   try {
-    context.page._nextCursor = 'old-next';
-    context.page.setData({ activities: [dto('old')], hasNextPage: true, loading: false, refreshing: false });
+    context.page.setData({ activities: [dto('old')], loading: false, refreshing: false });
     await context.page.handleTypeChange({ currentTarget: { dataset: { value: 'sport' } } });
     assert.equal(calls[0].type, 'sport');
     assert.equal(calls[0].cursor, undefined);
     assert.equal(context.page.data.activities[0].id, 'sport');
-    assert.equal(context.page._nextCursor, undefined);
   } finally {
     activityService.list = originalList;
     unloadDiscoverPage(context);
@@ -221,7 +162,7 @@ test('举报隐藏导致空页时最多自动补拉一次，避免无界递归',
     await context.page.fetchActivities({ mode: 'replace' });
     assert.equal(calls, 2);
     assert.deepEqual(context.page.data.activities, []);
-    assert.equal(context.page.data.hasNextPage, true);
+    assert.equal(Object.hasOwn(context.page.data, 'hasNextPage'), false);
   } finally {
     activityService.list = originalList;
     safetyService.filterHiddenActivities = originalFilter;
@@ -258,15 +199,15 @@ test('列表工具按 ID 合并且截止计时严格限制在 1 秒到 1 小时'
   assert.equal(expirationSchedule([dto('formed', { status: 'FORMED' })], now), null);
 });
 
-test('首页模板使用三条首屏加查看更多，彻底移除旧离散分页', () => {
+test('首页模板使用三条首屏加独立全部活动入口，彻底移除首页分页', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const script = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.js'), 'utf8');
   const config = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.json'), 'utf8');
-  assert.match(template, /class="load-more-heading/);
-  assert.match(template, /bindtap="handleLoadMore"/);
+  assert.match(template, /class="home-section-more"[^>]*bindtap="handleNavigateToAll"/);
+  assert.match(template, />发现更多</);
   assert.match(template, /wx:for="\{\{\[1,2,3\]\}\}"/);
-  assert.doesNotMatch(template, /discover-pagination|handlePrevPage|handleNextPage|currentPage/);
-  assert.doesNotMatch(script, /onReachBottom\s*\(|_pageCache|_pageCursors/);
+  assert.doesNotMatch(template, /isPaging|hasNextPage|bindtap="handleLoadMore"/);
+  assert.doesNotMatch(script, /handleLoadMore|loadMoreActivities|hasNextPage|isPaging|_nextCursor|_pageCache|_pageCursors/);
   assert.doesNotMatch(config, /onReachBottomDistance/);
 });
 

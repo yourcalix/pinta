@@ -24,15 +24,16 @@ function pageTemplates() {
   ].sort();
 }
 
-test('除独立视觉首页、发现、详情与资料页外，其余页面共用拼图纸纹背景', () => {
+test('除独立视觉首页、发现、全部活动、详情与资料页外，其余页面共用拼图纸纹背景', () => {
   const templates = pageTemplates();
   const referenceBackgroundPages = new Set([
     'pages/discover/index.wxml',
     'pages/community/index.wxml',
+    'subpackages/activity/list/index.wxml',
     'subpackages/activity/detail/index.wxml',
     'subpackages/profile/edit/index.wxml'
   ]);
-  assert.equal(templates.length, 15);
+  assert.equal(templates.length, 16);
   templates.filter((relativePath) => !referenceBackgroundPages.has(relativePath)).forEach((relativePath) => {
     const template = read(relativePath);
     assert.equal((template.match(/shared-paper-bg\.jpg/g) || []).length, 1, relativePath);
@@ -70,6 +71,7 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
     const lightBackgrounds = {
       'pages/discover/index.json': '#F9F7F2',
       'pages/community/index.json': '#F9F7F2',
+      'subpackages/activity/list/index.json': '#F9F7F2',
       'subpackages/activity/detail/index.json': '#FFFFFF',
       'subpackages/profile/edit/index.json': '#F6F7F9'
     };
