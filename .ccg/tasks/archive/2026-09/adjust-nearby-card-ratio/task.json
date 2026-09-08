@@ -1,0 +1,12 @@
+{
+  "id": "adjust-nearby-card-ratio",
+  "title": "调整附近拼吧卡片为 1:1.25 并等量伸展 Hero",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-08T16:05:00+08:00",
+  "branch": "main"
+}

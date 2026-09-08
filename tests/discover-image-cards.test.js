@@ -91,12 +91,12 @@ test('首页三列卡使用发起人行、两行标题、固定插画封面和�
   assert.match(homePreview, /class="home-preview-cover home-preview-cover--\{\{item\.typeTone\}\}"/);
   assert.match(homePreview, /class="home-preview-capacity"[^>]*>\{\{item\.capacityLabel\}\}/);
   assert.doesNotMatch(homePreview, /item\.sceneLine|item\.displayDescription/);
-  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*height:\s*292rpx;[^}]*padding:\s*16rpx 14rpx 14rpx;[^}]*box-shadow:\s*0 6rpx 18rpx rgba\(15, 23, 42, 0\.055\)/s);
+  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*height:\s*275rpx;[^}]*padding:\s*16rpx 14rpx 14rpx;[^}]*box-shadow:\s*0 6rpx 18rpx rgba\(15, 23, 42, 0\.055\)/s);
   assert.match(style, /\.home-preview-cover\s*\{[^}]*height:\s*120rpx;[^}]*border-radius:\s*14rpx;/s);
   assert.match(style, /\.home-preview-cover-image\s*\{[^}]*width:\s*104rpx;[^}]*height:\s*104rpx;/s);
   assert.match(style, /\.home-preview-title\s*\{[^}]*-webkit-line-clamp:\s*2;[^}]*font-size:\s*24rpx;/s);
   const pageStyle = read('pages/discover/index.wxss');
-  assert.match(pageStyle, /\.activity-skeleton-card\s*\{[^}]*height:\s*292rpx;[^}]*background:\s*#fff;[^}]*border-radius:\s*22rpx/s);
+  assert.match(pageStyle, /\.activity-skeleton-card\s*\{[^}]*height:\s*275rpx;[^}]*background:\s*#fff;[^}]*border-radius:\s*22rpx/s);
   assert.match(style, /\.activity-card--home-preview\.activity-card--large-text\s*\{[^}]*height:\s*auto;/s);
 });
 

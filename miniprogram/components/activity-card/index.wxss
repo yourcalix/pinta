@@ -404,7 +404,7 @@
 .activity-card--home-preview {
   display: flex;
   width: 100%;
-  height: 292rpx;
+  height: 275rpx;
   min-width: 0;
   box-sizing: border-box;
   flex-direction: column;
@@ -571,7 +571,7 @@
 .activity-card--home-preview.activity-card--large-text .home-preview-capacity { height: 38rpx; font-size: 22rpx; line-height: 38rpx; }
 
 @media (max-width: 340px) {
-  .activity-card--home-preview { height: 260rpx; padding: 11rpx; border-radius: 18rpx; }
+  .activity-card--home-preview { height: 240rpx; padding: 11rpx; border-radius: 18rpx; }
   .home-preview-owner { height: 34rpx; }
   .home-preview-owner-avatar { flex-basis: 34rpx; width: 34rpx; height: 34rpx; }
   .home-preview-owner-avatar--fallback { font-size: 16rpx; }

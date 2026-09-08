@@ -281,7 +281,7 @@ test('首页使用正式插画 Hero、按需检索面板与温暖米白页面背
   assert.match(template, /<scroll-view[^>]*scroll-x/);
   assert.doesNotMatch(template, /hero-campus\.png|class="hero surface"/);
   assert.match(style, /\.home-page\s*\{[^}]*padding-bottom:\s*calc\(200rpx \+ env\(safe-area-inset-bottom\)\)[^}]*background:\s*#f9f7f2/s);
-  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*692rpx/s);
+  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*709rpx/s);
 });
 
 test('首页在系统大字设置下将三列活动卡切换为单列可读模式', () => {
@@ -304,6 +304,6 @@ test('活动卡片首页预览变体采用规整三列白卡且不依赖旧积�
   assert.match(template, /owner-avatar/);
   assert.match(template, /item\.ownerInitial/);
   assert.doesNotMatch(template, /brand-puzzle\.png|owner-puzzle/);
-  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*width:\s*100%;[^}]*height:\s*292rpx;[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #efece6;[^}]*border-radius:\s*22rpx;/s);
+  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*width:\s*100%;[^}]*height:\s*275rpx;[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #efece6;[^}]*border-radius:\s*22rpx;/s);
   assert.match(style, /\.activity-card--pressed/);
 });
