@@ -1,6 +1,6 @@
 page { color: #111827; background: #f9f7f2; }
 .home-page { box-sizing: border-box; min-height: 100vh; padding-bottom: calc(200rpx + env(safe-area-inset-bottom)); overflow-x: hidden; background: #f9f7f2; }
-.home-content { margin-top: -16rpx; padding: 0 24rpx 0; }
+.home-content { margin-top: -48rpx; padding: 0 24rpx 0; }
 button { margin: 0; padding: 0; line-height: 1.25; }
 button::after { display: none; }
 .control--pressed { opacity: 0.7; transform: scale(0.96); }

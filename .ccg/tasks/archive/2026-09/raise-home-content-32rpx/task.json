@@ -1,0 +1,12 @@
+{
+  "id": "raise-home-content-32rpx",
+  "title": "将首页整体继续上移三十二 rpx",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已累计上移四十八 rpx 并完成模拟器与全量验证",
+  "createdAt": "2026-09-08T00:00:00Z",
+  "branch": "main"
+}
