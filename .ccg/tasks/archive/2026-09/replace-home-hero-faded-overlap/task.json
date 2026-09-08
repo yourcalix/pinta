@@ -1,0 +1,12 @@
+{
+  "id": "replace-home-hero-faded-overlap",
+  "title": "替换首页 Hero 并渐隐延伸至快捷卡底边",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-08T15:45:00+08:00",
+  "branch": "main"
+}

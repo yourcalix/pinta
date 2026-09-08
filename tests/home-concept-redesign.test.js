@@ -69,7 +69,9 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(style, /\.home-shortcuts\s*\{[^}]*height:\s*220rpx;[^}]*margin-top:\s*-98rpx;/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*margin-bottom:\s*8rpx;/s);
   assert.match(style, /\.home-activity-heading\s*\{[^}]*min-height:\s*64rpx;/s);
-  assert.match(style, /\.hero-illustration-slot\s*\{[^}]*right:\s*0;[^}]*bottom:\s*0;[^}]*width:\s*520rpx;[^}]*height:\s*692rpx;/s);
+  assert.match(style, /\.hero-illustration-slot\s*\{[^}]*right:\s*0;[^}]*bottom:\s*-122rpx;[^}]*width:\s*430rpx;[^}]*height:\s*860rpx;/s);
+  assert.match(style, /\.hero-illustration-image\s*\{[^}]*-webkit-mask-image:\s*linear-gradient\(to bottom, #000 0%, #000 74%, rgba\(0, 0, 0, 0\.72\) 86%, transparent 100%\);/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.hero-illustration-slot\s*\{[^}]*bottom:\s*-114rpx;[^}]*width:\s*373rpx;[^}]*height:\s*746rpx;/s);
   assert.match(style, /\.shortcut-icon-slot\s*\{[^}]*width:\s*124rpx;[^}]*height:\s*124rpx;/s);
   assert.match(style, /\.shortcut-subtitle--activities\s*\{[^}]*font-size:\s*16rpx;[^}]*letter-spacing:\s*-1rpx;/s);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
@@ -111,13 +113,13 @@ test('用户提供的十张首页素材按槽位缩放且保留完整 Alpha', ()
   assert.ok(totalBytes < 150 * 1024, `素材总大小 ${totalBytes} 应小于 150KB`);
 });
 
-test('正式 Hero 插画使用透明发布版且保持三比四完整构图', () => {
+test('正式 Hero 插画使用透明发布版且保持一比二完整构图', () => {
   const hero = pngInfo('assets/images/home/hero-community-puzzle.png');
   const bytes = fs.readFileSync(path.join(root, 'assets/images/home/hero-community-puzzle.png'));
-  assert.deepEqual([hero.width, hero.height], [750, 1000]);
+  assert.deepEqual([hero.width, hero.height], [600, 1200]);
   assert.equal(hero.colorType, 3);
   assert.ok(bytes.includes(Buffer.from('tRNS')), 'Hero PNG 必须保留透明通道');
-  assert.ok(hero.bytes < 240 * 1024, `Hero 素材 ${hero.bytes} bytes 应小于 240KB`);
+  assert.ok(hero.bytes < 200 * 1024, `Hero 素材 ${hero.bytes} bytes 应小于 200KB`);
 });
 
 test('新发现页只消费真实讨论并使用温暖生活方式内容流', () => {
