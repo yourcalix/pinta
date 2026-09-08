@@ -1,0 +1,12 @@
+{
+  "id": "remove-publish-tab-label",
+  "title": "移除 TabBar 中央发布文字",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付",
+  "createdAt": "2026-09-08T18:58:00+08:00",
+  "branch": "main"
+}

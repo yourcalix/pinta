@@ -15,7 +15,6 @@
     >
       <block wx:if="{{item.publish}}">
         <view class="publish-circle" aria-hidden="true"><image class="publish-plus-image" src="{{item.iconSrc}}" mode="aspectFit" /></view>
-        <text class="publish-label">发布</text>
       </block>
       <block wx:else>
         <image class="tab-icon-image" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" />

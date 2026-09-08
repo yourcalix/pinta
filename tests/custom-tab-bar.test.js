@@ -35,6 +35,7 @@ test('普通入口使用受控 PNG 图标、激活黄点，发布入口使用黑
 
   assert.match(template, /class="tab-icon-image"[^>]*src="\{\{item\.iconSrc\}\}"/);
   assert.match(template, /class="publish-circle"[\s\S]*class="publish-plus-image"/);
+  assert.doesNotMatch(template, /class="publish-label"/);
   assert.match(template, /class="tab-selected-dot [^"]*"/);
   assert.match(template, /tab-selected-dot--hidden/);
   assert.match(script, /concept-a\/tab-home\.png/);
@@ -48,6 +49,7 @@ test('普通入口使用受控 PNG 图标、激活黄点，发布入口使用黑
   assert.match(style, /\.tab-selected-dot\s*\{[^}]*margin-top:\s*4rpx[^}]*background:\s*#f59e0b/s);
   assert.doesNotMatch(style, /\.tab-selected-dot\s*\{[^}]*position:\s*absolute/s);
   assert.match(style, /\.publish-plus-image\s*\{[^}]*width:\s*40rpx;[^}]*height:\s*40rpx;/s);
+  assert.doesNotMatch(style, /\.publish-label\s*\{/);
   assert.deepEqual(app.tabBar.list.slice(0, 2).map((item) => item.pagePath), ['pages/discover/index', 'pages/community/index']);
 });
 

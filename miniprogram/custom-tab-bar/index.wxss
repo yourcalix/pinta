@@ -22,7 +22,6 @@
 .tab-item--publish { justify-content: flex-start; }
 .publish-circle { position: relative; display: flex; width: 92rpx; height: 92rpx; margin-top: -12rpx; align-items: center; justify-content: center; background: #111827; border: 6rpx solid #fff; border-radius: 50%; box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.22); transition: transform 120ms ease, opacity 120ms ease; }
 .publish-plus-image { display: block; width: 40rpx; height: 40rpx; pointer-events: none; }
-.publish-label { margin-top: -4rpx; color: #111827; font-size: 20rpx; font-weight: 700; line-height: 24rpx; }
 .tab-item--publish.tab-item--pressed .publish-circle { opacity: 0.9; transform: scale(0.92); }
 .unread-badge { position: absolute; top: 5rpx; left: calc(50% + 9rpx); min-width: 30rpx; height: 30rpx; padding: 0 6rpx; box-sizing: border-box; color: #fff; background: #ef4444; border: 3rpx solid #fff; border-radius: 16rpx; font-size: 17rpx; font-weight: 700; line-height: 24rpx; text-align: center; }
 @media (max-width: 320px) {
@@ -30,7 +29,7 @@
   .tab-paper { border-radius: 54rpx; }
   .tab-row, .tab-item { height: 108rpx; }
   .tab-icon { transform: scale(0.9); }
-  .tab-label, .publish-label { font-size: 18rpx; }
+  .tab-label { font-size: 18rpx; }
   .publish-circle { width: 84rpx; height: 84rpx; }
 }
 @media (prefers-reduced-motion: reduce) { .tab-item, .publish-circle { transition: none; } }
