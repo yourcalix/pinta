@@ -270,7 +270,7 @@ test('首页模板使用三条首屏加查看更多，彻底移除旧离散分�
   assert.doesNotMatch(config, /onReachBottomDistance/);
 });
 
-test('首页使用空插画 Hero、按需检索面板与温暖米白页面背景', () => {
+test('首页使用正式插画 Hero、按需检索面板与温暖米白页面背景', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxss'), 'utf8');
   assert.match(template, /class="home-greeting"/);

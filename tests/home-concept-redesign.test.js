@@ -64,10 +64,11 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(style, /\.home-shortcuts\s*\{[^}]*height:\s*220rpx;[^}]*margin-top:\s*-98rpx;/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*margin-bottom:\s*8rpx;/s);
   assert.match(style, /\.home-activity-heading\s*\{[^}]*min-height:\s*64rpx;/s);
-  assert.match(style, /\.hero-illustration-slot\s*\{[^}]*bottom:\s*0;/s);
+  assert.match(style, /\.hero-illustration-slot\s*\{[^}]*right:\s*-18rpx;[^}]*bottom:\s*-2rpx;[^}]*width:\s*650rpx;[^}]*height:\s*650rpx;/s);
   assert.match(style, /\.shortcut-icon-slot\s*\{[^}]*width:\s*124rpx;[^}]*height:\s*124rpx;/s);
   assert.match(style, /\.shortcut-subtitle--activities\s*\{[^}]*font-size:\s*16rpx;[^}]*letter-spacing:\s*-1rpx;/s);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
+  assert.match(template, /class="hero-illustration-image" src="\/assets\/images\/home\/hero-community-puzzle\.png" mode="aspectFit"/);
   assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
   assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
 });
@@ -103,6 +104,15 @@ test('用户提供的十张首页素材按槽位缩放且保留完整 Alpha', ()
     assert.deepEqual([info.width, info.height, info.colorType], [size, size, 6], file);
   });
   assert.ok(totalBytes < 150 * 1024, `素材总大小 ${totalBytes} 应小于 150KB`);
+});
+
+test('正式 Hero 插画使用透明发布版且保持方形完整构图', () => {
+  const hero = pngInfo('assets/images/home/hero-community-puzzle.png');
+  const bytes = fs.readFileSync(path.join(root, 'assets/images/home/hero-community-puzzle.png'));
+  assert.deepEqual([hero.width, hero.height], [900, 900]);
+  assert.equal(hero.colorType, 3);
+  assert.ok(bytes.includes(Buffer.from('tRNS')), 'Hero PNG 必须保留透明通道');
+  assert.ok(hero.bytes < 240 * 1024, `Hero 素材 ${hero.bytes} bytes 应小于 240KB`);
 });
 
 test('新发现页只消费真实讨论并使用温暖生活方式内容流', () => {
