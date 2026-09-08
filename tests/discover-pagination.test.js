@@ -218,6 +218,7 @@ test('首页使用正式插画 Hero、锚定搜索浮层与温暖米白页面背
   assert.match(template, /class="home-hero"/);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
   assert.match(template, /class="hero-search-floating-bar \{\{searchPanelVisible \? 'hero-search-floating-bar--visible' : ''\}\}"/);
+  assert.match(template, /wx:if="\{\{searchPanelVisible\}\}" class="hero-search-floating-bar/);
   assert.match(template, /class="hero-search-backdrop" catchtap="handleCloseSearch"/);
   assert.match(style, /\.hero-search-floating-bar--visible\s*\{[^}]*visibility:\s*visible;[^}]*opacity:\s*1;[^}]*pointer-events:\s*auto;/s);
   assert.doesNotMatch(template, /home-directory-tools|filter-chip|<scroll-view/);

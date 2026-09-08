@@ -1,0 +1,12 @@
+{
+  "id": "fix-ios-hidden-search-input",
+  "title": "修复 iOS 真机隐藏搜索框文字穿透",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-08T17:45:00+08:00",
+  "branch": "main"
+}

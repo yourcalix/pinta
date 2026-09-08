@@ -80,7 +80,7 @@
 - 首页与发现是暖米白独立视觉例外；其他一级 Tab 继续按各自既有规范使用统一纸纹背景及全局色彩遮罩。所有自定义导航页正文均通过动态安全区避让系统状态栏与微信胶囊。
 - 弱网 8 秒后给出重试入口，不展示 CloudBase 原始错误。
 - 可点击活动卡的读屏文本至少包含类型、标题、状态、时间、地点和名额信息；弹性行使用 `flex-wrap`，不得依赖固定卡片高度。
-- 靠近页面底部的 `input`、`textarea` 使用 `cursor-spacing` 与 `adjust-position`，并与 Safe Area 一起做真机键盘验证。
+- 靠近页面底部的 `input`、`textarea` 使用 `cursor-spacing` 与 `adjust-position`，并与 Safe Area 一起做真机键盘验证。包含原生 `input` 的浮层在关闭时必须通过 `wx:if` 卸载节点，不得仅依靠 `visibility`、`opacity` 或 `pointer-events` 隐藏；部分 iOS 微信版本会让原生输入层或 placeholder 穿透显示。
 - 多行提问/回答使用支持 `textarea` 的自定义底部抽屉；蒙层必须阻断背景手势，抽屉适配 Safe Area，提交失败保留输入并恢复 pending 状态。
 
 ## 性能

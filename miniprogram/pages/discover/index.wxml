@@ -20,7 +20,7 @@
         <button class="header-action header-action--search {{hasActiveFilters ? 'header-action--search-active' : ''}}" data-action="search" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="{{searchPanelVisible ? '收起活动搜索' : '搜索活动'}}"><image class="header-action-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" /></button>
       </view>
       <view wx:if="{{searchPanelVisible}}" class="hero-search-backdrop" catchtap="handleCloseSearch" aria-hidden="true"></view>
-      <view class="hero-search-floating-bar {{searchPanelVisible ? 'hero-search-floating-bar--visible' : ''}}" role="search" aria-label="首页活动搜索框" aria-hidden="{{!searchPanelVisible}}">
+      <view wx:if="{{searchPanelVisible}}" class="hero-search-floating-bar {{searchPanelVisible ? 'hero-search-floating-bar--visible' : ''}}" role="search" aria-label="首页活动搜索框">
         <image class="hero-search-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" />
         <input class="hero-search-input" value="{{keyword}}" focus="{{searchPanelVisible}}" adjust-position="{{false}}" cursor-spacing="12" placeholder="搜索活动/发起人" placeholder-class="hero-search-placeholder" confirm-type="search" aria-label="输入活动名称、地点或发起人关键词" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
         <button wx:if="{{keyword}}" class="hero-search-clear" bindtap="handleClearKeyword" hover-class="control--pressed" aria-label="清空搜索内容">×</button>
