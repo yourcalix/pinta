@@ -34,6 +34,7 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
   const script = read('pages/discover/index.js');
+  const config = JSON.parse(read('pages/discover/index.json'));
   const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-stream'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
@@ -50,6 +51,10 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(template, /variant="home-preview"/);
   assert.match(template, /home-activity-grid/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2;/s);
+  assert.match(style, /page\s*\{[^}]*height:\s*100%;[^}]*overflow:\s*hidden;/s);
+  assert.match(style, /\.home-page\s*\{[^}]*height:\s*100vh;[^}]*overflow:\s*hidden;/s);
+  assert.equal(config.disableScroll, true);
+  assert.equal(config.enablePullDownRefresh, false);
   assert.match(style, /\.home-greeting\s*\{[^}]*transform:\s*translateY\(-44rpx\);/s);
   assert.match(style, /\.greeting-actions\s*\{[^}]*margin-right:\s*168rpx;/s);
   assert.match(style, /\.home-hero\s*\{[^}]*height:\s*600rpx;[^}]*margin-top:\s*-36rpx;/s);
@@ -61,6 +66,7 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(style, /\.shortcut-subtitle--activities\s*\{[^}]*font-size:\s*16rpx;[^}]*letter-spacing:\s*-1rpx;/s);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
   assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
+  assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
 });
 
 test('附近拼吧常规模式严格使用三列紧凑卡并每次追加三条', () => {

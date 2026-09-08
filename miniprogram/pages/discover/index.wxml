@@ -72,6 +72,5 @@
       <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试，已加载内容不会丢失。' : (hasActiveFilters ? '换个类型或关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : (hasNextPage ? '查看更多' : '去发起拼单'))}}" bindaction="handleEmptyAction" /></view>
     </view>
 
-    <view wx:if="{{activities.length && !loading && !hasNextPage}}" class="page-end-marker" role="status">— 已展示全部附近活动 · 拼吧 —</view>
   </view>
 </view>

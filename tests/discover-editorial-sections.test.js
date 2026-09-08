@@ -10,13 +10,13 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('首页按问候、生活方式 Hero、快捷入口、检索与活动流顺序渲染', () => {
   const template = read('pages/discover/index.wxml');
-  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-stream', 'page-end-marker'];
+  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-stream'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
   assert.match(template, /你好，\{\{greetingNickname\}\}/);
-  assert.match(template, /— 已展示全部附近活动 · 拼吧 —/);
+  assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
 });
 test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨架', () => {
   const template = read('pages/discover/index.wxml');
@@ -45,13 +45,13 @@ test('活动流承载三条首屏、查看更多追加、真实活动卡与空�
   assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
 });
 
-test('首页不挂载未来成团记忆 UGC 模块且末页由终点文案收口', () => {
+test('首页不挂载未来成团记忆 UGC 模块且不渲染终点文案', () => {
   const template = read('pages/discover/index.wxml');
   const script = read('pages/discover/index.js');
   const style = read('pages/discover/index.wxss');
   assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
   assert.doesNotMatch(style, /\.story-(?:teaser|copy|eyebrow|title|subtitle|art|photo|sun)/);
   assert.doesNotMatch(script, /activityService\.memories|fetchMemories|handleMemorySelect|memoriesExpanded/);
-  assert.match(template, /<\/view>\s*<view wx:if="\{\{activities\.length && !loading && !hasNextPage\}\}" class="page-end-marker"/);
-  assert.match(style, /\.page-end-marker\s*\{[^}]*margin:\s*28rpx auto 16rpx/s);
+  assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
+  assert.doesNotMatch(style, /\.page-end-marker\s*\{/);
 });

@@ -1,5 +1,5 @@
-page { color: #111827; background: #f9f7f2; }
-.home-page { box-sizing: border-box; min-height: 100vh; padding-bottom: calc(200rpx + env(safe-area-inset-bottom)); overflow-x: hidden; background: #f9f7f2; }
+page { height: 100%; overflow: hidden; color: #111827; background: #f9f7f2; }
+.home-page { box-sizing: border-box; height: 100vh; min-height: 0; padding-bottom: calc(200rpx + env(safe-area-inset-bottom)); overflow: hidden; background: #f9f7f2; }
 .home-content { margin-top: -48rpx; padding: 0 24rpx 0; }
 button { margin: 0; padding: 0; line-height: 1.25; }
 button::after { display: none; }
@@ -71,7 +71,6 @@ button::after { display: none; }
 .home-activity-grid--large-text .activity-skeleton-card { height: 390rpx; padding: 22rpx; border-radius: 24rpx; }
 .home-activity-grid--large-text .activity-skeleton-cover { height: 220rpx; }
 .empty-state-shell { padding: 16rpx; background: #fff; border: 1rpx solid #efece6; border-radius: 24rpx; }
-.page-end-marker { margin: 28rpx auto 16rpx; color: #aaa298; font-size: 21rpx; line-height: 1.4; text-align: center; }
 @keyframes pulse { from { opacity: 0.55; } to { opacity: 1; } }
 
 @media (max-width: 340px) {

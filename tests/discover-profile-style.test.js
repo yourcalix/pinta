@@ -11,11 +11,11 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 test('首页三种列表状态均收进附近活动流', () => {
   const template = read('pages/discover/index.wxml');
   const listStart = template.indexOf('<view class="home-activity-stream">');
-  const listEnd = template.indexOf('<view wx:if="{{activities.length && !loading && !hasNextPage}}" class="page-end-marker"');
   for (const marker of ['activity-skeleton-card', '<activity-card', 'empty-state-shell']) {
     const index = template.indexOf(marker);
-    assert.ok(index > listStart && index < listEnd, `${marker} 应位于活动托盘内`);
+    assert.ok(index > listStart, `${marker} 应位于活动托盘内`);
   }
+  assert.doesNotMatch(template, /page-end-marker/);
 });
 
 test('首页现代视觉令牌使用米白、暖灰与克制阴影', () => {
