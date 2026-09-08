@@ -242,6 +242,12 @@ test('Hero 搜索按钮可展开与外部关闭且不改动正文布局状态', 
 test('首页在系统大字设置下将三列活动卡切换为单列可读模式', () => {
   const context = loadDiscoverPage();
   try {
+    global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 17 });
+    assert.equal(context.page.syncTextSizeMode(), false);
+    assert.equal(context.page.data.largeTextMode, false);
+    global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 19 });
+    assert.equal(context.page.syncTextSizeMode(), false);
+    assert.equal(context.page.data.largeTextMode, false);
     global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 20 });
     assert.equal(context.page.syncTextSizeMode(), true);
     assert.equal(context.page.data.largeTextMode, true);

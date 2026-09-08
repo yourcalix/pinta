@@ -11,6 +11,7 @@ const {
 
 const PAGE_SIZE = 10;
 const MAX_HIDDEN_PAGE_SKIPS = 1;
+const LARGE_TEXT_FONT_SIZE = 20;
 
 function hasActiveFilters(filters) {
   return Boolean(filters.type || filters.appliedKeyword);
@@ -227,7 +228,7 @@ Page({
       info = null;
     }
     const fontSizeSetting = Number(info && info.fontSizeSetting);
-    const largeTextMode = Number.isFinite(fontSizeSetting) && fontSizeSetting > 16;
+    const largeTextMode = Number.isFinite(fontSizeSetting) && fontSizeSetting >= LARGE_TEXT_FONT_SIZE;
     if (largeTextMode !== this.data.largeTextMode) this.setData({ largeTextMode });
     return largeTextMode;
   },

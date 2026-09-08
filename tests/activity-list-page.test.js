@@ -94,6 +94,20 @@ test('全部活动页包含搜索、真实类型筛选、画报卡和完整列�
   assert.match(componentTemplate, /class="activity-card activity-card--discover/);
 });
 
+test('全部活动页仅在真正放大字号时启用大字布局', () => {
+  const context = loadPage();
+  try {
+    global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 17 });
+    assert.equal(context.page.syncTextSizeMode(), false);
+    global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 19 });
+    assert.equal(context.page.syncTextSizeMode(), false);
+    global.wx.getAppBaseInfo = () => ({ fontSizeSetting: 20 });
+    assert.equal(context.page.syncTextSizeMode(), true);
+  } finally {
+    unloadPage(context);
+  }
+});
+
 test('全部活动页按十条游标分页并按 ID 去重追加', async () => {
   const originalList = activityService.list;
   const calls = [];

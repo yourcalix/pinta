@@ -1,0 +1,12 @@
+{
+  "id": "fix-ios-normal-font-layout",
+  "title": "修复 iPhone 正常字号误判为大字模式",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-08T17:30:00+08:00",
+  "branch": "main"
+}

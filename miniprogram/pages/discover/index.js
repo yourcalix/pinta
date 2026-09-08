@@ -24,6 +24,7 @@ const { selectTab } = require('../../utils/tab-bar');
 
 const PAGE_SIZE = 3;
 const MAX_HIDDEN_PAGE_SKIPS = 1;
+const LARGE_TEXT_FONT_SIZE = 20;
 const DEFAULT_GREETING_AVATAR = '/assets/images/profile/profile-avatar-neutral-painted.png';
 
 function hasActiveFilters(filters) {
@@ -369,7 +370,7 @@ Page({
       info = null;
     }
     const fontSizeSetting = Number(info && info.fontSizeSetting);
-    const largeTextMode = Number.isFinite(fontSizeSetting) && fontSizeSetting > 16;
+    const largeTextMode = Number.isFinite(fontSizeSetting) && fontSizeSetting >= LARGE_TEXT_FONT_SIZE;
     if (largeTextMode !== this.data.largeTextMode) this.setData({ largeTextMode });
     return largeTextMode;
   },

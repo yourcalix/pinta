@@ -75,7 +75,7 @@
 - 自定义 TabBar 五列必须各占 20% 热区，不得互相覆盖。底板为左右 `24rpx`、底部 `calc(24rpx + env(safe-area-inset-bottom))` 的白色悬浮胶囊；普通入口使用受控黑色 RGBA PNG，选中态保持 `opacity: 1`，未选中统一降为 `opacity: 0.42`，不得使用 CSS filter 动态着色。选中态使用黑色文字与黄色小圆点；黄色圆点必须参与纵向 Flex 布局并为未选中项保留透明占位，避免大字模式压住文案。中央发布使用黑色正圆与受控白色 PNG 加号并保留“发布”文字及无障碍名称；消息入口继续为未读徽标留出空间。页面正文底部必须至少预留 `calc(180rpx + env(safe-area-inset-bottom))`。
 - 启用 `tabBar.custom: true` 后，业务页面不得调用 `wx.hideTabBar()` 或 `wx.showTabBar()`；真机可能因此重新唤醒原生底栏并与 `custom-tab-bar` 重复渲染。启动覆盖层等临时显隐需求统一通过 `getTabBar()` 获取自定义组件并修改组件内部状态，异常退出时必须恢复可见。
 - 正文最小 `28rpx`，辅助文字最小 `24rpx`；交互热区不小于约 44px。
-- 固定底部操作区适配 `env(safe-area-inset-bottom)`；文字放大时容器使用 `min-height`。
+- 固定底部操作区适配 `env(safe-area-inset-bottom)`；文字放大时容器使用 `min-height`。`fontSizeSetting` 的 17–19px 值在部分 iPhone/微信组合中仍可能属于常规显示，活动卡仅在该值达到 `20px` 时启用大字降级布局，避免正常字号把首页三列误切为单列。
 - 仅在确有全屏沉浸需求的页面使用 `navigationStyle: custom`；正文顶部由状态栏和微信胶囊坐标计算，并对零值、缺失或 API 异常提供安全 fallback。固定全屏覆盖层与正文避让分离，其他页面继续使用原生导航。微信胶囊和系统状态栏不得尝试隐藏或仿制。
 - 首页与发现是暖米白独立视觉例外；其他一级 Tab 继续按各自既有规范使用统一纸纹背景及全局色彩遮罩。所有自定义导航页正文均通过动态安全区避让系统状态栏与微信胶囊。
 - 弱网 8 秒后给出重试入口，不展示 CloudBase 原始错误。
