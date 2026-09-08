@@ -1,0 +1,12 @@
+{
+  "id": "compact-hero-search-popover",
+  "title": "将首页搜索改为 Hero 右对齐等高弹出框",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-08T16:20:00+08:00",
+  "branch": "main"
+}

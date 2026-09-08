@@ -22,11 +22,11 @@ test('发现页四个类型筛选使用受控英文图标路径', () => {
   assert.doesNotMatch(script, /模块图标|桌面|Desktop/);
 });
 
-test('筛选 Chip 在文字前呈现受控图标且保留 Tab 语义', () => {
+test('首页移除正文流筛选 Chip 并改用 Hero 内搜索浮层', () => {
   const template = read('pages/discover/index.wxml');
-  assert.match(template, /role="tab"[^>]*aria-selected/);
-  assert.match(template, /class="filter-icon"[^>]*src="\{\{item\.iconSrc\}\}"[^>]*aria-hidden="true"/);
-  assert.ok(template.indexOf('class="filter-icon"') < template.indexOf('<text>{{item.label}}</text>'));
+  assert.match(template, /class="hero-search-floating-bar/);
+  assert.match(template, /placeholder="搜索活动\/发起人"/);
+  assert.doesNotMatch(template, /role="tab"|class="filter-icon"|class="filter-chip/);
 });
 
 test('筛选图标为72像素小型PNG且总量不超过16KB', () => {
@@ -40,16 +40,15 @@ test('筛选图标为72像素小型PNG且总量不超过16KB', () => {
   assert.ok(totalBytes <= 16 * 1024, `筛选图标总量为 ${totalBytes} bytes`);
 });
 
-test('筛选图标透明融入暖灰工具带并保留窄屏尺寸保护', () => {
+test('搜索微图标在标准屏和窄屏保持紧凑尺寸', () => {
   const styles = read('pages/discover/index.wxss');
-  assert.match(styles, /\.filter-icon\s*\{[^}]*width:\s*34rpx;[^}]*height:\s*34rpx;/s);
-  assert.match(styles, /@media \(max-width:\s*340px\)[\s\S]*\.filter-icon\s*\{[^}]*width:\s*30rpx;[^}]*height:\s*30rpx;/s);
+  assert.match(styles, /\.hero-search-icon\s*\{[^}]*width:\s*24rpx;[^}]*height:\s*24rpx;/s);
+  assert.match(styles, /@media \(max-width:\s*340px\)[\s\S]*\.hero-search-icon\s*\{[^}]*width:\s*22rpx;[^}]*height:\s*22rpx;/s);
 });
 
-test('筛选项使用暖灰默认态、白色选中态并保持 88rpx 触控高度', () => {
+test('搜索浮层与右上按钮等高、右对齐且不进入正文流', () => {
   const styles = read('pages/discover/index.wxss');
-  assert.match(styles, /\.filter-chip\s*\{[^}]*min-height:\s*88rpx;[^}]*color:\s*#777168;[^}]*background:\s*transparent;/s);
-  assert.match(styles, /\.filter-chip--active\s*\{[^}]*color:\s*#111827;[^}]*background:\s*#fff;/s);
-  assert.doesNotMatch(styles, /\.filter-chip--(?:companion|sport|food)\.filter-chip--active/);
-  assert.match(styles, /\.filter-icon\s*\{[^}]*filter:\s*saturate\(0\.6\);/s);
+  assert.match(styles, /\.hero-search-floating-bar\s*\{[^}]*position:\s*absolute;[^}]*top:\s*116rpx;[^}]*right:\s*38rpx;[^}]*width:\s*340rpx;[^}]*height:\s*64rpx;/s);
+  assert.match(styles, /@media \(max-width:\s*340px\)[\s\S]*\.hero-search-floating-bar\s*\{[^}]*top:\s*98rpx;[^}]*right:\s*28rpx;[^}]*width:\s*290rpx;[^}]*height:\s*58rpx;/s);
+  assert.doesNotMatch(styles, /\.filter-chip|\.filter-scroll|\.directory-tools/);
 });

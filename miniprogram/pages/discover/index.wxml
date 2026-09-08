@@ -17,7 +17,13 @@
       </view>
       <view class="hero-actions" aria-label="首页消息与搜索">
         <button class="header-action header-action--message" data-action="messages" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="查看消息"><image class="header-action-icon" src="/assets/icons/home/header-bell.png" mode="aspectFit" aria-hidden="true" /></button>
-        <button class="header-action header-action--search" data-action="search" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="{{searchPanelVisible ? '收起活动搜索' : '搜索活动'}}"><image class="header-action-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" /></button>
+        <button class="header-action header-action--search {{hasActiveFilters ? 'header-action--search-active' : ''}}" data-action="search" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="{{searchPanelVisible ? '收起活动搜索' : '搜索活动'}}"><image class="header-action-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" /></button>
+      </view>
+      <view wx:if="{{searchPanelVisible}}" class="hero-search-backdrop" catchtap="handleCloseSearch" aria-hidden="true"></view>
+      <view class="hero-search-floating-bar {{searchPanelVisible ? 'hero-search-floating-bar--visible' : ''}}" role="search" aria-label="首页活动搜索框" aria-hidden="{{!searchPanelVisible}}">
+        <image class="hero-search-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" />
+        <input class="hero-search-input" value="{{keyword}}" focus="{{searchPanelVisible}}" adjust-position="{{false}}" cursor-spacing="12" placeholder="搜索活动/发起人" placeholder-class="hero-search-placeholder" confirm-type="search" aria-label="输入活动名称、地点或发起人关键词" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        <button wx:if="{{keyword}}" class="hero-search-clear" bindtap="handleClearKeyword" hover-class="control--pressed" aria-label="清空搜索内容">×</button>
       </view>
       <view class="hero-illustration-slot" aria-hidden="true"><image class="hero-illustration-image" src="/assets/images/home/hero-community-puzzle.png" mode="aspectFit" /></view>
     </view>
@@ -37,22 +43,6 @@
         <text class="shortcut-title">暂定</text><text class="shortcut-subtitle">模块占位</text>
         <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.placeholder}}" src="{{shortcutIconPaths.placeholder}}" mode="aspectFit" /></view>
       </view>
-    </view>
-
-    <view id="home-directory-tools" class="directory-tools {{searchPanelVisible ? 'directory-tools--expanded' : ''}}" aria-hidden="{{!searchPanelVisible}}" aria-label="活动搜索与筛选">
-      <view class="search-row">
-        <view class="search-symbol" aria-hidden="true"></view>
-        <input class="search-input" value="{{keyword}}" placeholder="搜索活动、地点或发起人" placeholder-class="search-placeholder" confirm-type="search" aria-label="搜索活动、地点或发起人" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
-        <button wx:if="{{keyword}}" class="search-clear-button" bindtap="handleClearKeyword" hover-class="control--pressed" aria-label="清空搜索关键词">×</button>
-        <button class="search-submit-button" bindtap="handleSearch" hover-class="control--pressed" aria-label="执行搜索">搜索</button>
-      </view>
-      <scroll-view class="filter-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" role="tablist" aria-label="选择拼单类型">
-        <view class="filter-track">
-          <button wx:for="{{typeOptions}}" wx:key="value" class="filter-chip {{type === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">
-            <image class="filter-icon" src="{{item.iconSrc}}" mode="aspectFit" aria-hidden="true" /><text>{{item.label}}</text>
-          </button>
-        </view>
-      </scroll-view>
     </view>
 
     <view id="hot-pinba-heading" class="home-activity-heading" role="heading" aria-level="2">

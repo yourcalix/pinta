@@ -35,7 +35,7 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   const style = read('pages/discover/index.wxss');
   const script = read('pages/discover/index.js');
   const config = JSON.parse(read('pages/discover/index.json'));
-  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-stream'];
+  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'home-activity-heading', 'home-activity-stream'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
@@ -59,6 +59,11 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.doesNotMatch(template, /class="home-greeting"[\s\S]*?class="greeting-actions"/);
   assert.match(template, /class="home-hero"[\s\S]*class="hero-actions"/);
   assert.match(style, /\.hero-actions\s*\{[^}]*top:\s*40rpx;[^}]*right:\s*38rpx;[^}]*width:\s*144rpx;[^}]*height:\s*64rpx;[^}]*border-radius:\s*32rpx;/s);
+  assert.match(style, /\.hero-search-floating-bar\s*\{[^}]*top:\s*116rpx;[^}]*right:\s*38rpx;[^}]*width:\s*340rpx;[^}]*height:\s*64rpx;[^}]*border-radius:\s*32rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.hero-search-floating-bar\s*\{[^}]*top:\s*98rpx;[^}]*right:\s*28rpx;[^}]*width:\s*290rpx;[^}]*height:\s*58rpx;/s);
+  assert.match(template, /class="hero-search-floating-bar [^\"]*"[^>]*role="search"/);
+  assert.match(template, /adjust-position="\{\{false\}\}"[^>]*confirm-type="search"/);
+  assert.doesNotMatch(template, /home-directory-tools|filter-chip|search-submit-button/);
   assert.match(style, /\.header-action\s*\{[^}]*width:\s*72rpx;[^}]*height:\s*64rpx;/s);
   assert.match(style, /\.header-action-icon\s*\{[^}]*width:\s*28rpx;[^}]*height:\s*28rpx;/s);
   assert.match(style, /\.home-hero\s*\{[^}]*height:\s*709rpx;[^}]*margin-top:\s*-36rpx;/s);

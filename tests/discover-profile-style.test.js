@@ -21,9 +21,9 @@ test('首页三种列表状态均收进附近活动流', () => {
 test('首页现代视觉令牌使用米白、暖灰与克制阴影', () => {
   const pageStyle = read('pages/discover/index.wxss');
   const cardStyle = read('components/activity-card/index.wxss');
-  assert.match(pageStyle, /\.directory-tools\s*\{[^}]*max-height:\s*0[^}]*background:\s*rgba\(242, 238, 231, 0\.96\)[^}]*border-radius:\s*24rpx/s);
-  assert.match(pageStyle, /\.directory-tools--expanded\s*\{[^}]*max-height:\s*240rpx[^}]*pointer-events:\s*auto/s);
-  assert.match(pageStyle, /\.search-row\s*\{[^}]*background:\s*#fff[^}]*border-radius:\s*20rpx/s);
+  assert.match(pageStyle, /\.hero-search-floating-bar\s*\{[^}]*background:\s*rgba\(255, 255, 255, 0\.94\)[^}]*border-radius:\s*32rpx[^}]*box-shadow:\s*0 8rpx 24rpx rgba\(15, 23, 42, 0\.08\)/s);
+  assert.match(pageStyle, /\.hero-search-backdrop\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*15;[^}]*background:\s*transparent;/s);
+  assert.doesNotMatch(pageStyle, /\.directory-tools|\.filter-chip|\.search-submit-button/);
   assert.match(cardStyle, /\.activity-card--home-preview\s*\{[^}]*border:\s*1\.5rpx solid #efece6[^}]*border-radius:\s*22rpx/s);
   assert.doesNotMatch(pageStyle, /shared-paper-bg|global-page-background-tint/);
 });

@@ -444,6 +444,12 @@ Page({
     return false;
   },
 
+  handleCloseSearch() {
+    if (!this.data.searchPanelVisible) return false;
+    this.setData({ searchPanelVisible: false });
+    return true;
+  },
+
   handleHomeShortcut(event) {
     const action = event.currentTarget.dataset.action;
     if (action === 'activities') {

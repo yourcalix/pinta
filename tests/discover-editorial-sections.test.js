@@ -10,11 +10,12 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('首页按问候、生活方式 Hero、快捷入口、检索与活动流顺序渲染', () => {
   const template = read('pages/discover/index.wxml');
-  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'directory-tools', 'home-activity-heading', 'home-activity-stream'];
+  const markers = ['home-greeting', 'home-hero', 'home-shortcuts', 'home-activity-heading', 'home-activity-stream'];
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
+  assert.match(template, /class="hero-search-floating-bar/);
   assert.match(template, /你好，\{\{greetingNickname\}\}/);
   assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
 });
