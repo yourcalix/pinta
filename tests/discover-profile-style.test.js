@@ -31,7 +31,7 @@ test('首页现代视觉令牌使用米白、暖灰与克制阴影', () => {
 test('首页在 340px 以下收紧 Hero、快捷卡与活动骨架', () => {
   const pageStyle = read('pages/discover/index.wxss');
   const cardStyle = read('components/activity-card/index.wxss');
-  assert.match(pageStyle, /@media \(max-width:\s*340px\)[\s\S]*\.home-hero\s*\{[^}]*height:\s*540rpx/s);
+  assert.match(pageStyle, /@media \(max-width:\s*340px\)[\s\S]*\.home-hero\s*\{[^}]*height:\s*580rpx/s);
   assert.match(pageStyle, /@media \(max-width:\s*340px\)[\s\S]*\.home-shortcut\s*\{[^}]*height:\s*200rpx/s);
   assert.match(pageStyle, /@media \(max-width:\s*340px\)[\s\S]*\.activity-skeleton-card\s*\{[^}]*height:\s*260rpx/s);
   assert.match(cardStyle, /@media \(max-width:\s*340px\)[\s\S]*\.activity-card--home-preview\s*\{[^}]*height:\s*260rpx/s);
