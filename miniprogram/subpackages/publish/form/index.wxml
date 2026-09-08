@@ -1,9 +1,6 @@
-<view class="page form-page form-page--{{meta.tone}} global-background-host" style="padding-top: {{contentTopInset}}px;">
-  <image wx:if="{{type === 'food'}}" class="food-page-background" src="./assets/food/food-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-  <block wx:else>
-    <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-    <view class="global-page-background-tint" aria-hidden="true"></view>
-  </block>
+<view class="page form-page form-page--{{meta.tone}}" style="padding-top: {{contentTopInset}}px;">
+  <image class="form-paper-background" src="{{type === 'food' ? '../../../assets/images/publish/pin_food_interface.png' : '../../../assets/images/publish/publish-paper-texture.webp'}}" mode="aspectFill" aria-hidden="true" />
+  <view class="form-paper-tint" aria-hidden="true"></view>
 
   <view class="form-navigation" style="height: {{contentTopInset}}px;">
     <view class="form-navigation-row">
@@ -13,124 +10,15 @@
     </view>
   </view>
 
-  <view wx:if="{{type === 'food'}}" class="form-content food-form-content">
-    <view class="food-hero">
-      <view class="food-hero-copy">
-        <view class="food-eyebrow">PIN · FOOD</view>
-        <view class="food-hero-title">拼一桌<text>好味道</text></view>
-        <view class="food-hero-subtitle">{{meta.subtitle}}</view>
-      </view>
-      <image class="food-hero-image" src="./assets/food/food-hotpot.png" mode="widthFix" aria-hidden="true" />
-    </view>
-
-    <view wx:if="{{errorMessage}}" class="error-banner food-error-banner" role="alert">{{errorMessage}}</view>
-
-    <view class="food-paper-card food-paper-card--basic">
-      <image class="food-paper-edge food-paper-edge--top" src="./assets/food/food-paper-edge-top.png" mode="scaleToFill" aria-hidden="true" />
-      <image class="food-paper-edge food-paper-edge--bottom" src="./assets/food/food-paper-edge-bottom.png" mode="scaleToFill" aria-hidden="true" />
-      <view class="food-paper-card-content">
-        <view class="food-section-heading">
-          <view>
-            <view class="food-section-kicker">01 · INVITATION</view>
-            <view class="food-section-title">写下这桌的邀请</view>
-          </view>
-          <view class="food-section-dot" aria-hidden="true"></view>
-        </view>
-        <view class="food-field-label required">活动标题</view>
-        <input class="food-input" maxlength="30" value="{{form.title}}" data-field="title" bindinput="handleInput" placeholder="一句话说明你想约谁吃什么" placeholder-class="food-placeholder" adjust-position="true" cursor-spacing="140" aria-label="必填项，活动标题" />
-        <view class="food-field-label">补充说明（选填）</view>
-        <textarea class="food-textarea" maxlength="300" value="{{form.description}}" data-field="description" bindinput="handleInput" placeholder="聊聊这顿饭的缘由、口味期待或注意事项" placeholder-class="food-placeholder" adjust-position="true" cursor-spacing="140" aria-label="补充说明，选填" />
-      </view>
-    </view>
-
-    <view class="food-paper-card food-paper-card--meal">
-      <image class="food-paper-edge food-paper-edge--top" src="./assets/food/food-paper-edge-top.png" mode="scaleToFill" aria-hidden="true" />
-      <image class="food-paper-edge food-paper-edge--bottom" src="./assets/food/food-paper-edge-bottom.png" mode="scaleToFill" aria-hidden="true" />
-      <image class="food-section-illustration food-section-illustration--sushi" src="./assets/food/food-sushi.png" mode="widthFix" aria-hidden="true" />
-      <view class="food-paper-card-content">
-        <view class="food-section-heading food-section-heading--with-art">
-          <view>
-            <view class="food-section-kicker">02 · MENU</view>
-            <view class="food-section-title">想吃什么，去哪里</view>
-          </view>
-        </view>
-        <view class="food-field-label required">餐厅或饭店</view>
-        <input class="food-input" maxlength="50" value="{{form.venue}}" data-field="venue" bindinput="handleInput" placeholder="例如：附近餐厅二楼" placeholder-class="food-placeholder" adjust-position="true" cursor-spacing="140" aria-label="必填项，餐厅或饭店" />
-        <view class="food-two-column">
-          <view>
-            <view class="food-field-label required">口味或菜系</view>
-            <input class="food-input" maxlength="30" value="{{form.cuisine}}" data-field="cuisine" bindinput="handleInput" placeholder="粤菜、火锅、轻食" placeholder-class="food-placeholder" adjust-position="true" cursor-spacing="140" aria-label="必填项，口味或菜系" />
-          </view>
-          <view>
-            <view class="food-field-label required">人均预算</view>
-            <input class="food-input" maxlength="30" value="{{form.budgetRange}}" data-field="budgetRange" bindinput="handleInput" placeholder="例如：50 以内" placeholder-class="food-placeholder" adjust-position="true" cursor-spacing="140" aria-label="必填项，人均预算" />
-          </view>
-        </view>
-        <view class="food-field-label">饮食偏好（选填）</view>
-        <input class="food-input" maxlength="100" value="{{form.dietaryNotes}}" data-field="dietaryNotes" bindinput="handleInput" placeholder="例如：不吃辣、素食或食物过敏" placeholder-class="food-placeholder" adjust-position="true" cursor-spacing="140" aria-label="饮食偏好，选填" />
-      </view>
-    </view>
-
-    <view class="food-paper-card food-paper-card--schedule">
-      <image class="food-paper-edge food-paper-edge--top" src="./assets/food/food-paper-edge-top.png" mode="scaleToFill" aria-hidden="true" />
-      <image class="food-paper-edge food-paper-edge--bottom" src="./assets/food/food-paper-edge-bottom.png" mode="scaleToFill" aria-hidden="true" />
-      <image class="food-section-illustration food-section-illustration--picnic" src="./assets/food/food-picnic.png" mode="widthFix" aria-hidden="true" />
-      <view class="food-paper-card-content">
-        <view class="food-section-heading food-section-heading--with-art">
-          <view>
-            <view class="food-section-kicker">03 · APPOINTMENT</view>
-            <view class="food-section-title">约好时间与人数</view>
-          </view>
-        </view>
-        <view class="food-two-column food-picker-column">
-          <picker mode="date" value="{{form.startDate}}" bindchange="handleDate"><view class="food-picker-field" role="button" aria-label="选择活动日期，当前{{form.startDate || '未选择'}}"><text>{{form.startDate || '选择日期'}}</text><text class="food-picker-arrow" aria-hidden="true">⌄</text></view></picker>
-          <picker mode="selector" range="{{timeOptions}}" value="{{timeIndex}}" bindchange="handleTime"><view class="food-picker-field" role="button" aria-label="选择活动时间，当前{{form.startTime || '未选择'}}"><text>{{form.startTime || '选择时间'}}</text><text class="food-picker-arrow" aria-hidden="true">⌄</text></view></picker>
-        </view>
-        <view class="food-two-column">
-          <view>
-            <view class="food-field-label required">最低成团人数</view>
-            <input class="food-input" type="number" value="{{form.minMembers}}" data-field="minMembers" bindinput="handleNumber" adjust-position="true" cursor-spacing="140" aria-label="必填项，最低成团人数" />
-          </view>
-          <view>
-            <view class="food-field-label required">最多人数</view>
-            <input class="food-input" type="number" value="{{form.maxMembers}}" data-field="maxMembers" bindinput="handleNumber" adjust-position="true" cursor-spacing="140" aria-label="必填项，最多人数" />
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <view class="food-paper-card food-paper-card--safety">
-      <image class="food-paper-edge food-paper-edge--top" src="./assets/food/food-paper-edge-top.png" mode="scaleToFill" aria-hidden="true" />
-      <image class="food-paper-edge food-paper-edge--bottom" src="./assets/food/food-paper-edge-bottom.png" mode="scaleToFill" aria-hidden="true" />
-      <view class="food-paper-card-content">
-        <view class="food-section-heading">
-          <view>
-            <view class="food-section-kicker">04 · NOTES</view>
-            <view class="food-section-title">饭桌约定与安全</view>
-          </view>
-          <view class="food-section-dot food-section-dot--blue" aria-hidden="true"></view>
-        </view>
-        <view class="food-field-label">参与规则（选填）</view>
-        <textarea class="food-textarea food-textarea--short" maxlength="200" value="{{form.rules}}" data-field="rules" bindinput="handleInput" placeholder="例如：请守时，费用各自承担" placeholder-class="food-placeholder" adjust-position="true" cursor-spacing="140" aria-label="参与规则，选填" />
-        <checkbox-group bindchange="handleSafety">
-          <label class="food-agreement">
-            <checkbox value="agreed" checked="{{safetyAgreed}}" color="#D65D25" aria-label="同意拼单安全规则" />
-            <text>我确认信息真实，并同意遵守拼单安全规则。平台不提供运输、配送、担保或预订服务。</text>
-          </label>
-        </checkbox-group>
-      </view>
-    </view>
-  </view>
-
-  <view wx:else class="form-content">
+  <view class="form-content">
     <view class="type-intro type-intro--{{meta.tone}}">
-      <view class="type-intro-mark" aria-hidden="true"></view>
-      <text>{{meta.subtitle}}</text>
+      <image class="type-intro-mark" src="{{typeIcon}}" aria-hidden="true" />
+      <text class="type-intro-text">{{meta.subtitle}}</text>
     </view>
 
     <view wx:if="{{errorMessage}}" class="error-banner" role="alert">{{errorMessage}}</view>
 
-    <view class="form-card">
+    <view wx:if="{{type !== 'food'}}" class="form-card">
       <view class="section-title section-title--{{meta.tone}}">基本信息</view>
       <view class="field-label required">活动标题</view>
       <input class="input" maxlength="30" value="{{form.title}}" data-field="title" bindinput="handleInput" placeholder="一句话说明你想拼什么" adjust-position="true" cursor-spacing="140" aria-label="必填项，活动标题" />
@@ -164,7 +52,7 @@
       </view>
     </view>
 
-    <view wx:else class="form-card">
+    <view wx:elif="{{type === 'sport'}}" class="form-card">
       <view class="section-title section-title--sport">运动信息</view>
       <view class="field-label required">运动项目</view>
       <input class="input" maxlength="30" value="{{form.sportType}}" data-field="sportType" bindinput="handleInput" placeholder="例如：羽毛球、跑步、篮球" adjust-position="true" cursor-spacing="140" aria-label="必填项，运动项目" />
@@ -182,38 +70,135 @@
       <input class="input" maxlength="100" value="{{form.equipment}}" data-field="equipment" bindinput="handleInput" placeholder="例如：自带球拍" adjust-position="true" cursor-spacing="140" aria-label="装备要求，选填" />
     </view>
 
+    <view wx:else class="form-card">
+      <image class="form-card-bg" src="../../../assets/images/publish/fapiao.png" mode="scaleToFill" aria-hidden="true" />
+      <view class="form-card-content">
+        <view class="section-title section-title--food">
+          <image class="section-title-icon" src="../../../assets/images/publish/hotpot.png" aria-hidden="true" />
+          <text class="section-title-text">饭桌信息</text>
+        </view>
+        <view class="field-label required field-label--venue">餐厅或饭店</view>
+        <view class="venue-input-container">
+          <input class="input venue-input-manual" maxlength="50" value="{{form.venue}}" data-field="venue" bindinput="handleInput" placeholder="手动输入餐厅名称" adjust-position="true" cursor-spacing="140" aria-label="必填项，餐厅或饭店" />
+          <button class="venue-map-button" bindtap="handleChooseLocation" aria-label="从地图选择">
+            <text class="venue-map-icon">📍</text>
+            <text>地图选择</text>
+          </button>
+        </view>
+        <view class="two-column">
+          <view>
+            <view class="field-label required">
+              <image class="field-label-icon" src="../../../assets/images/publish/sushi.png" aria-hidden="true" />
+              口味菜系
+            </view>
+            <picker mode="selector" range="{{cuisineOptions}}" value="{{cuisineIndex}}" bindchange="handleCuisine">
+              <view class="picker-field" role="button" aria-label="选择口味菜系，当前{{form.cuisine || '未选择'}}">
+                <text>{{form.cuisine || '如：粤菜/火锅'}}</text>
+                <text aria-hidden="true">⌄</text>
+              </view>
+            </picker>
+            <image wx:if="{{cuisineImage}}" class="cuisine-preview-image" src="{{cuisineImage}}" mode="scaleToFill" aria-hidden="true" />
+          </view>
+          <view>
+            <view class="field-label required">
+              <image class="field-label-icon" src="../../../assets/images/publish/breakfast.png" aria-hidden="true" />
+              拼桌形式
+            </view>
+            <picker mode="selector" range="{{paymentOptions}}" value="{{paymentIndex}}" bindchange="handlePayment">
+              <view class="picker-field" role="button" aria-label="选择拼桌形式，当前{{form.paymentMethod || '未选择'}}">
+                <text>{{form.paymentMethod || '请选择'}}</text>
+                <text aria-hidden="true">⌄</text>
+              </view>
+            </picker>
+            <view wx:if="{{form.paymentMethod === 'Fifty Fifty (均摊)'}}">
+              <view class="field-label required">人均预算</view>
+              <picker mode="selector" range="{{budgetOptions}}" value="{{budgetIndex}}" bindchange="handleBudget">
+                <view class="picker-field" role="button" aria-label="选择人均预算，当前{{form.budgetRange || '未选择'}}">
+                  <text>{{form.budgetRange || '如：¥50/人'}}</text>
+                  <text aria-hidden="true">⌄</text>
+                </view>
+              </picker>
+            </view>
+            <view wx:if="{{form.paymentMethod === 'Go Dutch (AA)'}}" class="payment-hint">
+              选择此项代表各位将会仅支付自己点到的食物
+            </view>
+            <view wx:if="{{form.paymentMethod === '真的只是拼张桌'}}" class="payment-hint">
+              此选项适用于一些多人桌的排队时间快于单/双人桌的网红店~
+            </view>
+          </view>
+        </view>
+        <view class="field-label">
+          <image class="field-label-icon field-label-icon--dietary" src="../../../assets/images/publish/barbecue.png" aria-hidden="true" />
+          饮食偏好（选填）
+        </view>
+        <view class="dietary-chips">
+          <button wx:for="{{dietaryOptions}}" wx:key="value" class="dietary-chip {{form.dietaryNotes && form.dietaryNotes.includes(item.value) ? 'dietary-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleDietaryToggle" role="checkbox" aria-checked="{{form.dietaryNotes && form.dietaryNotes.includes(item.value)}}">{{item.label}}</button>
+        </view>
+        <view class="dietary-custom">
+          <input class="input" value="{{form.dietaryCustom}}" data-field="dietaryCustom" bindinput="handleInput" placeholder="其他饮食偏好（选填）" adjust-position="true" cursor-spacing="140" aria-label="其他饮食偏好，选填" />
+        </view>
+        <view class="safety-section">
+          <view class="field-label">
+            <image class="field-label-icon field-label-icon--rules" src="../../../assets/images/publish/burger.png" aria-hidden="true" />
+            参与规则（选填）
+          </view>
+          <textarea class="textarea textarea--short" maxlength="200" value="{{form.rules}}" data-field="rules" bindinput="handleInput" placeholder="例如：请守时，费用各自承担" adjust-position="true" cursor-spacing="140" aria-label="参与规则，选填" />
+        </view>
+      </view>
+    </view>
+
     <view class="form-card">
-      <view class="section-title section-title--{{meta.tone}}">时间与人数</view>
+      <image class="form-card-bg" src="../../../assets/images/publish/fapiao.png" mode="scaleToFill" aria-hidden="true" />
+      <view class="form-card-content">
+        <view class="section-title section-title--{{meta.tone}} section-title--time">
+          <image class="section-title-icon section-title-icon--time" src="../../../assets/images/publish/picnic.png" aria-hidden="true" />
+          <text class="section-title-text section-title-text--time">时间与人数</text>
+        </view>
       <view class="two-column picker-column">
         <picker mode="date" value="{{form.startDate}}" bindchange="handleDate"><view class="picker-field" role="button" aria-label="选择活动日期，当前{{form.startDate || '未选择'}}"><text>{{form.startDate || '选择日期'}}</text><text aria-hidden="true">⌄</text></view></picker>
         <picker mode="selector" range="{{timeOptions}}" value="{{timeIndex}}" bindchange="handleTime"><view class="picker-field" role="button" aria-label="选择活动时间，当前{{form.startTime || '未选择'}}"><text>{{form.startTime || '选择时间'}}</text><text aria-hidden="true">⌄</text></view></picker>
       </view>
       <view class="two-column">
         <view>
-          <view class="field-label required">最低成团人数</view>
-          <input class="input" type="number" value="{{form.minMembers}}" data-field="minMembers" bindinput="handleNumber" adjust-position="true" cursor-spacing="140" aria-label="必填项，最低成团人数" />
+          <view class="field-label">饭友性别偏好</view>
+          <picker mode="selector" range="{{genderOptions}}" value="{{genderIndex}}" bindchange="handleGenderPreference">
+            <view class="picker-field" role="button" aria-label="选择饭友性别偏好，当前{{form.genderPreference || '未选择'}}">
+              <text>{{form.genderPreference || '不限'}}</text>
+              <text aria-hidden="true">⌄</text>
+            </view>
+          </picker>
         </view>
         <view>
-          <view class="field-label required">最多人数</view>
-          <input class="input" type="number" value="{{form.maxMembers}}" data-field="maxMembers" bindinput="handleNumber" adjust-position="true" cursor-spacing="140" aria-label="必填项，最多人数" />
+          <view class="field-label">希望的MBTI类型</view>
+          <picker mode="selector" range="{{mbtiOptions}}" value="{{mbtiIndex}}" bindchange="handleMbtiPreference">
+            <view class="picker-field" role="button" aria-label="选择希望的MBTI类型，当前{{form.mbtiPreference || '未选择'}}">
+              <text>{{form.mbtiPreference || '不限'}}</text>
+              <text aria-hidden="true">⌄</text>
+            </view>
+          </picker>
         </view>
       </view>
-    </view>
-
-    <view class="form-card safety-card">
-      <view class="section-title section-title--{{meta.tone}}">参与规则与安全</view>
-      <view class="field-label">参与规则（选填）</view>
-      <textarea class="textarea textarea--short" maxlength="200" value="{{form.rules}}" data-field="rules" bindinput="handleInput" placeholder="例如：请守时，费用各自承担" adjust-position="true" cursor-spacing="140" aria-label="参与规则，选填" />
+      <view class="two-column">
+        <view>
+          <view class="field-label required">总人数要求（包括发起人）</view>
+          <input class="input" type="number" value="{{form.minMembers}}" data-field="minMembers" bindinput="handleNumber" adjust-position="true" cursor-spacing="140" aria-label="必填项，总人数要求（包括发起人）" />
+        </view>
+        <view>
+          <view class="field-label">想要设置人数范围？</view>
+          <input class="input" value="{{form.maxMembers}}" data-field="maxMembers" bindinput="handleInput" placeholder="如：2-5" adjust-position="true" cursor-spacing="140" aria-label="可选，想要设置人数范围" />
+        </view>
+      </view>
       <checkbox-group bindchange="handleSafety">
         <label class="agreement">
           <checkbox value="agreed" checked="{{safetyAgreed}}" color="#16A36A" aria-label="同意拼单安全规则" />
           <text>我确认信息真实，并同意遵守拼单安全规则。平台不提供运输、配送、担保或预订服务。</text>
         </label>
       </checkbox-group>
+      </view>
     </view>
   </view>
 
-  <view class="fixed-submit-bar {{type === 'food' ? 'fixed-submit-bar--food' : ''}}">
-    <button class="submit-button {{type === 'food' ? 'submit-button--food' : ''}}" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼单' : '立即发布拼单'}}">{{submitting ? '正在发布…' : '立即发布拼单'}}</button>
+  <view class="fixed-submit-bar">
+    <button class="submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼单' : '立即发布拼单'}}">{{submitting ? '正在发布…' : '立即发布拼单'}}</button>
   </view>
 </view>

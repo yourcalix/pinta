@@ -1,0 +1,12 @@
+{
+  "id": "restore-original-food-publish",
+  "title": "原封不动恢复用户提供的拼饭桌发布页面",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交精确恢复结果",
+  "createdAt": "2026-09-08T00:00:00+08:00",
+  "branch": "main"
+}
