@@ -304,6 +304,6 @@ test('活动卡片首页预览变体采用规整三列白卡且不依赖旧积�
   assert.match(template, /owner-avatar/);
   assert.match(template, /item\.ownerInitial/);
   assert.doesNotMatch(template, /brand-puzzle\.png|owner-puzzle/);
-  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*width:\s*100%;[^}]*height:\s*320rpx;[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #efece6;[^}]*border-radius:\s*22rpx;/s);
+  assert.match(style, /\.activity-card--home-preview\s*\{[^}]*width:\s*100%;[^}]*height:\s*292rpx;[^}]*background:\s*#fff;[^}]*border:\s*1\.5rpx solid #efece6;[^}]*border-radius:\s*22rpx;/s);
   assert.match(style, /\.activity-card--pressed/);
 });

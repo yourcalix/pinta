@@ -62,6 +62,9 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.home-hero\s*\{[^}]*height:\s*540rpx;/s);
   assert.match(style, /\.hero-title\s*\{[^}]*font-size:\s*52rpx;/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*height:\s*220rpx;[^}]*margin-top:\s*-98rpx;/s);
+  assert.match(style, /\.home-shortcuts\s*\{[^}]*margin-bottom:\s*8rpx;/s);
+  assert.match(style, /\.home-activity-heading\s*\{[^}]*min-height:\s*64rpx;/s);
+  assert.match(style, /\.hero-illustration-slot\s*\{[^}]*bottom:\s*0;/s);
   assert.match(style, /\.shortcut-icon-slot\s*\{[^}]*width:\s*124rpx;[^}]*height:\s*124rpx;/s);
   assert.match(style, /\.shortcut-subtitle--activities\s*\{[^}]*font-size:\s*16rpx;[^}]*letter-spacing:\s*-1rpx;/s);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
