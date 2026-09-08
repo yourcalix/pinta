@@ -1,0 +1,12 @@
+{
+  "id": "replace-home-hero-bottom-aligned",
+  "title": "替换首页 Hero 插画并与底边对齐",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-08T00:00:00Z",
+  "branch": "main"
+}
