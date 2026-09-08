@@ -50,9 +50,11 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(template, /variant="home-preview"/);
   assert.match(template, /home-activity-grid/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2;/s);
-  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*560rpx;/s);
+  assert.match(style, /\.home-greeting\s*\{[^}]*transform:\s*translateY\(-44rpx\);/s);
+  assert.match(style, /\.greeting-actions\s*\{[^}]*margin-right:\s*168rpx;/s);
+  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*600rpx;[^}]*margin-top:\s*-36rpx;/s);
   assert.match(style, /\.home-content\s*\{[^}]*margin-top:\s*-48rpx;[^}]*padding:\s*0 24rpx 0;/s);
-  assert.match(style, /\.home-hero\s*\{[^}]*margin-top:\s*4rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.home-hero\s*\{[^}]*height:\s*540rpx;/s);
   assert.match(style, /\.hero-title\s*\{[^}]*font-size:\s*52rpx;/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*height:\s*220rpx;[^}]*margin-top:\s*-98rpx;/s);
   assert.match(style, /\.shortcut-icon-slot\s*\{[^}]*width:\s*124rpx;[^}]*height:\s*124rpx;/s);

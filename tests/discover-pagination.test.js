@@ -281,7 +281,7 @@ test('首页使用空插画 Hero、按需检索面板与温暖米白页面背景
   assert.match(template, /<scroll-view[^>]*scroll-x/);
   assert.doesNotMatch(template, /hero-campus\.png|class="hero surface"/);
   assert.match(style, /\.home-page\s*\{[^}]*padding-bottom:\s*calc\(200rpx \+ env\(safe-area-inset-bottom\)\)[^}]*background:\s*#f9f7f2/s);
-  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*560rpx/s);
+  assert.match(style, /\.home-hero\s*\{[^}]*height:\s*600rpx/s);
 });
 
 test('首页在系统大字设置下将三列活动卡切换为单列可读模式', () => {
