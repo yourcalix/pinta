@@ -1,0 +1,12 @@
+{
+  "id": "replace-publish-benefit-image",
+  "title": "替换发布页拼享惠模块插画",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交素材替换",
+  "createdAt": "2026-09-09T00:00:00+08:00",
+  "branch": "main"
+}
