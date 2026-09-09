@@ -9,6 +9,10 @@
   background: #075aa7;
 }
 
+.form-page--food {
+  padding-bottom: calc(190rpx + env(safe-area-inset-bottom));
+}
+
 .form-paper-background,
 .form-paper-tint {
   position: fixed;
@@ -141,6 +145,15 @@
   height: 100%;
   z-index: 0;
   pointer-events: none;
+}
+
+.type-intro-mark,
+.section-title-icon,
+.field-label-icon,
+.cuisine-preview-image,
+.form-card-bg {
+  pointer-events: none;
+  user-select: none;
 }
 
 .form-card-content {
@@ -481,6 +494,7 @@
 
 @media (max-width: 340px) {
   .form-content { padding-right: 24rpx; padding-left: 24rpx; }
+  .food-form-content { padding-right: 24rpx; padding-left: 24rpx; }
   .type-intro { margin-bottom: 16rpx; font-size: 23rpx; }
   .form-card { padding: 24rpx 20rpx; }
   .two-column { grid-template-columns: 1fr; gap: 0; }

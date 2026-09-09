@@ -73,6 +73,79 @@ test('Mock 创建活动会规范化标题和补充说明空白', async (t) => {
   assert.equal(result.data.activity.description, '');
 });
 
+test('拼饭桌扩展字段在正式校验与 Mock 创建中保持同构', async (t) => {
+  mockServer.reset();
+  t.after(() => mockServer.reset());
+
+  const input = activityInput('food', {
+    typeData: {
+      venue: '  学生餐厅  ',
+      cuisine: ' 粤菜 ',
+      budgetRange: '',
+      dietaryNotes: '  不吃香菜、花生过敏  ',
+      paymentMethod: 'GO_DUTCH',
+      genderPreference: 'ALL',
+      mbtiPreference: 'ENFP'
+    }
+  });
+  const expected = {
+    venue: '学生餐厅',
+    cuisine: '粤菜',
+    budgetRange: '',
+    dietaryNotes: '不吃香菜、花生过敏',
+    paymentMethod: 'GO_DUTCH',
+    genderPreference: 'ALL',
+    mbtiPreference: 'ENFP'
+  };
+
+  assert.deepEqual(validateActivityInput(input).typeData, expected);
+  const result = await mockCreate(input, 'food-expanded-fields');
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data.activity.typeData, expected);
+});
+
+test('旧拼饭桌客户端缺少扩展字段时按均摊语义兼容', () => {
+  const value = validateActivityInput(activityInput('food'));
+  assert.equal(value.typeData.paymentMethod, 'FIFTY_FIFTY');
+  assert.equal(value.typeData.genderPreference, '');
+  assert.equal(value.typeData.mbtiPreference, '');
+});
+
+test('拼饭桌仅对缺省拼桌形式兼容，显式空值在 Cloud 与 Mock 均拒绝', async (t) => {
+  mockServer.reset();
+  t.after(() => mockServer.reset());
+  const input = activityInput('food', {
+    typeData: {
+      venue: '附近餐厅', cuisine: '粤菜', budgetRange: '50以内', dietaryNotes: '',
+      paymentMethod: '', genderPreference: '', mbtiPreference: ''
+    }
+  });
+
+  assert.throws(() => validateActivityInput(input), (error) => error.code === 'VALIDATION_ERROR');
+  const result = await mockCreate(input, 'empty-payment-method');
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'VALIDATION_ERROR');
+  assert.equal(result.error.message, '拼桌形式选项无效');
+});
+
+test('拼饭桌扩展字段拒绝未知枚举并按支付方式校验预算', () => {
+  const invalidPreference = activityInput('food', {
+    typeData: {
+      venue: '附近餐厅', cuisine: '粤菜', budgetRange: '50以内', dietaryNotes: '',
+      paymentMethod: 'GO_DUTCH', genderPreference: 'UNKNOWN', mbtiPreference: ''
+    }
+  });
+  assert.throws(() => validateActivityInput(invalidPreference), (error) => error.code === 'VALIDATION_ERROR');
+
+  const missingSharedBudget = activityInput('food', {
+    typeData: {
+      venue: '附近餐厅', cuisine: '粤菜', budgetRange: '', dietaryNotes: '',
+      paymentMethod: 'FIFTY_FIFTY', genderPreference: '', mbtiPreference: ''
+    }
+  });
+  assert.throws(() => validateActivityInput(missingSharedBudget), (error) => error.code === 'VALIDATION_ERROR');
+});
+
 test('Mock 与正式后端共享标题30字和补充说明300字上限', async (t) => {
   mockServer.reset();
   t.after(() => mockServer.reset());

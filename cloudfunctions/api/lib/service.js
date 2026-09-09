@@ -9,6 +9,8 @@ const {
   APPLICATION_STATUS,
   USER_GENDERS,
   USER_MBTI_TYPES,
+  FOOD_PAYMENT_METHODS,
+  FOOD_GENDER_PREFERENCES,
   LEGACY_ACTIVITY_TYPE_MAP
 } = require('./constants');
 const {
@@ -149,6 +151,19 @@ function selfUser(user) {
   };
 }
 
+function publicFoodTypeData(source) {
+  const typeData = source && typeof source === 'object' ? source : {};
+  return {
+    venue: typeof typeData.venue === 'string' ? typeData.venue : '',
+    cuisine: typeof typeData.cuisine === 'string' ? typeData.cuisine : '',
+    budgetRange: typeof typeData.budgetRange === 'string' ? typeData.budgetRange : typeof typeData.budget === 'string' ? typeData.budget : '',
+    dietaryNotes: typeof typeData.dietaryNotes === 'string' ? typeData.dietaryNotes : '',
+    paymentMethod: FOOD_PAYMENT_METHODS.includes(typeData.paymentMethod) ? typeData.paymentMethod : 'FIFTY_FIFTY',
+    genderPreference: FOOD_GENDER_PREFERENCES.includes(typeData.genderPreference) ? typeData.genderPreference : '',
+    mbtiPreference: USER_MBTI_TYPES.includes(typeData.mbtiPreference) ? typeData.mbtiPreference : ''
+  };
+}
+
 function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
   const storedType = activity.type;
   activity = normalizeRideCapacity(activity);
@@ -198,12 +213,17 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
             intensity: 'RELAXED',
             equipment: ''
           }
-        : storedType === 'product'
+        : storedType === 'food'
+          ? publicFoodTypeData(activity.typeData)
+          : storedType === 'product'
           ? {
               venue: activity.placeLabel || '',
               cuisine: activity.typeData && activity.typeData.productName || '一起吃饭',
-              budget: activity.typeData && activity.typeData.unitPriceRange || '',
-              dietaryNotes: ''
+              budgetRange: activity.typeData && activity.typeData.unitPriceRange || '',
+              dietaryNotes: '',
+              paymentMethod: 'FIFTY_FIFTY',
+              genderPreference: '',
+              mbtiPreference: ''
             }
           : activity.typeData,
     owner: activity.owner && activity.owner.nickname

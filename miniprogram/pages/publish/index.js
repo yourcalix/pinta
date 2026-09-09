@@ -43,7 +43,7 @@ const PUBLISH_MODULES = Object.freeze([
 const DRAFT_FIELDS = Object.freeze({
   companion: ['title', 'description', 'rules', 'startDate', 'startTime', 'originLabel', 'destinationLabel'],
   sport: ['title', 'description', 'rules', 'startDate', 'startTime', 'sportType', 'venue', 'equipment'],
-  food: ['title', 'description', 'rules', 'startDate', 'startTime', 'venue', 'cuisine', 'budgetRange', 'dietaryNotes']
+  food: ['title', 'description', 'rules', 'startDate', 'startTime', 'venue', 'cuisine', 'budgetRange', 'dietaryNotes', 'dietaryCustom', 'paymentMethod', 'genderPreference', 'mbtiPreference', 'memberRangeText']
 });
 
 function hasMeaningfulDraft(draft, type) {

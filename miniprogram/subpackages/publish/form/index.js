@@ -35,11 +35,17 @@ const CUISINE_IMAGES = Object.freeze({
   '家常菜': '../../../assets/images/publish/pin_htht.jpg'
 });
 const TIME_OPTIONS = Object.freeze(Array.from({ length: 48 }, (_, index) => `${String(Math.floor(index / 2)).padStart(2, '0')}:${index % 2 ? '30' : '00'}`));
+const FOOD_PAYMENT_VALUES = Object.freeze({
+  'Fifty Fifty (均摊)': 'FIFTY_FIFTY',
+  'Go Dutch (AA)': 'GO_DUTCH',
+  '真的只是拼张桌': 'TABLE_ONLY'
+});
+const FOOD_GENDER_VALUES = Object.freeze({ 男生: 'MALE', 女生: 'FEMALE', 男女均可: 'ALL' });
 const COMMON_FORM_FIELDS = Object.freeze(['title', 'description', 'rules', 'placeLabel', 'startDate', 'startTime', 'minMembers', 'maxMembers']);
 const TYPE_FORM_FIELDS = Object.freeze({
   companion: ['originLabel', 'destinationLabel', 'timeFlexibility', 'transportPreference', 'luggageType'],
   sport: ['sportType', 'venue', 'level', 'intensity', 'equipment'],
-  food: ['venue', 'cuisine', 'budgetRange', 'dietaryNotes', 'genderPreference', 'mbtiPreference', 'paymentMethod']
+  food: ['venue', 'cuisine', 'budgetRange', 'dietaryNotes', 'dietaryCustom', 'genderPreference', 'mbtiPreference', 'paymentMethod', 'memberRangeText']
 });
 
 function initialForm(type) {
@@ -50,21 +56,91 @@ function initialForm(type) {
     sportType: '', venue: '', level: 'ANY', intensity: 'MEDIUM', equipment: '',
     cuisine: '', budgetRange: '', dietaryNotes: '',
     genderPreference: '', mbtiPreference: '',
-    paymentMethod: '', dietaryCustom: ''
+    paymentMethod: '', dietaryCustom: '', memberRangeText: '4'
   };
 }
 
 function cleanFormData(type, source = {}) {
   const initial = initialForm(type);
   const allowed = new Set(['type', ...COMMON_FORM_FIELDS, ...TYPE_FORM_FIELDS[type]]);
-  return Object.keys(initial).reduce((result, field) => {
-    if (allowed.has(field) && Object.prototype.hasOwnProperty.call(source, field)) result[field] = source[field];
-    return result;
+  const result = Object.keys(initial).reduce((cleaned, field) => {
+    if (allowed.has(field) && Object.prototype.hasOwnProperty.call(source, field)) cleaned[field] = source[field];
+    return cleaned;
   }, { ...initial, type });
+  if (type === 'food' && !Object.prototype.hasOwnProperty.call(source, 'memberRangeText')
+    && Object.prototype.hasOwnProperty.call(source, 'maxMembers')) {
+    const minimum = Number(source.minMembers);
+    const maximum = Number(source.maxMembers);
+    result.memberRangeText = Number.isInteger(minimum) && Number.isInteger(maximum) && minimum < maximum
+      ? `${minimum}-${maximum}`
+      : String(source.maxMembers);
+  }
+  return result;
 }
 
 function safeStartsAt(form) {
   try { return combineLocal(form.startDate, form.startTime); } catch (error) { return ''; }
+}
+
+function normalizedText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function truncateText(value, maxLength) {
+  return Array.from(value).slice(0, maxLength).join('');
+}
+
+function selectedOptionIndex(options, value) {
+  const index = options.indexOf(value);
+  return index >= 0 ? index : 0;
+}
+
+function foodCapacity(form) {
+  const configuredMinimum = Number(form.minMembers);
+  const rawRange = normalizedText(form.memberRangeText);
+  if (!Number.isInteger(configuredMinimum) || configuredMinimum < 2 || configuredMinimum > 20) {
+    return { error: '请设置 2—20 人的总人数要求' };
+  }
+  if (!rawRange) return { minMembers: configuredMinimum, maxMembers: configuredMinimum };
+  if (/^\d+$/.test(rawRange)) {
+    const maximum = Number(rawRange);
+    if (!Number.isInteger(maximum) || maximum < configuredMinimum || maximum > 20) return { error: '人数范围需在 2—20 人之间且不少于总人数要求' };
+    return { minMembers: configuredMinimum, maxMembers: maximum };
+  }
+  const match = rawRange.match(/^(\d+)\s*[-—–]\s*(\d+)$/);
+  if (!match) return { error: '人数范围格式应为如：2-5' };
+  const lower = Number(match[1]);
+  const upper = Number(match[2]);
+  if (lower !== configuredMinimum) return { error: '人数范围起始值需与总人数要求一致' };
+  if (lower < 2 || upper > 20 || lower > upper) return { error: '人数范围需在 2—20 人之间且格式正确' };
+  return { minMembers: lower, maxMembers: upper };
+}
+
+function standardCapacity(form) {
+  const minMembers = Number(form.minMembers);
+  const maxMembers = Number(form.maxMembers);
+  if (!Number.isInteger(minMembers) || !Number.isInteger(maxMembers) || minMembers < 2 || maxMembers > 20 || maxMembers < minMembers) {
+    return { error: '请设置 2—20 人且合理的成团人数' };
+  }
+  return { minMembers, maxMembers };
+}
+
+function combinedDietaryNotes(form) {
+  const values = normalizedText(form.dietaryNotes).split(',').map((item) => item.trim()).filter(Boolean);
+  const custom = normalizedText(form.dietaryCustom);
+  if (custom) values.push(custom);
+  return [...new Set(values)].join('、');
+}
+
+function foodTitle(form) {
+  const cuisine = normalizedText(form.cuisine) || '饭桌';
+  const venue = normalizedText(form.venue) || '附近餐厅';
+  return truncateText(`${cuisine}拼桌 · ${venue}`, 30);
+}
+
+function foodDescription(form) {
+  const payment = normalizedText(form.paymentMethod);
+  return truncateText(`一起去${normalizedText(form.venue)}吃${normalizedText(form.cuisine)}${payment ? `，${payment}` : ''}`, 300);
 }
 
 Page({
@@ -103,12 +179,20 @@ Page({
     const type = TYPES[options.type] ? options.type : 'companion';
     this.draftKey = `pinba_publish_draft_${type}`;
     const draft = wx.getStorageSync(this.draftKey);
+    const form = cleanFormData(type, draft && draft.form);
     this.setData({
       contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx),
       type,
       meta: TYPES[type],
       typeIcon: TYPES[type].icon,
-      form: cleanFormData(type, draft && draft.form),
+      form,
+      timeIndex: selectedOptionIndex(this.data.timeOptions, form.startTime),
+      cuisineIndex: selectedOptionIndex(this.data.cuisineOptions, form.cuisine),
+      cuisineImage: CUISINE_IMAGES[form.cuisine] || '',
+      paymentIndex: selectedOptionIndex(this.data.paymentOptions, form.paymentMethod),
+      budgetIndex: selectedOptionIndex(this.data.budgetOptions, form.budgetRange),
+      genderIndex: selectedOptionIndex(this.data.genderOptions, form.genderPreference),
+      mbtiIndex: selectedOptionIndex(this.data.mbtiOptions, form.mbtiPreference),
       safetyAgreed: Boolean(draft && draft.safetyAgreed),
       submissionKey: `publish_${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     });
@@ -192,23 +276,17 @@ Page({
 
   validateForm() {
     const form = this.data.form;
-    if (form.title.trim().length < 2) return '请填写 2—30 个字的活动标题';
+    if (this.data.type !== 'food' && normalizedText(form.title).length < 2) return '请填写 2—30 个字的活动标题';
     if (!form.startDate || !form.startTime) return '请选择活动时间';
     const startsAt = safeStartsAt(form);
     if (!Number.isFinite(Date.parse(startsAt)) || Date.parse(startsAt) <= Date.now() + 5 * 60 * 1000) return '活动时间需至少晚于当前时间 5 分钟';
-    if (form.minMembers < 2 || form.minMembers > 20) return '请设置 2—20 人的总人数要求';
-    if (form.maxMembers && form.maxMembers.trim()) {
-      const rangeMatch = form.maxMembers.match(/^(\d+)-(\d+)$/);
-      if (!rangeMatch) return '人数范围格式应为如：2-5';
-      const min = Number(rangeMatch[1]);
-      const max = Number(rangeMatch[2]);
-      if (min < 2 || max > 20 || min > max) return '人数范围需在 2—20 人之间且格式正确';
-      if (min > form.minMembers) return '人数范围最小值不能小于总人数要求';
-    }
+    const capacity = this.data.type === 'food' ? foodCapacity(form) : standardCapacity(form);
+    if (capacity.error) return capacity.error;
     if (this.data.type === 'companion' && (!form.originLabel.trim() || !form.destinationLabel.trim())) return '请填写出发地和目的地';
     if (this.data.type === 'sport' && (!form.sportType.trim() || !form.venue.trim())) return '请填写运动项目和活动场地';
-    if (this.data.type === 'food' && (!form.venue.trim() || !form.cuisine.trim() || !form.paymentMethod.trim())) return '请填写餐厅、口味和拼桌形式';
+    if (this.data.type === 'food' && (!form.venue.trim() || !form.cuisine.trim() || !FOOD_PAYMENT_VALUES[form.paymentMethod])) return '请填写餐厅、口味和拼桌形式';
     if (this.data.type === 'food' && form.paymentMethod === 'Fifty Fifty (均摊)' && !form.budgetRange.trim()) return '请选择人均预算';
+    if (this.data.type === 'food' && combinedDietaryNotes(form).length > 100) return '饮食偏好不能超过 100 个字';
     if (!this.data.safetyAgreed) return '请阅读并同意拼单安全规则';
     return '';
   },
@@ -216,23 +294,33 @@ Page({
   buildPayload() {
     const form = this.data.form;
     const startsAt = safeStartsAt(form);
+    const isFood = this.data.type === 'food';
+    const capacity = isFood ? foodCapacity(form) : standardCapacity(form);
     const common = {
       type: this.data.type,
-      title: form.title.trim(),
-      description: form.description.trim(),
+      title: isFood ? foodTitle(form) : normalizedText(form.title),
+      description: isFood ? foodDescription(form) : normalizedText(form.description),
       city: PILOT_CITY,
       district: PILOT_DISTRICTS[0],
       placeLabel: (this.data.type === 'companion' ? `${form.originLabel.trim()} → ${form.destinationLabel.trim()}` : form.venue.trim()),
       startsAt,
       deadlineAt: new Date(Date.parse(startsAt) - 30 * 60 * 1000).toISOString(),
-      targetMembers: Number(form.maxMembers),
-      minMembers: Number(form.minMembers),
-      maxMembers: Number(form.maxMembers),
-      rules: form.rules.trim()
+      targetMembers: capacity.maxMembers,
+      minMembers: capacity.minMembers,
+      maxMembers: capacity.maxMembers,
+      rules: normalizedText(form.rules)
     };
     if (this.data.type === 'companion') common.typeData = { originLabel: form.originLabel.trim(), destinationLabel: form.destinationLabel.trim(), timeFlexibility: form.timeFlexibility, transportPreference: form.transportPreference, luggageType: form.luggageType };
     if (this.data.type === 'sport') common.typeData = { sportType: form.sportType.trim(), venue: form.venue.trim(), level: form.level, intensity: form.intensity, equipment: form.equipment.trim() };
-    if (this.data.type === 'food') common.typeData = { venue: form.venue.trim(), cuisine: form.cuisine.trim(), budgetRange: form.budgetRange.trim(), dietaryNotes: form.dietaryNotes.trim() };
+    if (this.data.type === 'food') common.typeData = {
+      venue: normalizedText(form.venue),
+      cuisine: normalizedText(form.cuisine),
+      budgetRange: normalizedText(form.budgetRange),
+      dietaryNotes: combinedDietaryNotes(form),
+      paymentMethod: FOOD_PAYMENT_VALUES[form.paymentMethod] || '',
+      genderPreference: FOOD_GENDER_VALUES[form.genderPreference] || '',
+      mbtiPreference: normalizedText(form.mbtiPreference)
+    };
     return common;
   },
 

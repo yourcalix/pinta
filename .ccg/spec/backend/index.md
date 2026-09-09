@@ -53,6 +53,8 @@
 
 ## 数据与隐私
 
+- 拼饭桌创建契约的 `typeData` 在既有 `venue / cuisine / budgetRange / dietaryNotes` 外，可选保存受控的 `paymentMethod: FIFTY_FIFTY | GO_DUTCH | TABLE_ONLY`、`genderPreference: MALE | FEMALE | ALL | ''` 与标准 MBTI 偏好；旧客户端省略 `paymentMethod` 时按已有“人均预算”语义兼容为 `FIFTY_FIFTY`。地图选择仍只落地受控地点名称，不保存经纬度；自定义忌口在提交适配层合并进长度受控的 `dietaryNotes`。Mock 与 Cloud 必须共享枚举、长度、预算条件必填和缺省语义。
+
 - `activity.memories` 是公开只读接口，只接受 `limit` 且服务端夹紧至 `1–6`；Store 必须从事实源筛选 `FORMED` 且具有合法 `formedAt` 的活动，按 `formedAt` 倒序返回，并复用活动公开 DTO。不得由客户端传入状态，不得用 `updatedAt`、`startsAt` 或列表缓存推断成团时间，也不得暴露成员身份、联系方式或私密资料；Cloud 查询可有界多取后过滤脏数据，但不得无界扫描。
 - 三类新活动头像名册不得公开内部 memberId。公开转换必须按活动页批量读取 `ACTIVE` 成员及其当前资料，CloudBase `command.in` 每批不超过 10 条；已有名册用于稳定排序，名册缺失时只可依据成员事实重建，绝不按聚合人数伪造头像。旧 `PASSENGER_A/B` 仅作为内部迁移提示，不得再出现在公共活动 DTO。历史 ride 只读 DTO 必须在公开转换入口归一七人容量，包括 Mock 的聚合页直接入口，不依赖 list/detail 上游预处理。
 - 公开发起人资料优先从当前活动的 `ACTIVE + OWNER` 成员事实显式水合；活动存在 `ownerId` 时必须精确匹配对应 `userId`，不得假设头像名册首位就是发起人。历史活动缺少 OWNER 成员时，可仅按 `ownerId` 读取对应 ACTIVE 用户的受控公开资料，但不得据此补造头像名册。公开 `ownerProfile` 只允许昵称快照、公开头像槽、`MALE | FEMALE` 性别枚举、服务端按澳门自然日派生的 `18–150` 整数年龄及标准 MBTI 枚举；不得透传完整生日、兴趣、成年确认、用户 ID 或原始 cloud fileID。头像临时 URL 只可为 ACTIVE 用户签发，Mock、Memory 与 Cloud 必须保持同构降级。

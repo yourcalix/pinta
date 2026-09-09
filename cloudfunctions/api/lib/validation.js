@@ -13,6 +13,8 @@ const {
   COMPANION_TRANSPORT_PREFERENCES,
   SPORT_LEVELS,
   SPORT_INTENSITIES,
+  FOOD_PAYMENT_METHODS,
+  FOOD_GENDER_PREFERENCES,
   REPORT_REASONS,
   USER_GENDERS,
   USER_MBTI_TYPES
@@ -42,6 +44,11 @@ function integerValue(value, field, min, max) {
 function enumValue(value, field, allowed) {
   invariant(allowed.includes(value), 'VALIDATION_ERROR', `${field}选项无效`, { field });
   return value;
+}
+
+function optionalEnumValue(value, field, allowed) {
+  if (value === undefined || value === null || value === '') return '';
+  return enumValue(value, field, allowed);
 }
 
 function memberLuggageType(value) {
@@ -109,11 +116,17 @@ function validateActivityInput(input, now = new Date()) {
   }
 
   if (type === 'food') {
+    const paymentMethod = typeData.paymentMethod === undefined
+      ? 'FIFTY_FIFTY'
+      : enumValue(typeData.paymentMethod, '拼桌形式', FOOD_PAYMENT_METHODS);
     result.typeData = {
       venue: stringValue(typeData.venue, '餐厅或食堂', { required: true, max: 50 }),
       cuisine: stringValue(typeData.cuisine, '口味或菜系', { required: true, max: 30 }),
-      budgetRange: stringValue(typeData.budgetRange, '人均预算', { required: true, max: 30 }),
-      dietaryNotes: stringValue(typeData.dietaryNotes, '饮食偏好', { max: 100 })
+      budgetRange: stringValue(typeData.budgetRange, '人均预算', { required: paymentMethod === 'FIFTY_FIFTY', max: 30 }),
+      dietaryNotes: stringValue(typeData.dietaryNotes, '饮食偏好', { max: 100 }),
+      paymentMethod,
+      genderPreference: optionalEnumValue(typeData.genderPreference, '饭友性别偏好', FOOD_GENDER_PREFERENCES),
+      mbtiPreference: optionalEnumValue(typeData.mbtiPreference, '饭友 MBTI 偏好', USER_MBTI_TYPES)
     };
   }
 

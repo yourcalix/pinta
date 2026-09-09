@@ -1,6 +1,12 @@
-<view class="page form-page form-page--{{meta.tone}}" style="padding-top: {{contentTopInset}}px;">
-  <image class="form-paper-background" src="{{type === 'food' ? '../../../assets/images/publish/pin_food_interface.png' : '../../../assets/images/publish/publish-paper-texture.webp'}}" mode="aspectFill" aria-hidden="true" />
-  <view class="form-paper-tint" aria-hidden="true"></view>
+<view class="page form-page form-page--{{meta.tone}} global-background-host" style="padding-top: {{contentTopInset}}px;">
+  <block wx:if="{{type === 'food'}}">
+    <image class="form-paper-background" src="../../../assets/images/publish/pin_food_interface.png" mode="aspectFill" aria-hidden="true" />
+    <view class="form-paper-tint" aria-hidden="true"></view>
+  </block>
+  <block wx:else>
+    <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
+    <view class="global-page-background-tint" aria-hidden="true"></view>
+  </block>
 
   <view class="form-navigation" style="height: {{contentTopInset}}px;">
     <view class="form-navigation-row">
@@ -10,7 +16,7 @@
     </view>
   </view>
 
-  <view class="form-content">
+  <view class="form-content {{type === 'food' ? 'food-form-content' : ''}}">
     <view class="type-intro type-intro--{{meta.tone}}">
       <image class="type-intro-mark" src="{{typeIcon}}" aria-hidden="true" />
       <text class="type-intro-text">{{meta.subtitle}}</text>
@@ -135,7 +141,7 @@
           <button wx:for="{{dietaryOptions}}" wx:key="value" class="dietary-chip {{form.dietaryNotes && form.dietaryNotes.includes(item.value) ? 'dietary-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleDietaryToggle" role="checkbox" aria-checked="{{form.dietaryNotes && form.dietaryNotes.includes(item.value)}}">{{item.label}}</button>
         </view>
         <view class="dietary-custom">
-          <input class="input" value="{{form.dietaryCustom}}" data-field="dietaryCustom" bindinput="handleInput" placeholder="其他饮食偏好（选填）" adjust-position="true" cursor-spacing="140" aria-label="其他饮食偏好，选填" />
+          <input class="input" maxlength="100" value="{{form.dietaryCustom}}" data-field="dietaryCustom" bindinput="handleInput" placeholder="其他饮食偏好（选填）" adjust-position="true" cursor-spacing="140" aria-label="其他饮食偏好，选填" />
         </view>
         <view class="safety-section">
           <view class="field-label">
@@ -158,7 +164,7 @@
         <picker mode="date" value="{{form.startDate}}" bindchange="handleDate"><view class="picker-field" role="button" aria-label="选择活动日期，当前{{form.startDate || '未选择'}}"><text>{{form.startDate || '选择日期'}}</text><text aria-hidden="true">⌄</text></view></picker>
         <picker mode="selector" range="{{timeOptions}}" value="{{timeIndex}}" bindchange="handleTime"><view class="picker-field" role="button" aria-label="选择活动时间，当前{{form.startTime || '未选择'}}"><text>{{form.startTime || '选择时间'}}</text><text aria-hidden="true">⌄</text></view></picker>
       </view>
-      <view class="two-column">
+      <view wx:if="{{type === 'food'}}" class="two-column">
         <view>
           <view class="field-label">饭友性别偏好</view>
           <picker mode="selector" range="{{genderOptions}}" value="{{genderIndex}}" bindchange="handleGenderPreference">
@@ -185,7 +191,7 @@
         </view>
         <view>
           <view class="field-label">想要设置人数范围？</view>
-          <input class="input" value="{{form.maxMembers}}" data-field="maxMembers" bindinput="handleInput" placeholder="如：2-5" adjust-position="true" cursor-spacing="140" aria-label="可选，想要设置人数范围" />
+          <input class="input" value="{{type === 'food' ? form.memberRangeText : form.maxMembers}}" data-field="{{type === 'food' ? 'memberRangeText' : 'maxMembers'}}" bindinput="handleInput" placeholder="如：2-5" adjust-position="true" cursor-spacing="140" aria-label="可选，想要设置人数范围" />
         </view>
       </view>
       <checkbox-group bindchange="handleSafety">
@@ -198,7 +204,7 @@
     </view>
   </view>
 
-  <view class="fixed-submit-bar">
+  <view class="fixed-submit-bar {{type === 'food' ? 'fixed-submit-bar--food' : ''}}">
     <button class="submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼单' : '立即发布拼单'}}">{{submitting ? '正在发布…' : '立即发布拼单'}}</button>
   </view>
 </view>

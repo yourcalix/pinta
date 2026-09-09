@@ -9,6 +9,8 @@ const {
 const { parseBirthDate, adultBirthLimit, calculateAgeOnMacauDate } = require('../utils/profile-birth-date');
 
 const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
+const FOOD_PAYMENT_METHODS = Object.freeze(['FIFTY_FIFTY', 'GO_DUTCH', 'TABLE_ONLY']);
+const FOOD_GENDER_PREFERENCES = Object.freeze(['MALE', 'FEMALE', 'ALL']);
 const LEGACY_ACTIVITY_TYPE_MAP = Object.freeze({ ride: 'companion', buddy: 'sport', product: 'food' });
 const REMOVED_ACTIONS = new Set([
   'student.verification.get', 'student.verification.submit', 'student.document.prepare',
@@ -353,7 +355,10 @@ function seedState() {
         city: '澳门', district: '澳门城区', placeLabel: '附近餐厅',
         startsAt: isoAfter(40), deadlineAt: isoAfter(28), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
         rules: '各自到店消费，不代收款、不提供配送。',
-        typeData: { venue: '附近餐厅', cuisine: '火锅', budget: '人均约 80', dietaryNotes: '可选清汤锅' },
+        typeData: {
+          venue: '附近餐厅', cuisine: '火锅', budgetRange: '人均约 80', dietaryNotes: '可选清汤锅',
+          paymentMethod: 'FIFTY_FIFTY', genderPreference: '', mbtiPreference: ''
+        },
         status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
       },
       {
@@ -861,6 +866,18 @@ function publicActivity(activity, options = {}) {
         ? 'member'
         : viewerApplication ? 'applicant' : 'guest';
   const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, ...safe } = activity;
+  if (storedType === 'food') safe.typeData = normalizeMockFoodTypeDataForRead(safe.typeData);
+  if (storedType === 'product') {
+    safe.typeData = {
+      venue: safe.placeLabel || '',
+      cuisine: safe.typeData && safe.typeData.productName || '一起吃饭',
+      budgetRange: safe.typeData && safe.typeData.unitPriceRange || '',
+      dietaryNotes: '',
+      paymentMethod: 'FIFTY_FIFTY',
+      genderPreference: '',
+      mbtiPreference: ''
+    };
+  }
   const capacity = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
   const activeMembers = state.members
     .filter((item) => item.activityId === activity.id && item.status === 'ACTIVE')
@@ -978,6 +995,43 @@ function requiredNormalizedContent(value, field, min, max) {
   assert(content.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`);
   assert(content.length >= min, 'VALIDATION_ERROR', `${field}至少需要${min}个字符`);
   return content;
+}
+
+function optionalMockEnum(value, field, allowed) {
+  if (value === undefined || value === null || value === '') return '';
+  assert(allowed.includes(value), 'VALIDATION_ERROR', `${field}选项无效`, { field });
+  return value;
+}
+
+function normalizeMockFoodTypeData(source) {
+  const typeData = source && typeof source === 'object' ? source : {};
+  const paymentMethod = typeData.paymentMethod === undefined ? 'FIFTY_FIFTY' : typeData.paymentMethod;
+  assert(FOOD_PAYMENT_METHODS.includes(paymentMethod), 'VALIDATION_ERROR', '拼桌形式选项无效', { field: 'paymentMethod' });
+  return {
+    venue: requiredNormalizedContent(typeData.venue, '餐厅或食堂', 1, 50),
+    cuisine: requiredNormalizedContent(typeData.cuisine, '口味或菜系', 1, 30),
+    budgetRange: paymentMethod === 'FIFTY_FIFTY'
+      ? requiredNormalizedContent(typeData.budgetRange, '人均预算', 1, 30)
+      : optionalNormalizedContent(typeData.budgetRange, '人均预算', 30),
+    dietaryNotes: optionalNormalizedContent(typeData.dietaryNotes, '饮食偏好', 100),
+    paymentMethod,
+    genderPreference: optionalMockEnum(typeData.genderPreference, '饭友性别偏好', FOOD_GENDER_PREFERENCES),
+    mbtiPreference: optionalMockEnum(typeData.mbtiPreference, '饭友 MBTI 偏好', USER_MBTI_TYPES)
+  };
+}
+
+function normalizeMockFoodTypeDataForRead(source) {
+  const typeData = source && typeof source === 'object' ? source : {};
+  const paymentMethod = FOOD_PAYMENT_METHODS.includes(typeData.paymentMethod) ? typeData.paymentMethod : 'FIFTY_FIFTY';
+  return {
+    venue: typeof typeData.venue === 'string' ? typeData.venue : '',
+    cuisine: typeof typeData.cuisine === 'string' ? typeData.cuisine : '',
+    budgetRange: typeof typeData.budgetRange === 'string' ? typeData.budgetRange : typeof typeData.budget === 'string' ? typeData.budget : '',
+    dietaryNotes: typeof typeData.dietaryNotes === 'string' ? typeData.dietaryNotes : '',
+    paymentMethod,
+    genderPreference: FOOD_GENDER_PREFERENCES.includes(typeData.genderPreference) ? typeData.genderPreference : '',
+    mbtiPreference: USER_MBTI_TYPES.includes(typeData.mbtiPreference) ? typeData.mbtiPreference : ''
+  };
 }
 
 function validatedId(value, field) {
@@ -1154,6 +1208,7 @@ function createActivity(input) {
   const maxMembers = Number(activityInput.maxMembers);
   assert(Number.isInteger(minMembers) && Number.isInteger(maxMembers) && minMembers >= 2 && maxMembers <= 20 && minMembers <= maxMembers, 'VALIDATION_ERROR', '人数设置无效');
   assert(activityInput.typeData && typeof activityInput.typeData === 'object', 'VALIDATION_ERROR', '请补齐活动信息');
+  if (activityInput.type === 'food') activityInput.typeData = normalizeMockFoodTypeData(activityInput.typeData);
   delete activityInput.driverId;
   delete activityInput.vehicleId;
   delete activityInput.contactInfo;
