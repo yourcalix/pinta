@@ -1,0 +1,12 @@
+{
+  "id": "analyze-food-publish-conflicts",
+  "title": "评估拼饭桌原样搬入的 7 项规范冲突能否在界面不变前提下解决",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "等待用户确认是否按零视觉改动方案实施",
+  "createdAt": "2026-09-09T03:01:54Z",
+  "branch": "main"
+}
