@@ -1,0 +1,12 @@
+{
+  "id": "adjust-publish-benefit-art-scale",
+  "title": "调整拼享惠插画在发布模块中的主体比例",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交调整后的透明插画",
+  "createdAt": "2026-09-09T00:00:00+08:00",
+  "branch": "main"
+}
