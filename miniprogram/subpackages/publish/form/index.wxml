@@ -1,6 +1,6 @@
 <view class="page form-page form-page--{{meta.tone}} global-background-host" style="padding-top: {{contentTopInset}}px;">
   <block wx:if="{{type === 'food'}}">
-    <image class="form-paper-background" src="../../../assets/images/publish/pin_food_interface.png" mode="aspectFill" aria-hidden="true" />
+    <image class="form-paper-background" src="./assets/food/pin_food_interface.jpg" mode="aspectFill" aria-hidden="true" />
     <view class="form-paper-tint" aria-hidden="true"></view>
   </block>
   <block wx:else>
@@ -77,10 +77,10 @@
     </view>
 
     <view wx:else class="form-card">
-      <image class="form-card-bg" src="../../../assets/images/publish/fapiao.png" mode="scaleToFill" aria-hidden="true" />
+      <image class="form-card-bg" src="./assets/food/fapiao.png" mode="scaleToFill" aria-hidden="true" />
       <view class="form-card-content">
         <view class="section-title section-title--food">
-          <image class="section-title-icon" src="../../../assets/images/publish/hotpot.png" aria-hidden="true" />
+          <image class="section-title-icon" src="./assets/food/hotpot.png" aria-hidden="true" />
           <text class="section-title-text">饭桌信息</text>
         </view>
         <view class="field-label required field-label--venue">餐厅或饭店</view>
@@ -94,7 +94,7 @@
         <view class="two-column">
           <view>
             <view class="field-label required">
-              <image class="field-label-icon" src="../../../assets/images/publish/sushi.png" aria-hidden="true" />
+              <image class="field-label-icon" src="./assets/food/sushi.png" aria-hidden="true" />
               口味菜系
             </view>
             <picker mode="selector" range="{{cuisineOptions}}" value="{{cuisineIndex}}" bindchange="handleCuisine">
@@ -107,7 +107,7 @@
           </view>
           <view>
             <view class="field-label required">
-              <image class="field-label-icon" src="../../../assets/images/publish/breakfast.png" aria-hidden="true" />
+              <image class="field-label-icon" src="./assets/food/breakfast.png" aria-hidden="true" />
               拼桌形式
             </view>
             <picker mode="selector" range="{{paymentOptions}}" value="{{paymentIndex}}" bindchange="handlePayment">
@@ -134,7 +134,7 @@
           </view>
         </view>
         <view class="field-label">
-          <image class="field-label-icon field-label-icon--dietary" src="../../../assets/images/publish/barbecue.png" aria-hidden="true" />
+          <image class="field-label-icon field-label-icon--dietary" src="./assets/food/barbecue.png" aria-hidden="true" />
           饮食偏好（选填）
         </view>
         <view class="dietary-chips">
@@ -145,7 +145,7 @@
         </view>
         <view class="safety-section">
           <view class="field-label">
-            <image class="field-label-icon field-label-icon--rules" src="../../../assets/images/publish/burger.png" aria-hidden="true" />
+            <image class="field-label-icon field-label-icon--rules" src="./assets/food/burger.png" aria-hidden="true" />
             参与规则（选填）
           </view>
           <textarea class="textarea textarea--short" maxlength="200" value="{{form.rules}}" data-field="rules" bindinput="handleInput" placeholder="例如：请守时，费用各自承担" adjust-position="true" cursor-spacing="140" aria-label="参与规则，选填" />
@@ -154,10 +154,10 @@
     </view>
 
     <view class="form-card">
-      <image class="form-card-bg" src="../../../assets/images/publish/fapiao.png" mode="scaleToFill" aria-hidden="true" />
+      <image class="form-card-bg" src="./assets/food/fapiao.png" mode="scaleToFill" aria-hidden="true" />
       <view class="form-card-content">
         <view class="section-title section-title--{{meta.tone}} section-title--time">
-          <image class="section-title-icon section-title-icon--time" src="../../../assets/images/publish/picnic.png" aria-hidden="true" />
+          <image class="section-title-icon section-title-icon--time" src="./assets/food/picnic.png" aria-hidden="true" />
           <text class="section-title-text section-title-text--time">时间与人数</text>
         </view>
       <view class="two-column picker-column">

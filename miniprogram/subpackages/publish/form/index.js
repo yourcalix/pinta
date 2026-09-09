@@ -7,32 +7,32 @@ const { calculateContentTopInset } = require('../../../utils/navigation-layout')
 const { PILOT_CITY, PILOT_DISTRICTS } = require('../../../config/locations');
 
 const TYPES = Object.freeze({
-  companion: { title: '发布拼同行', subtitle: '找同路伙伴，一起商量合规出行方式', tone: 'companion', icon: '../../../assets/images/publish/pin_food.png' },
-  sport: { title: '发布拼运动', subtitle: '约球、跑步或组队，找到合适的运动搭子', tone: 'sport', icon: '../../../assets/images/publish/pin_food.png' },
-  food: { title: ' 发布拼饭桌 ', subtitle: '发起拼饭桌 \n 一起探索附近好味道!', tone: 'food', icon: '../../../assets/images/publish/pin_food.png' }
+  companion: { title: '发布拼同行', subtitle: '找同路伙伴，一起商量合规出行方式', tone: 'companion', icon: './assets/food/pin_food.png' },
+  sport: { title: '发布拼运动', subtitle: '约球、跑步或组队，找到合适的运动搭子', tone: 'sport', icon: './assets/food/pin_food.png' },
+  food: { title: ' 发布拼饭桌 ', subtitle: '发起拼饭桌 \n 一起探索附近好味道!', tone: 'food', icon: './assets/food/pin_food.png' }
 });
 
 const CUISINE_IMAGES = Object.freeze({
-  '粤菜': '../../../assets/images/publish/yuecai.png',
-  '火锅': '../../../assets/images/publish/pin_htht.jpg',
-  '川菜': '../../../assets/images/publish/pin_htht.jpg',
-  '湘菜': '../../../assets/images/publish/pin_htht.jpg',
-  '鲁菜': '../../../assets/images/publish/pin_htht.jpg',
-  '苏菜': '../../../assets/images/publish/pin_htht.jpg',
-  '浙菜': '../../../assets/images/publish/pin_htht.jpg',
-  '闽菜': '../../../assets/images/publish/pin_htht.jpg',
-  '徽菜': '../../../assets/images/publish/pin_htht.jpg',
-  '东北菜': '../../../assets/images/publish/pin_htht.jpg',
-  '西北菜': '../../../assets/images/publish/pin_htht.jpg',
-  '新疆菜': '../../../assets/images/publish/pin_htht.jpg',
-  '烧烤': '../../../assets/images/publish/pin_htht.jpg',
-  '自助餐': '../../../assets/images/publish/pin_htht.jpg',
-  '日料': '../../../assets/images/publish/pin_htht.jpg',
-  '韩料': '../../../assets/images/publish/pin_htht.jpg',
-  '西餐': '../../../assets/images/publish/pin_htht.jpg',
-  '东南亚菜': '../../../assets/images/publish/pin_htht.jpg',
-  '轻食': '../../../assets/images/publish/pin_htht.jpg',
-  '家常菜': '../../../assets/images/publish/pin_htht.jpg'
+  '粤菜': './assets/food/yuecai.jpg',
+  '火锅': './assets/food/pin_htht.jpg',
+  '川菜': './assets/food/pin_htht.jpg',
+  '湘菜': './assets/food/pin_htht.jpg',
+  '鲁菜': './assets/food/pin_htht.jpg',
+  '苏菜': './assets/food/pin_htht.jpg',
+  '浙菜': './assets/food/pin_htht.jpg',
+  '闽菜': './assets/food/pin_htht.jpg',
+  '徽菜': './assets/food/pin_htht.jpg',
+  '东北菜': './assets/food/pin_htht.jpg',
+  '西北菜': './assets/food/pin_htht.jpg',
+  '新疆菜': './assets/food/pin_htht.jpg',
+  '烧烤': './assets/food/pin_htht.jpg',
+  '自助餐': './assets/food/pin_htht.jpg',
+  '日料': './assets/food/pin_htht.jpg',
+  '韩料': './assets/food/pin_htht.jpg',
+  '西餐': './assets/food/pin_htht.jpg',
+  '东南亚菜': './assets/food/pin_htht.jpg',
+  '轻食': './assets/food/pin_htht.jpg',
+  '家常菜': './assets/food/pin_htht.jpg'
 });
 const TIME_OPTIONS = Object.freeze(Array.from({ length: 48 }, (_, index) => `${String(Math.floor(index / 2)).padStart(2, '0')}:${index % 2 ? '30' : '00'}`));
 const FOOD_PAYMENT_VALUES = Object.freeze({

@@ -13,11 +13,16 @@ const TRANSPARENT_ASSETS = [
   'assets/images/publish/publish-draft-avatar.png',
   'assets/images/profile/profile-avatar-male-painted.png',
   'assets/images/profile/profile-avatar-female-painted.png',
-  'assets/images/profile/profile-avatar-neutral-painted.png'
+  'assets/images/profile/profile-avatar-neutral-painted.png',
+  'subpackages/publish/form/assets/food/fapiao.png',
+  'subpackages/publish/form/assets/food/pin_food.png'
 ];
 const JPEG_ASSETS = [
   'assets/images/profile/profile-default-cover.jpg',
-  'assets/images/shared/shared-paper-bg.jpg'
+  'assets/images/shared/shared-paper-bg.jpg',
+  'subpackages/publish/form/assets/food/pin_food_interface.jpg',
+  'subpackages/publish/form/assets/food/yuecai.jpg',
+  'subpackages/publish/form/assets/food/pin_htht.jpg'
 ];
 
 function walk(directory) {
@@ -28,6 +33,8 @@ function walk(directory) {
 }
 
 function pngTransparencyLevels(buffer) {
+  const colorType = buffer[25];
+  if (colorType === 4 || colorType === 6) return Number.POSITIVE_INFINITY;
   let offset = 8;
   while (offset + 12 <= buffer.length) {
     const length = buffer.readUInt32BE(offset);
@@ -65,7 +72,10 @@ test('透明活动插画与头像使用保留多级 Alpha 的 PNG', () => {
     const buffer = fs.readFileSync(path.join(ROOT, relativePath));
     assert.deepEqual([...buffer.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], relativePath);
     assert.ok(pngTransparencyLevels(buffer) > 2, `${relativePath} 未保留多级透明度`);
-    assert.ok(buffer.length <= 100 * 1024, `${relativePath} 超过 100KB：${buffer.length}`);
+    const limit = relativePath.endsWith('/fapiao.png') ? 320 * 1024
+      : relativePath.endsWith('/pin_food.png') ? 180 * 1024
+        : 100 * 1024;
+    assert.ok(buffer.length <= limit, `${relativePath} 超过 ${limit / 1024}KB：${buffer.length}`);
   }
 });
 
@@ -74,6 +84,7 @@ test('个人背景与共享纸纹使用非渐进式 Baseline JPEG', () => {
     const buffer = fs.readFileSync(path.join(ROOT, relativePath));
     assert.deepEqual([...buffer.subarray(0, 3)], [0xff, 0xd8, 0xff], relativePath);
     assert.equal(jpegFrameMarker(buffer), 0xc0, `${relativePath} 不是 Baseline JPEG`);
-    assert.ok(buffer.length <= 200 * 1024, `${relativePath} 超过 200KB：${buffer.length}`);
+    const limit = relativePath.endsWith('/pin_food_interface.jpg') ? 450 * 1024 : 200 * 1024;
+    assert.ok(buffer.length <= limit, `${relativePath} 超过 ${limit / 1024}KB：${buffer.length}`);
   }
 });

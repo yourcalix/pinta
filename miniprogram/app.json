@@ -49,6 +49,14 @@
       ]
     }
   ],
+  "preloadRule": {
+    "pages/publish/index": {
+      "network": "all",
+      "packages": [
+        "subpackages/publish"
+      ]
+    }
+  },
   "window": {
     "navigationBarTitleText": "拼吧",
     "navigationBarBackgroundColor": "#075AA7",

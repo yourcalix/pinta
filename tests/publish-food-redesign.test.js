@@ -32,7 +32,7 @@ test('拼饭桌原稿保留既有视觉文案并与另外两类表单保持条�
   assert.match(template, /section-title--sport/);
   ['饭桌信息', '餐厅或饭店', '拼桌形式', '饮食偏好（选填）', '时间与人数', '饭友性别偏好', '希望的MBTI类型']
     .forEach((label) => assert.match(template, new RegExp(label), label));
-  assert.match(template, /pin_food_interface\.png/);
+  assert.match(template, /\.\/assets\/food\/pin_food_interface\.jpg/);
   assert.match(template, /fapiao\.png/);
 });
 
@@ -115,7 +115,7 @@ test('拼饭桌旧草稿迁移人数范围并恢复各选择器索引', () => {
   assert.equal(page.data.paymentIndex, 1);
   assert.equal(page.data.genderIndex, 3);
   assert.equal(page.data.mbtiIndex, 8);
-  assert.equal(page.data.cuisineImage, '../../../assets/images/publish/pin_htht.jpg');
+  assert.equal(page.data.cuisineImage, './assets/food/pin_htht.jpg');
 });
 
 test('拼饭桌确定性标题在超长餐厅和菜系下仍满足服务端长度上限', () => {
@@ -141,12 +141,12 @@ test('拼饭桌确定性标题在超长餐厅和菜系下仍满足服务端长�
 
 test('拼饭桌实际引用素材均位于小程序包且使用 iPhone 稳定格式', () => {
   const files = [
-    'pin_food_interface.png', 'pin_food.png', 'fapiao.png', 'hotpot.png', 'sushi.png',
-    'breakfast.png', 'barbecue.png', 'burger.png', 'picnic.png', 'yuecai.png', 'pin_htht.jpg'
+    'pin_food_interface.jpg', 'pin_food.png', 'fapiao.png', 'hotpot.png', 'sushi.png',
+    'breakfast.png', 'barbecue.png', 'burger.png', 'picnic.png', 'yuecai.jpg', 'pin_htht.jpg'
   ];
 
   files.forEach((file) => {
-    const fullPath = path.join(root, 'assets/images/publish', file);
+    const fullPath = path.join(root, 'subpackages/publish/form/assets/food', file);
     assert.equal(fs.existsSync(fullPath), true, file);
     assert.ok(/\.(?:png|jpe?g)$/i.test(file), file);
   });
@@ -156,7 +156,7 @@ test('拼饭桌整纸视觉例外保持原稿且所有装饰图不拦截输入�
   const template = read('subpackages/publish/form/index.wxml');
   const style = read('subpackages/publish/form/index.wxss');
 
-  assert.match(template, /class="form-paper-background"[^>]*pin_food_interface\.png/);
+  assert.match(template, /class="form-paper-background"[^>]*\.\/assets\/food\/pin_food_interface\.jpg/);
   assert.equal((template.match(/class="form-card-bg"/g) || []).length, 2);
   assert.match(style, /\.type-intro-mark,[\s\S]*\.form-card-bg\s*\{[\s\S]*pointer-events:\s*none;[\s\S]*user-select:\s*none;/);
 });
