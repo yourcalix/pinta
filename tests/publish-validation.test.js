@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const mockServer = require('../miniprogram/mocks/server');
 const { validateActivityInput } = require('../cloudfunctions/api/lib/validation');
+const { publicActivity } = require('../cloudfunctions/api/lib/service');
 
 function activityInput(type, overrides = {}) {
   const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -58,6 +59,92 @@ test('三类活动均允许不填写补充说明，并与正式校验契约一�
     assert.equal(result.ok, true, `${type} 应允许空补充说明`);
     assert.equal(result.data.activity.description, '');
   }
+});
+
+test('三类活动在 Cloud 与 Mock 中统一拒绝超过未来七天的开始时间', async (t) => {
+  mockServer.reset();
+  t.after(() => mockServer.reset());
+
+  for (const type of ['companion', 'sport', 'food']) {
+    const input = activityInput(type, {
+      startsAt: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString()
+    });
+    assert.throws(() => validateActivityInput(input), (error) => error.code === 'VALIDATION_ERROR');
+    const result = await mockCreate(input, `future-limit-${type}`);
+    assert.equal(result.ok, false, `${type} Mock 应拒绝超过七天的开始时间`);
+    assert.equal(result.error.code, 'VALIDATION_ERROR');
+    assert.equal(result.error.message, '活动开始时间不能超过7天');
+  }
+});
+
+test('拼同行九项偏好在正式校验与 Mock 创建中保持严格同构', async (t) => {
+  mockServer.reset();
+  t.after(() => mockServer.reset());
+  const preferences = {
+    friendGender: 'FEMALE',
+    mbti: 'I',
+    navigationStyle: 'GUIDE',
+    travelPace: 'RELAXED',
+    photoHabit: 'CASUAL',
+    silenceComfort: 'NATURAL',
+    garlic: 'FRESHEN',
+    fragrance: 'LIGHT',
+    slippers: 'CONTEXT'
+  };
+  const input = activityInput('companion', {
+    typeData: { ...activityInput('companion').typeData, preferences }
+  });
+
+  assert.deepEqual(validateActivityInput(input).typeData.preferences, preferences);
+  const result = await mockCreate(input, 'companion-preferences');
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data.activity.typeData.preferences, preferences);
+});
+
+test('拼同行偏好缺省兼容旧客户端，未知枚举在 Cloud 与 Mock 均拒绝', async (t) => {
+  mockServer.reset();
+  t.after(() => mockServer.reset());
+  const emptyPreferences = {
+    friendGender: '', mbti: '', navigationStyle: '', travelPace: '', photoHabit: '',
+    silenceComfort: '', garlic: '', fragrance: '', slippers: ''
+  };
+  assert.deepEqual(validateActivityInput(activityInput('companion')).typeData.preferences, emptyPreferences);
+
+  const invalid = activityInput('companion', {
+    typeData: {
+      ...activityInput('companion').typeData,
+      preferences: { travelPace: 'UNKNOWN' }
+    }
+  });
+  assert.throws(() => validateActivityInput(invalid), (error) => error.code === 'VALIDATION_ERROR');
+  const result = await mockCreate(invalid, 'invalid-companion-preference');
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'VALIDATION_ERROR');
+  assert.equal(result.error.message, '出行节奏偏好选项无效');
+});
+
+test('拼同行公开 DTO 对历史基础枚举与偏好脏值执行白名单降级', () => {
+  const dto = publicActivity({
+    ...activityInput('companion'),
+    id: 'legacy-companion',
+    memberCount: 1,
+    status: 'RECRUITING',
+    typeData: {
+      originLabel: '关闸',
+      destinationLabel: '氹仔',
+      timeFlexibility: 'UNKNOWN',
+      transportPreference: 'UNKNOWN',
+      luggageType: 'UNKNOWN',
+      preferences: { travelPace: 'UNKNOWN', photoHabit: 'CASUAL', internalNote: 'hidden' }
+    }
+  });
+
+  assert.equal(dto.typeData.timeFlexibility, 'ON_TIME');
+  assert.equal(dto.typeData.transportPreference, 'DISCUSS_AFTER_FORMED');
+  assert.equal(dto.typeData.luggageType, 'NONE');
+  assert.equal(dto.typeData.preferences.travelPace, '');
+  assert.equal(dto.typeData.preferences.photoHabit, 'CASUAL');
+  assert.equal(Object.hasOwn(dto.typeData.preferences, 'internalNote'), false);
 });
 
 test('Mock 创建活动会规范化标题和补充说明空白', async (t) => {

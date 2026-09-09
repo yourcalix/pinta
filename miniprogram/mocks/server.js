@@ -11,6 +11,20 @@ const { parseBirthDate, adultBirthLimit, calculateAgeOnMacauDate } = require('..
 const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
 const FOOD_PAYMENT_METHODS = Object.freeze(['FIFTY_FIFTY', 'GO_DUTCH', 'TABLE_ONLY']);
 const FOOD_GENDER_PREFERENCES = Object.freeze(['MALE', 'FEMALE', 'ALL']);
+const COMPANION_TIME_FLEXIBILITY = Object.freeze(['ON_TIME', 'WITHIN_30_MIN', 'WITHIN_60_MIN']);
+const COMPANION_TRANSPORT_PREFERENCES = Object.freeze(['PUBLIC_TRANSIT', 'LICENSED_TAXI', 'DISCUSS_AFTER_FORMED']);
+const MEMBER_LUGGAGE_TYPES = Object.freeze(['NONE', 'SMALL', 'LARGE']);
+const COMPANION_PREFERENCE_VALUES = Object.freeze({
+  friendGender: Object.freeze(['ANY', 'FEMALE', 'MALE']),
+  mbti: Object.freeze(['E', 'I', 'ANY']),
+  navigationStyle: Object.freeze(['GUIDE', 'FOLLOW', 'LOST_CONFIDENT']),
+  travelPace: Object.freeze(['FAST', 'RELAXED', 'SPONTANEOUS']),
+  photoHabit: Object.freeze(['FIRST', 'CASUAL', 'NO_CAMERA']),
+  silenceComfort: Object.freeze(['CHATTY', 'NATURAL', 'HEADPHONES']),
+  garlic: Object.freeze(['OK', 'FRESHEN', 'AVOID']),
+  fragrance: Object.freeze(['ANY', 'LIGHT', 'NONE']),
+  slippers: Object.freeze(['RELAXED', 'CONTEXT', 'NEAT'])
+});
 const LEGACY_ACTIVITY_TYPE_MAP = Object.freeze({ ride: 'companion', buddy: 'sport', product: 'food' });
 const REMOVED_ACTIONS = new Set([
   'student.verification.get', 'student.verification.submit', 'student.document.prepare',
@@ -866,6 +880,7 @@ function publicActivity(activity, options = {}) {
         ? 'member'
         : viewerApplication ? 'applicant' : 'guest';
   const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, ...safe } = activity;
+  if (storedType === 'companion') safe.typeData = normalizeMockCompanionTypeDataForRead(safe.typeData);
   if (storedType === 'food') safe.typeData = normalizeMockFoodTypeDataForRead(safe.typeData);
   if (storedType === 'product') {
     safe.typeData = {
@@ -1001,6 +1016,50 @@ function optionalMockEnum(value, field, allowed) {
   if (value === undefined || value === null || value === '') return '';
   assert(allowed.includes(value), 'VALIDATION_ERROR', `${field}选项无效`, { field });
   return value;
+}
+
+function normalizeMockCompanionPreferences(source, forRead = false) {
+  const preferences = source === undefined || source === null ? {} : source;
+  if (!forRead) {
+    assert(preferences && typeof preferences === 'object' && !Array.isArray(preferences), 'VALIDATION_ERROR', '同行偏好格式无效', { field: 'preferences' });
+    assert(Object.keys(preferences).every((key) => Object.prototype.hasOwnProperty.call(COMPANION_PREFERENCE_VALUES, key)), 'VALIDATION_ERROR', '同行偏好包含未知字段', { field: 'preferences' });
+  }
+  const labels = {
+    friendGender: '拼友性别偏好', mbti: 'MBTI 频道偏好', navigationStyle: '导航属性偏好',
+    travelPace: '出行节奏偏好', photoHabit: '拍照习惯偏好', silenceComfort: '沉默兼容度偏好',
+    garlic: '饭后蒜味偏好', fragrance: '香水气场偏好', slippers: '拖鞋出门偏好'
+  };
+  return Object.fromEntries(Object.entries(COMPANION_PREFERENCE_VALUES).map(([key, allowed]) => {
+    const value = preferences && preferences[key];
+    return [key, forRead ? (allowed.includes(value) ? value : '') : optionalMockEnum(value, labels[key], allowed)];
+  }));
+}
+
+function normalizeMockCompanionTypeData(source) {
+  const typeData = source && typeof source === 'object' ? source : {};
+  assert(COMPANION_TIME_FLEXIBILITY.includes(typeData.timeFlexibility), 'VALIDATION_ERROR', '时间弹性选项无效');
+  assert(COMPANION_TRANSPORT_PREFERENCES.includes(typeData.transportPreference), 'VALIDATION_ERROR', '出行方式倾向选项无效');
+  assert(MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType || 'NONE'), 'VALIDATION_ERROR', '我的行李选项无效');
+  return {
+    originLabel: requiredNormalizedContent(typeData.originLabel, '出发地', 1, 40),
+    destinationLabel: requiredNormalizedContent(typeData.destinationLabel, '目的地', 1, 40),
+    timeFlexibility: typeData.timeFlexibility,
+    transportPreference: typeData.transportPreference,
+    luggageType: typeData.luggageType || 'NONE',
+    preferences: normalizeMockCompanionPreferences(typeData.preferences)
+  };
+}
+
+function normalizeMockCompanionTypeDataForRead(source) {
+  const typeData = source && typeof source === 'object' ? source : {};
+  return {
+    originLabel: typeof typeData.originLabel === 'string' ? typeData.originLabel : '',
+    destinationLabel: typeof typeData.destinationLabel === 'string' ? typeData.destinationLabel : '',
+    timeFlexibility: COMPANION_TIME_FLEXIBILITY.includes(typeData.timeFlexibility) ? typeData.timeFlexibility : 'ON_TIME',
+    transportPreference: COMPANION_TRANSPORT_PREFERENCES.includes(typeData.transportPreference) ? typeData.transportPreference : 'DISCUSS_AFTER_FORMED',
+    luggageType: MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType) ? typeData.luggageType : 'NONE',
+    preferences: normalizeMockCompanionPreferences(typeData.preferences, true)
+  };
 }
 
 function normalizeMockFoodTypeData(source) {
@@ -1203,11 +1262,13 @@ function createActivity(input) {
   const startsAt = Date.parse(activityInput.startsAt);
   const deadlineAt = Date.parse(activityInput.deadlineAt);
   assert(Number.isFinite(startsAt) && startsAt > Date.parse(now), 'VALIDATION_ERROR', '活动时间必须晚于当前时间');
+  assert(startsAt - Date.parse(now) <= 7 * 24 * 60 * 60 * 1000, 'VALIDATION_ERROR', '活动开始时间不能超过7天');
   assert(Number.isFinite(deadlineAt) && deadlineAt > Date.parse(now) && deadlineAt < startsAt, 'VALIDATION_ERROR', '报名截止时间无效');
   const minMembers = Number(activityInput.minMembers);
   const maxMembers = Number(activityInput.maxMembers);
   assert(Number.isInteger(minMembers) && Number.isInteger(maxMembers) && minMembers >= 2 && maxMembers <= 20 && minMembers <= maxMembers, 'VALIDATION_ERROR', '人数设置无效');
   assert(activityInput.typeData && typeof activityInput.typeData === 'object', 'VALIDATION_ERROR', '请补齐活动信息');
+  if (activityInput.type === 'companion') activityInput.typeData = normalizeMockCompanionTypeData(activityInput.typeData);
   if (activityInput.type === 'food') activityInput.typeData = normalizeMockFoodTypeData(activityInput.typeData);
   delete activityInput.driverId;
   delete activityInput.vehicleId;

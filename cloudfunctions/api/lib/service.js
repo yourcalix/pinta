@@ -9,8 +9,12 @@ const {
   APPLICATION_STATUS,
   USER_GENDERS,
   USER_MBTI_TYPES,
+  MEMBER_LUGGAGE_TYPES,
+  COMPANION_TIME_FLEXIBILITY,
+  COMPANION_TRANSPORT_PREFERENCES,
   FOOD_PAYMENT_METHODS,
   FOOD_GENDER_PREFERENCES,
+  COMPANION_PREFERENCE_VALUES,
   LEGACY_ACTIVITY_TYPE_MAP
 } = require('./constants');
 const {
@@ -164,6 +168,32 @@ function publicFoodTypeData(source) {
   };
 }
 
+function publicCompanionTypeData(source) {
+  const typeData = source && typeof source === 'object' ? source : {};
+  const preferences = typeData.preferences && typeof typeData.preferences === 'object' && !Array.isArray(typeData.preferences)
+    ? typeData.preferences
+    : {};
+  const safePreference = (key) => COMPANION_PREFERENCE_VALUES[key].includes(preferences[key]) ? preferences[key] : '';
+  return {
+    originLabel: typeof typeData.originLabel === 'string' ? typeData.originLabel : '',
+    destinationLabel: typeof typeData.destinationLabel === 'string' ? typeData.destinationLabel : '',
+    timeFlexibility: COMPANION_TIME_FLEXIBILITY.includes(typeData.timeFlexibility) ? typeData.timeFlexibility : 'ON_TIME',
+    transportPreference: COMPANION_TRANSPORT_PREFERENCES.includes(typeData.transportPreference) ? typeData.transportPreference : 'DISCUSS_AFTER_FORMED',
+    luggageType: MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType) ? typeData.luggageType : 'NONE',
+    preferences: {
+      friendGender: safePreference('friendGender'),
+      mbti: safePreference('mbti'),
+      navigationStyle: safePreference('navigationStyle'),
+      travelPace: safePreference('travelPace'),
+      photoHabit: safePreference('photoHabit'),
+      silenceComfort: safePreference('silenceComfort'),
+      garlic: safePreference('garlic'),
+      fragrance: safePreference('fragrance'),
+      slippers: safePreference('slippers')
+    }
+  };
+}
+
 function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
   const storedType = activity.type;
   activity = normalizeRideCapacity(activity);
@@ -197,7 +227,9 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
       ? activity.formedAt
       : null,
     rules: activity.rules,
-    typeData: storedType === 'ride'
+    typeData: storedType === 'companion'
+      ? publicCompanionTypeData(activity.typeData)
+      : storedType === 'ride'
       ? {
           originLabel: activity.typeData && activity.typeData.origin && activity.typeData.origin.label || activity.placeLabel || '',
           destinationLabel: activity.typeData && activity.typeData.destination && activity.typeData.destination.label || '',

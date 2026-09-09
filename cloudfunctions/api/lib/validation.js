@@ -11,6 +11,7 @@ const {
   MEMBER_LUGGAGE_TYPES,
   COMPANION_TIME_FLEXIBILITY,
   COMPANION_TRANSPORT_PREFERENCES,
+  COMPANION_PREFERENCE_VALUES,
   SPORT_LEVELS,
   SPORT_INTENSITIES,
   FOOD_PAYMENT_METHODS,
@@ -96,12 +97,28 @@ function validateActivityInput(input, now = new Date()) {
     const originLabel = stringValue(typeData.originLabel, '出发地', { required: true, max: 40 });
     const destinationLabel = stringValue(typeData.destinationLabel, '目的地', { required: true, max: 40 });
     result.placeLabel = `${originLabel} → ${destinationLabel}`;
+    const preferences = typeData.preferences === undefined || typeData.preferences === null
+      ? {}
+      : typeData.preferences;
+    invariant(preferences && typeof preferences === 'object' && !Array.isArray(preferences), 'VALIDATION_ERROR', '同行偏好格式无效', { field: 'preferences' });
+    invariant(Object.keys(preferences).every((key) => Object.prototype.hasOwnProperty.call(COMPANION_PREFERENCE_VALUES, key)), 'VALIDATION_ERROR', '同行偏好包含未知字段', { field: 'preferences' });
     result.typeData = {
       originLabel,
       destinationLabel,
       timeFlexibility: enumValue(typeData.timeFlexibility, '时间弹性', COMPANION_TIME_FLEXIBILITY),
       transportPreference: enumValue(typeData.transportPreference, '出行方式倾向', COMPANION_TRANSPORT_PREFERENCES),
-      luggageType: memberLuggageType(typeData.luggageType || 'NONE')
+      luggageType: memberLuggageType(typeData.luggageType || 'NONE'),
+      preferences: {
+        friendGender: optionalEnumValue(preferences.friendGender, '拼友性别偏好', COMPANION_PREFERENCE_VALUES.friendGender),
+        mbti: optionalEnumValue(preferences.mbti, 'MBTI 频道偏好', COMPANION_PREFERENCE_VALUES.mbti),
+        navigationStyle: optionalEnumValue(preferences.navigationStyle, '导航属性偏好', COMPANION_PREFERENCE_VALUES.navigationStyle),
+        travelPace: optionalEnumValue(preferences.travelPace, '出行节奏偏好', COMPANION_PREFERENCE_VALUES.travelPace),
+        photoHabit: optionalEnumValue(preferences.photoHabit, '拍照习惯偏好', COMPANION_PREFERENCE_VALUES.photoHabit),
+        silenceComfort: optionalEnumValue(preferences.silenceComfort, '沉默兼容度偏好', COMPANION_PREFERENCE_VALUES.silenceComfort),
+        garlic: optionalEnumValue(preferences.garlic, '饭后蒜味偏好', COMPANION_PREFERENCE_VALUES.garlic),
+        fragrance: optionalEnumValue(preferences.fragrance, '香水气场偏好', COMPANION_PREFERENCE_VALUES.fragrance),
+        slippers: optionalEnumValue(preferences.slippers, '拖鞋出门偏好', COMPANION_PREFERENCE_VALUES.slippers)
+      }
     };
   }
 

@@ -1,0 +1,12 @@
+{
+  "id": "import-companion-publish-interface",
+  "title": "从用户提供的完整工程快照中仅迁入拼同行发布界面",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-09-09T15:10:00+08:00",
+  "branch": "main"
+}

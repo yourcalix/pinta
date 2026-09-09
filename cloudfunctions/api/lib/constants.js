@@ -64,6 +64,17 @@ const PASSENGER_AVATAR_KINDS = Object.freeze(['PASSENGER_A', 'PASSENGER_B']);
 const MEMBER_LUGGAGE_TYPES = Object.freeze(['NONE', 'SMALL', 'LARGE']);
 const COMPANION_TIME_FLEXIBILITY = Object.freeze(['ON_TIME', 'WITHIN_30_MIN', 'WITHIN_60_MIN']);
 const COMPANION_TRANSPORT_PREFERENCES = Object.freeze(['PUBLIC_TRANSIT', 'LICENSED_TAXI', 'DISCUSS_AFTER_FORMED']);
+const COMPANION_PREFERENCE_VALUES = Object.freeze({
+  friendGender: Object.freeze(['ANY', 'FEMALE', 'MALE']),
+  mbti: Object.freeze(['E', 'I', 'ANY']),
+  navigationStyle: Object.freeze(['GUIDE', 'FOLLOW', 'LOST_CONFIDENT']),
+  travelPace: Object.freeze(['FAST', 'RELAXED', 'SPONTANEOUS']),
+  photoHabit: Object.freeze(['FIRST', 'CASUAL', 'NO_CAMERA']),
+  silenceComfort: Object.freeze(['CHATTY', 'NATURAL', 'HEADPHONES']),
+  garlic: Object.freeze(['OK', 'FRESHEN', 'AVOID']),
+  fragrance: Object.freeze(['ANY', 'LIGHT', 'NONE']),
+  slippers: Object.freeze(['RELAXED', 'CONTEXT', 'NEAT'])
+});
 const SPORT_LEVELS = Object.freeze(['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ANY']);
 const SPORT_INTENSITIES = Object.freeze(['LIGHT', 'MEDIUM', 'HIGH']);
 const FOOD_PAYMENT_METHODS = Object.freeze(['FIFTY_FIFTY', 'GO_DUTCH', 'TABLE_ONLY']);
@@ -95,6 +106,7 @@ module.exports = {
   MEMBER_LUGGAGE_TYPES,
   COMPANION_TIME_FLEXIBILITY,
   COMPANION_TRANSPORT_PREFERENCES,
+  COMPANION_PREFERENCE_VALUES,
   SPORT_LEVELS,
   SPORT_INTENSITIES,
   FOOD_PAYMENT_METHODS,

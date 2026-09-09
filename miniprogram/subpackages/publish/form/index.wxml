@@ -7,6 +7,7 @@
     <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
     <view class="global-page-background-tint" aria-hidden="true"></view>
   </block>
+  <image wx:if="{{type === 'companion'}}" class="companion-travel-frame" src="./assets/companion/companion-travel-frame.png" mode="aspectFill" aria-hidden="true" />
 
   <view class="form-navigation" style="height: {{contentTopInset}}px;">
     <view class="form-navigation-row">
@@ -16,7 +17,138 @@
     </view>
   </view>
 
-  <view class="form-content {{type === 'food' ? 'food-form-content' : ''}}">
+  <view wx:if="{{type === 'companion'}}" class="companion-form-content">
+    <view class="companion-intro">
+      <view class="companion-intro-mark" aria-hidden="true"></view>
+      <text>{{meta.subtitle}}</text>
+    </view>
+
+    <view wx:if="{{errorMessage}}" class="error-banner companion-error-banner" role="alert">{{errorMessage}}</view>
+
+    <view class="companion-card companion-card--basic">
+      <view class="companion-card-doodle companion-card-doodle--ticket" aria-hidden="true"></view>
+      <view class="companion-section-title">基本信息</view>
+      <view class="field-label required">活动标题</view>
+      <input class="input companion-input" maxlength="30" value="{{form.title}}" data-field="title" bindinput="handleInput" placeholder="简述你想找怎样的同行伙伴" adjust-position="true" cursor-spacing="140" aria-label="必填项，活动标题" />
+      <view class="field-label">补充说明（选填）</view>
+      <textarea class="textarea companion-textarea" maxlength="300" value="{{form.description}}" data-field="description" bindinput="handleInput" placeholder="补充行程安排、集合方式或注意事项" adjust-position="true" cursor-spacing="140" aria-label="补充说明，选填" />
+    </view>
+
+    <view class="companion-card companion-card--route">
+      <view class="companion-card-doodle companion-card-doodle--route" aria-hidden="true">↗</view>
+      <view class="companion-section-title">同行信息</view>
+      <view class="two-column companion-route-grid">
+        <view>
+          <view class="field-label required">出发地</view>
+          <input class="input companion-input" maxlength="40" value="{{form.originLabel}}" data-field="originLabel" bindinput="handleInput" placeholder="例如：地铁站出口" adjust-position="true" cursor-spacing="140" aria-label="必填项，出发地" />
+        </view>
+        <view>
+          <view class="field-label required">目的地</view>
+          <input class="input companion-input" maxlength="40" value="{{form.destinationLabel}}" data-field="destinationLabel" bindinput="handleInput" placeholder="例如：商场南门" adjust-position="true" cursor-spacing="140" aria-label="必填项，目的地" />
+        </view>
+      </view>
+      <view class="field-label">出行方式倾向</view>
+      <view class="choice-row" role="radiogroup" aria-label="出行方式倾向">
+        <button wx:for="{{transportOptions}}" wx:key="value" class="choice companion-choice {{form.transportPreference === item.value ? 'choice--active' : ''}}" data-field="transportPreference" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.transportPreference === item.value}}">{{item.label}}</button>
+      </view>
+      <view class="field-label">行李情况</view>
+      <view class="choice-row" role="radiogroup" aria-label="行李情况">
+        <button wx:for="{{luggageOptions}}" wx:key="value" class="choice companion-choice {{form.luggageType === item.value ? 'choice--active' : ''}}" data-field="luggageType" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.luggageType === item.value}}">{{item.label}}</button>
+      </view>
+    </view>
+
+    <view class="companion-card companion-card--preferences">
+      <view class="companion-card-doodle companion-card-doodle--heart" aria-hidden="true">♡</view>
+      <view class="companion-section-title">同行偏好</view>
+      <view class="companion-preference-note">以下均为选填，再小众的频道也可能有人接得住</view>
+
+      <view class="field-label">期待拼友性别</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="期待拼友性别">
+        <button wx:for="{{genderPreferenceOptions}}" wx:key="value" class="companion-chip {{form.friendGenderPreference === item.value ? 'companion-chip--active' : ''}}" data-field="friendGenderPreference" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.friendGenderPreference === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">MBTI 频道</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="MBTI 频道">
+        <button wx:for="{{companionMbtiOptions}}" wx:key="value" class="companion-chip {{form.mbtiPreference === item.value ? 'companion-chip--active' : ''}}" data-field="mbtiPreference" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.mbtiPreference === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">导航属性</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="导航属性">
+        <button wx:for="{{navigationStyleOptions}}" wx:key="value" class="companion-chip {{form.navigationStyle === item.value ? 'companion-chip--active' : ''}}" data-field="navigationStyle" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.navigationStyle === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">出行节奏</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="出行节奏">
+        <button wx:for="{{travelPaceOptions}}" wx:key="value" class="companion-chip {{form.travelPace === item.value ? 'companion-chip--active' : ''}}" data-field="travelPace" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.travelPace === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">拍照习惯</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="拍照习惯">
+        <button wx:for="{{photoHabitOptions}}" wx:key="value" class="companion-chip {{form.photoHabit === item.value ? 'companion-chip--active' : ''}}" data-field="photoHabit" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.photoHabit === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">沉默兼容度</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="沉默兼容度">
+        <button wx:for="{{silenceComfortOptions}}" wx:key="value" class="companion-chip {{form.silenceComfort === item.value ? 'companion-chip--active' : ''}}" data-field="silenceComfort" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.silenceComfort === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">饭后蒜味</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="饭后蒜味">
+        <button wx:for="{{garlicPreferenceOptions}}" wx:key="value" class="companion-chip {{form.garlicPreference === item.value ? 'companion-chip--active' : ''}}" data-field="garlicPreference" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.garlicPreference === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">香水气场</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="香水气场">
+        <button wx:for="{{fragrancePreferenceOptions}}" wx:key="value" class="companion-chip {{form.fragrancePreference === item.value ? 'companion-chip--active' : ''}}" data-field="fragrancePreference" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.fragrancePreference === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+      <view class="field-label">拖鞋出门</view>
+      <view class="companion-chip-group" role="radiogroup" aria-label="拖鞋出门">
+        <button wx:for="{{slippersPreferenceOptions}}" wx:key="value" class="companion-chip {{form.slippersPreference === item.value ? 'companion-chip--active' : ''}}" data-field="slippersPreference" data-value="{{item.value}}" bindtap="handleCompanionOptionalChoice" role="radio" aria-checked="{{form.slippersPreference === item.value}}"><text class="companion-chip-surface">{{item.label}}</text></button>
+      </view>
+    </view>
+
+    <view class="companion-card companion-card--schedule">
+      <view class="companion-card-doodle companion-card-doodle--calendar" aria-hidden="true"></view>
+      <view class="companion-section-title">时间与人数</view>
+      <view class="two-column companion-schedule-grid">
+        <picker mode="date" start="{{minStartDate}}" end="{{maxStartDate}}" value="{{form.startDate}}" bindchange="handleDate">
+          <view class="picker-field companion-picker" role="button" aria-label="选择活动日期，当前{{form.startDate || '未选择'}}"><text>{{form.startDate || '选择日期'}}</text><text aria-hidden="true">⌄</text></view>
+        </picker>
+        <picker mode="time" value="{{form.startTime}}" bindchange="handleCompanionTime">
+          <view class="picker-field companion-picker" role="button" aria-label="选择出发时间，当前{{form.startTime || '未选择'}}"><text>{{form.startTime || '选择时间'}}</text><text aria-hidden="true">⌄</text></view>
+        </picker>
+      </view>
+      <view class="field-label">时间弹性</view>
+      <picker mode="selector" range="{{flexibilityLabels}}" value="{{flexibilityIndex}}" bindchange="handleCompanionFlexibility">
+        <view class="picker-field companion-picker" role="button" aria-label="选择时间弹性，当前{{flexibilityLabels[flexibilityIndex]}}"><text>{{flexibilityLabels[flexibilityIndex]}}</text><text aria-hidden="true">⌄</text></view>
+      </picker>
+      <view class="companion-member-switch" role="tablist" aria-label="拼友人数设置方式">
+        <button class="companion-member-mode {{form.companionMemberMode === 'fixed' ? 'companion-member-mode--active' : ''}}" data-mode="fixed" bindtap="handleCompanionMemberMode" role="tab" aria-selected="{{form.companionMemberMode === 'fixed'}}">固定拼友数</button>
+        <button class="companion-member-mode {{form.companionMemberMode === 'range' ? 'companion-member-mode--active' : ''}}" data-mode="range" bindtap="handleCompanionMemberMode" role="tab" aria-selected="{{form.companionMemberMode === 'range'}}">限制人数范围</button>
+      </view>
+      <view wx:if="{{form.companionMemberMode === 'fixed'}}" class="companion-member-control">
+        <view><view class="field-label required companion-member-label">需要几位拼友</view><text class="companion-member-note">人数不含自己，成团总人数会再加上你</text></view>
+        <view class="companion-number-field"><input type="number" value="{{form.companionMinFriends}}" data-field="companionMinFriends" bindinput="handleCompanionFriendNumber" placeholder="如：3" adjust-position="true" cursor-spacing="140" aria-label="需要的拼友人数，1至19位" /><text>位</text></view>
+      </view>
+      <view wx:else class="companion-member-range">
+        <view class="field-label required companion-member-label">可接受的拼友范围</view>
+        <text class="companion-member-note">拼友 1—19 位，对应含自己的总人数 2—20 人</text>
+        <view class="companion-range-fields">
+          <label class="companion-range-field"><text>最少</text><input type="number" value="{{form.companionMinFriends}}" data-field="companionMinFriends" bindinput="handleCompanionFriendNumber" adjust-position="true" cursor-spacing="140" aria-label="最少需要的拼友人数，1至19位" /><text>位</text></label>
+          <text class="companion-range-separator">至</text>
+          <label class="companion-range-field"><text>最多</text><input type="number" value="{{form.companionMaxFriends}}" data-field="companionMaxFriends" bindinput="handleCompanionFriendNumber" adjust-position="true" cursor-spacing="140" aria-label="最多需要的拼友人数，1至19位" /><text>位</text></label>
+        </view>
+      </view>
+    </view>
+
+    <view class="companion-card companion-card--safety">
+      <view class="companion-card-doodle companion-card-doodle--safety" aria-hidden="true">✓</view>
+      <view class="companion-section-title">参与规则与安全</view>
+      <view class="field-label">参与规则（选填）</view>
+      <textarea class="textarea companion-textarea companion-textarea--short" maxlength="200" value="{{form.rules}}" data-field="rules" bindinput="handleInput" placeholder="例如：请守时，费用各自承担" adjust-position="true" cursor-spacing="140" aria-label="参与规则，选填" />
+      <checkbox-group bindchange="handleSafety">
+        <label class="agreement companion-agreement">
+          <checkbox value="agreed" checked="{{safetyAgreed}}" color="#16A36A" aria-label="同意拼单安全规则" />
+          <text>我确认信息真实，并同意遵守拼单安全规则。平台不提供运输、配送、担保或预订服务。</text>
+        </label>
+      </checkbox-group>
+    </view>
+  </view>
+
+  <view wx:else class="form-content {{type === 'food' ? 'food-form-content' : ''}}">
     <view class="type-intro type-intro--{{meta.tone}}">
       <image class="type-intro-mark" src="{{typeIcon}}" aria-hidden="true" />
       <text class="type-intro-text">{{meta.subtitle}}</text>
@@ -32,33 +164,7 @@
       <textarea class="textarea" maxlength="300" value="{{form.description}}" data-field="description" bindinput="handleInput" placeholder="补充时间弹性、活动偏好或注意事项" adjust-position="true" cursor-spacing="140" aria-label="补充说明，选填" />
     </view>
 
-    <view wx:if="{{type === 'companion'}}" class="form-card">
-      <view class="section-title section-title--companion">同行信息</view>
-      <view class="two-column">
-        <view>
-          <view class="field-label required">出发地</view>
-          <input class="input" maxlength="40" value="{{form.originLabel}}" data-field="originLabel" bindinput="handleInput" placeholder="例如：地铁站出口" adjust-position="true" cursor-spacing="140" aria-label="必填项，出发地" />
-        </view>
-        <view>
-          <view class="field-label required">目的地</view>
-          <input class="input" maxlength="40" value="{{form.destinationLabel}}" data-field="destinationLabel" bindinput="handleInput" placeholder="例如：商场南门" adjust-position="true" cursor-spacing="140" aria-label="必填项，目的地" />
-        </view>
-      </view>
-      <view class="field-label">时间弹性</view>
-      <view class="choice-row" role="radiogroup" aria-label="时间弹性">
-        <button wx:for="{{flexibilityOptions}}" wx:key="value" class="choice {{form.timeFlexibility === item.value ? 'choice--active' : ''}}" data-field="timeFlexibility" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.timeFlexibility === item.value}}">{{item.label}}</button>
-      </view>
-      <view class="field-label">出行方式倾向</view>
-      <view class="choice-row" role="radiogroup" aria-label="出行方式倾向">
-        <button wx:for="{{transportOptions}}" wx:key="value" class="choice {{form.transportPreference === item.value ? 'choice--active' : ''}}" data-field="transportPreference" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.transportPreference === item.value}}">{{item.label}}</button>
-      </view>
-      <view class="field-label">行李情况</view>
-      <view class="choice-row" role="radiogroup" aria-label="行李情况">
-        <button wx:for="{{luggageOptions}}" wx:key="value" class="choice {{form.luggageType === item.value ? 'choice--active' : ''}}" data-field="luggageType" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.luggageType === item.value}}">{{item.label}}</button>
-      </view>
-    </view>
-
-    <view wx:elif="{{type === 'sport'}}" class="form-card">
+    <view wx:if="{{type === 'sport'}}" class="form-card">
       <view class="section-title section-title--sport">运动信息</view>
       <view class="field-label required">运动项目</view>
       <input class="input" maxlength="30" value="{{form.sportType}}" data-field="sportType" bindinput="handleInput" placeholder="例如：羽毛球、跑步、篮球" adjust-position="true" cursor-spacing="140" aria-label="必填项，运动项目" />
@@ -161,7 +267,7 @@
           <text class="section-title-text section-title-text--time">时间与人数</text>
         </view>
       <view class="two-column picker-column">
-        <picker mode="date" value="{{form.startDate}}" bindchange="handleDate"><view class="picker-field" role="button" aria-label="选择活动日期，当前{{form.startDate || '未选择'}}"><text>{{form.startDate || '选择日期'}}</text><text aria-hidden="true">⌄</text></view></picker>
+        <picker mode="date" start="{{minStartDate}}" end="{{maxStartDate}}" value="{{form.startDate}}" bindchange="handleDate"><view class="picker-field" role="button" aria-label="选择活动日期，当前{{form.startDate || '未选择'}}"><text>{{form.startDate || '选择日期'}}</text><text aria-hidden="true">⌄</text></view></picker>
         <picker mode="selector" range="{{timeOptions}}" value="{{timeIndex}}" bindchange="handleTime"><view class="picker-field" role="button" aria-label="选择活动时间，当前{{form.startTime || '未选择'}}"><text>{{form.startTime || '选择时间'}}</text><text aria-hidden="true">⌄</text></view></picker>
       </view>
       <view wx:if="{{type === 'food'}}" class="two-column">
@@ -204,7 +310,10 @@
     </view>
   </view>
 
-  <view class="fixed-submit-bar {{type === 'food' ? 'fixed-submit-bar--food' : ''}}">
+  <view wx:if="{{type === 'companion'}}" class="fixed-submit-bar fixed-submit-bar--companion">
+    <button class="submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼同行' : '立即发布拼同行'}}">{{submitting ? '正在发布…' : '立即发布拼同行'}}</button>
+  </view>
+  <view wx:else class="fixed-submit-bar {{type === 'food' ? 'fixed-submit-bar--food' : ''}}">
     <button class="submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼单' : '立即发布拼单'}}">{{submitting ? '正在发布…' : '立即发布拼单'}}</button>
   </view>
 </view>

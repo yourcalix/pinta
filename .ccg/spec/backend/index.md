@@ -54,6 +54,7 @@
 ## 数据与隐私
 
 - 拼饭桌创建契约的 `typeData` 在既有 `venue / cuisine / budgetRange / dietaryNotes` 外，可选保存受控的 `paymentMethod: FIFTY_FIFTY | GO_DUTCH | TABLE_ONLY`、`genderPreference: MALE | FEMALE | ALL | ''` 与标准 MBTI 偏好；旧客户端省略 `paymentMethod` 时按已有“人均预算”语义兼容为 `FIFTY_FIFTY`。地图选择仍只落地受控地点名称，不保存经纬度；自定义忌口在提交适配层合并进长度受控的 `dietaryNotes`。Mock 与 Cloud 必须共享枚举、长度、预算条件必填和缺省语义。
+- 拼同行创建契约的 `typeData.preferences` 只允许 `friendGender / mbti / navigationStyle / travelPace / photoHabit / silenceComfort / garlic / fragrance / slippers` 九个选填字段，各字段必须按服务端白名单接受严格英文枚举，缺省统一为空字符串；未知键、未知枚举及非对象输入一律拒绝。Cloud、Mock 与公开 DTO 必须保持同构，公开读取还须对白名单内历史脏值降级为空字符串，并对 `timeFlexibility / transportPreference / luggageType` 使用既有安全缺省。人数继续只保存含发起人在内的 `minMembers / maxMembers` 2—20 契约，不保存客户端“拼友数”展示语义。
 
 - `activity.memories` 是公开只读接口，只接受 `limit` 且服务端夹紧至 `1–6`；Store 必须从事实源筛选 `FORMED` 且具有合法 `formedAt` 的活动，按 `formedAt` 倒序返回，并复用活动公开 DTO。不得由客户端传入状态，不得用 `updatedAt`、`startsAt` 或列表缓存推断成团时间，也不得暴露成员身份、联系方式或私密资料；Cloud 查询可有界多取后过滤脏数据，但不得无界扫描。
 - 三类新活动头像名册不得公开内部 memberId。公开转换必须按活动页批量读取 `ACTIVE` 成员及其当前资料，CloudBase `command.in` 每批不超过 10 条；已有名册用于稳定排序，名册缺失时只可依据成员事实重建，绝不按聚合人数伪造头像。旧 `PASSENGER_A/B` 仅作为内部迁移提示，不得再出现在公共活动 DTO。历史 ride 只读 DTO 必须在公开转换入口归一七人容量，包括 Mock 的聚合页直接入口，不依赖 list/detail 上游预处理。

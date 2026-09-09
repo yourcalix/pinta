@@ -41,9 +41,28 @@ const FOOD_PAYMENT_VALUES = Object.freeze({
   '真的只是拼张桌': 'TABLE_ONLY'
 });
 const FOOD_GENDER_VALUES = Object.freeze({ 男生: 'MALE', 女生: 'FEMALE', 男女均可: 'ALL' });
+const COMPANION_FORM_ENUMS = Object.freeze({
+  timeFlexibility: ['ON_TIME', 'WITHIN_30_MIN', 'WITHIN_60_MIN'],
+  transportPreference: ['PUBLIC_TRANSIT', 'LICENSED_TAXI', 'DISCUSS_AFTER_FORMED'],
+  luggageType: ['NONE', 'SMALL', 'LARGE'],
+  friendGenderPreference: ['', 'ANY', 'FEMALE', 'MALE'],
+  mbtiPreference: ['', 'E', 'I', 'ANY'],
+  navigationStyle: ['', 'GUIDE', 'FOLLOW', 'LOST_CONFIDENT'],
+  travelPace: ['', 'FAST', 'RELAXED', 'SPONTANEOUS'],
+  photoHabit: ['', 'FIRST', 'CASUAL', 'NO_CAMERA'],
+  silenceComfort: ['', 'CHATTY', 'NATURAL', 'HEADPHONES'],
+  garlicPreference: ['', 'OK', 'FRESHEN', 'AVOID'],
+  fragrancePreference: ['', 'ANY', 'LIGHT', 'NONE'],
+  slippersPreference: ['', 'RELAXED', 'CONTEXT', 'NEAT']
+});
 const COMMON_FORM_FIELDS = Object.freeze(['title', 'description', 'rules', 'placeLabel', 'startDate', 'startTime', 'minMembers', 'maxMembers']);
 const TYPE_FORM_FIELDS = Object.freeze({
-  companion: ['originLabel', 'destinationLabel', 'timeFlexibility', 'transportPreference', 'luggageType'],
+  companion: [
+    'originLabel', 'destinationLabel', 'timeFlexibility', 'transportPreference', 'luggageType',
+    'companionMemberMode', 'companionMinFriends', 'companionMaxFriends',
+    'friendGenderPreference', 'mbtiPreference', 'navigationStyle', 'travelPace', 'photoHabit',
+    'silenceComfort', 'garlicPreference', 'fragrancePreference', 'slippersPreference'
+  ],
   sport: ['sportType', 'venue', 'level', 'intensity', 'equipment'],
   food: ['venue', 'cuisine', 'budgetRange', 'dietaryNotes', 'dietaryCustom', 'genderPreference', 'mbtiPreference', 'paymentMethod', 'memberRangeText']
 });
@@ -53,9 +72,12 @@ function initialForm(type) {
     type,
     title: '', description: '', rules: '', placeLabel: '', startDate: '', startTime: '', minMembers: 2, maxMembers: 4,
     originLabel: '', destinationLabel: '', timeFlexibility: 'WITHIN_30_MIN', transportPreference: 'DISCUSS_AFTER_FORMED', luggageType: 'NONE',
+    companionMemberMode: 'fixed', companionMinFriends: 1, companionMaxFriends: 1,
+    friendGenderPreference: '', mbtiPreference: '', navigationStyle: '', travelPace: '', photoHabit: '',
+    silenceComfort: '', garlicPreference: '', fragrancePreference: '', slippersPreference: '',
     sportType: '', venue: '', level: 'ANY', intensity: 'MEDIUM', equipment: '',
     cuisine: '', budgetRange: '', dietaryNotes: '',
-    genderPreference: '', mbtiPreference: '',
+    genderPreference: '',
     paymentMethod: '', dietaryCustom: '', memberRangeText: '4'
   };
 }
@@ -63,10 +85,10 @@ function initialForm(type) {
 function cleanFormData(type, source = {}) {
   const initial = initialForm(type);
   const allowed = new Set(['type', ...COMMON_FORM_FIELDS, ...TYPE_FORM_FIELDS[type]]);
-  const result = Object.keys(initial).reduce((cleaned, field) => {
-    if (allowed.has(field) && Object.prototype.hasOwnProperty.call(source, field)) cleaned[field] = source[field];
+  const result = [...allowed].reduce((cleaned, field) => {
+    cleaned[field] = Object.prototype.hasOwnProperty.call(source, field) ? source[field] : initial[field];
     return cleaned;
-  }, { ...initial, type });
+  }, { type });
   if (type === 'food' && !Object.prototype.hasOwnProperty.call(source, 'memberRangeText')
     && Object.prototype.hasOwnProperty.call(source, 'maxMembers')) {
     const minimum = Number(source.minMembers);
@@ -74,6 +96,25 @@ function cleanFormData(type, source = {}) {
     result.memberRangeText = Number.isInteger(minimum) && Number.isInteger(maximum) && minimum < maximum
       ? `${minimum}-${maximum}`
       : String(source.maxMembers);
+  }
+  if (type === 'companion' && !Object.prototype.hasOwnProperty.call(source, 'companionMinFriends')) {
+    const hasLegacyCapacity = Object.prototype.hasOwnProperty.call(source, 'minMembers')
+      || Object.prototype.hasOwnProperty.call(source, 'maxMembers');
+    if (hasLegacyCapacity) {
+      const minimum = Math.min(20, Math.max(2, Number(source.minMembers) || 2));
+      const maximum = Math.min(20, Math.max(minimum, Number(source.maxMembers) || minimum));
+      result.companionMemberMode = minimum === maximum ? 'fixed' : 'range';
+      result.companionMinFriends = minimum - 1;
+      result.companionMaxFriends = maximum - 1;
+    }
+  }
+  if (type === 'companion' && !['fixed', 'range'].includes(result.companionMemberMode)) {
+    result.companionMemberMode = 'fixed';
+  }
+  if (type === 'companion') {
+    Object.entries(COMPANION_FORM_ENUMS).forEach(([field, values]) => {
+      if (!values.includes(result[field])) result[field] = initial[field];
+    });
   }
   return result;
 }
@@ -125,6 +166,28 @@ function standardCapacity(form) {
   return { minMembers, maxMembers };
 }
 
+function companionCapacity(form) {
+  const minimum = Number(form.companionMinFriends);
+  const maximum = form.companionMemberMode === 'range' ? Number(form.companionMaxFriends) : minimum;
+  if (!Number.isInteger(minimum) || !Number.isInteger(maximum)
+    || minimum < 1 || maximum > 19
+    || (form.companionMemberMode === 'range' ? maximum <= minimum : maximum < minimum)) {
+    return { error: '拼友人数需在 1—19 位之间（成团总人数 2—20 人）' };
+  }
+  return { minMembers: minimum + 1, maxMembers: maximum + 1 };
+}
+
+function localDateText(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function localDateAfter(days) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+  return localDateText(date);
+}
+
 function combinedDietaryNotes(form) {
   const values = normalizedText(form.dietaryNotes).split(',').map((item) => item.trim()).filter(Boolean);
   const custom = normalizedText(form.dietaryCustom);
@@ -153,8 +216,21 @@ Page({
     timeOptions: TIME_OPTIONS,
     timeIndex: 0,
     flexibilityOptions: [{ value: 'ON_TIME', label: '准时' }, { value: 'WITHIN_30_MIN', label: '前后 30 分钟' }, { value: 'WITHIN_60_MIN', label: '前后 60 分钟' }],
+    flexibilityLabels: ['准时', '前后 30 分钟', '前后 60 分钟'],
+    flexibilityIndex: 1,
+    minStartDate: localDateAfter(0),
+    maxStartDate: localDateAfter(6),
     transportOptions: [{ value: 'PUBLIC_TRANSIT', label: '公共交通' }, { value: 'LICENSED_TAXI', label: '正规出租车' }, { value: 'DISCUSS_AFTER_FORMED', label: '成团后商量' }],
     luggageOptions: [{ value: 'NONE', label: '无大件' }, { value: 'SMALL', label: '小行李' }, { value: 'LARGE', label: '大行李' }],
+    genderPreferenceOptions: [{ value: 'ANY', label: '不限' }, { value: 'FEMALE', label: '女生优先' }, { value: 'MALE', label: '男生优先' }],
+    companionMbtiOptions: [{ value: 'E', label: 'E 人带带我' }, { value: 'I', label: 'I 人慢热局' }, { value: 'ANY', label: '四字母随缘' }],
+    navigationStyleOptions: [{ value: 'GUIDE', label: '人形地图' }, { value: 'FOLLOW', label: '跟着走就行' }, { value: 'LOST_CONFIDENT', label: '路痴但很自信' }],
+    travelPaceOptions: [{ value: 'FAST', label: '特种兵模式' }, { value: 'RELAXED', label: '松弛感漫游' }, { value: 'SPONTANEOUS', label: '边走边决定' }],
+    photoHabitOptions: [{ value: 'FIRST', label: '先拍再出发' }, { value: 'CASUAL', label: '随手记录派' }, { value: 'NO_CAMERA', label: '拒绝出镜' }],
+    silenceComfortOptions: [{ value: 'CHATTY', label: '一路唠到底' }, { value: 'NATURAL', label: '有话再聊' }, { value: 'HEADPHONES', label: '各自戴耳机' }],
+    garlicPreferenceOptions: [{ value: 'OK', label: '烟火气 OK' }, { value: 'FRESHEN', label: '口香糖就行' }, { value: 'AVOID', label: '有点介意' }],
+    fragrancePreferenceOptions: [{ value: 'ANY', label: '浓淡随意' }, { value: 'LIGHT', label: '淡香 OK' }, { value: 'NONE', label: '无香更舒服' }],
+    slippersPreferenceOptions: [{ value: 'RELAXED', label: '松弛感拉满' }, { value: 'CONTEXT', label: '看场合' }, { value: 'NEAT', label: '精致点更好' }],
     levelOptions: [{ value: 'ANY', label: '不限' }, { value: 'BEGINNER', label: '新手' }, { value: 'INTERMEDIATE', label: '熟练' }, { value: 'ADVANCED', label: '进阶' }],
     intensityOptions: [{ value: 'LIGHT', label: '轻松' }, { value: 'MEDIUM', label: '适中' }, { value: 'HIGH', label: '高强度' }],
     cuisineOptions: ['粤菜', '火锅', '川菜', '湘菜', '鲁菜', '苏菜', '浙菜', '闽菜', '徽菜', '东北菜', '西北菜', '新疆菜', '烧烤', '自助餐', '日料', '韩料', '西餐', '东南亚菜', '轻食', '家常菜'],
@@ -187,6 +263,9 @@ Page({
       typeIcon: TYPES[type].icon,
       form,
       timeIndex: selectedOptionIndex(this.data.timeOptions, form.startTime),
+      flexibilityIndex: selectedOptionIndex(this.data.flexibilityOptions.map((item) => item.value), form.timeFlexibility),
+      minStartDate: localDateAfter(0),
+      maxStartDate: localDateAfter(6),
       cuisineIndex: selectedOptionIndex(this.data.cuisineOptions, form.cuisine),
       cuisineImage: CUISINE_IMAGES[form.cuisine] || '',
       paymentIndex: selectedOptionIndex(this.data.paymentOptions, form.paymentMethod),
@@ -206,8 +285,37 @@ Page({
   handleInput(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value, errorMessage: '' }); },
   handleDate(event) { this.setData({ 'form.startDate': event.detail.value, errorMessage: '' }); },
   handleTime(event) { const index = Number(event.detail.value) || 0; this.setData({ timeIndex: index, 'form.startTime': TIME_OPTIONS[index], errorMessage: '' }); },
+  handleCompanionTime(event) { this.setData({ 'form.startTime': event.detail.value, errorMessage: '' }); },
+  handleCompanionFlexibility(event) {
+    const index = Number(event.detail.value) || 0;
+    this.setData({ flexibilityIndex: index, 'form.timeFlexibility': this.data.flexibilityOptions[index].value, errorMessage: '' });
+  },
   handleNumber(event) { const field = event.currentTarget.dataset.field; this.setData({ [`form.${field}`]: Number(event.detail.value) || 0, errorMessage: '' }); },
   handleChoice(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.currentTarget.dataset.value, errorMessage: '' }); },
+  handleCompanionOptionalChoice(event) {
+    const field = event.currentTarget.dataset.field;
+    const value = event.currentTarget.dataset.value;
+    this.setData({ [`form.${field}`]: this.data.form[field] === value ? '' : value, errorMessage: '' });
+  },
+  handleCompanionMemberMode(event) {
+    const mode = event.currentTarget.dataset.mode === 'range' ? 'range' : 'fixed';
+    let minimum = Math.min(19, Math.max(1, Number(this.data.form.companionMinFriends) || 1));
+    if (mode === 'range' && minimum === 19) minimum = 18;
+    const maximum = mode === 'range'
+      ? Math.min(19, Math.max(minimum + 1, Number(this.data.form.companionMaxFriends) || minimum + 1))
+      : minimum;
+    this.setData({
+      'form.companionMemberMode': mode,
+      'form.companionMinFriends': minimum,
+      'form.companionMaxFriends': maximum,
+      errorMessage: ''
+    });
+  },
+  handleCompanionFriendNumber(event) {
+    const field = event.currentTarget.dataset.field;
+    const rawValue = String(event.detail.value || '').replace(/\D/g, '');
+    this.setData({ [`form.${field}`]: rawValue === '' ? '' : Number(rawValue), errorMessage: '' });
+  },
   handleSafety(event) { this.setData({ safetyAgreed: event.detail.value.includes('agreed'), errorMessage: '' }); },
   handleCuisine(event) {
     const index = Number(event.detail.value) || 0;
@@ -280,7 +388,10 @@ Page({
     if (!form.startDate || !form.startTime) return '请选择活动时间';
     const startsAt = safeStartsAt(form);
     if (!Number.isFinite(Date.parse(startsAt)) || Date.parse(startsAt) <= Date.now() + 5 * 60 * 1000) return '活动时间需至少晚于当前时间 5 分钟';
-    const capacity = this.data.type === 'food' ? foodCapacity(form) : standardCapacity(form);
+    if (Date.parse(startsAt) > Date.now() + 7 * 24 * 60 * 60 * 1000) return '活动时间不能超过未来 7 天';
+    const capacity = this.data.type === 'food'
+      ? foodCapacity(form)
+      : this.data.type === 'companion' ? companionCapacity(form) : standardCapacity(form);
     if (capacity.error) return capacity.error;
     if (this.data.type === 'companion' && (!form.originLabel.trim() || !form.destinationLabel.trim())) return '请填写出发地和目的地';
     if (this.data.type === 'sport' && (!form.sportType.trim() || !form.venue.trim())) return '请填写运动项目和活动场地';
@@ -295,7 +406,7 @@ Page({
     const form = this.data.form;
     const startsAt = safeStartsAt(form);
     const isFood = this.data.type === 'food';
-    const capacity = isFood ? foodCapacity(form) : standardCapacity(form);
+    const capacity = isFood ? foodCapacity(form) : this.data.type === 'companion' ? companionCapacity(form) : standardCapacity(form);
     const common = {
       type: this.data.type,
       title: isFood ? foodTitle(form) : normalizedText(form.title),
@@ -310,7 +421,24 @@ Page({
       maxMembers: capacity.maxMembers,
       rules: normalizedText(form.rules)
     };
-    if (this.data.type === 'companion') common.typeData = { originLabel: form.originLabel.trim(), destinationLabel: form.destinationLabel.trim(), timeFlexibility: form.timeFlexibility, transportPreference: form.transportPreference, luggageType: form.luggageType };
+    if (this.data.type === 'companion') common.typeData = {
+      originLabel: form.originLabel.trim(),
+      destinationLabel: form.destinationLabel.trim(),
+      timeFlexibility: form.timeFlexibility,
+      transportPreference: form.transportPreference,
+      luggageType: form.luggageType,
+      preferences: {
+        friendGender: form.friendGenderPreference,
+        mbti: form.mbtiPreference,
+        navigationStyle: form.navigationStyle,
+        travelPace: form.travelPace,
+        photoHabit: form.photoHabit,
+        silenceComfort: form.silenceComfort,
+        garlic: form.garlicPreference,
+        fragrance: form.fragrancePreference,
+        slippers: form.slippersPreference
+      }
+    };
     if (this.data.type === 'sport') common.typeData = { sportType: form.sportType.trim(), venue: form.venue.trim(), level: form.level, intensity: form.intensity, equipment: form.equipment.trim() };
     if (this.data.type === 'food') common.typeData = {
       venue: normalizedText(form.venue),

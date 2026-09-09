@@ -1,0 +1,10 @@
+{"path":"miniprogram/subpackages/publish/form/index.wxml","role":"companion 独立表单结构与分支隔离"}
+{"path":"miniprogram/subpackages/publish/form/index.wxss","role":"companion 旅行手绘视觉、触控与窄屏适配"}
+{"path":"miniprogram/subpackages/publish/form/index.js","role":"草稿迁移、人数映射、时间与 payload 适配"}
+{"path":"miniprogram/subpackages/publish/form/assets/companion/companion-travel-frame.png","role":"发布分包内 9:20 透明安全画布旅行边框"}
+{"path":"cloudfunctions/api/lib/constants.js","role":"九项同行偏好严格枚举"}
+{"path":"cloudfunctions/api/lib/validation.js","role":"Cloud 创建输入同构校验"}
+{"path":"cloudfunctions/api/lib/service.js","role":"公开 companion DTO 白名单降级"}
+{"path":"miniprogram/mocks/server.js","role":"Mock 创建与读取同构"}
+{"path":"tests/publish-companion-redesign.test.js","role":"同行 UI、交互、草稿和 payload 回归"}
+{"path":"tests/publish-validation.test.js","role":"Cloud/Mock/公开 DTO 契约回归"}
