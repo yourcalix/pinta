@@ -1,0 +1,12 @@
+{
+  "id": "align-benefit-card-art",
+  "title": "统一拼享惠与前三个发布模块的插画摆放比例",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交发布页样式修复",
+  "createdAt": "2026-09-09T00:00:00+08:00",
+  "branch": "main"
+}

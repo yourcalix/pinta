@@ -416,6 +416,7 @@ test('发布入口展示拼享惠筹备模块且不把未上线类型送入活�
   assert.match(template, /wx:if="\{\{item\.image\}\}"/);
   assert.match(template, /aria-disabled="\{\{!item\.available \|\| pending\}\}"/);
   assert.match(style, /\.type-card--benefit\s*\{/);
+  assert.match(style, /\.type-card-art--food,\s*\.type-card-art--benefit\s*\{[\s\S]*left:\s*7%[\s\S]*bottom:\s*2%[\s\S]*width:\s*86%[\s\S]*height:\s*86%/);
   assert.doesNotMatch(script, /pinba_publish_draft_benefit/);
 });
 
