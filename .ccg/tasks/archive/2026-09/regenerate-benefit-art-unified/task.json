@@ -1,0 +1,12 @@
+{
+  "id": "regenerate-benefit-art-unified",
+  "title": "按前三个发布模块的统一比例重生拼享惠插画",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交统一比例的新插画与基础样式",
+  "createdAt": "2026-09-09T00:00:00+08:00",
+  "branch": "main"
+}

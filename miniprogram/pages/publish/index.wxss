@@ -139,8 +139,7 @@
   pointer-events: none;
   transform: translateZ(0);
 }
-.type-card-art--food,
-.type-card-art--benefit {
+.type-card-art--food {
   left: 7%;
   bottom: 2%;
   width: 86%;
