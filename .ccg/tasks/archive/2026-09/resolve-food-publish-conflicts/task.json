@@ -1,0 +1,12 @@
+{
+  "id": "resolve-food-publish-conflicts",
+  "title": "在保持拼饭桌可见界面不变的前提下解决 7 项规范冲突并更新 GitHub",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已归档；提交变更并推送 origin/main",
+  "createdAt": "2026-09-09T03:11:54Z",
+  "branch": "main"
+}
