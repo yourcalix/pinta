@@ -1,0 +1,6 @@
+{"path":"miniprogram/app.json","reason":"分包配置与主包页面清单"}
+{"path":"miniprogram/pages/publish/index.js","reason":"主包发布入口所需封面"}
+{"path":"miniprogram/pages/publish/index.wxml","reason":"主包草稿头像与共享背景"}
+{"path":"miniprogram/subpackages/publish/form/index.js","reason":"表单动态图片路径"}
+{"path":"miniprogram/subpackages/publish/form/index.wxml","reason":"表单本地图片引用"}
+{"path":"tests/publish-food-redesign.test.js","reason":"现有拼饭桌素材与视觉契约"}

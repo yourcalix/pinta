@@ -1,0 +1,12 @@
+{
+  "id": "fix-main-package-size-limit",
+  "title": "修复微信小程序真机预览主包 18MB 超过 2MB 限制",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-09T14:27:09+08:00",
+  "branch": "main"
+}
