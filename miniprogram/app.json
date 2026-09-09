@@ -25,6 +25,7 @@
       "root": "subpackages/activity",
       "pages": [
         "list/index",
+        "memories/index",
         "detail/index",
         "manage/index",
         "group/index"

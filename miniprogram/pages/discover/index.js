@@ -78,6 +78,7 @@ Page({
 
   onShow() {
     this._allActivitiesNavigationPending = false;
+    this.releaseMemoriesNavigationLock();
     selectTab(this, 0);
     this.syncTextSizeMode();
     this.syncGreetingProfile();
@@ -90,12 +91,14 @@ Page({
 
   onHide() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this.releaseMemoriesNavigationLock();
     this.clearExpirationTimer();
     this.teardownLaunchSplash(true);
   },
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this.releaseMemoriesNavigationLock();
     this.clearExpirationTimer();
     this.teardownLaunchSplash(false);
   },
@@ -401,12 +404,30 @@ Page({
       return true;
     }
     if (action === 'memories') {
-      if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
-        wx.showToast({ title: '成团分享功能即将上线', icon: 'none' });
-      }
+      if (this._memoriesNavigationPending) return false;
+      this._memoriesNavigationPending = true;
+      this._memoriesNavigationTimer = setTimeout(() => {
+        this._memoriesNavigationTimer = null;
+        this._memoriesNavigationPending = false;
+      }, 500);
+      wx.navigateTo({
+        url: '/subpackages/activity/memories/index',
+        fail: () => {
+          this.releaseMemoriesNavigationLock();
+          if (typeof wx.showToast === 'function') {
+            wx.showToast({ title: '页面打开失败，请稍后重试', icon: 'none' });
+          }
+        }
+      });
       return true;
     }
     return false;
+  },
+
+  releaseMemoriesNavigationLock() {
+    if (this._memoriesNavigationTimer) clearTimeout(this._memoriesNavigationTimer);
+    this._memoriesNavigationTimer = null;
+    this._memoriesNavigationPending = false;
   },
 
   handleNavigateToAll() {

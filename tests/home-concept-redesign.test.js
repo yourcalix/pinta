@@ -81,7 +81,7 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(style, /\.shortcut-subtitle--activities\s*\{[^}]*font-size:\s*16rpx;[^}]*letter-spacing:\s*-1rpx;/s);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
   assert.match(template, /class="hero-illustration-image" src="\/assets\/images\/home\/hero-community-puzzle\.png" mode="aspectFit"/);
-  assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
+  assert.doesNotMatch(template, /story-teaser|OUR STORIES|class="memory-(?:panel|grid|section)/);
   assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
 });
 

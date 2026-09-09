@@ -50,7 +50,7 @@ test('首页不挂载未来成团记忆 UGC 模块且不渲染终点文案', () 
   const template = read('pages/discover/index.wxml');
   const script = read('pages/discover/index.js');
   const style = read('pages/discover/index.wxss');
-  assert.doesNotMatch(template, /story-teaser|OUR STORIES|成团记忆/);
+  assert.doesNotMatch(template, /story-teaser|OUR STORIES|class="memory-(?:panel|grid|section)/);
   assert.doesNotMatch(style, /\.story-(?:teaser|copy|eyebrow|title|subtitle|art|photo|sun)/);
   assert.doesNotMatch(script, /activityService\.memories|fetchMemories|handleMemorySelect|memoriesExpanded/);
   assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);

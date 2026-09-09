@@ -1,0 +1,8 @@
+{"path":"miniprogram/pages/discover/index.wxml","reason":"首页琐碎回忆快捷卡入口与无障碍语义"}
+{"path":"miniprogram/pages/discover/index.js","reason":"独立页导航、防重复入栈与失败恢复"}
+{"path":"miniprogram/app.json","reason":"活动分包页面注册"}
+{"path":"miniprogram/subpackages/activity/memories/index.wxml","reason":"成团记忆静态专题画报结构"}
+{"path":"miniprogram/subpackages/activity/memories/index.wxss","reason":"归档视觉、响应式几何与安全区"}
+{"path":"miniprogram/subpackages/activity/memories/assets/formed-memory-editorial-bg.jpg","reason":"分包内归档 Baseline JPEG 背景"}
+{"path":"tests/home-memory-preview.test.js","reason":"路由、静态契约、几何、无障碍与图片格式回归测试"}
+{"path":".ccg/spec/frontend/archive/formed-memory-editorial-v1.md","reason":"独立预告页启用后的视觉与数据边界规范"}

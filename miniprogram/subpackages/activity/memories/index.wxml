@@ -1,0 +1,33 @@
+<view class="memory-preview-page">
+  <view class="memory-preview-status" role="status">拼友成团故事分享与精选晒图功能正在筹备中，近期开放</view>
+
+  <view class="memory-panel" role="region" aria-label="成团记忆专题画报，记录每一次顺利成团的珍贵瞬间，分享功能即将开放">
+    <image class="memory-panel-background" src="./assets/formed-memory-editorial-bg.jpg" mode="aspectFill" aria-hidden="true" />
+    <view class="memory-panel-shade" aria-hidden="true"></view>
+    <view class="memory-panel-glow" aria-hidden="true"></view>
+
+    <view class="memory-masthead" aria-hidden="true">
+      <view class="memory-watermark">OUR STORIES</view>
+      <view class="memory-art-title">
+        <view class="memory-art-title-first">分享你的</view>
+        <view class="memory-art-title-second"><text class="memory-title-accent">成团</text><text>记忆</text><view class="memory-camera"><view class="memory-camera-lens"></view></view></view>
+      </view>
+      <view class="memory-subtitle">每一次顺利成团，都值得被记住</view>
+    </view>
+
+    <view class="memory-grid" aria-hidden="true">
+      <view class="memory-slot memory-slot--lead">
+        <view class="memory-slot-camera memory-slot-camera--large"><view class="memory-slot-lens"></view></view>
+        <view class="memory-slot-copy memory-slot-copy--large">成团故事<text>分享功能即将开放</text></view>
+      </view>
+      <view class="memory-slot memory-slot--top">
+        <view class="memory-slot-camera"><view class="memory-slot-lens"></view></view>
+        <view class="memory-slot-copy">虚位以待<text>敬请期待</text></view>
+      </view>
+      <view class="memory-slot memory-slot--bottom">
+        <view class="memory-slot-camera"><view class="memory-slot-lens"></view></view>
+        <view class="memory-slot-copy">等你来分享<text>记录精彩瞬间</text></view>
+      </view>
+    </view>
+  </view>
+</view>

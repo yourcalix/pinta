@@ -1,0 +1,12 @@
+{
+  "id": "connect-home-memory-interface",
+  "title": "将首页琐碎回忆入口接入已归档的成团记忆界面",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-09-09T23:20:08+08:00",
+  "branch": "main"
+}

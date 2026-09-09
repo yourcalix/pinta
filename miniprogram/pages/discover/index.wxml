@@ -34,7 +34,7 @@
         <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.activities}}" src="{{shortcutIconPaths.activities}}" mode="aspectFit" /></view>
         <view class="shortcut-arrow" aria-hidden="true">›</view>
       </button>
-      <button class="home-shortcut home-shortcut--memories" data-action="memories" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="琐碎回忆，记录第一次成团，功能即将上线">
+      <button class="home-shortcut home-shortcut--memories" data-action="memories" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="琐碎回忆，查看成团记忆专题预告">
         <text class="shortcut-title">琐碎回忆</text><text class="shortcut-subtitle">记录第一次成团</text>
         <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.memories}}" src="{{shortcutIconPaths.memories}}" mode="aspectFit" /></view>
         <view class="shortcut-arrow" aria-hidden="true">›</view>
