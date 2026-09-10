@@ -1,0 +1,12 @@
+{
+  "id": "enable-real-amap-mode",
+  "title": "启用真实高德地图与云环境模式",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已启用真实模式；高德接口因当前网络超时，待微信开发者工具真机复验",
+  "createdAt": "2026-09-10T10:40:00+08:00",
+  "branch": "main"
+}
