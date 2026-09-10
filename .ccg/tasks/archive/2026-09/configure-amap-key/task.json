@@ -1,0 +1,12 @@
+{
+  "id": "configure-amap-key",
+  "title": "配置本地高德地图 Key",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成本地配置与泄漏防护验证",
+  "createdAt": "2026-09-10T10:30:00+08:00",
+  "branch": "main"
+}
