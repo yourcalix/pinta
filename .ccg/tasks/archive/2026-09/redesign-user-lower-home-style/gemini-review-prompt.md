@@ -1,3 +1,128 @@
+<GEMINI_WEB_PROMPT>
+ROLE: frontend implementation reviewer
+审查“我的”下半区暖米白风格实际实现，上一轮方案APPROVE_PLAN。以下为完整WXML/WXSS/JSON，未省略事件、数据属性和状态。WXSS末尾的限定选择器覆盖原样式；以最终级联判断。
+边界：profile-stage背景、资料、统计、待办、页面加载/错误、JS服务和全局TabBar都未改。已用脚本与HEAD对比验证：my-activities之前WXML完全一致，原CSS除下方面板164→200rpx留白外一致；新增规则全部限定profile-content-sheet。JSON只改Bottom托底。
+实现：#F9F7F2下方面板，白色圆角卡、琥珀色分类和节点，成员头像/人数/状态移入卡内底部；状态仍消费原statusLabel/statusTone，局部样式保持语义色。日期单独一行。四栏短文案，数字99+显示、aria-label完整真实数。主字28、辅助24rpx，窄屏分类竖排，min-height避免固定卡高。时间地点可断行。
+上方保持原深色及白色状态栏文字，禁止建议整页改黑字。首页/消息参考是暖米白白卡，不是全页统一必须去除上方背景。
+现有全局view/text/button等border-box。TabBar高度116rpx，bottom24rpx+SafeArea。底部面板200rpx+SafeArea。未新增图片；主包1,701,540bytes。371测试通过、0失败、1跳过，项目结构语法ok。没有本次真机截图，不可推断视觉/读屏已验收。
+请检查：作用域是否污染上方；四栏在320px和大字下；日期与卡片、成员行空间；status可见；头像binderror索引与导航绑定是否保留；空态按钮、长文本、自然滚动和底部安全区。
+只聚焦本次差异，历史问题单列。输出Critical/Warning/Info（文件、具体原因、最小修正），最后APPROVE/REVISE；不要生成不存在的业务事实或测试结论。
+FILE: pages/user/index.wxml
+```
+<view class="page user-page global-background-host">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
+  <view class="global-page-background-tint" aria-hidden="true"></view>
+
+  <view wx:if="{{loading}}" class="page-state-layer" style="margin-top: {{contentTopInset}}px;" role="status" aria-label="正在整理你的个人主页">
+    <view class="profile-loading-avatar skeleton-shimmer"></view>
+    <view class="profile-loading-line profile-loading-line--title skeleton-shimmer"></view>
+    <view class="profile-loading-line skeleton-shimmer"></view>
+  </view>
+
+  <view wx:elif="{{error}}" class="page-state-layer page-state-layer--error" style="margin-top: {{contentTopInset}}px;">
+    <view class="state-symbol" aria-hidden="true">!</view>
+    <view class="state-title">{{error}}</view>
+    <view class="state-copy">个人资料或活动暂时没有加载出来，请稍后重试。</view>
+    <button class="state-action" bindtap="loadDashboard" hover-class="soft-button--pressed">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <view class="profile-stage" style="padding-top: {{contentTopInset}}px;" role="region" aria-label="个人主页，{{user.profile.nickname}}，{{profileGenderLabel}}，已确认年满18岁">
+      <view class="profile-atmosphere" aria-hidden="true">
+        <view class="profile-atmosphere-base"></view>
+        <image class="profile-atmosphere-image {{profileCoverUsesAvatar ? 'profile-atmosphere-image--avatar' : 'profile-atmosphere-image--seascape'}}" src="{{profileCoverPath}}" mode="aspectFill" binderror="handleAvatarImageError" aria-hidden="true" />
+        <view class="profile-atmosphere-shade {{profileCoverUsesAvatar ? '' : 'profile-atmosphere-shade--seascape'}}"></view>
+      </view>
+      <button class="profile-background-preview" bindtap="handleBackgroundPreview" hover-class="profile-background-preview--pressed" hover-stay-time="80" aria-label="查看背景大图"></button>
+
+      <view class="profile-stage-content">
+        <view class="profile-action-row" style="top: calc({{profileActionTop}}px - {{contentTopInset}}px); right: {{profileActionRight}}px;">
+          <button class="profile-edit-button" bindtap="handleProfile" hover-class="glass-button--pressed" aria-label="编辑个人资料">
+            <view class="profile-edit-surface"><text aria-hidden="true">✎</text><text>编辑主页</text></view>
+          </button>
+        </view>
+
+        <view class="profile-identity">
+          <button class="profile-avatar-shell" bindtap="handleAvatarPreview" hover-class="profile-avatar-shell--pressed" hover-stay-time="80" aria-label="查看头像大图"><image class="profile-avatar" src="{{profileAvatarPath}}" mode="{{hasCustomAvatar ? 'aspectFill' : 'aspectFit'}}" binderror="handleAvatarImageError" aria-hidden="true" /></button>
+          <view class="profile-name-block">
+            <view class="profile-name-row"><text class="profile-name">{{user.profile.nickname}}</text><text class="profile-gender profile-gender--{{user.profile.gender === 'FEMALE' ? 'female' : 'male'}}" aria-label="性别，{{profileGenderLabel}}">{{user.profile.gender === 'FEMALE' ? '♀' : '♂'}}</text></view>
+            <view class="profile-verification">已确认年满18岁</view>
+          </view>
+        </view>
+
+        <button class="profile-intro {{hasProfileIntro ? 'profile-intro--filled' : ''}}" bindtap="handleProfile" hover-class="glass-button--pressed" aria-label="编辑兴趣标签，当前为{{profileIntro}}">
+          <text class="profile-intro-mark" aria-hidden="true">“</text><text class="profile-intro-text">{{profileIntro}}</text><text class="profile-intro-pencil" aria-hidden="true">✎</text>
+        </button>
+
+        <view class="profile-metrics" role="group" aria-label="我的活动概览">
+          <button class="metric-item" data-value="owned" bindtap="handleMetricTap" hover-class="metric-item--pressed" hover-stay-time="80" aria-label="我发起的活动，{{owned.length}}场，点击切换列表"><text class="metric-value">{{owned.length}}</text><text class="metric-label">我发起的</text></button>
+          <view class="metric-divider" aria-hidden="true"></view>
+          <button class="metric-item" data-value="joined" bindtap="handleMetricTap" hover-class="metric-item--pressed" hover-stay-time="80" aria-label="我加入的活动，{{joined.length}}场，点击切换列表"><text class="metric-value">{{joined.length}}</text><text class="metric-label">我加入的</text></button>
+          <view class="metric-divider" aria-hidden="true"></view>
+          <button class="metric-item" data-value="formed" bindtap="handleMetricTap" hover-class="metric-item--pressed" hover-stay-time="80" aria-label="已成团活动，{{formed.length}}场，点击切换列表"><text class="metric-value">{{formed.length}}</text><text class="metric-label">已成团</text></button>
+        </view>
+
+        <scroll-view wx:if="{{tasks.length}}" class="quick-task-strip" scroll-x enhanced show-scrollbar="{{false}}" aria-label="待处理事项">
+          <view class="quick-task-row">
+            <button wx:for="{{tasks}}" wx:key="id" class="quick-task-card" data-task="{{item}}" bindtap="handleTaskTap" hover-class="glass-button--pressed" hover-stay-time="80" aria-label="待处理事项，{{item.title}}，点击处理">
+              <text class="quick-task-icon" aria-hidden="true">{{index === 0 ? '!' : '·'}}</text>
+              <view class="quick-task-copy task-main"><text class="quick-task-title">{{item.title}}</text><text class="quick-task-time">{{item.displayTime}}</text></view>
+              <text class="quick-task-arrow" aria-hidden="true">›</text>
+            </button>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+
+    <view id="my-activities" class="profile-content-sheet">
+      <view class="list-tabs" role="tablist" aria-label="切换我的拼单列表">
+        <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'owned'}}" aria-label="发起活动，{{owned.length}}场"><text>发起</text><text class="tab-count" aria-hidden="true">{{owned.length > 99 ? '99+' : owned.length}}</text></button>
+        <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'joined'}}" aria-label="参与活动，{{joined.length}}场"><text>参与</text><text class="tab-count" aria-hidden="true">{{joined.length > 99 ? '99+' : joined.length}}</text></button>
+        <button class="list-tab {{currentList === 'formed' ? 'list-tab--active' : ''}}" data-value="formed" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'formed'}}" aria-label="成团活动，{{formed.length}}场"><text>成团</text><text class="tab-count" aria-hidden="true">{{formed.length > 99 ? '99+' : formed.length}}</text></button>
+        <button class="list-tab {{currentList === 'history' ? 'list-tab--active' : ''}}" data-value="history" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'history'}}" aria-label="历史活动，{{history.length}}场"><text>历史</text><text class="tab-count" aria-hidden="true">{{history.length > 99 ? '99+' : history.length}}</text></button>
+      </view>
+
+      <view class="timeline-list">
+        <view wx:for="{{currentItems}}" wx:for-index="activityIndex" wx:key="id" class="timeline-entry">
+          <view class="timeline-heading">
+            <view class="timeline-date"><text>{{item.timelineDate}}</text><text class="timeline-weekday">{{item.timelineDay}}</text></view>
+          </view>
+
+          <view class="timeline-track" aria-hidden="true"><view class="timeline-dot"></view></view>
+          <view class="timeline-activity" data-id="{{item.id}}" bindtap="handleActivityTap" hover-class="timeline-activity--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}">
+            <view class="timeline-cover timeline-cover--{{item.typeTone}}" aria-hidden="true"><image class="timeline-cover-image" src="{{item.profileCover}}" mode="aspectFit" lazy-load="{{true}}" aria-hidden="true" /></view>
+            <view class="timeline-copy">
+              <view class="timeline-tags"><view class="timeline-type timeline-type--{{item.typeTone}}">{{item.typeLabel}}</view></view>
+              <view class="timeline-title"><text wx:if="{{item.legacy && item.legacy.readOnly}}" class="timeline-archive">历史归档 · </text>{{item.title}}</view>
+              <view class="timeline-meta"><text class="timeline-meta-icon" aria-hidden="true">◷</text><text>{{item.displayTime}}</text></view>
+              <view class="timeline-meta"><text class="timeline-meta-icon" aria-hidden="true">⌖</text><text class="timeline-place">{{item.sceneLine}}</text></view>
+              <view class="timeline-card-footer">
+                <view class="timeline-summary">
+                  <view class="timeline-avatar-group" aria-hidden="true">
+                    <view wx:for="{{item.visibleAvatarSlots}}" wx:for-item="slot" wx:for-index="slotIndex" wx:key="id" class="timeline-avatar {{slot.empty ? 'timeline-avatar--empty' : ''}}"><text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="{{slot.mode}}" data-activity-index="{{activityIndex}}" data-activity-id="{{item.id}}" data-slot-index="{{slotIndex}}" data-slot-id="{{slot.id}}" data-src="{{slot.src}}" lazy-load="{{true}}" binderror="handleTimelineAvatarError" aria-hidden="true" /></view>
+                  </view>
+                  <text>{{item.timelinePeopleLabel}}</text>
+                </view>
+                <view class="timeline-capacity"><text class="sheet-status sheet-status--{{item.statusTone}}">{{item.statusLabel}}</text><text>{{item.capacityLabel}}</text></view>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{!currentItems.length}}" class="list-empty">
+          <view class="empty-puzzle" aria-hidden="true"><view class="empty-puzzle-eye empty-puzzle-eye--left"></view><view class="empty-puzzle-eye empty-puzzle-eye--right"></view><view class="empty-puzzle-smile"></view></view>
+          <view class="empty-title">暂无相关拼单记录</view>
+          <view class="empty-copy">去发现页看看正在发生什么吧。</view>
+          <button class="empty-action" bindtap="handleGoDiscover" hover-class="soft-button--pressed">去发现页看看</button>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>
+```
+
+FILE: pages/user/index.wxss
+```
 .user-page {
   position: relative;
   box-sizing: border-box;
@@ -875,3 +1000,20 @@ button::after { display: none; }
   .profile-content-sheet .timeline-activity { margin-left: 24rpx; padding: 16rpx; gap: 12rpx; border-radius: 20rpx; }
   .profile-content-sheet .timeline-cover { flex-basis: 104rpx; width: 104rpx; height: 130rpx; }
 }
+```
+
+FILE: pages/user/index.json
+```
+{
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#075AA7",
+  "backgroundColorTop": "#075AA7",
+  "backgroundColorBottom": "#F9F7F2",
+  "backgroundTextStyle": "light",
+  "usingComponents": {
+    "status-badge": "/components/status-badge/index"
+  }
+}
+```
+</GEMINI_WEB_PROMPT>

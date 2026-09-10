@@ -3,7 +3,7 @@
   "navigationBarTextStyle": "white",
   "backgroundColor": "#075AA7",
   "backgroundColorTop": "#075AA7",
-  "backgroundColorBottom": "#075AA7",
+  "backgroundColorBottom": "#F9F7F2",
   "backgroundTextStyle": "light",
   "usingComponents": {
     "status-badge": "/components/status-badge/index"

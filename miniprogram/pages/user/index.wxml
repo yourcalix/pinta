@@ -65,33 +65,35 @@
 
     <view id="my-activities" class="profile-content-sheet">
       <view class="list-tabs" role="tablist" aria-label="切换我的拼单列表">
-        <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'owned'}}"><text>发起</text><text class="tab-count">{{owned.length}}</text></button>
-        <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'joined'}}"><text>参与</text><text class="tab-count">{{joined.length}}</text></button>
-        <button class="list-tab {{currentList === 'formed' ? 'list-tab--active' : ''}}" data-value="formed" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'formed'}}"><text>成团</text><text class="tab-count">{{formed.length}}</text></button>
-        <button class="list-tab {{currentList === 'history' ? 'list-tab--active' : ''}}" data-value="history" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'history'}}"><text>历史</text><text class="tab-count">{{history.length}}</text></button>
+        <button class="list-tab {{currentList === 'owned' ? 'list-tab--active' : ''}}" data-value="owned" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'owned'}}" aria-label="发起活动，{{owned.length}}场"><text>发起</text><text class="tab-count" aria-hidden="true">{{owned.length > 99 ? '99+' : owned.length}}</text></button>
+        <button class="list-tab {{currentList === 'joined' ? 'list-tab--active' : ''}}" data-value="joined" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'joined'}}" aria-label="参与活动，{{joined.length}}场"><text>参与</text><text class="tab-count" aria-hidden="true">{{joined.length > 99 ? '99+' : joined.length}}</text></button>
+        <button class="list-tab {{currentList === 'formed' ? 'list-tab--active' : ''}}" data-value="formed" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'formed'}}" aria-label="成团活动，{{formed.length}}场"><text>成团</text><text class="tab-count" aria-hidden="true">{{formed.length > 99 ? '99+' : formed.length}}</text></button>
+        <button class="list-tab {{currentList === 'history' ? 'list-tab--active' : ''}}" data-value="history" bindtap="handleListChange" role="tab" aria-selected="{{currentList === 'history'}}" aria-label="历史活动，{{history.length}}场"><text>历史</text><text class="tab-count" aria-hidden="true">{{history.length > 99 ? '99+' : history.length}}</text></button>
       </view>
 
       <view class="timeline-list">
         <view wx:for="{{currentItems}}" wx:for-index="activityIndex" wx:key="id" class="timeline-entry">
           <view class="timeline-heading">
             <view class="timeline-date"><text>{{item.timelineDate}}</text><text class="timeline-weekday">{{item.timelineDay}}</text></view>
-            <view class="timeline-summary">
-              <view class="timeline-avatar-group" aria-hidden="true">
-                <view wx:for="{{item.visibleAvatarSlots}}" wx:for-item="slot" wx:for-index="slotIndex" wx:key="id" class="timeline-avatar {{slot.empty ? 'timeline-avatar--empty' : ''}}"><text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="{{slot.mode}}" data-activity-index="{{activityIndex}}" data-activity-id="{{item.id}}" data-slot-index="{{slotIndex}}" data-slot-id="{{slot.id}}" data-src="{{slot.src}}" lazy-load="{{true}}" binderror="handleTimelineAvatarError" aria-hidden="true" /></view>
-              </view>
-              <text>{{item.timelinePeopleLabel}}</text>
-            </view>
-            <view class="timeline-capacity"><text>{{item.statusLabel}}</text><text> {{item.capacityLabel}}</text></view>
           </view>
 
           <view class="timeline-track" aria-hidden="true"><view class="timeline-dot"></view></view>
           <view class="timeline-activity" data-id="{{item.id}}" bindtap="handleActivityTap" hover-class="timeline-activity--pressed" hover-stay-time="80" role="button" aria-label="{{item.accessibilityLabel}}">
             <view class="timeline-cover timeline-cover--{{item.typeTone}}" aria-hidden="true"><image class="timeline-cover-image" src="{{item.profileCover}}" mode="aspectFit" lazy-load="{{true}}" aria-hidden="true" /></view>
             <view class="timeline-copy">
-              <view class="timeline-tags"><view class="timeline-type timeline-type--{{item.typeTone}}">{{item.typeLabel}}</view><status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" /></view>
+              <view class="timeline-tags"><view class="timeline-type timeline-type--{{item.typeTone}}">{{item.typeLabel}}</view></view>
               <view class="timeline-title"><text wx:if="{{item.legacy && item.legacy.readOnly}}" class="timeline-archive">历史归档 · </text>{{item.title}}</view>
               <view class="timeline-meta"><text class="timeline-meta-icon" aria-hidden="true">◷</text><text>{{item.displayTime}}</text></view>
               <view class="timeline-meta"><text class="timeline-meta-icon" aria-hidden="true">⌖</text><text class="timeline-place">{{item.sceneLine}}</text></view>
+              <view class="timeline-card-footer">
+                <view class="timeline-summary">
+                  <view class="timeline-avatar-group" aria-hidden="true">
+                    <view wx:for="{{item.visibleAvatarSlots}}" wx:for-item="slot" wx:for-index="slotIndex" wx:key="id" class="timeline-avatar {{slot.empty ? 'timeline-avatar--empty' : ''}}"><text wx:if="{{slot.empty}}">·</text><image wx:else src="{{slot.src}}" mode="{{slot.mode}}" data-activity-index="{{activityIndex}}" data-activity-id="{{item.id}}" data-slot-index="{{slotIndex}}" data-slot-id="{{slot.id}}" data-src="{{slot.src}}" lazy-load="{{true}}" binderror="handleTimelineAvatarError" aria-hidden="true" /></view>
+                  </view>
+                  <text>{{item.timelinePeopleLabel}}</text>
+                </view>
+                <view class="timeline-capacity"><text class="sheet-status sheet-status--{{item.statusTone}}">{{item.statusLabel}}</text><text>{{item.capacityLabel}}</text></view>
+              </view>
             </view>
           </view>
         </view>

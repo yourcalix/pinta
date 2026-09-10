@@ -58,7 +58,7 @@ test('活动记录使用日期时间线、类型插画和安全区避让', () =>
   assert.match(template, /class="timeline-date"/);
   assert.match(template, /class="timeline-cover-image"[^>]*mode="aspectFit"/);
   assert.match(template, /class="timeline-activity"[^>]*bindtap="handleActivityTap"/);
-  assert.match(style, /padding-bottom:\s*calc\(164rpx \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(style, /padding-bottom:\s*calc\(200rpx \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(style, /@media \(max-width:\s*340px\)/);
   assert.match(style, /\.timeline-cover\s*{[\s\S]*width:\s*160rpx[\s\S]*height:\s*200rpx/);
   assert.match(style, /\.list-tab--active\s*{[\s\S]*font-size:\s*30rpx/);
