@@ -1,28 +1,23 @@
-<view class="messages-page global-background-host" style="padding-top: {{contentTopInset}}px;">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-  <view class="global-page-background-tint" aria-hidden="true"></view>
-
+<view class="messages-page" style="padding-top: {{contentTopInset}}px;">
   <view class="messages-header">
-    <text class="eyebrow">PINBA MESSAGES</text>
-    <text class="title">拼吧 · 消息</text>
+    <view class="header-title-row"><text class="title" role="heading" aria-level="1">消息</text><text class="eyebrow" aria-hidden="true">PINBA MESSAGES</text></view>
     <text class="subtitle">和搭子保持联系</text>
-    <view class="header-doodle" aria-hidden="true"><view></view><view></view><view></view></view>
   </view>
 
   <view class="messages-content">
-    <view class="system-card" bindtap="handleSystemNotification" hover-class="paper-card--pressed" role="button" aria-label="系统通知，{{systemUnread}}条未读">
-      <view class="system-icon" aria-hidden="true">!</view>
-      <view class="system-copy">
+    <view class="system-card {{!systemNotification ? 'system-card--quiet' : ''}}" bindtap="handleSystemNotification" hover-class="paper-card--pressed" role="button" aria-label="{{systemNotification ? '系统通知：' + systemNotification.title + '，' + systemUnread + '条未读，点击查看该通知' : '系统通知，前往我的页面查看活动进度'}}">
+      <view class="system-icon" aria-hidden="true"><image src="/assets/icons/home/header-bell.png" mode="aspectFit" /></view>
+      <view class="system-copy" aria-hidden="true">
         <view class="system-title-row"><text class="system-title">系统通知</text><text wx:if="{{systemUnread}}" class="system-count">{{systemUnread > 99 ? '99+' : systemUnread}}</text></view>
-        <text class="system-preview">{{systemNotification ? systemNotification.title : '活动进度和平台提醒会显示在这里'}}</text>
+        <text class="system-preview">{{systemNotification ? systemNotification.title : '前往“我的”查看活动进度'}}</text>
       </view>
       <text class="chevron" aria-hidden="true">›</text>
     </view>
 
-    <view class="section-heading"><text>全部私信</text><text class="section-count">{{conversations.length}}</text></view>
+    <view class="section-heading" role="heading" aria-level="2"><text>全部私信</text></view>
 
     <block wx:if="{{loading}}">
-      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="conversation-card skeleton-card"><view class="skeleton-avatar"></view><view class="skeleton-lines"><view></view><view></view></view></view>
+      <view role="status" aria-label="正在加载私信"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="conversation-card skeleton-card" aria-hidden="true"><view class="skeleton-avatar"></view><view class="skeleton-lines"><view></view><view></view></view></view></view>
     </block>
 
     <view wx:elif="{{error}}" class="state-paper" role="alert">
@@ -47,10 +42,10 @@
         bindtap="handleConversation"
         hover-class="paper-card--pressed"
         role="button"
-        aria-label="{{item.accessibilityLabel}}"
+        aria-label="{{item.accessibilityLabel}}，{{item.displayTime}}{{item.source && item.source.title ? '，来自活动：' + item.source.title : ''}}"
       >
         <view class="conversation-avatar avatar--{{item.tone}}" aria-hidden="true">{{item.initial}}</view>
-        <view class="conversation-copy">
+        <view class="conversation-copy" aria-hidden="true">
           <view class="conversation-top"><text class="conversation-name">{{item.nickname}}</text><text class="conversation-time">{{item.displayTime}}</text></view>
           <view class="conversation-bottom"><text class="conversation-preview">{{item.preview}}</text><text wx:if="{{item.unreadCount}}" class="conversation-unread">{{item.unreadCount > 99 ? '99+' : item.unreadCount}}</text></view>
           <text wx:if="{{item.source && item.source.title}}" class="source-label">来自活动：{{item.source.title}}</text>

@@ -1,0 +1,12 @@
+{
+  "id": "redesign-messages-home-style",
+  "title": "消息主页按首页暖米白风格更新",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "实现与用户贴回的Gemini复审已完成；归档交付，用户可重新编译进行真机视觉验收",
+  "createdAt": "2026-09-10T00:00:00+08:00",
+  "branch": "main"
+}
