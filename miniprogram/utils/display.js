@@ -75,6 +75,12 @@ function decorateActivity(activity) {
   const visibleLimit = maxMembers <= 4 ? maxMembers : maxMembers <= 7 ? 3 : 2;
   const visibleAvatarSlots = slots.slice(0, visibleLimit).map((slot, index) => ({ ...slot, delay: index * 45, layer: visibleLimit - index }));
   const hiddenMemberCount = slots.slice(visibleLimit).filter((slot) => !slot.empty).length;
+  const distanceMeters = activity.nearby && Number(activity.nearby.distanceMeters);
+  const distanceLabel = Number.isFinite(distanceMeters)
+    ? distanceMeters < 1000
+      ? `距你 ${Math.max(0, Math.round(distanceMeters))}m`
+      : `距你 ${(distanceMeters / 1000).toFixed(distanceMeters < 10000 ? 1 : 0)}km`
+    : '';
   return {
     ...activity,
     typeLabel: typeMeta.label,
@@ -94,6 +100,7 @@ function decorateActivity(activity) {
     progressPercent,
     visibleAvatarSlots,
     hiddenMemberCount,
+    distanceLabel,
     canApply,
     capacityLabel: `${memberCount}/${maxMembers} 人`,
     ownerNickname,

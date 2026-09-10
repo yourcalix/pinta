@@ -5,6 +5,13 @@ const { decodeCursor, assertCommunityTextSafe } = require('./community');
 const { decodeDirectCursor, assertDirectMessageTextSafe } = require('./direct-message');
 const { parseBirthDate, adultBirthLimit, compareCalendarDate } = require('./profile-birth-date');
 const {
+  COORDINATE_SYSTEM,
+  DEFAULT_NEARBY_RADIUS_METERS,
+  MAX_NEARBY_RADIUS_METERS,
+  macauCoordinate,
+  decodeNearbyCursor
+} = require('./activity-location');
+const {
   ACTIVITY_TYPES,
   PILOT_CITY,
   PILOT_DISTRICTS,
@@ -64,6 +71,24 @@ function isoDateValue(value, field) {
   return new Date(timestamp).toISOString();
 }
 
+function validateMeetingPointInput(value) {
+  if (value === undefined || value === null) return undefined;
+  invariant(value && typeof value === 'object' && !Array.isArray(value), 'VALIDATION_ERROR', '会合地点格式无效', { field: 'meetingPoint' });
+  const allowed = ['label', 'address', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
+  invariant(Object.keys(value).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '会合地点包含未知字段', { field: 'meetingPoint' });
+  invariant(value.coordinateSystem === COORDINATE_SYSTEM, 'VALIDATION_ERROR', '会合地点坐标系必须为 GCJ-02', { field: 'meetingPoint.coordinateSystem' });
+  invariant(value.provider === 'AMAP', 'VALIDATION_ERROR', '请选择高德地图地点', { field: 'meetingPoint.provider' });
+  const point = macauCoordinate(value.latitude, value.longitude);
+  return {
+    label: stringValue(value.label, '会合地点', { required: true, max: 80 }),
+    address: stringValue(value.address, '会合地点地址', { max: 120 }),
+    ...point,
+    coordinateSystem: COORDINATE_SYSTEM,
+    provider: 'AMAP',
+    poiId: stringValue(value.poiId, '高德地点ID', { max: 80 })
+  };
+}
+
 function validateActivityInput(input, now = new Date()) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   const type = enumValue(input.type, '活动类型', ACTIVITY_TYPES);
@@ -91,6 +116,8 @@ function validateActivityInput(input, now = new Date()) {
     maxMembers,
     rules: stringValue(input.rules, '参与规则', { max: 200 })
   };
+  const meetingPoint = validateMeetingPointInput(input.meetingPoint);
+  if (meetingPoint) result.meetingPoint = meetingPoint;
 
   const typeData = input.typeData || {};
   if (type === 'companion') {
@@ -148,6 +175,27 @@ function validateActivityInput(input, now = new Date()) {
   }
 
   return result;
+}
+
+function validateActivityNearbyInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  const allowed = ['latitude', 'longitude', 'coordinateSystem', 'radiusMeters', 'type', 'city', 'district', 'cursor', 'limit'];
+  invariant(Object.keys(input).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '附近筛选条件无效');
+  invariant(input.coordinateSystem === COORDINATE_SYSTEM, 'VALIDATION_ERROR', '定位坐标系必须为 GCJ-02', { field: 'coordinateSystem' });
+  const point = macauCoordinate(input.latitude, input.longitude);
+  const radiusMeters = integerValue(input.radiusMeters === undefined ? DEFAULT_NEARBY_RADIUS_METERS : input.radiusMeters, '搜索半径', 100, MAX_NEARBY_RADIUS_METERS);
+  const type = optionalFilterString(input.type, '活动类型', 20);
+  const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+  const district = optionalFilterString(input.district, '行政区', 30);
+  if (type) enumValue(type, '活动类型', ACTIVITY_TYPES);
+  invariant(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
+  if (district) enumValue(district, '行政区', PILOT_DISTRICTS);
+  const query = { ...point, coordinateSystem: COORDINATE_SYSTEM, radiusMeters, type: type || undefined, city, district: district || undefined };
+  return {
+    ...query,
+    after: decodeNearbyCursor(input.cursor, query),
+    limit: integerValue(input.limit === undefined ? 10 : input.limit, '分页数量', 1, 30)
+  };
 }
 
 function validateActivityListInput(input) {
@@ -356,6 +404,7 @@ function requireIdempotencyKey(value) {
 module.exports = {
   validateActivityInput,
   validateActivityListInput,
+  validateActivityNearbyInput,
   validateActivityMemoriesInput,
   validateApplicationInput,
   validateProfileInput,

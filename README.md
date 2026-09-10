@@ -18,7 +18,7 @@
 仓库中的 `project.config.json` 始终保留 `touristappid`。接入真实账号时，不要修改并提交这个公共配置；微信开发者工具支持用优先级更高的 `project.private.config.json` 保存个人 AppID，且本仓库已经忽略该文件。
 
 1. 复制 `project.private.config.example.json` 为 `project.private.config.json`，把占位值替换为真实 AppID；也可以在开发者工具“详情 → 基本信息”中修改，工具会优先写入私有配置。
-2. 在小程序管理后台如实配置《小程序用户隐私保护指引》。当前代码实际调用的隐私接口只有 `wx.setClipboardData`，后台需声明剪贴板用途；不要勾选未使用的手机号、精确位置、头像、通讯录或相册能力。
+2. 在小程序管理后台如实配置《小程序用户隐私保护指引》。当前代码会在用户主动进入“附近拼吧”并点击开启后调用 `wx.getLocation`，用于临时计算与公开会合地点的距离；成员主动复制联系方式时会调用 `wx.setClipboardData`。后台需声明精确位置与剪贴板用途，不要勾选未使用的手机号、通讯录或相册能力。
 3. 成团页只有在有效成员主动点击“复制联系信息”时才触发剪贴板隐私授权。拒绝只会中止复制，已通过服务端鉴权显示的联系方式仍可长按选择，其他功能不受影响。
 4. 隐私弹窗提供“查看隐私保护指引”“暂不同意”和“同意并继续”；微信基础库低于 2.32.3 时不会使用新监听机制，复制 API 保持平台原生行为。
 5. 真实 AppID 下必须用 iOS、Android 各至少一台设备验证同意、拒绝、10 秒内重试、协议打开和大字号布局。
@@ -84,11 +84,19 @@ npm run verify
 9. 在隐私保护指引中单独说明司机实名、驾驶证、车辆照片的用途、保存期限、撤回方式和删除渠道，并完成真实 AppID 真机验证。
 10. G1 建立本地环境配置后将 `useMock` 切换为 `false`；不要把真实环境 ID、密钥或订阅模板 ID 提交到仓库。
 
+### 高德地图与附近活动
+
+1. 在高德开放平台创建微信小程序 Key，把真实值写入被 Git 忽略的 `miniprogram/config/local.js`：`amapMiniProgramKey: '你的 Key'`。仓库中的 `local.example.js` 只保留占位符。
+2. 在微信公众平台“开发管理 → 开发设置 → 服务器域名”中把 `https://restapi.amap.com` 加入 `request` 合法域名。POI 检索统一返回 GCJ-02 坐标；不要混用 WGS84。
+3. 为 CloudBase `activities.meetingGeoPoint` 创建地理位置索引，并在测试环境验证带 `status / city / type / district` 条件的 `geoNear` 查询。缺少索引时客户端会显示“附近活动服务正在准备中”，不会伪装成附近为空。
+4. 新版本三类发布表单都要求选择公开会合地点。历史活动若没有坐标仍可在“全部活动”中浏览，但不会进入“附近拼吧”；不要按文字地址猜测或批量伪造坐标。
+5. 附近页只把查看者坐标发送给 `activity.nearby` 做单次半径计算，服务端不落库、不写审计，客户端离开页面即清除。公开 DTO 只返回地点名称、地址和距离，不返回精确经纬度。
+
 生产环境如果没有启用微信内容安全检查，云函数会拒绝发布和用户生成内容提交，避免静默绕过审核。
 
 ## 建议数据库索引
 
-- `activities`：`status + startsAt`、`type + status + startsAt`、`city + district + status + startsAt`、`type + status + typeData.routeId + startsAt`、`ownerId + updatedAt`。
+- `activities`：`status + startsAt`、`type + status + startsAt`、`city + district + status + startsAt`、`type + status + typeData.routeId + startsAt`、`ownerId + updatedAt`；附近查询另为顶层 `meetingGeoPoint` 建立地理位置索引，并按真实 CloudBase 控制台查询计划补齐 `status / city / type / district` 组合。
 - `applications`：`activityId + createdAt`、`activityId + applicantId + status`。
 - `members`：`activityId + userId + status`、`userId + role + status`。
 - `memberContacts`：成员电话敏感集合，仅云函数读写；以活动和成员确定性 ID 保存，禁止开放客户端直读权限。

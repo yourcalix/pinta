@@ -85,17 +85,17 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
 });
 
-test('附近拼吧常规模式严格使用三列紧凑卡并跳转全部活动页', () => {
+test('全城热拼常规模式严格使用三列紧凑卡并把发现更多导向附近页', () => {
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
   const script = read('pages/discover/index.js');
   assert.match(style, /\.home-activity-grid\s*\{[^}]*width:\s*100%;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*21rpx;/s);
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*12rpx;/s);
   assert.match(template, /class="home-section-more"[^>]*bindtap="handleNavigateToAll"/);
-  assert.match(template, /aria-label="发现更多，点击查看全部活动列表"/);
+  assert.match(template, /aria-label="发现更多，点击查看附近活动"/);
   assert.doesNotMatch(template, /isPaging|hasNextPage|handleLoadMore/);
   assert.match(script, /const PAGE_SIZE = 3;/);
-  assert.match(script, /url:\s*'\/subpackages\/activity\/list\/index'/);
+  assert.match(script, /handleNavigateToAll[\s\S]*url:\s*'\/subpackages\/activity\/nearby\/index'/);
 });
 
 test('用户提供的十张首页素材按槽位缩放且保留完整 Alpha', () => {

@@ -1,0 +1,24 @@
+<view class="nearby-page">
+  <view wx:if="{{state === 'intro'}}" class="location-gate">
+    <view class="location-art" aria-hidden="true"><text>⌖</text><view class="location-ring"></view></view>
+    <text class="gate-title">发现身边的同频搭子</text>
+    <text class="gate-copy">开启定位后，我们仅用于临时计算距离，不保存实时位置，也不会追踪您的行动轨迹。</text>
+    <button class="primary-action" bindtap="handleEnableLocation" hover-class="control--pressed">开启附近定位</button>
+    <button class="secondary-action" bindtap="handleAllActivities" hover-class="control--pressed">去查看全城活动 ›</button>
+  </view>
+  <block wx:else>
+    <view class="nearby-tools">
+      <scroll-view scroll-x show-scrollbar="{{false}}" class="filter-scroll"><view class="filter-track" role="tablist" aria-label="附近距离筛选：1km、3km、5km、10km"><button wx:for="{{radiusOptions}}" wx:key="value" class="filter-chip {{radiusMeters === item.value ? 'filter-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleRadiusChange" role="tab" aria-selected="{{radiusMeters === item.value}}">{{item.label}}</button></view></scroll-view>
+      <scroll-view scroll-x show-scrollbar="{{false}}" class="filter-scroll filter-scroll--type"><view class="filter-track" role="tablist" aria-label="附近活动类型筛选"><button wx:for="{{typeOptions}}" wx:key="value" class="type-chip {{type === item.value ? 'type-chip--active' : ''}}" data-value="{{item.value}}" bindtap="handleTypeChange" role="tab" aria-selected="{{type === item.value}}">{{item.label}}</button></view></scroll-view>
+    </view>
+    <view class="nearby-content">
+      <view wx:if="{{state === 'loading'}}" class="skeleton-list" role="status" aria-label="正在定位并加载附近活动"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card" aria-hidden="true"><view class="skeleton-cover"></view><view class="skeleton-copy"></view></view></view>
+      <view wx:elif="{{state === 'success'}}" class="nearby-list">
+        <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="discover" bindselect="handleCardSelect" />
+        <view class="list-footer" role="status"><text wx:if="{{loadingMore}}">正在发现更多活动…</text><button wx:elif="{{loadMoreError}}" bindtap="handleRetryLoadMore">{{loadMoreError}}</button><text wx:elif="{{!hasMore}}">— 已展示当前范围内全部活动 —</text></view>
+      </view>
+      <view wx:elif="{{state === 'empty'}}" class="state-card"><text class="state-symbol" aria-hidden="true">○</text><text class="state-title">这个范围内还没有搭子组队</text><text class="state-copy">可以扩大到 {{radiusMeters < 5000 ? '5km' : '10km'}}，或者看看全城正在发生什么。</text><button wx:if="{{radiusMeters < 10000}}" class="primary-action" bindtap="handleExpandRadius">扩大搜索半径</button><button class="secondary-action" bindtap="handleAllActivities">去查看全城活动 ›</button></view>
+      <view wx:else class="state-card"><text class="state-symbol" aria-hidden="true">!</text><text class="state-title">{{state === 'denied' ? '需要定位权限才能发现附近活动' : '暂时没能加载附近活动'}}</text><text class="state-copy">{{errorMessage}}</text><button wx:if="{{state === 'denied'}}" class="primary-action" bindtap="handleOpenSettings">打开设置</button><button wx:else class="primary-action" bindtap="handleEnableLocation">重新定位</button><button class="secondary-action" bindtap="handleAllActivities">去查看全城活动 ›</button></view>
+    </view>
+  </block>
+</view>

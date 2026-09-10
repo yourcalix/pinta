@@ -16,6 +16,7 @@ const {
   PASSENGER_AVATAR_KINDS,
   USER_GENDERS,
   USER_MBTI_TYPES,
+  LEGACY_ACTIVITY_TYPE_MAP,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { calculateAgeOnMacauDate } = require('./profile-birth-date');
@@ -42,6 +43,7 @@ const {
   groupMessageId
 } = require('./group-chat-policy');
 const { collectPublicActivityPage } = require('./public-activity-page');
+const { haversineDistanceMeters, nearbySortTuple, compareNearbyTuple } = require('./activity-location');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
   rideCapacity,
@@ -592,6 +594,13 @@ class CloudStore {
   }
 
   async createActivityWithOwner(activity, ownerMember, rideFulfillment = null, ownerContact = null) {
+    if (activity.meetingPoint) {
+      activity = {
+        ...activity,
+        meetingPoint: { ...activity.meetingPoint },
+        meetingGeoPoint: this.db.Geo.Point(activity.meetingPoint.longitude, activity.meetingPoint.latitude)
+      };
+    }
     activity = { ...activity, groupSequence: 0, avatarRoster: upsertAvatarRoster(activity.avatarRoster, ownerMember.id, ownerMember.avatarKind) };
     ownerMember = { ...ownerMember, groupWindow: beginGroupMembership(activity) };
     if (activity.type === 'ride') {
@@ -690,6 +699,52 @@ class CloudStore {
         });
       }
     });
+  }
+
+  async listNearbyActivities(filters = {}, at) {
+    const where = {
+      status: this.command.in([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED]),
+      city: filters.city,
+      meetingGeoPoint: this.command.geoNear({
+        geometry: this.db.Geo.Point(filters.longitude, filters.latitude),
+        minDistance: 0,
+        maxDistance: filters.radiusMeters
+      })
+    };
+    if (filters.type) {
+      const legacyTypes = Object.entries(LEGACY_ACTIVITY_TYPE_MAP)
+        .filter(([, currentType]) => currentType === filters.type)
+        .map(([legacyType]) => legacyType);
+      where.type = this.command.in([filters.type, ...legacyTypes]);
+    }
+    if (filters.district) where.district = filters.district;
+    const candidates = [];
+    let exhausted = false;
+    try {
+      for (let offset = 0; offset < 2000; offset += 100) {
+        const result = await this.db.collection('activities').where(where).skip(offset).limit(100).get();
+        const batch = (result.data || []).map(entity);
+        candidates.push(...batch);
+        if (batch.length < 100) { exhausted = true; break; }
+      }
+    } catch (error) {
+      const message = String(error && (error.message || error.errMsg) || error);
+      if (/index|索引|geo/i.test(message)) throw new AppError('NEARBY_UNAVAILABLE');
+      throw error;
+    }
+    if (!exhausted) throw new AppError('NEARBY_UNAVAILABLE', '附近活动过多，请缩小搜索半径后重试');
+    const visible = candidates
+      .filter((activity) => activity.meetingPoint && Number.isFinite(activity.meetingPoint.latitude) && Number.isFinite(activity.meetingPoint.longitude))
+      .filter((activity) => activity.status !== ACTIVITY_STATUS.RECRUITING || !Number.isFinite(Date.parse(activity.deadlineAt)) || Date.parse(activity.deadlineAt) > Date.parse(at))
+      .map((activity) => ({ ...activity, _distanceMeters: haversineDistanceMeters(filters, activity.meetingPoint) }))
+      .filter((activity) => activity._distanceMeters <= filters.radiusMeters)
+      .sort((left, right) => compareNearbyTuple(nearbySortTuple(left), nearbySortTuple(right)));
+    const afterBoundary = filters.after
+      ? visible.filter((activity) => compareNearbyTuple(nearbySortTuple(activity), filters.after) > 0)
+      : visible;
+    const page = afterBoundary.slice(0, filters.limit + 1);
+    const items = page.slice(0, filters.limit);
+    return { items, nextCursor: page.length > filters.limit ? nearbySortTuple(items[items.length - 1]) : null };
   }
 
   async listActivityMemories(limit = 6) {

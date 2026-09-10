@@ -15,6 +15,7 @@ const {
   PASSENGER_AVATAR_KINDS,
   USER_GENDERS,
   USER_MBTI_TYPES,
+  LEGACY_ACTIVITY_TYPE_MAP,
   MACAU_RIDE_ROUTE_IDS_BY_CAMPUS
 } = require('./constants');
 const { calculateAgeOnMacauDate } = require('./profile-birth-date');
@@ -44,6 +45,7 @@ const {
   groupMessageId
 } = require('./group-chat-policy');
 const { collectPublicActivityPage } = require('./public-activity-page');
+const { haversineDistanceMeters, nearbySortTuple, compareNearbyTuple } = require('./activity-location');
 const { driverApprovalFacts } = require('./driver-approval');
 const {
   rideCapacity,
@@ -442,6 +444,28 @@ class MemoryStore {
       fetchBatch: async (offset, size) => candidates.slice(offset, offset + size)
     });
     return { items: clone(page.items), nextCursor: page.nextCursor };
+  }
+
+  async listNearbyActivities(filters = {}, at) {
+    const candidates = [...this.activities.values()]
+      .filter((activity) => [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED].includes(activity.status))
+      .filter((activity) => activity.city === filters.city)
+      .filter((activity) => !filters.type || (LEGACY_ACTIVITY_TYPE_MAP[activity.type] || activity.type) === filters.type)
+      .filter((activity) => !filters.district || activity.district === filters.district)
+      .filter((activity) => activity.meetingPoint && Number.isFinite(activity.meetingPoint.latitude) && Number.isFinite(activity.meetingPoint.longitude))
+      .filter((activity) => activity.status !== ACTIVITY_STATUS.RECRUITING || !Number.isFinite(Date.parse(activity.deadlineAt)) || Date.parse(activity.deadlineAt) > Date.parse(at))
+      .map((activity) => ({
+        ...activity,
+        _distanceMeters: haversineDistanceMeters(filters, activity.meetingPoint)
+      }))
+      .filter((activity) => activity._distanceMeters <= filters.radiusMeters)
+      .sort((left, right) => compareNearbyTuple(nearbySortTuple(left), nearbySortTuple(right)));
+    const visible = filters.after
+      ? candidates.filter((activity) => compareNearbyTuple(nearbySortTuple(activity), filters.after) > 0)
+      : candidates;
+    const page = visible.slice(0, filters.limit + 1);
+    const items = page.slice(0, filters.limit);
+    return { items: clone(items), nextCursor: page.length > filters.limit ? nearbySortTuple(items[items.length - 1]) : null };
   }
 
   async listActivityMemories(limit = 6) {

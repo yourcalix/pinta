@@ -20,6 +20,7 @@ const {
 const {
   validateActivityInput,
   validateActivityListInput,
+  validateActivityNearbyInput,
   validateActivityMemoriesInput,
   validateApplicationInput,
   validateProfileInput,
@@ -41,6 +42,7 @@ const {
   requireIdempotencyKey,
   stringValue
 } = require('./validation');
+const { encodeNearbyCursor } = require('./activity-location');
 const { createLocalModeration } = require('./moderation');
 const { COMMUNITY_POST_STATUS, COMMUNITY_REPLY_STATUS } = require('./community');
 const { resolveNotificationTarget } = require('./notification-target');
@@ -275,6 +277,15 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
   };
   if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) {
     result.legacy = { sourceType: storedType, readOnly: true };
+  }
+  if (activity.meetingPoint && typeof activity.meetingPoint.label === 'string') {
+    result.meetingPoint = {
+      label: activity.meetingPoint.label,
+      address: typeof activity.meetingPoint.address === 'string' ? activity.meetingPoint.address : ''
+    };
+  }
+  if (Number.isFinite(activity._distanceMeters)) {
+    result.nearby = { distanceMeters: Math.max(0, Math.round(activity._distanceMeters)) };
   }
   if (viewer.application) {
     result.viewerApplication = {
@@ -647,6 +658,17 @@ function createPinbaService(options) {
       };
     }
 
+    if (action === 'activity.nearby') {
+      const filters = validateActivityNearbyInput(input);
+      const page = await store.listNearbyActivities(filters, at);
+      return {
+        items: await publicActivities(page.items, {}, at),
+        nextCursor: page.nextCursor === null || page.nextCursor === undefined
+          ? null
+          : encodeNearbyCursor(filters, page.nextCursor)
+      };
+    }
+
     if (action === 'activity.memories') {
       const { limit } = validateActivityMemoriesInput(input);
       const items = await store.listActivityMemories(limit, at);
@@ -870,7 +892,13 @@ function createPinbaService(options) {
       const user = await requireActiveUser(context, true);
       const payload = validateActivityInput(input, clock());
       const activityPayload = payload;
-      await moderation.check([activityPayload.title, activityPayload.description, activityPayload.rules], { actorId: user.id, scene: 2 });
+      await moderation.check([
+        activityPayload.title,
+        activityPayload.description,
+        activityPayload.rules,
+        activityPayload.meetingPoint && activityPayload.meetingPoint.label,
+        activityPayload.meetingPoint && activityPayload.meetingPoint.address
+      ].filter(Boolean), { actorId: user.id, scene: 2 });
       const activityId = operationId(context, 'activity');
       const activity = {
         id: activityId,

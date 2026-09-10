@@ -78,6 +78,7 @@ Page({
 
   onShow() {
     this._allActivitiesNavigationPending = false;
+    this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
     selectTab(this, 0);
     this.syncTextSizeMode();
@@ -91,6 +92,8 @@ Page({
 
   onHide() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this._allActivitiesNavigationPending = false;
+    this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
     this.clearExpirationTimer();
     this.teardownLaunchSplash(true);
@@ -98,6 +101,8 @@ Page({
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this._allActivitiesNavigationPending = false;
+    this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
     this.clearExpirationTimer();
     this.teardownLaunchSplash(false);
@@ -400,7 +405,12 @@ Page({
   handleHomeShortcut(event) {
     const action = event.currentTarget.dataset.action;
     if (action === 'activities') {
-      this.scrollToHotPinba();
+      if (this._allActivitiesNavigationPending) return false;
+      this._allActivitiesNavigationPending = true;
+      wx.navigateTo({
+        url: '/subpackages/activity/list/index',
+        fail: () => { this._allActivitiesNavigationPending = false; }
+      });
       return true;
     }
     if (action === 'memories') {
@@ -431,11 +441,11 @@ Page({
   },
 
   handleNavigateToAll() {
-    if (this._allActivitiesNavigationPending) return false;
-    this._allActivitiesNavigationPending = true;
+    if (this._nearbyNavigationPending) return false;
+    this._nearbyNavigationPending = true;
     wx.navigateTo({
-      url: '/subpackages/activity/list/index',
-      fail: () => { this._allActivitiesNavigationPending = false; }
+      url: '/subpackages/activity/nearby/index',
+      fail: () => { this._nearbyNavigationPending = false; }
     });
     return true;
   },

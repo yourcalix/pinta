@@ -114,13 +114,13 @@ test('首页只请求并展示三条活动预览，不消费后续游标', async
   }
 });
 
-test('发现更多始终跳转全部活动页并阻止快速重复入栈', () => {
+test('发现更多始终跳转附近活动页并阻止快速重复入栈', () => {
   const context = loadDiscoverPage();
   try {
     assert.equal(context.page.handleNavigateToAll(), true);
     assert.equal(context.page.handleNavigateToAll(), false);
     assert.equal(context.navigateCalls.length, 1);
-    assert.equal(context.navigateCalls[0].url, '/subpackages/activity/list/index');
+    assert.equal(context.navigateCalls[0].url, '/subpackages/activity/nearby/index');
     context.navigateCalls[0].fail();
     assert.equal(context.page.handleNavigateToAll(), true);
   } finally {

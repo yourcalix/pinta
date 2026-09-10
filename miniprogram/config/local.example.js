@@ -3,5 +3,6 @@
 module.exports = {
   useMock: false,
   cloudEnv: 'your-cloudbase-environment-id',
-  apiFunction: 'api'
+  apiFunction: 'api',
+  amapMiniProgramKey: 'your-amap-mini-program-key'
 };

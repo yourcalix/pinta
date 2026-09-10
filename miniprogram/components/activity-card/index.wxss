@@ -305,6 +305,7 @@
 .archive-prefix { font-size: 24rpx; color: #65675f; font-weight: 500; }
 .activity-card--discover .meta-item { gap: 6rpx; color: #64748b; font-size: 24rpx; font-weight: 500; }
 .activity-card--discover .editorial-place { margin-top: 12rpx; }
+.activity-card--discover .distance-badge { flex: 0 0 auto; padding: 4rpx 10rpx; color: #075aa7; background: #e4f2ff; border-radius: 14rpx; font-size: 19rpx; font-weight: 700; white-space: nowrap; }
 .activity-card--discover .meta-icon { flex-basis: 24rpx; width: 24rpx; }
 .activity-card--discover .meta-text { flex: 1; }
 .activity-card--discover .meta-text--place { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

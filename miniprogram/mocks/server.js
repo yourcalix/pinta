@@ -85,6 +85,7 @@ const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
 ]);
 const PUBLIC_ACTIONS = new Set([
   'activity.list',
+  'activity.nearby',
   'activity.memories',
   'activity.detail',
   'activity.question.list',
@@ -339,7 +340,7 @@ function seedState() {
   const rideStartsAt = rideStartDate.toISOString();
   const rideWindowEnd = new Date(rideStartDate.getTime() + 60 * 60 * 1000).toISOString();
   return {
-    schemaVersion: 9,
+    schemaVersion: 10,
     sequence: 100,
     users: [
       { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
@@ -357,6 +358,7 @@ function seedState() {
         city: '澳门', district: '澳门城区', placeLabel: '青茂口岸 → 凼仔',
         startsAt: rideStartsAt, deadlineAt: isoAfter(18), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
         rules: '成团后在公共区域集合，自主选择合法出行方式。',
+        meetingPoint: { label: '青茂口岸', address: '澳门青茂口岸联检大楼', latitude: 22.2094, longitude: 113.5381, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-qingmao' },
         typeData: {
           originLabel: '青茂口岸', destinationLabel: '凼仔',
           timeFlexibility: 'WITHIN_60_MIN', transportPreference: 'DISCUSS_AFTER_FORMED', luggageType: 'NONE'
@@ -369,6 +371,7 @@ function seedState() {
         city: '澳门', district: '澳门城区', placeLabel: '附近餐厅',
         startsAt: isoAfter(40), deadlineAt: isoAfter(28), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
         rules: '各自到店消费，不代收款、不提供配送。',
+        meetingPoint: { label: '附近餐厅', address: '澳门半岛公共餐厅', latitude: 22.1969, longitude: 113.5455, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-food' },
         typeData: {
           venue: '附近餐厅', cuisine: '火锅', budgetRange: '人均约 80', dietaryNotes: '可选清汤锅',
           paymentMethod: 'FIFTY_FIFTY', genderPreference: '', mbtiPreference: ''
@@ -381,6 +384,7 @@ function seedState() {
         city: '澳门', district: '澳门城区', placeLabel: '附近体育馆',
         startsAt: isoAfter(10), deadlineAt: isoAfter(5), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 2,
         rules: '体育馆一楼前台旁会合，请自带球拍。',
+        meetingPoint: { label: '附近体育馆', address: '澳门公共体育馆', latitude: 22.1938, longitude: 113.5482, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-sport' },
         typeData: { sportType: '羽毛球', venue: '附近体育馆', level: 'BEGINNER', intensity: 'RELAXED', equipment: '自带球拍' },
         status: 'FORMED', version: 2, formedAt: now, createdAt: now, updatedAt: now
       },
@@ -498,7 +502,7 @@ function writeStorage(key, value) {
 }
 
 let state = readStorage(STATE_KEY) || seedState();
-if (!state || state.schemaVersion !== 9) state = seedState();
+if (!state || state.schemaVersion !== 10) state = seedState();
 let currentUserId = readStorage(PERSONA_KEY) || 'u_owner';
 if (!state.idempotency) state.idempotency = {};
 if (!state.activityQuestions) state.activityQuestions = [];
@@ -879,7 +883,10 @@ function publicActivity(activity, options = {}) {
       : viewerMember
         ? 'member'
         : viewerApplication ? 'applicant' : 'guest';
-  const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, ...safe } = activity;
+  const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, meetingPoint, meetingGeoPoint, _distanceMeters, ...safe } = activity;
+  if (meetingPoint && typeof meetingPoint.label === 'string') {
+    safe.meetingPoint = { label: meetingPoint.label, address: typeof meetingPoint.address === 'string' ? meetingPoint.address : '' };
+  }
   if (storedType === 'companion') safe.typeData = normalizeMockCompanionTypeDataForRead(safe.typeData);
   if (storedType === 'food') safe.typeData = normalizeMockFoodTypeDataForRead(safe.typeData);
   if (storedType === 'product') {
@@ -951,6 +958,7 @@ function publicActivity(activity, options = {}) {
       ...(storedType === 'ride' ? { luggageType: viewerMember.luggageType || null } : {})
     };
   }
+  if (Number.isFinite(_distanceMeters)) result.nearby = { distanceMeters: Math.max(0, Math.round(_distanceMeters)) };
   return result;
 }
 
@@ -1124,6 +1132,91 @@ function validateActivityListFilters(input) {
   };
 }
 
+function mockMacauPoint(latitude, longitude) {
+  const point = { latitude: Number(latitude), longitude: Number(longitude) };
+  assert(Number.isFinite(point.latitude) && Number.isFinite(point.longitude), 'VALIDATION_ERROR', '位置坐标格式无效');
+  assert(point.latitude >= 22.05 && point.latitude <= 22.25 && point.longitude >= 113.45 && point.longitude <= 113.65, 'VALIDATION_ERROR', '活动地点须位于当前试点区域');
+  return point;
+}
+
+function validateMockMeetingPoint(value) {
+  if (value === undefined || value === null) return undefined;
+  assert(value && typeof value === 'object' && !Array.isArray(value), 'VALIDATION_ERROR', '会合地点格式无效');
+  const allowed = ['label', 'address', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
+  assert(Object.keys(value).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '会合地点包含未知字段');
+  assert(value.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '会合地点坐标系必须为 GCJ-02');
+  assert(value.provider === 'AMAP', 'VALIDATION_ERROR', '请选择高德地图地点');
+  const point = mockMacauPoint(value.latitude, value.longitude);
+  return {
+    label: requiredNormalizedContent(value.label, '会合地点', 1, 80),
+    address: optionalNormalizedContent(value.address, '会合地点地址', 120),
+    ...point,
+    coordinateSystem: 'GCJ02', provider: 'AMAP',
+    poiId: optionalNormalizedContent(value.poiId, '高德地点ID', 80)
+  };
+}
+
+function mockDistanceMeters(left, right) {
+  const rad = (value) => value * Math.PI / 180;
+  const lat1 = rad(left.latitude);
+  const lat2 = rad(right.latitude);
+  const deltaLat = lat2 - lat1;
+  const deltaLon = rad(right.longitude - left.longitude);
+  const value = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+  return Math.round(6371008.8 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)));
+}
+
+function mockNearbyFingerprint(query) {
+  const text = `${query.latitude.toFixed(5)}|${query.longitude.toFixed(5)}|${query.radiusMeters}|${query.type || ''}|${query.city}|${query.district || ''}`;
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) hash = Math.imul(hash ^ text.charCodeAt(index), 16777619) >>> 0;
+  return hash.toString(36);
+}
+
+function mockNearbyTuple(activity) {
+  return { distanceMeters: Math.max(0, Math.round(activity._distanceMeters)), startsAt: String(activity.startsAt || ''), id: String(activity.id || '') };
+}
+
+function compareMockNearbyTuple(left, right) {
+  return left.distanceMeters - right.distanceMeters || left.startsAt.localeCompare(right.startsAt) || left.id.localeCompare(right.id);
+}
+
+function mockNearbyCursor(query, after) {
+  return `nearby:${encodeURIComponent(JSON.stringify({ v: 1, a: after, f: mockNearbyFingerprint(query) }))}`;
+}
+
+function validateMockNearby(input) {
+  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '附近筛选条件无效');
+  const allowed = ['latitude', 'longitude', 'coordinateSystem', 'radiusMeters', 'type', 'city', 'district', 'cursor', 'limit'];
+  assert(Object.keys(input).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '附近筛选条件无效');
+  assert(input.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '定位坐标系必须为 GCJ-02');
+  const point = mockMacauPoint(input.latitude, input.longitude);
+  const radiusMeters = Number(input.radiusMeters === undefined ? 3000 : input.radiusMeters);
+  const limit = Number(input.limit === undefined ? 10 : input.limit);
+  assert(Number.isInteger(radiusMeters) && radiusMeters >= 100 && radiusMeters <= 10000, 'VALIDATION_ERROR', '搜索半径必须在100到10000之间');
+  assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量无效');
+  const type = optionalFilterString(input.type, '活动类型', 20);
+  const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+  const district = optionalFilterString(input.district, '行政区', 30);
+  assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效');
+  assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域');
+  assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效');
+  const query = { ...point, radiusMeters, type: type || undefined, city, district: district || undefined };
+  let after = null;
+  if (input.cursor) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(String(input.cursor).replace(/^nearby:/, '')));
+      assert(parsed && parsed.v === 1 && parsed.a && parsed.f === mockNearbyFingerprint(query), 'VALIDATION_ERROR', '分页游标与当前筛选条件不匹配');
+      assert(Number.isSafeInteger(parsed.a.distanceMeters) && typeof parsed.a.startsAt === 'string' && typeof parsed.a.id === 'string', 'VALIDATION_ERROR', '分页游标无效');
+      after = parsed.a;
+    } catch (error) {
+      if (error && error.ok === false) throw error;
+      throw fail('VALIDATION_ERROR', '分页游标无效');
+    }
+  }
+  return { ...query, limit, after };
+}
+
 function moderateContent(content) {
   assert(!/先付定金|司机接单|包赚|稳赚|返利|陪玩交易|援交/i.test(content), 'CONTENT_REJECTED', '内容未通过安全检查，请修改后重试');
 }
@@ -1237,6 +1330,27 @@ function listActivities(input) {
   };
 }
 
+function listNearbyActivities(input) {
+  const filters = validateMockNearby(input);
+  const now = new Date().toISOString();
+  const candidates = state.activities
+    .filter((item) => ['RECRUITING', 'FORMED'].includes(item.status) && item.city === PILOT_CITY)
+    .filter((item) => !filters.type || (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type)
+    .filter((item) => !filters.district || item.district === filters.district)
+    .filter((item) => item.meetingPoint && Number.isFinite(item.meetingPoint.latitude) && Number.isFinite(item.meetingPoint.longitude))
+    .filter((item) => item.status !== 'RECRUITING' || Date.parse(item.deadlineAt) > Date.parse(now))
+    .map((item) => ({ ...item, _distanceMeters: mockDistanceMeters(filters, item.meetingPoint) }))
+    .filter((item) => item._distanceMeters <= filters.radiusMeters)
+    .sort((left, right) => compareMockNearbyTuple(mockNearbyTuple(left), mockNearbyTuple(right)));
+  const visible = filters.after ? candidates.filter((item) => compareMockNearbyTuple(mockNearbyTuple(item), filters.after) > 0) : candidates;
+  const page = visible.slice(0, filters.limit + 1);
+  const items = page.slice(0, filters.limit);
+  return {
+    items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
+    nextCursor: page.length > filters.limit ? mockNearbyCursor(filters, mockNearbyTuple(items[items.length - 1])) : null
+  };
+}
+
 function listActivityMemories(input = {}) {
   const keys = Object.keys(input || {});
   assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
@@ -1270,6 +1384,7 @@ function createActivity(input) {
   assert(activityInput.typeData && typeof activityInput.typeData === 'object', 'VALIDATION_ERROR', '请补齐活动信息');
   if (activityInput.type === 'companion') activityInput.typeData = normalizeMockCompanionTypeData(activityInput.typeData);
   if (activityInput.type === 'food') activityInput.typeData = normalizeMockFoodTypeData(activityInput.typeData);
+  if (activityInput.meetingPoint !== undefined) activityInput.meetingPoint = validateMockMeetingPoint(activityInput.meetingPoint);
   delete activityInput.driverId;
   delete activityInput.vehicleId;
   delete activityInput.contactInfo;
@@ -1654,6 +1769,7 @@ function handle(action, input, idempotencyKey = '') {
     return { application: publicDriverApplication(application) };
   }
   if (action === 'activity.list') return listActivities(input);
+  if (action === 'activity.nearby') return listNearbyActivities(input);
   if (action === 'activity.memories') return listActivityMemories(input);
   if (action === 'activity.detail') {
     const now = new Date().toISOString();

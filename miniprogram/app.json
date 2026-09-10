@@ -25,6 +25,7 @@
       "root": "subpackages/activity",
       "pages": [
         "list/index",
+        "nearby/index",
         "memories/index",
         "detail/index",
         "manage/index",
@@ -34,7 +35,8 @@
     {
       "root": "subpackages/publish",
       "pages": [
-        "form/index"
+        "form/index",
+        "location-picker/index"
       ]
     },
     {
@@ -65,6 +67,14 @@
     "backgroundColor": "#075AA7",
     "backgroundTextStyle": "light"
   },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于计算您与附近活动公开会合地点的距离"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
   "tabBar": {
     "custom": true,
     "color": "#6B756F",

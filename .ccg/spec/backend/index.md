@@ -53,7 +53,7 @@
 
 ## 数据与隐私
 
-- 拼饭桌创建契约的 `typeData` 在既有 `venue / cuisine / budgetRange / dietaryNotes` 外，可选保存受控的 `paymentMethod: FIFTY_FIFTY | GO_DUTCH | TABLE_ONLY`、`genderPreference: MALE | FEMALE | ALL | ''` 与标准 MBTI 偏好；旧客户端省略 `paymentMethod` 时按已有“人均预算”语义兼容为 `FIFTY_FIFTY`。地图选择仍只落地受控地点名称，不保存经纬度；自定义忌口在提交适配层合并进长度受控的 `dietaryNotes`。Mock 与 Cloud 必须共享枚举、长度、预算条件必填和缺省语义。
+- 拼饭桌创建契约的 `typeData` 在既有 `venue / cuisine / budgetRange / dietaryNotes` 外，可选保存受控的 `paymentMethod: FIFTY_FIFTY | GO_DUTCH | TABLE_ONLY`、`genderPreference: MALE | FEMALE | ALL | ''` 与标准 MBTI 偏好；旧客户端省略 `paymentMethod` 时按已有“人均预算”语义兼容为 `FIFTY_FIFTY`。新客户端必须另提交由高德 POI 选点形成的 `meetingPoint`；自定义忌口在提交适配层合并进长度受控的 `dietaryNotes`。Mock 与 Cloud 必须共享枚举、长度、预算条件必填和缺省语义。
 - 拼同行创建契约的 `typeData.preferences` 只允许 `friendGender / mbti / navigationStyle / travelPace / photoHabit / silenceComfort / garlic / fragrance / slippers` 九个选填字段，各字段必须按服务端白名单接受严格英文枚举，缺省统一为空字符串；未知键、未知枚举及非对象输入一律拒绝。Cloud、Mock 与公开 DTO 必须保持同构，公开读取还须对白名单内历史脏值降级为空字符串，并对 `timeFlexibility / transportPreference / luggageType` 使用既有安全缺省。人数继续只保存含发起人在内的 `minMembers / maxMembers` 2—20 契约，不保存客户端“拼友数”展示语义。
 
 - `activity.memories` 是公开只读接口，只接受 `limit` 且服务端夹紧至 `1–6`；Store 必须从事实源筛选 `FORMED` 且具有合法 `formedAt` 的活动，按 `formedAt` 倒序返回，并复用活动公开 DTO。不得由客户端传入状态，不得用 `updatedAt`、`startsAt` 或列表缓存推断成团时间，也不得暴露成员身份、联系方式或私密资料；Cloud 查询可有界多取后过滤脏数据，但不得无界扫描。
@@ -64,7 +64,8 @@
 - 公开列表与游客详情不得暴露成员个人行李；只可在当前用户自己的 `viewerMembership` 或经授权的成团/管理成员视图中按需返回。
 - 公开问答 DTO 只输出问题、回答、昵称快照和公开时间，不得包含 `askerId`、`responderId`、openid、联系方式、幂等 hash 或内容审核内部字段。
 - 通知 DTO 只输出显式字段白名单，目标使用由通知类型计算的 `MANAGE | GROUP | DETAIL` 语义枚举；不得透传数据库中的自由 `url` 或 `page` 字段。未来微信服务通知的 `page` 也必须由同一类型映射纯函数生成。
-- 地点只存城市、行政区、商圈/地标标签和成团后说明；MVP 不存经纬度。
+- 普通地点展示继续使用城市、行政区、商圈/地标标签和成团后说明。发布者主动选择的公开会合地点可额外保存 `meetingPoint: { label, address, latitude, longitude, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId }`，并在 Cloud 文档中物化顶层 `meetingGeoPoint` 供空间索引查询。普通列表、详情和附近 DTO 均不得返回精确坐标；附近 DTO 只增加服务端计算的 `nearby.distanceMeters`。查看者定位仅存在于单次 `activity.nearby` 调用栈，不落库、不写审计、不写日志。历史无坐标活动保留在全城列表，但不进入附近结果。
+- `activity.nearby` 是独立公开只读动作：限定 GCJ-02、澳门试点边界、100m—10km 半径和最多 30 条；Memory/Mock 使用 Haversine，Cloud 使用顶层 `meetingGeoPoint` 的 `geoNear` 并以 Haversine 统一最终排序。附近游标必须绑定坐标、半径与筛选条件，并以距离、开始时间和活动 ID 的末项元组续页，禁止跨查询复用；单次半径结果扫描达到 2,000 条时明确返回缩小半径提示，绝不静默漏数。缺失地理索引时返回可恢复的 `NEARBY_UNAVAILABLE`，不得偷偷回退成全城结果。
 - 拼车费用只允许 `FREE | SHARED_COST | NO_COST`，禁止自定义收费金额。
 - 日志不得记录完整联系方式、微信凭据或用户提交的敏感原文。
 - 公开活动列表的 `nextCursor` 是客户端不可解释的不透明字符串；当前 raw-offset 实现必须在服务入口校验非负十进制安全整数，并在 keyword、截止状态等后置过滤场景中扫描 `limit + 1` 个匹配项，以下一个匹配项的原始偏移作为续页游标。

@@ -283,6 +283,33 @@
   font-size: 28rpx;
 }
 
+.public-meeting-point { margin-top: 22rpx; }
+.public-meeting-point .field-label { margin-top: 0; }
+.meeting-point-button {
+  display: flex;
+  width: 100%;
+  min-height: 88rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 14rpx;
+  margin: 0;
+  padding: 14rpx 18rpx;
+  color: #17324d;
+  text-align: left;
+  background: #fffdf8;
+  border: 2rpx dashed #8ab6aa;
+  border-radius: 17rpx 14rpx 18rpx 15rpx;
+}
+.meeting-point-button::after { display: none; }
+.meeting-point-button--pressed { opacity: .72; transform: scale(.99); }
+.meeting-point-button--food { border-color: #e39a5c; background: rgba(255, 251, 241, .88); }
+.meeting-point-icon { flex: 0 0 auto; color: #16816e; font-size: 34rpx; font-weight: 800; }
+.meeting-point-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4rpx; }
+.meeting-point-name { overflow: hidden; font-size: 25rpx; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
+.meeting-point-address { overflow: hidden; color: #6b756f; font-size: 20rpx; font-weight: 450; text-overflow: ellipsis; white-space: nowrap; }
+.meeting-point-arrow { flex: 0 0 auto; color: #7c8a83; font-size: 38rpx; }
+.meeting-point-privacy { display: block; margin-top: 9rpx; color: #78827d; font-size: 19rpx; line-height: 1.5; }
+
 .field-label-icon {
   flex: 0 0 auto;
   width: 100rpx;

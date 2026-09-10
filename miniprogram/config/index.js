@@ -6,5 +6,6 @@ module.exports = {
   apiFunction: 'api',
   requestTimeoutMs: 8000,
   subscribeTemplateIds: [],
+  amapMiniProgramKey: '',
   demoCity: '澳门'
 };

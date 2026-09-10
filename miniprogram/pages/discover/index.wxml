@@ -46,8 +46,8 @@
     </view>
 
     <view id="hot-pinba-heading" class="home-activity-heading" role="heading" aria-level="2">
-      <view class="section-title-row"><text class="section-title">{{hasActiveFilters ? '筛选结果' : '附近拼吧'}}</text><text wx:if="{{!hasActiveFilters}}" class="section-title-detail">· 正在发生</text></view>
-      <button class="home-section-more" bindtap="handleNavigateToAll" hover-class="home-section-more--pressed" hover-stay-time="80" aria-label="发现更多，点击查看全部活动列表"><text>发现更多</text><text class="home-section-more-arrow" aria-hidden="true">›</text></button>
+      <view class="section-title-row"><text class="section-title">{{hasActiveFilters ? '筛选结果' : '正在组队'}}</text><text wx:if="{{!hasActiveFilters}}" class="section-title-detail">· 全城热拼</text></view>
+      <button class="home-section-more" bindtap="handleNavigateToAll" hover-class="home-section-more--pressed" hover-stay-time="80" aria-label="发现更多，点击查看附近活动"><text>发现更多</text><text class="home-section-more-arrow" aria-hidden="true">›</text></button>
     </view>
 
     <view class="home-activity-stream">

@@ -6,6 +6,7 @@ const ALLOWED_KEYS = Object.freeze([
   'apiFunction',
   'requestTimeoutMs',
   'subscribeTemplateIds',
+  'amapMiniProgramKey',
   'demoCity'
 ]);
 
@@ -21,6 +22,8 @@ function resolveRuntimeConfig(defaults, local) {
   if (typeof resolved.apiFunction !== 'string' || !resolved.apiFunction.trim()) throw new Error('apiFunction 配置无效');
   if (!Number.isFinite(resolved.requestTimeoutMs) || resolved.requestTimeoutMs <= 0) throw new Error('requestTimeoutMs 配置无效');
   if (!Array.isArray(resolved.subscribeTemplateIds)) throw new Error('subscribeTemplateIds 配置无效');
+  if (resolved.amapMiniProgramKey === undefined) resolved.amapMiniProgramKey = '';
+  if (typeof resolved.amapMiniProgramKey !== 'string') throw new Error('amapMiniProgramKey 配置无效');
   return Object.freeze(resolved);
 }
 

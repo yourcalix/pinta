@@ -55,7 +55,7 @@ const COMPANION_FORM_ENUMS = Object.freeze({
   fragrancePreference: ['', 'ANY', 'LIGHT', 'NONE'],
   slippersPreference: ['', 'RELAXED', 'CONTEXT', 'NEAT']
 });
-const COMMON_FORM_FIELDS = Object.freeze(['title', 'description', 'rules', 'placeLabel', 'startDate', 'startTime', 'minMembers', 'maxMembers']);
+const COMMON_FORM_FIELDS = Object.freeze(['title', 'description', 'rules', 'placeLabel', 'startDate', 'startTime', 'minMembers', 'maxMembers', 'meetingPoint']);
 const TYPE_FORM_FIELDS = Object.freeze({
   companion: [
     'originLabel', 'destinationLabel', 'timeFlexibility', 'transportPreference', 'luggageType',
@@ -70,7 +70,7 @@ const TYPE_FORM_FIELDS = Object.freeze({
 function initialForm(type) {
   return {
     type,
-    title: '', description: '', rules: '', placeLabel: '', startDate: '', startTime: '', minMembers: 2, maxMembers: 4,
+    title: '', description: '', rules: '', placeLabel: '', startDate: '', startTime: '', minMembers: 2, maxMembers: 4, meetingPoint: null,
     originLabel: '', destinationLabel: '', timeFlexibility: 'WITHIN_30_MIN', transportPreference: 'DISCUSS_AFTER_FORMED', luggageType: 'NONE',
     companionMemberMode: 'fixed', companionMinFriends: 1, companionMaxFriends: 1,
     friendGenderPreference: '', mbtiPreference: '', navigationStyle: '', travelPace: '', photoHabit: '',
@@ -115,6 +115,21 @@ function cleanFormData(type, source = {}) {
     Object.entries(COMPANION_FORM_ENUMS).forEach(([field, values]) => {
       if (!values.includes(result[field])) result[field] = initial[field];
     });
+  }
+  const meetingPoint = result.meetingPoint;
+  if (!meetingPoint || typeof meetingPoint !== 'object'
+    || meetingPoint.provider !== 'AMAP' || meetingPoint.coordinateSystem !== 'GCJ02'
+    || !Number.isFinite(meetingPoint.latitude) || !Number.isFinite(meetingPoint.longitude)
+    || typeof meetingPoint.label !== 'string' || !meetingPoint.label.trim()) {
+    result.meetingPoint = null;
+  } else {
+    result.meetingPoint = {
+      poiId: normalizedText(meetingPoint.poiId).slice(0, 80),
+      label: normalizedText(meetingPoint.label).slice(0, 80),
+      address: normalizedText(meetingPoint.address).slice(0, 120),
+      latitude: Number(meetingPoint.latitude), longitude: Number(meetingPoint.longitude),
+      coordinateSystem: 'GCJ02', provider: 'AMAP'
+    };
   }
   return result;
 }
@@ -282,7 +297,16 @@ Page({
 
   saveDraft() { wx.setStorageSync(this.draftKey, { form: cleanFormData(this.data.type, this.data.form), safetyAgreed: this.data.safetyAgreed, savedAt: Date.now() }); },
 
-  handleInput(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value, errorMessage: '' }); },
+  handleInput(event) {
+    const field = event.currentTarget.dataset.field;
+    const linkedMeetingField = (this.data.type === 'companion' && field === 'originLabel')
+      || (['sport', 'food'].includes(this.data.type) && field === 'venue');
+    this.setData({
+      [`form.${field}`]: event.detail.value,
+      ...(linkedMeetingField ? { 'form.meetingPoint': null } : {}),
+      errorMessage: ''
+    });
+  },
   handleDate(event) { this.setData({ 'form.startDate': event.detail.value, errorMessage: '' }); },
   handleTime(event) { const index = Number(event.detail.value) || 0; this.setData({ timeIndex: index, 'form.startTime': TIME_OPTIONS[index], errorMessage: '' }); },
   handleCompanionTime(event) { this.setData({ 'form.startTime': event.detail.value, errorMessage: '' }); },
@@ -354,17 +378,20 @@ Page({
     }
     this.setData({ 'form.dietaryNotes': updated, errorMessage: '' });
   },
-  handleChooseLocation() {
-    wx.chooseLocation({
-      success: (res) => {
-        this.setData({
-          'form.venue': res.name || res.address,
-          errorMessage: ''
-        });
+  handleOpenMeetingPointPicker() {
+    wx.navigateTo({
+      url: '/subpackages/publish/location-picker/index',
+      events: {
+        meetingPointSelected: (meetingPoint) => {
+          const linkedField = this.data.type === 'companion' ? 'originLabel' : 'venue';
+          this.setData({
+            'form.meetingPoint': meetingPoint,
+            [`form.${linkedField}`]: meetingPoint.label,
+            errorMessage: ''
+          });
+        }
       },
-      fail: (err) => {
-        console.error('选择位置失败', err);
-      }
+      fail: () => this.setData({ errorMessage: '地点选择页打开失败，请稍后重试' })
     });
   },
 
@@ -393,6 +420,10 @@ Page({
       ? foodCapacity(form)
       : this.data.type === 'companion' ? companionCapacity(form) : standardCapacity(form);
     if (capacity.error) return capacity.error;
+    if (!form.meetingPoint || form.meetingPoint.provider !== 'AMAP' || form.meetingPoint.coordinateSystem !== 'GCJ02'
+      || !Number.isFinite(form.meetingPoint.latitude) || !Number.isFinite(form.meetingPoint.longitude)) {
+      return '请选择有效的活动会合地点';
+    }
     if (this.data.type === 'companion' && (!form.originLabel.trim() || !form.destinationLabel.trim())) return '请填写出发地和目的地';
     if (this.data.type === 'sport' && (!form.sportType.trim() || !form.venue.trim())) return '请填写运动项目和活动场地';
     if (this.data.type === 'food' && (!form.venue.trim() || !form.cuisine.trim() || !FOOD_PAYMENT_VALUES[form.paymentMethod])) return '请填写餐厅、口味和拼桌形式';
@@ -421,6 +452,7 @@ Page({
       maxMembers: capacity.maxMembers,
       rules: normalizedText(form.rules)
     };
+    common.meetingPoint = { ...form.meetingPoint };
     if (this.data.type === 'companion') common.typeData = {
       originLabel: form.originLabel.trim(),
       destinationLabel: form.destinationLabel.trim(),

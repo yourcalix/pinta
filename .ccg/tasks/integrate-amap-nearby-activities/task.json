@@ -1,0 +1,12 @@
+{
+  "id": "integrate-amap-nearby-activities",
+  "title": "接入高德地图并重构附近活动与组队拼团入口",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并推送已验证变更",
+  "createdAt": "2026-09-09T23:48:09+08:00",
+  "branch": "main"
+}

@@ -35,7 +35,7 @@
       <view class="editorial-status"><status-badge label="{{item.statusLabel}}" tone="{{item.statusTone}}" /></view>
     </view>
     <view class="activity-title"><text wx:if="{{item.legacy && item.legacy.readOnly}}" class="archive-prefix">历史 · </text>{{item.title}}</view>
-    <view class="meta-item editorial-place"><text class="meta-icon">⌖</text><text class="meta-text meta-text--place">{{item.sceneLine}}</text></view>
+    <view class="meta-item editorial-place"><text class="meta-icon">⌖</text><text class="meta-text meta-text--place">{{item.sceneLine}}</text><text wx:if="{{item.distanceLabel}}" class="distance-badge">{{item.distanceLabel}}</text></view>
     <view class="owner-line">
       <image wx:if="{{ownerAvatar && !ownerAvatar.empty}}" class="owner-avatar-image" src="{{ownerAvatar.src}}" mode="{{ownerAvatar.mode}}" data-slot-id="{{ownerAvatar.id}}" data-src="{{ownerAvatar.src}}" lazy-load="{{true}}" binderror="handleOwnerAvatarError" />
       <view wx:else class="owner-avatar">{{item.ownerInitial}}</view><text class="owner-name">{{item.ownerNickname}}</text><text class="owner-role">发起</text>

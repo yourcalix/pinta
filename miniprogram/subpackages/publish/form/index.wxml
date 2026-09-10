@@ -47,6 +47,15 @@
           <input class="input companion-input" maxlength="40" value="{{form.destinationLabel}}" data-field="destinationLabel" bindinput="handleInput" placeholder="例如：商场南门" adjust-position="true" cursor-spacing="140" aria-label="必填项，目的地" />
         </view>
       </view>
+      <view class="public-meeting-point">
+        <view class="field-label required">公开会合地点</view>
+        <button class="meeting-point-button" bindtap="handleOpenMeetingPointPicker" hover-class="meeting-point-button--pressed" aria-label="{{form.meetingPoint ? '重新选择公开会合地点' : '从高德地图选择公开会合地点'}}">
+          <text class="meeting-point-icon" aria-hidden="true">⌖</text>
+          <view class="meeting-point-copy"><text class="meeting-point-name">{{form.meetingPoint ? form.meetingPoint.label : '搜索出发集合点'}}</text><text wx:if="{{form.meetingPoint}}" class="meeting-point-address">{{form.meetingPoint.address}}</text></view>
+          <text class="meeting-point-arrow" aria-hidden="true">›</text>
+        </button>
+        <text class="meeting-point-privacy">这是活动公开地点，用于附近发现，不会保存您的实时位置</text>
+      </view>
       <view class="field-label">出行方式倾向</view>
       <view class="choice-row" role="radiogroup" aria-label="出行方式倾向">
         <button wx:for="{{transportOptions}}" wx:key="value" class="choice companion-choice {{form.transportPreference === item.value ? 'choice--active' : ''}}" data-field="transportPreference" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.transportPreference === item.value}}">{{item.label}}</button>
@@ -170,6 +179,15 @@
       <input class="input" maxlength="30" value="{{form.sportType}}" data-field="sportType" bindinput="handleInput" placeholder="例如：羽毛球、跑步、篮球" adjust-position="true" cursor-spacing="140" aria-label="必填项，运动项目" />
       <view class="field-label required">活动场地</view>
       <input class="input" maxlength="50" value="{{form.venue}}" data-field="venue" bindinput="handleInput" placeholder="例如：附近体育馆" adjust-position="true" cursor-spacing="140" aria-label="必填项，活动场地" />
+      <view class="public-meeting-point">
+        <view class="field-label required">公开会合地点</view>
+        <button class="meeting-point-button" bindtap="handleOpenMeetingPointPicker" hover-class="meeting-point-button--pressed" aria-label="{{form.meetingPoint ? '重新选择公开会合地点' : '从高德地图选择公开会合地点'}}">
+          <text class="meeting-point-icon" aria-hidden="true">⌖</text>
+          <view class="meeting-point-copy"><text class="meeting-point-name">{{form.meetingPoint ? form.meetingPoint.label : '搜索运动场馆'}}</text><text wx:if="{{form.meetingPoint}}" class="meeting-point-address">{{form.meetingPoint.address}}</text></view>
+          <text class="meeting-point-arrow" aria-hidden="true">›</text>
+        </button>
+        <text class="meeting-point-privacy">这是活动公开地点，用于附近发现，不会保存您的实时位置</text>
+      </view>
       <view class="field-label">参与水平</view>
       <view class="choice-row" role="radiogroup" aria-label="参与水平">
         <button wx:for="{{levelOptions}}" wx:key="value" class="choice {{form.level === item.value ? 'choice--active' : ''}}" data-field="level" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.level === item.value}}">{{item.label}}</button>
@@ -192,10 +210,19 @@
         <view class="field-label required field-label--venue">餐厅或饭店</view>
         <view class="venue-input-container">
           <input class="input venue-input-manual" maxlength="50" value="{{form.venue}}" data-field="venue" bindinput="handleInput" placeholder="手动输入餐厅名称" adjust-position="true" cursor-spacing="140" aria-label="必填项，餐厅或饭店" />
-          <button class="venue-map-button" bindtap="handleChooseLocation" aria-label="从地图选择">
+          <button class="venue-map-button" bindtap="handleOpenMeetingPointPicker" aria-label="从高德地图选择">
             <text class="venue-map-icon">📍</text>
             <text>地图选择</text>
           </button>
+        </view>
+        <view class="public-meeting-point public-meeting-point--food">
+          <view class="field-label required">公开会合地点</view>
+          <button class="meeting-point-button meeting-point-button--food" bindtap="handleOpenMeetingPointPicker" hover-class="meeting-point-button--pressed" aria-label="{{form.meetingPoint ? '重新选择公开会合地点' : '从高德地图选择公开会合地点'}}">
+            <text class="meeting-point-icon" aria-hidden="true">⌖</text>
+            <view class="meeting-point-copy"><text class="meeting-point-name">{{form.meetingPoint ? form.meetingPoint.label : '搜索目标餐厅'}}</text><text wx:if="{{form.meetingPoint}}" class="meeting-point-address">{{form.meetingPoint.address}}</text></view>
+            <text class="meeting-point-arrow" aria-hidden="true">›</text>
+          </button>
+          <text class="meeting-point-privacy">这是活动公开地点，用于附近发现，不会保存您的实时位置</text>
         </view>
         <view class="two-column">
           <view>
