@@ -49,12 +49,20 @@ Page({
 
   onShow() {
     selectTab(this, 1);
+    this.releaseActivityNavigation();
     if (this._skipFirstShow) return void (this._skipFirstShow = false);
     return this.loadPosts(false, true);
   },
 
-  onHide() { this._loadSeq = (this._loadSeq || 0) + 1; },
-  onUnload() { this._loadSeq = (this._loadSeq || 0) + 1; },
+  onHide() {
+    this._loadSeq = (this._loadSeq || 0) + 1;
+    this.releaseActivityNavigation();
+  },
+
+  onUnload() {
+    this._loadSeq = (this._loadSeq || 0) + 1;
+    this.releaseActivityNavigation();
+  },
 
   async onPullDownRefresh() {
     try { await this.loadPosts(false, true); } finally { wx.stopPullDownRefresh(); }
@@ -105,6 +113,39 @@ Page({
     } catch (error) {
       if (!error.handled) wx.showToast({ title: error.message || '暂时无法登录', icon: 'none' });
     }
+  },
+
+  handleSearchActivities() {
+    if (this._activityNavigationPending) return;
+    this._activityNavigationPending = true;
+    wx.navigateTo({
+      url: '/subpackages/activity/list/index',
+      fail: () => {
+        this.releaseActivityNavigation();
+        wx.showToast({ title: '暂时无法打开活动列表', icon: 'none' });
+      }
+    });
+  },
+
+  releaseActivityNavigation() {
+    this._activityNavigationPending = false;
+  },
+
+  handleMessages() {
+    wx.switchTab({ url: '/pages/messages/index' });
+  },
+
+  handleTopicAction(event) {
+    const action = String(event.currentTarget.dataset.action || '');
+    if (action === 'activities') {
+      this.handleSearchActivities();
+      return;
+    }
+    if (action === 'guidelines') {
+      this.handleGuidelines();
+      return;
+    }
+    if (action === 'compose') this.handleCompose();
   },
 
   handlePost(event) {

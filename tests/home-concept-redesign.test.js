@@ -132,11 +132,12 @@ test('正式 Hero 插画使用透明发布版且保持一比二完整构图', ()
 test('新发现页只消费真实讨论并使用温暖生活方式内容流', () => {
   const template = read('pages/community/index.wxml');
   const style = read('pages/community/index.wxss');
-  assert.match(template, /class="discover-square-title"[^>]*>发现/);
-  assert.match(template, /正在发生/);
-  assert.match(template, /热门讨论/);
-  assert.match(template, /class="discover-compose-button"[\s\S]*bindtap="handleCompose"/);
+  assert.match(template, /class="activity-search-entry"[^>]*bindtap="handleSearchActivities"/);
+  assert.match(template, /class="community-topic-rail"/);
+  assert.match(template, /data-action="compose"[^>]*bindtap="handleTopicAction"/);
+  assert.match(template, /class="post-content-panel"/);
   assert.doesNotMatch(template, /社区快捷入口|shortcut-card--rules|community-ambient-bg/);
+  assert.doesNotMatch(template, /热门讨论|精选推荐|关注|附近|问答/);
   assert.match(style, /\.community-page\s*\{[^}]*background:\s*#f9f7f2;/s);
-  assert.match(style, /padding-bottom:\s*calc\(180rpx \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(style, /padding-bottom:\s*calc\(190rpx \+ env\(safe-area-inset-bottom\)\)/);
 });
