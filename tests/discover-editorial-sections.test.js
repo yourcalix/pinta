@@ -16,13 +16,13 @@ test('首页按问候、生活方式 Hero、快捷入口、检索与活动流顺
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   assert.match(template, /class="hero-illustration-slot" aria-hidden="true"/);
   assert.match(template, /class="hero-search-floating-bar/);
-  assert.match(template, /你好，\{\{greetingNickname\}\}/);
+  assert.match(template, /\{\{greetingSalutation\}\}，\{\{greetingNickname\}\}/);
   assert.doesNotMatch(template, /已展示全部附近活动|page-end-marker/);
 });
 test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨架', () => {
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
-  assert.match(template, /class="home-greeting"[^>]*aria-label="你好，\{\{greetingNickname\}\}，欢迎你回到拼吧"/);
+  assert.match(template, /class="home-greeting"[^>]*aria-label="\{\{greetingSalutation\}\}，\{\{greetingNickname\}\}，欢迎你回到拼吧"/);
   assert.match(template, /class="hero-title"[\s\S]*你的搭子，[\s\S]*刚刚好/);
   assert.match(template, /class="home-shortcuts"[\s\S]*组队拼团[\s\S]*琐碎回忆[\s\S]*暂定/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2/s);

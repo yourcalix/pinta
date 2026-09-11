@@ -1,0 +1,12 @@
+{
+  "id": "add-home-time-greeting",
+  "title": "首页问候语按澳门时间动态显示",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "实现、自动化验证及Gemini复审均已完成，归档交付",
+  "createdAt": "2026-09-11T00:00:00+08:00",
+  "branch": "main"
+}

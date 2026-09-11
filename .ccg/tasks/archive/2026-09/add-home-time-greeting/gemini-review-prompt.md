@@ -1,3 +1,57 @@
+<GEMINI_WEB_PROMPT>
+ROLE: frontend implementation reviewer
+
+审查拼吧微信原生小程序首页“按时间动态问候”的实际实现。
+
+目标：原“你好，昵称”根据澳门UTC+8显示：
+00:00–04:59 夜深了
+05:00–08:59 早上好
+09:00–11:59 上午好
+12:00–13:59 中午好
+14:00–17:59 下午好
+18:00–23:59 晚上好
+
+实现边界：
+- 新增纯函数 resolveMacauGreeting(now)，使用UTC小时+8，不依赖设备时区。
+- 首页data新增greetingSalutation，在onLoad与每次onShow同步。
+- 不增加常驻计时器，避免干扰既有启动动画定时器；用户离开再回首页时刷新。
+- WXML可见标题和ARIA都消费同一问候字段。
+- 昵称、头像、首页布局、网络请求和后端均未改。
+- 现有greeting-title具备单行ellipsis，长昵称仍有保护。
+- 373测试通过、0失败、1跳过；项目结构检查和JS语法检查通过。
+- 尚未真机验收，不要声称真机已经验证。
+
+重点检查：澳门时间边界是否正确；onLoad/onShow生命周期是否可靠；无障碍文案是否同步；是否引入定时器、时区或布局风险；测试是否覆盖关键边界。
+只聚焦本次差异，历史问题单列。输出Critical/Warning/Info，每项给出文件和最小修正，最后APPROVE或REVISE。不要输出无关重构。
+
+FILE: miniprogram/utils/home-greeting.js
+```
+'use strict';
+
+const MACAU_UTC_OFFSET_HOURS = 8;
+function macauHour(now = new Date()) {
+  const value = now instanceof Date ? now : new Date(now);
+  if (!Number.isFinite(value.getTime())) return 9;
+  return (value.getUTCHours() + MACAU_UTC_OFFSET_HOURS) % 24;
+}
+
+function resolveMacauGreeting(now = new Date()) {
+  const hour = macauHour(now);
+  if (hour < 5) return '夜深了';
+  if (hour < 9) return '早上好';
+  if (hour < 12) return '上午好';
+  if (hour < 14) return '中午好';
+  if (hour < 18) return '下午好';
+  return '晚上好';
+}
+
+module.exports = {
+  resolveMacauGreeting
+};
+```
+
+FILE: miniprogram/pages/discover/index.js
+```
 'use strict';
 
 const activityService = require('../../services/activity');
@@ -506,3 +560,107 @@ Page({
     wx.switchTab({ url: '/pages/publish/index' });
   }
 });
+```
+
+FILE: miniprogram/pages/discover/index.wxml
+```
+<view class="page home-page" style="padding-top: {{contentTopInset}}px;">
+  <launch-splash wx:if="{{launchSplashVisible}}" progress="{{launchProgress}}" exiting="{{launchSplashExiting}}" bindasseterror="handleLaunchAssetError" />
+
+  <view class="home-content">
+    <view class="home-greeting" role="heading" aria-level="1" aria-label="{{greetingSalutation}}，{{greetingNickname}}，欢迎你回到拼吧">
+      <image class="greeting-avatar" src="{{greetingAvatarPath}}" mode="aspectFill" binderror="handleGreetingAvatarError" aria-hidden="true" />
+      <view class="greeting-copy">
+        <text class="greeting-title">{{greetingSalutation}}，{{greetingNickname}} <text aria-hidden="true">👋</text></text>
+        <text class="greeting-subtitle">欢迎你回到拼吧</text>
+      </view>
+    </view>
+
+    <view class="home-hero" role="region" aria-label="你的搭子，刚刚好。发现身边同频的人和活动">
+      <view class="hero-copy">
+        <view class="hero-title"><text>你的搭子，</text><text class="hero-title-accent">刚刚好</text></view>
+        <text class="hero-subtitle">发现身边同频的人和活动</text>
+      </view>
+      <view class="hero-actions" aria-label="首页消息与搜索">
+        <button class="header-action header-action--message" data-action="messages" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="查看消息"><image class="header-action-icon" src="/assets/icons/home/header-bell.png" mode="aspectFit" aria-hidden="true" /></button>
+        <button class="header-action header-action--search {{hasActiveFilters ? 'header-action--search-active' : ''}}" data-action="search" bindtap="handleHeaderAction" hover-class="control--pressed" aria-label="{{searchPanelVisible ? '收起活动搜索' : '搜索活动'}}"><image class="header-action-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" /></button>
+      </view>
+      <view wx:if="{{searchPanelVisible}}" class="hero-search-backdrop" catchtap="handleCloseSearch" aria-hidden="true"></view>
+      <view wx:if="{{searchPanelVisible}}" class="hero-search-floating-bar {{searchPanelVisible ? 'hero-search-floating-bar--visible' : ''}}" role="search" aria-label="首页活动搜索框">
+        <image class="hero-search-icon" src="/assets/icons/home/header-search.png" mode="aspectFit" aria-hidden="true" />
+        <input class="hero-search-input" value="{{keyword}}" focus="{{searchPanelVisible}}" adjust-position="{{false}}" cursor-spacing="12" placeholder="搜索活动/发起人" placeholder-class="hero-search-placeholder" confirm-type="search" aria-label="输入活动名称、地点或发起人关键词" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        <button wx:if="{{keyword}}" class="hero-search-clear" bindtap="handleClearKeyword" hover-class="control--pressed" aria-label="清空搜索内容">×</button>
+      </view>
+      <view class="hero-illustration-slot" aria-hidden="true"><image class="hero-illustration-image" src="/assets/images/home/hero-community-puzzle.png" mode="aspectFit" /></view>
+    </view>
+
+    <view class="home-shortcuts" aria-label="首页快捷入口">
+      <button class="home-shortcut home-shortcut--activities" data-action="activities" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="组队拼团，看看大家都在聊什么">
+        <text class="shortcut-title">组队拼团</text><text class="shortcut-subtitle shortcut-subtitle--activities">看看大家都在聊什么</text>
+        <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.activities}}" src="{{shortcutIconPaths.activities}}" mode="aspectFit" /></view>
+        <view class="shortcut-arrow" aria-hidden="true">›</view>
+      </button>
+      <button class="home-shortcut home-shortcut--memories" data-action="memories" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="琐碎回忆，查看成团记忆专题预告">
+        <text class="shortcut-title">琐碎回忆</text><text class="shortcut-subtitle">记录第一次成团</text>
+        <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.memories}}" src="{{shortcutIconPaths.memories}}" mode="aspectFit" /></view>
+        <view class="shortcut-arrow" aria-hidden="true">›</view>
+      </button>
+      <view class="home-shortcut home-shortcut--placeholder" aria-hidden="true">
+        <text class="shortcut-title">暂定</text><text class="shortcut-subtitle">模块占位</text>
+        <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.placeholder}}" src="{{shortcutIconPaths.placeholder}}" mode="aspectFit" /></view>
+      </view>
+    </view>
+
+    <view id="hot-pinba-heading" class="home-activity-heading" role="heading" aria-level="2">
+      <view class="section-title-row"><text class="section-title">{{hasActiveFilters ? '筛选结果' : '正在组队'}}</text><text wx:if="{{!hasActiveFilters}}" class="section-title-detail">· 全城热拼</text></view>
+      <button class="home-section-more" bindtap="handleNavigateToAll" hover-class="home-section-more--pressed" hover-stay-time="80" aria-label="发现更多，点击查看附近活动"><text>发现更多</text><text class="home-section-more-arrow" aria-hidden="true">›</text></button>
+    </view>
+
+    <view class="home-activity-stream">
+      <view wx:if="{{loading}}" class="home-activity-grid {{largeTextMode ? 'home-activity-grid--large-text' : ''}}" aria-label="正在加载活动">
+        <view wx:for="{{[1,2,3]}}" wx:key="*this" class="activity-skeleton-card" aria-hidden="true"><view class="activity-skeleton-owner"><view class="activity-skeleton-avatar"></view><view class="activity-skeleton-line activity-skeleton-line--owner"></view></view><view class="activity-skeleton-line activity-skeleton-line--title"></view><view class="activity-skeleton-line activity-skeleton-line--title-short"></view><view class="activity-skeleton-cover"></view></view>
+      </view>
+      <view wx:elif="{{activities.length}}" class="home-activity-grid {{largeTextMode ? 'home-activity-grid--large-text' : ''}}">
+        <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="home-preview" large-text="{{largeTextMode}}" bindselect="handleCardSelect" />
+      </view>
+      <view wx:else class="empty-state-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error || (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error ? '检查网络后重试。' : (hasActiveFilters ? '换个关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : '去发起拼单')}}" bindaction="handleEmptyAction" /></view>
+    </view>
+
+  </view>
+</view>
+```
+
+FILE: tests/home-time-greeting.test.js
+```
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const { resolveMacauGreeting } = require('../miniprogram/utils/home-greeting');
+
+const atMacauTime = (hour, minute = 0) => new Date(Date.UTC(2026, 8, 10, hour - 8, minute));
+
+test('首页问候按澳门自然时段覆盖凌晨、早上、上午、中午、下午和晚上', () => {
+  const cases = [
+    [0, '夜深了'], [4, '夜深了'],
+    [5, '早上好'], [8, '早上好'],
+    [9, '上午好'], [11, '上午好'],
+    [12, '中午好'], [13, '中午好'],
+    [14, '下午好'], [17, '下午好'],
+    [18, '晚上好'], [23, '晚上好']
+  ];
+  cases.forEach(([hour, expected]) => assert.equal(resolveMacauGreeting(atMacauTime(hour)), expected));
+});
+
+test('首页展示动态问候并在页面载入和每次显示时刷新', () => {
+  const script = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/discover/index.js'), 'utf8');
+  const template = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/discover/index.wxml'), 'utf8');
+  assert.match(template, /\{\{greetingSalutation\}\}，\{\{greetingNickname\}\}/);
+  assert.match(script, /syncGreetingSalutation\(\)/);
+  assert.ok((script.match(/this\.syncGreetingSalutation\(\)/g) || []).length >= 2);
+});
+```
+</GEMINI_WEB_PROMPT>

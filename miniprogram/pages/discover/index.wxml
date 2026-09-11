@@ -2,10 +2,10 @@
   <launch-splash wx:if="{{launchSplashVisible}}" progress="{{launchProgress}}" exiting="{{launchSplashExiting}}" bindasseterror="handleLaunchAssetError" />
 
   <view class="home-content">
-    <view class="home-greeting" role="heading" aria-level="1" aria-label="你好，{{greetingNickname}}，欢迎你回到拼吧">
+    <view class="home-greeting" role="heading" aria-level="1" aria-label="{{greetingSalutation}}，{{greetingNickname}}，欢迎你回到拼吧">
       <image class="greeting-avatar" src="{{greetingAvatarPath}}" mode="aspectFill" binderror="handleGreetingAvatarError" aria-hidden="true" />
       <view class="greeting-copy">
-        <text class="greeting-title">你好，{{greetingNickname}} <text aria-hidden="true">👋</text></text>
+        <text class="greeting-title">{{greetingSalutation}}，{{greetingNickname}} <text aria-hidden="true">👋</text></text>
         <text class="greeting-subtitle">欢迎你回到拼吧</text>
       </view>
     </view>
