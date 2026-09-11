@@ -1,0 +1,12 @@
+{
+  "id": "use-beijing-time-account-nickname",
+  "title": "首页问候改用北京时间并加载当前账号昵称",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已完成并待归档",
+  "createdAt": "2026-09-11T00:00:00+08:00",
+  "branch": "main"
+}

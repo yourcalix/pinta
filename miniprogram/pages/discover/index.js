@@ -2,6 +2,7 @@
 
 const activityService = require('../../services/activity');
 const safetyService = require('../../services/safety');
+const userService = require('../../services/user');
 const { decorateActivity } = require('../../utils/display');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const {
@@ -9,7 +10,7 @@ const {
   removeLocallyExpiredRecruiting
 } = require('../../utils/discover-list');
 const { resolveProfileAvatar } = require('../../utils/profile-avatar');
-const { resolveMacauGreeting } = require('../../utils/home-greeting');
+const { resolveBeijingGreeting } = require('../../utils/home-greeting');
 const {
   TOTAL_BLOCKS,
   PRELOAD_BLOCKS,
@@ -72,6 +73,7 @@ Page({
     this.syncTextSizeMode();
     this.syncGreetingSalutation();
     this.syncGreetingProfile();
+    this.loadGreetingProfile();
     this._skipFirstShow = true;
     this.startLaunchSplash();
     const activities = Promise.resolve(this.fetchActivities({ mode: 'replace' }))
@@ -96,6 +98,7 @@ Page({
 
   onHide() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this.invalidateGreetingProfileLoad();
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
@@ -105,6 +108,7 @@ Page({
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this.invalidateGreetingProfileLoad();
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
@@ -352,7 +356,7 @@ Page({
   },
 
   syncGreetingSalutation() {
-    const greetingSalutation = resolveMacauGreeting();
+    const greetingSalutation = resolveBeijingGreeting();
     if (greetingSalutation !== this.data.greetingSalutation) {
       this.setData({ greetingSalutation });
     }
@@ -361,7 +365,13 @@ Page({
   syncGreetingProfile() {
     const app = typeof getApp === 'function' ? getApp() : null;
     const profile = app && app.globalData && app.globalData.user && app.globalData.user.profile;
-    const nickname = String(profile && profile.nickname || '搭子').trim() || '搭子';
+    if (!profile) return false;
+    return this.applyGreetingProfile(profile);
+  },
+
+  applyGreetingProfile(profile) {
+    const nickname = String(profile && profile.nickname || '').trim();
+    if (!nickname) return false;
     const avatar = resolveProfileAvatar(profile);
     const next = {
       greetingNickname: nickname,
@@ -372,7 +382,27 @@ Page({
       next.greetingNickname !== this.data.greetingNickname
       || next.greetingAvatarPath !== this.data.greetingAvatarPath
       || next.greetingAvatarFallbackPath !== this.data.greetingAvatarFallbackPath
-    ) this.setData(next);
+    ) {
+      this.setData(next);
+      return true;
+    }
+    return false;
+  },
+
+  async loadGreetingProfile() {
+    const requestSeq = (this._greetingProfileSeq = (this._greetingProfileSeq || 0) + 1);
+    try {
+      const result = await userService.getProfile();
+      if (requestSeq !== this._greetingProfileSeq) return false;
+      const profile = result && result.user && result.user.profile;
+      return this.applyGreetingProfile(profile);
+    } catch (error) {
+      return false;
+    }
+  },
+
+  invalidateGreetingProfileLoad() {
+    this._greetingProfileSeq = (this._greetingProfileSeq || 0) + 1;
   },
 
   handleGreetingAvatarError() {
