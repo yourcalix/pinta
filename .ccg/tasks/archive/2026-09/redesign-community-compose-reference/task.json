@@ -1,0 +1,12 @@
+{
+  "id": "redesign-community-compose-reference",
+  "title": "按参考图重构发布讨论页面",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-11T17:30:00+08:00",
+  "branch": "main"
+}

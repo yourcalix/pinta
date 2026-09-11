@@ -1,30 +1,62 @@
-<view class="page compose-page global-background-host">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
+<view class="compose-page global-background-host" style="padding-top: {{contentTopInset}}px;">
+  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true"></image>
   <view class="global-page-background-tint" aria-hidden="true"></view>
-  <view class="compose-card surface">
-    <view class="compose-heading">
-      <text class="compose-title">分享讨论</text>
-      <text class="compose-counter">{{remaining}} / 500</text>
+  <view class="compose-navigation" style="height: {{contentTopInset}}px;">
+    <view class="compose-nav-inner">
+      <button class="compose-cancel" bindtap="handleCancel" disabled="{{submitting}}" hover-class="compose-control--pressed" hover-stay-time="70" role="button" aria-label="取消并返回上一页">取消</button>
+      <text class="compose-nav-title" role="heading" aria-level="1">发布讨论</text>
+      <view class="compose-nav-spacer" aria-hidden="true"></view>
     </view>
-    <text class="compose-tip">仅支持纯文字，不要填写电话、微信号、外链或其他隐私信息。</text>
-    <textarea
-      class="discussion-textarea"
-      value="{{content}}"
-      maxlength="500"
-      auto-height="true"
-      placeholder="写下想和大家讨论的问题、兴趣话题或互助信息…"
-      cursor-spacing="120"
-      adjust-position="true"
-      aria-label="讨论内容，最多500字"
-      bindinput="handleInput"
-    />
-    <text wx:if="{{errorMessage}}" class="error-message" role="alert">{{errorMessage}}</text>
   </view>
-  <view class="community-rules surface">
-    <text class="rules-title">友善交流</text>
-    <text class="rules-content">请保持真实、尊重与互助。禁止广告导流、联系方式、外链、骚扰及违法内容。</text>
+
+  <view class="compose-content">
+    <view class="author-identity-card" role="text" aria-label="发帖作者：{{authorNickname}}，将公开展示在社区">
+      <view class="author-badge-shell" aria-hidden="true">
+        <image class="author-badge-image" src="./assets/community-compose-author-badge.png" mode="aspectFit"></image>
+        <text class="author-badge-text">文</text>
+      </view>
+      <view class="author-identity-copy" aria-hidden="true">
+        <text class="author-nickname">{{authorNickname}}</text>
+        <text class="author-visibility"> · 将公开展示在社区</text>
+      </view>
+    </view>
+
+    <view class="compose-editor-card">
+      <textarea
+        class="compose-textarea"
+        value="{{content}}"
+        maxlength="500"
+        placeholder="聊聊你此刻的想法，或者发起一个组队讨论…"
+        placeholder-class="compose-placeholder"
+        cursor-spacing="140"
+        adjust-position="true"
+        aria-label="讨论内容，最多500字"
+        bindinput="handleInput"
+      />
+      <text class="compose-counter" aria-live="polite">{{contentLength}}/500</text>
+    </view>
+    <text wx:if="{{errorMessage}}" class="compose-error" role="alert">{{errorMessage}}</text>
+
+    <view class="topic-section">
+      <text class="topic-heading">点击添加话题：</text>
+      <view class="topic-capsules-row">
+        <button class="topic-capsule" data-topic="#寻找搭子" bindtap="handleTopicTap" hover-class="topic-capsule--pressed" hover-stay-time="70" role="button" aria-label="添加话题：寻找搭子"><view class="topic-capsule-visual">+ 寻找搭子</view></button>
+        <button class="topic-capsule" data-topic="#运动打卡" bindtap="handleTopicTap" hover-class="topic-capsule--pressed" hover-stay-time="70" role="button" aria-label="添加话题：运动打卡"><view class="topic-capsule-visual">+ 运动打卡</view></button>
+        <button class="topic-capsule" data-topic="#日常碎碎念" bindtap="handleTopicTap" hover-class="topic-capsule--pressed" hover-stay-time="70" role="button" aria-label="添加话题：日常碎碎念"><view class="topic-capsule-visual">+ 日常碎碎念</view></button>
+      </view>
+    </view>
+
+    <button class="community-rules-card" bindtap="handleGuidelines" hover-class="compose-card--pressed" hover-stay-time="70" role="button" aria-label="友善交流，共建温暖拼吧社区，点击查看社区守则">
+      <image class="rules-shield-image" src="./assets/community-compose-rules-shield.png" mode="aspectFit" aria-hidden="true"></image>
+      <view class="rules-divider" aria-hidden="true"></view>
+      <text class="rules-message" aria-hidden="true">友善交流，共建温暖拼吧社区</text>
+      <text class="rules-link" aria-hidden="true">《社区守则》›</text>
+    </button>
+
+    <view class="compose-submit-zone">
+      <button class="confirm-publish-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit" hover-class="confirm-publish-button--pressed" hover-stay-time="70" role="button" aria-label="{{submitting ? '正在发布讨论' : '确认发布讨论'}}">
+        {{submitting ? '正在发布…' : '确认发布'}}
+      </button>
+    </view>
   </view>
-  <button class="primary-button submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="handleSubmit">
-    {{submitting ? '正在提交…' : '发起讨论'}}
-  </button>
 </view>
