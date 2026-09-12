@@ -1,0 +1,12 @@
+{
+  "id": "fix-community-post-detail-after-publish",
+  "title": "修复发布讨论后详情页读取失败",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "在 CloudBase 创建 communityReplies 复合索引并真机复测",
+  "createdAt": "2026-09-12T18:30:00+08:00",
+  "branch": "main"
+}
