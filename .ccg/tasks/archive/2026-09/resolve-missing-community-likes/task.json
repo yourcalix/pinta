@@ -1,0 +1,12 @@
+{
+  "id": "resolve-missing-community-likes",
+  "title": "确认并处理 communityLikes 集合缺失",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "在 CloudBase 创建 communityLikes 集合并重新打开讨论详情",
+  "createdAt": "2026-09-12T21:20:00+08:00",
+  "branch": "main"
+}
