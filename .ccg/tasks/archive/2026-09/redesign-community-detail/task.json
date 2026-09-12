@@ -1,0 +1,12 @@
+{
+  "id": "redesign-community-detail",
+  "title": "按暖米白生活方式风格重构讨论详情页",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交已验证变更",
+  "createdAt": "2026-09-13T00:00:00Z",
+  "branch": "main"
+}

@@ -1,7 +1,8 @@
 {
-  "navigationBarTitleText": "讨论详情",
-  "navigationBarBackgroundColor": "#075AA7",
-  "navigationBarTextStyle": "white",
-  "backgroundColor": "#075AA7",
-  "backgroundTextStyle": "light"
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#F9F7F2",
+  "backgroundColorTop": "#F9F7F2",
+  "backgroundColorBottom": "#F9F7F2",
+  "backgroundTextStyle": "dark"
 }

@@ -3,7 +3,7 @@
 const communityService = require('../../../services/community');
 const userService = require('../../../services/user');
 const safetyService = require('../../../services/safety');
-const { formatDateTime } = require('../../../utils/date');
+const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../../utils/passenger-avatar');
 
 const PAGE_SIZE = 20;
@@ -15,6 +15,34 @@ const REPORT_REASONS = [
   { label: '其他问题', value: 'OTHER' }
 ];
 
+function splitContentSegments(content) {
+  const source = String(content || '');
+  const segments = [];
+  const matcher = /#[\u4e00-\u9fa5A-Za-z0-9_]+/g;
+  let cursor = 0;
+  let match = matcher.exec(source);
+  while (match) {
+    if (match.index > cursor) segments.push({ type: 'text', text: source.slice(cursor, match.index) });
+    segments.push({ type: 'tag', text: match[0] });
+    cursor = match.index + match[0].length;
+    match = matcher.exec(source);
+  }
+  if (cursor < source.length) segments.push({ type: 'text', text: source.slice(cursor) });
+  return segments.length ? segments : [{ type: 'text', text: source }];
+}
+
+function formatCommunityTime(value, now = Date.now()) {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return '';
+  const minutes = Math.max(0, Math.floor((now - timestamp) / 60000));
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}小时前`;
+  if (minutes < 7 * 1440) return `${Math.floor(minutes / 1440)}天前`;
+  const beijingDate = new Date(timestamp + 8 * 60 * 60 * 1000);
+  return `${beijingDate.getUTCMonth() + 1}月${beijingDate.getUTCDate()}日`;
+}
+
 function decorate(item) {
   const nickname = String(item && item.author && item.author.nickname || '拼吧用户').trim() || '拼吧用户';
   const avatarInitial = Array.from(nickname)[0] || '拼';
@@ -24,7 +52,8 @@ function decorate(item) {
     authorNickname: nickname,
     avatarInitial,
     avatarTone: AVATAR_TONES[(avatarInitial.codePointAt(0) || 0) % AVATAR_TONES.length],
-    displayTime: formatDateTime(item && item.createdAt),
+    contentSegments: splitContentSegments(item && item.content),
+    displayTime: formatCommunityTime(item && item.createdAt),
     likeCount: Math.max(0, Number(item && item.likeCount) || 0),
     viewerHasLiked: Boolean(item && item.viewerHasLiked),
     likePending: false
@@ -38,6 +67,7 @@ function mergeReplies(current, incoming) {
 
 Page({
   data: {
+    contentTopInset: 88,
     postId: '', post: null, replies: [], replyContent: '', submitting: false,
     loading: true, error: '', nextCursor: '', hasMore: false,
     loadingMore: false, loadMoreError: '', likingMap: {}, replyInputFocus: false
@@ -48,7 +78,8 @@ Page({
     this._disposed = false;
     const postId = String(options.id || '').trim();
     this._replyFocus = options.reply === '1' && Boolean(postId);
-    this.setData(postId ? { postId } : { postId: '', loading: false, error: '讨论参数无效' });
+    const contentTopInset = calculateContentTopInset(typeof wx === 'undefined' ? null : wx);
+    this.setData(postId ? { postId, contentTopInset } : { postId: '', contentTopInset, loading: false, error: '讨论参数无效' });
     if (!postId) return;
     return this.loadDetail(false);
   },
@@ -213,7 +244,12 @@ Page({
   handleRetryDetail() { return this.loadDetail(false); },
   handleRetryLoadMore() { this.loadDetail(true); },
   handleLoadMore() { this.loadDetail(true); },
+  handleBack() {
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    if (pages.length > 1) return wx.navigateBack({ delta: 1 });
+    return wx.switchTab({ url: '/pages/community/index' });
+  },
   handleBackToCommunity() { wx.switchTab({ url: '/pages/community/index' }); }
 });
 
-module.exports = { decorate, mergeReplies };
+module.exports = { decorate, mergeReplies, splitContentSegments, formatCommunityTime };
