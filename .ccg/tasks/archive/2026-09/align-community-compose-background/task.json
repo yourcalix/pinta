@@ -1,0 +1,12 @@
+{
+  "id": "align-community-compose-background",
+  "title": "使发布讨论背景与发现页面一致",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-12T00:00:00+08:00",
+  "branch": "main"
+}

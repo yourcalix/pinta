@@ -1,6 +1,4 @@
-<view class="compose-page global-background-host" style="padding-top: {{contentTopInset}}px;">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true"></image>
-  <view class="global-page-background-tint" aria-hidden="true"></view>
+<view class="compose-page" style="padding-top: {{contentTopInset}}px;">
   <view class="compose-navigation" style="height: {{contentTopInset}}px;">
     <view class="compose-nav-inner">
       <button class="compose-cancel" bindtap="handleCancel" disabled="{{submitting}}" hover-class="compose-control--pressed" hover-stay-time="70" role="button" aria-label="取消并返回上一页">取消</button>

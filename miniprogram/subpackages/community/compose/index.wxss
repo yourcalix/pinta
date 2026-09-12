@@ -1,6 +1,6 @@
 page {
   color: #111827;
-  background: #075aa7;
+  background: #f9f7f2;
 }
 
 .compose-page {
@@ -8,7 +8,7 @@ page {
   min-height: 100vh;
   box-sizing: border-box;
   flex-direction: column;
-  background: #075aa7;
+  background: #f9f7f2;
 }
 
 button {
@@ -26,7 +26,8 @@ button::after { display: none; }
   left: 0;
   z-index: 20;
   box-sizing: border-box;
-  background: rgba(7, 66, 129, .58);
+  background: rgba(249, 247, 242, .92);
+  border-bottom: 1rpx solid rgba(239, 236, 230, .8);
 }
 
 .compose-nav-inner {
@@ -53,7 +54,7 @@ button::after { display: none; }
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  color: #fff;
+  color: #374151;
   background: transparent;
   border: 0;
   font-size: 30rpx;
@@ -61,13 +62,13 @@ button::after { display: none; }
   text-align: left;
 }
 
-.compose-cancel[disabled] { color: rgba(255, 255, 255, .48); background: transparent; }
+.compose-cancel[disabled] { color: rgba(55, 65, 81, .42); background: transparent; }
 .compose-control--pressed { opacity: .48; }
 
 .compose-nav-title {
   position: absolute;
   left: 50%;
-  color: #fff;
+  color: #111827;
   font-size: 34rpx;
   font-weight: 850;
   line-height: 1;
@@ -193,13 +194,13 @@ button::after { display: none; }
   display: block;
   margin-top: 14rpx;
   padding: 0 8rpx;
-  color: #ffe1e3;
+  color: #dc2626;
   font-size: 24rpx;
   line-height: 36rpx;
 }
 
 .topic-section { margin-top: 26rpx; }
-.topic-heading { display: block; color: #e9f3ff; font-size: 24rpx; line-height: 36rpx; }
+.topic-heading { display: block; color: #78716c; font-size: 24rpx; line-height: 36rpx; }
 
 .topic-capsules-row {
   display: flex;

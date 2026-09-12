@@ -41,15 +41,17 @@ function loadPage() {
   };
 }
 
-test('发布讨论页保留深蓝纸纹背景并采用参考式自定义导航和真实内容结构', () => {
+test('发布讨论页与发现页共用暖米白背景并采用参考式自定义导航和真实内容结构', () => {
   const template = read('index.wxml');
   const style = read('index.wxss');
   const config = JSON.parse(read('index.json'));
   assert.equal(config.navigationStyle, 'custom');
-  assert.equal(config.backgroundColor, '#075AA7');
-  assert.equal(config.navigationBarTextStyle, 'white');
-  assert.match(template, /global-background-host/);
-  assert.match(template, /shared-paper-bg\.jpg/);
+  assert.equal(config.backgroundColor, '#F9F7F2');
+  assert.equal(config.backgroundColorTop, '#F9F7F2');
+  assert.equal(config.backgroundColorBottom, '#F9F7F2');
+  assert.equal(config.backgroundTextStyle, 'dark');
+  assert.equal(config.navigationBarTextStyle, 'black');
+  assert.doesNotMatch(template, /global-background-host|global-page-background|shared-paper-bg\.jpg/);
   assert.match(template, /class="compose-navigation"/);
   assert.match(template, /class="compose-cancel"[^>]*bindtap="handleCancel"/);
   assert.match(template, /class="compose-nav-title"[^>]*>发布讨论/);
@@ -58,7 +60,11 @@ test('发布讨论页保留深蓝纸纹背景并采用参考式自定义导航�
   assert.match(template, /将公开展示在社区/);
   assert.match(template, /class="compose-editor-card"/);
   assert.match(template, /class="compose-counter"[^>]*>\{\{contentLength\}\}\/500/);
-  assert.match(style, /page\s*\{[^}]*background:\s*#075aa7/s);
+  assert.match(style, /page\s*\{[^}]*background:\s*#f9f7f2/s);
+  assert.match(style, /\.compose-page\s*\{[^}]*background:\s*#f9f7f2/s);
+  assert.match(style, /\.compose-navigation\s*\{[^}]*background:\s*rgba\(249, 247, 242, \.92\)/s);
+  assert.match(style, /\.compose-cancel[\s\S]*color:\s*#374151/);
+  assert.match(style, /\.compose-nav-title\s*\{[^}]*color:\s*#111827/s);
   assert.match(style, /\.compose-editor-card\s*\{[^}]*min-height:\s*440rpx/s);
   assert.match(style, /\.confirm-publish-button\s*\{[^}]*min-height:\s*96rpx/s);
 });
