@@ -4,6 +4,7 @@ const communityService = require('../../services/community');
 const userService = require('../../services/user');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { selectTab } = require('../../utils/tab-bar');
+const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../utils/passenger-avatar');
 
 const PAGE_SIZE = 12;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
@@ -14,11 +15,12 @@ function decorate(item) {
   const authorNickname = String(item.author && item.author.nickname || '拼吧用户').trim() || '拼吧用户';
   const avatarInitial = Array.from(authorNickname)[0] || '拼';
   const avatarTone = AVATAR_TONES[(avatarInitial.codePointAt(0) || 0) % AVATAR_TONES.length];
+  const avatarSlot = normalizeAvatarSlots([item.author && item.author.avatar], 1)[0];
   const replyCount = Math.max(0, Number(item.replyCount) || 0);
   const likeCount = Math.max(0, Number(item.likeCount) || 0);
   const viewerHasLiked = Boolean(item.viewerHasLiked);
   const timeLabel = minutes < 1 ? '刚刚' : minutes < 60 ? `${minutes}分钟前` : minutes < 1440 ? `${Math.floor(minutes / 60)}小时前` : `${Math.floor(minutes / 1440)}天前`;
-  return { ...item, authorNickname, avatarInitial, avatarTone, replyCount, likeCount, viewerHasLiked, likePending: Boolean(item.likePending), timeLabel,
+  return { ...item, avatarSlot, authorNickname, avatarInitial, avatarTone, replyCount, likeCount, viewerHasLiked, likePending: Boolean(item.likePending), timeLabel,
     accessibilityLabel: `${authorNickname}发布的讨论：${String(item.content || '').slice(0, 30)}，${timeLabel}，${likeCount}个赞，${replyCount}条回复，${viewerHasLiked ? '已点赞' : '未点赞'}，双击查看详情`
   };
 }
@@ -117,6 +119,16 @@ Page({
 
   handleKeywordInput(event) {
     this.setData({ keyword: String(event.detail.value || '').slice(0, 30) });
+  },
+
+  handlePostAvatarError(event) {
+    const id = String(event.currentTarget.dataset.id || '');
+    if (!id) return;
+    this.setData({ posts: this.data.posts.map((item) => {
+      if (item.id !== id || item.avatarSlot.empty) return item;
+      const avatarSlot = fallbackAvatarSlot(item.avatarSlot);
+      return { ...item, avatarSlot: avatarSlot === item.avatarSlot ? { ...avatarSlot, src: '', empty: true } : avatarSlot };
+    }) });
   },
 
   handleSearchSubmit() {

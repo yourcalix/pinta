@@ -131,6 +131,21 @@ class MemoryStore {
     return clone(this.users.get(actorId) || null);
   }
 
+  async hydratePublicCommunityAuthors(items = []) {
+    const userIds = new Set(items.filter(Boolean).map((item) => item.authorId).filter(Boolean));
+    const profilesByUserId = {};
+    for (const userId of userIds) {
+      const user = this.users.get(userId);
+      if (!user || user.status !== 'ACTIVE' || !user.profile) continue;
+      const avatar = user.profile.avatar;
+      profilesByUserId[userId] = {
+        gender: user.profile.gender || null,
+        avatarSrc: avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : ''
+      };
+    }
+    return clone({ profilesByUserId });
+  }
+
   async hydratePublicActivityAvatars(activities = [], at = new Date()) {
     const activityIds = new Set(activities.filter(Boolean).map((activity) => activity.id));
     const activeMembers = [...this.members.values()]

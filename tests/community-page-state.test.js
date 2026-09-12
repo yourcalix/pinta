@@ -47,7 +47,7 @@ function unloadCommunityPage(context) {
   delete global.wx;
 }
 
-test('社区页把昵称装饰为受控单字头像且不生成位图路径', async () => {
+test('社区页优先装饰对应账号头像且无效DTO回退受控单字头像', async () => {
   const originalListPosts = communityService.listPosts;
   communityService.listPosts = async () => ({
     items: [{
@@ -55,7 +55,7 @@ test('社区页把昵称装饰为受控单字头像且不生成位图路径', as
       content: '周末一起交流新的运动项目。',
       createdAt: new Date().toISOString(),
       replyCount: 2,
-      author: { nickname: '小满' }
+      author: { nickname: '小满', avatar: { kind: 'CUSTOM', src: 'https://cdn.example/xiaoman.jpg', fallback: 'FEMALE_DEFAULT' } }
     }],
     nextCursor: null
   });
@@ -65,8 +65,17 @@ test('社区页把昵称装饰为受控单字头像且不生成位图路径', as
     const [post] = context.page.data.posts;
     assert.equal(post.avatarInitial, '小');
     assert.match(post.avatarTone, /^(blue|purple|orange|green|teal)$/);
-    assert.equal(post.avatarPath, undefined);
+    assert.equal(post.avatarSlot.kind, 'CUSTOM');
+    assert.equal(post.avatarSlot.src, 'https://cdn.example/xiaoman.jpg');
+    assert.match(post.avatarSlot.fallbackSrc, /profile-avatar-female-painted\.png$/);
     assert.match(post.accessibilityLabel, /小满发布的讨论/);
+
+    context.page.handlePostAvatarError({ currentTarget: { dataset: { id: 'post-1' } } });
+    assert.equal(context.page.data.posts[0].avatarSlot.kind, 'DEFAULT');
+    assert.equal(context.page.data.posts[0].avatarSlot.src, post.avatarSlot.fallbackSrc);
+    context.page.handlePostAvatarError({ currentTarget: { dataset: { id: 'post-1' } } });
+    assert.equal(context.page.data.posts[0].avatarSlot.empty, true);
+    assert.equal(context.page.data.posts[0].avatarSlot.src, '');
   } finally {
     communityService.listPosts = originalListPosts;
     unloadCommunityPage(context);

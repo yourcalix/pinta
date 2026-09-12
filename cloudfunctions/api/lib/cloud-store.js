@@ -161,6 +161,59 @@ class CloudStore {
     return this.getDocument('users', actorId);
   }
 
+  async hydratePublicCommunityAuthors(items = []) {
+    const userIds = [...new Set(items.filter(Boolean).map((item) => item.authorId).filter(Boolean))];
+    const users = [];
+    for (let index = 0; index < userIds.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
+      const chunk = userIds.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
+      const result = await this.db.collection('users')
+        .where({ _id: this.command.in(chunk) })
+        .limit(chunk.length)
+        .get();
+      users.push(...(result.data || []).map(entity));
+    }
+    const activeUsers = users.filter((user) => user.status === 'ACTIVE' && user.profile);
+    const fileIDs = [...new Set(activeUsers.map((user) => {
+      const avatar = user.profile.avatar;
+      return avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : '';
+    }).filter(Boolean))];
+    const displayUrlByFileID = new Map();
+    if (typeof this.cloud.getTempFileURL === 'function') {
+      try {
+        let failureCount = 0;
+        for (let index = 0; index < fileIDs.length; index += 50) {
+          const chunk = fileIDs.slice(index, index + 50);
+          const result = await this.cloud.getTempFileURL({ fileList: chunk });
+          let successCount = 0;
+          for (const item of result.fileList || []) {
+            if (item && item.status === 0 && item.fileID && typeof item.tempFileURL === 'string' && /^https:\/\//.test(item.tempFileURL)) {
+              displayUrlByFileID.set(item.fileID, item.tempFileURL);
+              successCount += 1;
+            }
+          }
+          failureCount += Math.max(0, chunk.length - successCount);
+        }
+        if (failureCount) console.error('[pinba-community-avatar-url-partial]', { userCount: userIds.length, fileCount: fileIDs.length, failureCount });
+      } catch (error) {
+        console.error('[pinba-community-avatar-url]', {
+          userCount: userIds.length,
+          fileCount: fileIDs.length,
+          code: error && (error.errCode || error.code) || 'UNKNOWN'
+        });
+      }
+    }
+    const profilesByUserId = {};
+    for (const user of activeUsers) {
+      const avatar = user.profile.avatar;
+      const fileID = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string' ? avatar.fileID : '';
+      profilesByUserId[user.id] = {
+        gender: user.profile.gender || null,
+        avatarSrc: displayUrlByFileID.get(fileID) || ''
+      };
+    }
+    return { profilesByUserId };
+  }
+
   async hydratePublicActivityAvatars(activities = [], at = new Date()) {
     const activityIds = [...new Set(activities.filter(Boolean).map((activity) => activity.id).filter(Boolean))];
     const activeMembers = [];

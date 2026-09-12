@@ -604,11 +604,22 @@ function initializeActivityCommunication(target) {
 }
 initializeActivityCommunication(state);
 
+function publicCommunityAuthor(item) {
+  if (!item || !item.author) return null;
+  const current = userById(item.authorId);
+  const legacyProfile = { gender: item.author.avatarKind === 'PASSENGER_A' ? 'MALE' : item.author.avatarKind === 'PASSENGER_B' ? 'FEMALE' : null };
+  return {
+    nickname: item.author.nickname,
+    avatarKind: item.author.avatarKind,
+    avatar: publicAvatarSlot(current && current.status === 'ACTIVE' && current.profile ? current.profile : legacyProfile)
+  };
+}
+
 function publicCommunityPost(item) {
   const like = state.communityLikes.find((entry) => entry.targetType === 'post' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
   return {
     id: item.id,
-    author: clone(item.author),
+    author: publicCommunityAuthor(item),
     content: item.content,
     replyCount: Number(item.replyCount || 0),
     likeCount: Number(item.likeCount || 0),
@@ -624,7 +635,7 @@ function publicCommunityReply(item) {
   return {
     id: item.id,
     postId: item.postId,
-    author: clone(item.author),
+    author: publicCommunityAuthor(item),
     content: item.content,
     likeCount: Number(item.likeCount || 0),
     createdAt: item.createdAt,

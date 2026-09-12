@@ -34,7 +34,8 @@ button::after{display:none}
 .post-card{min-height:300rpx;padding:24rpx;overflow:hidden;border-radius:28rpx;transition:opacity 120ms ease,transform 120ms ease}
 .post-card-hover{background:#f6f4ee}
 .post-author-row,.post-footer,.post-metrics,.like-count,.reply-count,.skeleton-head,.skeleton-footer,.footer-state{display:flex;align-items:center}
-.post-avatar{display:flex;flex:0 0 72rpx;width:72rpx;height:72rpx;align-items:center;justify-content:center;margin-right:16rpx;color:#fff;border-radius:50%;font-size:28rpx;font-weight:800;box-shadow:inset 0 -4rpx 9rpx rgba(17,24,39,.08)}
+.post-avatar{display:flex;flex:0 0 72rpx;width:72rpx;height:72rpx;align-items:center;justify-content:center;margin-right:16rpx;box-sizing:border-box;overflow:hidden;color:#fff;border-radius:50%;font-size:28rpx;font-weight:800;box-shadow:inset 0 -4rpx 9rpx rgba(17,24,39,.08)}
+.post-avatar-image{display:block;background:#f3f0e6;pointer-events:none}
 .post-avatar--blue{background:#7fa6ce}
 .post-avatar--purple{background:#9a8bc7}
 .post-avatar--orange{background:#d59b68}

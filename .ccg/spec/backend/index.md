@@ -4,7 +4,7 @@
 
 - 自定义头像使用独立的 `profile.avatar.prepare / profile.avatar.confirm / profile.avatar.clear` 状态机，不通过 `profile.update` 接收自由 `fileID`。
 - 上传记录必须绑定当前 actor、服务端生成的 uploadId、精确 cloudPath 与过期时间；confirm 必须下载文件并校验真实格式、大小、尺寸及图片安全结果，生产环境审核不可用时 fail-closed。
-- 自定义头像原始记录只进入 `selfUser.profile.avatar`。公开活动人数进度可在服务端从 `ACTIVE` 成员事实批量水合当前头像，但只允许输出 `CUSTOM { src, fallback } | DEFAULT { fallback } | EMPTY` 展示 DTO；不得输出 memberId、userId、cloudPath、uploadId、revision，且社区作者、申请人、群成员、消息参与者、分享与审计 payload 仍不得携带自定义头像。默认性别手绘头像继续作为无自定义头像和加载失败回退。
+- 自定义头像原始记录只进入 `selfUser.profile.avatar`。公开活动人数进度与社区帖子/回复作者可在服务端从 `ACTIVE` 用户事实批量水合当前头像，但只允许输出 `CUSTOM { src, fallback } | DEFAULT { fallback } | EMPTY` 展示 DTO；不得输出 memberId、authorId、userId、openid、fileID、cloudPath、uploadId、revision。社区水合必须按作者去重批量读取，CloudBase `command.in` 每批不超过 10 条，只接受服务端签发的 HTTPS 临时地址，失败时不得拖垮主请求。申请人、群成员、消息参与者、分享与审计 payload 仍不得携带自定义头像。默认性别手绘头像继续作为无自定义头像和加载失败回退。
 - 新头像绑定与用户资料更新必须事务化；临时文件和被替换文件采用即时 best-effort 删除并由部署侧清理机制兜底。
 
 ## 架构

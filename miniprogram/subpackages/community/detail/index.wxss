@@ -4,6 +4,7 @@
 .retry-button { margin-top: 20rpx; }
 .author-row, .reply-card { display: flex; align-items: flex-start; }
 .avatar, .reply-avatar { display: flex; align-items: center; justify-content: center; color: #fff8ee; font-weight: 700; box-shadow: inset 0 -4rpx 0 rgba(7,35,70,.12), 0 4rpx 10rpx rgba(7,35,70,.12); }
+.avatar-image, .reply-avatar-image { display: block; box-sizing: border-box; overflow: hidden; background: #f3f0e6; pointer-events: none; }
 .avatar { flex: 0 0 80rpx; width: 80rpx; height: 80rpx; margin-right: 16rpx; border: 3rpx solid rgba(255,248,238,.86); border-radius: 24rpx; font-size: 34rpx; }
 .avatar--blue { background: #2f6fbd; }
 .avatar--purple { background: #6b46c1; }

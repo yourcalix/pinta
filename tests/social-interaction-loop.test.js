@@ -117,7 +117,7 @@ test('删除目标不能点赞，未登录或资料不完整不能点赞', async
   assert.equal((await call('community.like.set', { targetType: 'reply', targetId: 'reply', liked: true })).error.code, 'UNAUTHENTICATED');
 });
 
-test('前端呈现双计数、友好时间、单字头像、评论续页与独立点赞锁，社区无陌生人私信', () => {
+test('前端呈现当前用户头像、单字回退、双计数、评论续页与独立点赞锁', () => {
   const root = path.join(__dirname, '../miniprogram');
   const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
   const list = read('pages/community/index.wxml');
@@ -126,7 +126,9 @@ test('前端呈现双计数、友好时间、单字头像、评论续页与独�
   assert.match(list, /item\.likeCount/);
   assert.match(detail, /displayTime/);
   assert.match(detail, /avatarInitial/);
-  assert.doesNotMatch(detail, /avatarPath|<image[^>]*reply-avatar/);
+  assert.match(list, /binderror="handlePostAvatarError"/);
+  assert.match(detail, /binderror="handleReplyAvatarError"/);
+  assert.match(detail, /mode="\{\{item\.avatarSlot\.mode\}\}"/);
   assert.match(detail, /handleLike/);
   assert.match(detail, /handleRetryLoadMore/);
   assert.match(detail, /handleRetryDetail/);

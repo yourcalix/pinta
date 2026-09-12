@@ -1,0 +1,12 @@
+{
+  "id": "align-community-author-avatars",
+  "title": "让讨论区帖子与回复头像对应当前用户头像",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交已验证变更",
+  "createdAt": "2026-09-12T16:19:19Z",
+  "branch": "main"
+}

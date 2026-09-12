@@ -56,7 +56,7 @@ test('发现页采用真实讨论搜索、通知入口、真实主题动作和�
   assert.equal(config.backgroundColor, '#F9F7F2');
 });
 
-test('发现页空状态与帖子卡使用白卡、受控单字头像和真实互动数', () => {
+test('发现页空状态与帖子卡使用白卡、当前头像及受控单字回退', () => {
   const template = read('pages/community/index.wxml');
   const style = read('pages/community/index.wxss');
   const script = read('pages/community/index.js');
@@ -70,7 +70,8 @@ test('发现页空状态与帖子卡使用白卡、受控单字头像和真实�
   assert.match(template, /class="like-count reply-count"[^>]*data-r="1"[^>]*catchtap="handlePost"/);
   assert.match(template, /community-empty-discussion\.png/);
   assert.doesNotMatch(template, /认证邻居|关联活动|收藏|分享|帖子图片|post-image|围观|浏览量|#反诈提醒/);
-  assert.match(script, /AVATAR_TONES/);
+  assert.match(script, /normalizeAvatarSlots/);
+  assert.match(script, /fallbackAvatarSlot/);
   assert.match(script, /avatarInitial/);
   assert.match(script, /loadMoreError/);
   assert.match(script, /发现内容加载失败/);

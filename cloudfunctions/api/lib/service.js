@@ -347,10 +347,26 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
   return result;
 }
 
-function publicCommunityPost(post, viewerId = '', viewerHasLiked = false) {
+function legacyCommunityAuthorProfile(item) {
+  const avatarKind = item && item.author && item.author.avatarKind;
+  return { gender: avatarKind === 'PASSENGER_A' ? 'MALE' : avatarKind === 'PASSENGER_B' ? 'FEMALE' : null };
+}
+
+function publicCommunityAuthor(item, profilesByUserId = {}) {
+  if (!item || !item.author) return null;
+  const hasHydratedProfile = item.authorId && Object.prototype.hasOwnProperty.call(profilesByUserId, item.authorId);
+  const profile = hasHydratedProfile ? profilesByUserId[item.authorId] : legacyCommunityAuthorProfile(item);
+  return {
+    nickname: item.author.nickname,
+    avatarKind: item.author.avatarKind,
+    avatar: publicAvatarSlot(profile)
+  };
+}
+
+function publicCommunityPost(post, viewerId = '', viewerHasLiked = false, profilesByUserId = {}) {
   return {
     id: post.id,
-    author: post.author ? { nickname: post.author.nickname, avatarKind: post.author.avatarKind } : null,
+    author: publicCommunityAuthor(post, profilesByUserId),
     content: post.content,
     replyCount: Number(post.replyCount || 0),
     likeCount: Number(post.likeCount || 0),
@@ -361,11 +377,11 @@ function publicCommunityPost(post, viewerId = '', viewerHasLiked = false) {
   };
 }
 
-function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false) {
+function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false, profilesByUserId = {}) {
   return {
     id: reply.id,
     postId: reply.postId,
-    author: reply.author ? { nickname: reply.author.nickname, avatarKind: reply.author.avatarKind } : null,
+    author: publicCommunityAuthor(reply, profilesByUserId),
     content: reply.content,
     likeCount: Number(reply.likeCount || 0),
     createdAt: reply.createdAt,
@@ -466,7 +482,28 @@ function createPinbaService(options) {
     return publicCompanionSnapshot(page, actorId, at);
   }
 
+  async function communityAuthorProfiles(items) {
+    if (typeof store.hydratePublicCommunityAuthors !== 'function') return {};
+    try {
+      const hydration = await store.hydratePublicCommunityAuthors(items);
+      return hydration && hydration.profilesByUserId || {};
+    } catch (error) {
+      console.error('[pinba-community-avatar-hydration]', {
+        itemCount: (items || []).length,
+        code: error && (error.errCode || error.code) || 'UNKNOWN'
+      });
+      return {};
+    }
+  }
+
   async function refreshCachedActivity(data, context, at) {
+    const communityKey = data && data.post && data.post.author ? 'post' : data && data.reply && data.reply.author ? 'reply' : '';
+    if (communityKey) {
+      const cachedItem = data[communityKey];
+      const authorItem = { authorId: context && context.actorId, author: cachedItem.author };
+      const profilesByUserId = await communityAuthorProfiles([authorItem]);
+      return { ...data, [communityKey]: { ...cachedItem, author: publicCommunityAuthor(authorItem, profilesByUserId) } };
+    }
     if (!data || !data.activity || !data.activity.id) return data;
     const emptyCachedAvatarSlots = () => {
       const capacity = data.activity.maxMembers || data.activity.maxPassengers || data.activity.targetMembers;
@@ -821,8 +858,9 @@ function createPinbaService(options) {
       const actorId = context && context.actorId;
       const targets = page.items.map((item) => ({ targetType: 'post', targetId: item.id }));
       const likeStates = actorId ? await store.getCommunityLikeStates(actorId, targets) : {};
+      const profilesByUserId = await communityAuthorProfiles(page.items);
       return {
-        items: page.items.map((item) => publicCommunityPost(item, actorId, likeStates[`post:${item.id}`])),
+        items: page.items.map((item) => publicCommunityPost(item, actorId, likeStates[`post:${item.id}`], profilesByUserId)),
         nextCursor: page.nextCursor || null
       };
     }
@@ -836,9 +874,10 @@ function createPinbaService(options) {
       const actorId = context && context.actorId;
       const targets = [{ targetType: 'post', targetId: post.id }, ...page.items.map((item) => ({ targetType: 'reply', targetId: item.id }))];
       const likeStates = actorId ? await store.getCommunityLikeStates(actorId, targets) : {};
+      const profilesByUserId = await communityAuthorProfiles([post, ...page.items]);
       return {
-        post: publicCommunityPost(post, actorId, likeStates[`post:${post.id}`]),
-        replies: page.items.map((item) => publicCommunityReply(item, actorId, likeStates[`reply:${item.id}`])),
+        post: publicCommunityPost(post, actorId, likeStates[`post:${post.id}`], profilesByUserId),
+        replies: page.items.map((item) => publicCommunityReply(item, actorId, likeStates[`reply:${item.id}`], profilesByUserId)),
         nextCursor: page.nextCursor || null
       };
     }
@@ -862,7 +901,9 @@ function createPinbaService(options) {
         updatedAt: at
       };
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityPost', targetId: post.id, at };
-      return { post: publicCommunityPost(await store.createCommunityPost(post, audit), user.id) };
+      const createdPost = await store.createCommunityPost(post, audit);
+      const profilesByUserId = await communityAuthorProfiles([createdPost]);
+      return { post: publicCommunityPost(createdPost, user.id, false, profilesByUserId) };
     }
 
     if (action === 'community.reply.create') {
@@ -886,7 +927,8 @@ function createPinbaService(options) {
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityReply', targetId: reply.id, at };
       const createdReply = await store.createCommunityReply(reply, audit);
       const updatedPost = await store.getCommunityPost(payload.postId);
-      return { reply: publicCommunityReply(createdReply, user.id), replyCount: Number(updatedPost && updatedPost.replyCount || 0) };
+      const profilesByUserId = await communityAuthorProfiles([createdReply]);
+      return { reply: publicCommunityReply(createdReply, user.id, false, profilesByUserId), replyCount: Number(updatedPost && updatedPost.replyCount || 0) };
     }
 
     if (action === 'community.post.delete') {

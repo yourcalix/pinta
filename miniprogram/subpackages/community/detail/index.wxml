@@ -9,7 +9,8 @@
   <block wx:else>
     <view class="post-detail surface">
       <view class="author-row">
-        <view class="avatar avatar--{{post.avatarTone}}" aria-hidden="true">{{post.avatarInitial}}</view>
+        <image wx:if="{{!post.avatarSlot.empty}}" class="avatar avatar-image" src="{{post.avatarSlot.src}}" mode="{{post.avatarSlot.mode}}" binderror="handlePostAvatarError" aria-hidden="true"></image>
+        <view wx:else class="avatar avatar--{{post.avatarTone}}" aria-hidden="true">{{post.avatarInitial}}</view>
         <view class="author-meta">
           <text class="author-name">{{post.authorNickname}}</text>
           <text class="post-time">{{post.displayTime}}</text>
@@ -33,7 +34,8 @@
     <view class="reply-heading"><text>全部回复</text><text class="reply-count">{{post.replyCount}}</text></view>
     <view wx:if="{{replies.length}}" class="reply-list">
       <view wx:for="{{replies}}" wx:key="id" class="reply-card surface">
-        <view class="reply-avatar avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
+        <image wx:if="{{!item.avatarSlot.empty}}" class="reply-avatar reply-avatar-image" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" lazy-load="true" data-id="{{item.id}}" binderror="handleReplyAvatarError" aria-hidden="true"></image>
+        <view wx:else class="reply-avatar avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
         <view class="reply-body">
           <view class="reply-meta">
             <text class="reply-author">{{item.authorNickname}}</text>

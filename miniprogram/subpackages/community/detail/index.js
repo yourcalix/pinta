@@ -4,6 +4,7 @@ const communityService = require('../../../services/community');
 const userService = require('../../../services/user');
 const safetyService = require('../../../services/safety');
 const { formatDateTime } = require('../../../utils/date');
+const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../../utils/passenger-avatar');
 
 const PAGE_SIZE = 20;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
@@ -19,6 +20,7 @@ function decorate(item) {
   const avatarInitial = Array.from(nickname)[0] || '拼';
   return {
     ...item,
+    avatarSlot: normalizeAvatarSlots([item && item.author && item.author.avatar], 1)[0],
     authorNickname: nickname,
     avatarInitial,
     avatarTone: AVATAR_TONES[(avatarInitial.codePointAt(0) || 0) % AVATAR_TONES.length],
@@ -109,6 +111,20 @@ Page({
     if (!await this.ensureInteractionAccess()) this.setData({ replyInputFocus: false });
   },
   handleReplyBlur() { if (this.data.replyInputFocus) this.setData({ replyInputFocus: false }); },
+
+  handlePostAvatarError() {
+    if (this.data.post) this.setData({ post: this.fallbackAuthorAvatar(this.data.post) });
+  },
+  handleReplyAvatarError(event) {
+    const id = String(event.currentTarget.dataset.id || '');
+    if (!id) return;
+    this.setData({ replies: this.data.replies.map((item) => item.id === id ? this.fallbackAuthorAvatar(item) : item) });
+  },
+  fallbackAuthorAvatar(item) {
+    if (!item || item.avatarSlot.empty) return item;
+    const avatarSlot = fallbackAvatarSlot(item.avatarSlot);
+    return { ...item, avatarSlot: avatarSlot === item.avatarSlot ? { ...avatarSlot, src: '', empty: true } : avatarSlot };
+  },
 
   async handleSendReply() {
     const content = this.data.replyContent.trim();

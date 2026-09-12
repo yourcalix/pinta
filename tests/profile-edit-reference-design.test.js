@@ -30,7 +30,8 @@ test('编辑主页只呈现真实资料字段且受控头像随性别联动', ()
 
   assert.match(template, /class="controlled-avatar"[^>]*src="\{\{profileAvatarPath\}\}"/);
   assert.match(template, /open-type="chooseAvatar"/);
-  assert.match(template, /点击更换 · 仅主页展示/);
+  assert.match(template, /点击更换 · 公开展示/);
+  assert.match(template, /个人主页、活动成员展示与讨论区作者识别/);
   assert.match(template, /class="profile-row nickname-row"[^>]*bindtap="handleNicknameOpen"/);
   assert.match(template, /class="row-chevron"[^>]*aria-hidden="true">›/);
   assert.match(template, /bindchange="handleGenderPick"/);
