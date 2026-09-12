@@ -1,0 +1,12 @@
+{
+  "id": "clarify-companion-presence-permission",
+  "title": "确认在线搭子集合的控制台权限选项",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "guides",
+  "currentPhase": "completed",
+  "nextAction": "用户选择所有用户不可读写并创建集合",
+  "createdAt": "2026-09-12T00:00:00+08:00",
+  "branch": "main"
+}
