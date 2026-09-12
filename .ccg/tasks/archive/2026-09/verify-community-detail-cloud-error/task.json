@@ -1,0 +1,12 @@
+{
+  "id": "verify-community-detail-cloud-error",
+  "title": "确认讨论详情云端真实错误",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "读取 api 云函数失败日志并依据错误码继续定位",
+  "createdAt": "2026-09-12T18:55:00+08:00",
+  "branch": "main"
+}
