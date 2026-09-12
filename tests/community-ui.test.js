@@ -30,11 +30,11 @@ test('发现页采用真实讨论搜索、通知入口、真实主题动作和�
   assert.match(template, /class="search-result-bar"[^>]*\{\{appliedKeyword\}\}/);
   assert.match(template, /class="community-notification"[^>]*bindtap="handleMessages"/);
   assert.match(template, /class="community-topic-rail"[^>]*enable-flex="true"/);
-  assert.match(template, /data-action="activities"[^>]*bindtap="handleTopicAction"/);
+  assert.match(template, /data-action="companion"[^>]*bindtap="handleTopicAction"/);
   assert.match(template, /data-action="guidelines"[^>]*bindtap="handleTopicAction"/);
   assert.match(template, /data-action="compose"[^>]*bindtap="handleTopicAction"/);
   assert.match(template, /#寻找搭子|#社区守则|#发布讨论/);
-  assert.match(script, /handleSearchActivities\(\)/);
+  assert.match(script, /handleCompanionOrbit\(\)/);
   assert.match(script, /handleSearchSubmit\(\)/);
   assert.match(script, /keyword:\s*this\.data\.appliedKeyword \|\| undefined/);
   assert.match(script, /handleMessages\(\)/);
@@ -75,13 +75,13 @@ test('发现页空状态与帖子卡使用白卡、受控单字头像和真实�
   assert.match(script, /发现内容加载失败/);
 });
 
-test('发现主题动作复用既有守则、发帖、活动列表与消息路由', () => {
+test('发现主题动作复用既有守则、发帖、在线星球与消息路由', () => {
   const script = read('pages/community/index.js');
   assert.match(script, /handleGuidelines\(\)\s*\{/);
   assert.match(script, /wx\.showModal\(\{/);
   assert.match(script, /title:\s*'拼吧发现守则'/);
   assert.match(script, /showCancel:\s*false/);
-  assert.match(script, /subpackages\/activity\/list\/index/);
+  assert.match(script, /subpackages\/community\/companion\/index/);
   assert.match(script, /pages\/messages\/index/);
   assert.match(script, /subpackages\/community\/compose\/index/);
   assert.doesNotMatch(script, /pages\/common\/webview|community\/rules/);

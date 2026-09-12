@@ -97,6 +97,7 @@ npm run verify
 ## 建议数据库索引
 
 - `activities`：`status + startsAt`、`type + status + startsAt`、`city + district + status + startsAt`、`type + status + typeData.routeId + startsAt`、`ownerId + updatedAt`；附近查询另为顶层 `meetingGeoPoint` 建立地理位置索引，并按真实 CloudBase 控制台查询计划补齐 `status / city / type / district` 组合。
+- `companionPresences`：`scene(升序) + status(升序) + expiresAt(降序)`，用于“在线搭子星球”读取未过期在线事实；集合禁止客户端直接读写，只经云函数鉴权与脱敏快照访问。
 - `applications`：`activityId + createdAt`、`activityId + applicantId + status`。
 - `members`：`activityId + userId + status`、`userId + role + status`。
 - `memberContacts`：成员电话敏感集合，仅云函数读写；以活动和成员确定性 ID 保存，禁止开放客户端直读权限。

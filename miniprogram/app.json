@@ -11,7 +11,8 @@
       "root": "subpackages/community",
       "pages": [
         "detail/index",
-        "compose/index"
+        "compose/index",
+        "companion/index"
       ]
     },
     {

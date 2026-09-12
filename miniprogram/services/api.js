@@ -19,6 +19,9 @@ const MUTATING_ACTIONS = new Set([
   'community.post.delete',
   'community.reply.delete',
   'community.like.set',
+  'companion.presence.enter',
+  'companion.presence.heartbeat',
+  'companion.presence.leave',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -42,7 +45,9 @@ const SENSITIVE_MUTATING_ACTIONS = new Set([
   'community.post.create',
   'community.reply.create',
   'dm.message.send',
-  'group.message.send'
+  'group.message.send',
+  'companion.presence.heartbeat',
+  'companion.presence.leave'
 ]);
 const sensitiveFingerprintSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 let authenticatedActorScope = '';

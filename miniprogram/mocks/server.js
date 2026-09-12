@@ -59,6 +59,9 @@ const MUTATING_ACTIONS = new Set([
   'community.post.delete',
   'community.reply.delete',
   'community.like.set',
+  'companion.presence.enter',
+  'companion.presence.heartbeat',
+  'companion.presence.leave',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -81,6 +84,7 @@ const MUTATING_ACTIONS = new Set([
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
   'driver.application.submit', 'admin.driverApplication.review', 'community.like.set',
+  'companion.presence.heartbeat', 'companion.presence.leave',
   'group.message.send', 'group.message.read', 'dm.consult.create', 'dm.message.send'
 ]);
 const PUBLIC_ACTIONS = new Set([
@@ -90,11 +94,16 @@ const PUBLIC_ACTIONS = new Set([
   'activity.detail',
   'activity.question.list',
   'community.post.list',
-  'community.post.detail'
+  'community.post.detail',
+  'companion.presence.snapshot'
 ]);
 const MAX_PUBLIC_SCAN = 500;
 const mockSensitiveHashSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
 const PASSENGER_AVATAR_KINDS = Object.freeze(['PASSENGER_A', 'PASSENGER_B']);
+const COMPANION_PRESENCE_SCENE = 'companion_globe';
+const COMPANION_PRESENCE_TTL_MS = 90 * 1000;
+const COMPANION_MIN_WRITE_INTERVAL_MS = 20 * 1000;
+const COMPANION_SAMPLE_LIMIT = 50;
 
 function isMockLocalAvatarPath(value) {
   return typeof value === 'string'
@@ -253,6 +262,34 @@ function stableMockEntityId(prefix, ...parts) {
     hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
   }
   return `${prefix}_${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+}
+
+function validateCompanionScene(input, requireSessionToken = false) {
+  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '在线场景参数无效');
+  const allowedKeys = requireSessionToken ? ['scene', 'sessionToken'] : ['scene'];
+  assert(Object.keys(input).every((key) => allowedKeys.includes(key)), 'VALIDATION_ERROR', '在线场景参数无效');
+  assert(input.scene === COMPANION_PRESENCE_SCENE, 'VALIDATION_ERROR', '在线场景无效');
+  if (requireSessionToken) assert(typeof input.sessionToken === 'string' && input.sessionToken.length >= 16 && input.sessionToken.length <= 100, 'VALIDATION_ERROR', '在线会话令牌无效');
+  return { scene: input.scene, sessionToken: requireSessionToken ? input.sessionToken : '' };
+}
+
+function publicMockPresenceSnapshot(at) {
+  const active = state.companionPresences
+    .filter((item) => item.scene === COMPANION_PRESENCE_SCENE && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(at))
+    .sort((left, right) => String(right.expiresAt).localeCompare(String(left.expiresAt)) || String(left.id).localeCompare(String(right.id)));
+  const bucket = Math.floor(Date.parse(at) / 15000);
+  const users = active.slice(0, COMPANION_SAMPLE_LIMIT).map((item) => {
+    const nickname = Array.from(String(item.nickname || '').trim() || '匿名搭子').slice(0, 12).join('');
+    const sessionKey = item.sessionNonce
+      || stableMockEntityId('legacyPresenceWindow', nickname, item.expiresAt, bucket);
+    return {
+      displayToken: stableMockEntityId('presenceView', sessionKey, bucket),
+      nickname,
+      layoutSeed: Number.parseInt(sessionKey.slice(-8), 16) >>> 0,
+      viewerIsSelf: item.userId === currentUserId
+    };
+  }).sort((left, right) => left.displayToken.localeCompare(right.displayToken));
+  return { onlineTotal: active.length, sampleLimit: COMPANION_SAMPLE_LIMIT, users, serverNow: at };
 }
 
 function normalizeActivityForRead(activity, now) {
@@ -476,6 +513,7 @@ function seedState() {
       }
     ],
     communityLikes: [],
+    companionPresences: [],
     directConversations: directPreview.conversations,
     directMessages: directPreview.messages,
     groupMessages: [],
@@ -516,6 +554,7 @@ if (!state.memberContacts) state.memberContacts = [];
 if (!state.communityPosts) state.communityPosts = [];
 if (!state.communityReplies) state.communityReplies = [];
 if (!state.communityLikes) state.communityLikes = [];
+if (!state.companionPresences) state.companionPresences = [];
 if (!state.groupMessages) state.groupMessages = [];
 if (!state.groupReadStates) state.groupReadStates = [];
 if (!Array.isArray(state.directConversations)
@@ -992,6 +1031,12 @@ function requireUser() {
   const user = userById(currentUserId);
   if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
   if (user.status !== 'ACTIVE') throw fail('ACCOUNT_DISABLED', '账号已被限制，请联系平台处理');
+  return user;
+}
+
+function requireKnownUser() {
+  const user = userById(currentUserId);
+  if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
   return user;
 }
 
@@ -1629,7 +1674,8 @@ function approveApplication(input) {
 
 function handle(action, input, idempotencyKey = '') {
   if (REMOVED_ACTIONS.has(action)) throw fail('NOT_FOUND', '接口动作不存在');
-  if (!PUBLIC_ACTIONS.has(action)) requireUser();
+  if (action === 'companion.presence.leave') requireKnownUser();
+  else if (!PUBLIC_ACTIONS.has(action)) requireUser();
   if (action === 'auth.login') {
     const user = requireUser();
     return {
@@ -1798,6 +1844,58 @@ function handle(action, input, idempotencyKey = '') {
   if (action === 'activity.question.list') return listActivityQuestions(input);
   if (action === 'activity.question.ask') return askActivityQuestion(input);
   if (action === 'activity.question.answer') return answerActivityQuestion(input);
+  if (action === 'companion.presence.snapshot') {
+    validateCompanionScene(input);
+    return publicMockPresenceSnapshot(new Date().toISOString());
+  }
+  if (action === 'companion.presence.enter') {
+    validateCompanionScene(input);
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const now = new Date().toISOString();
+    const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
+    const existing = state.companionPresences.find((item) => item.id === id);
+    const sessionNonce = stableMockEntityId('presenceSession', now, idempotencyKey);
+    const next = {
+      id,
+      scene: COMPANION_PRESENCE_SCENE,
+      userId: user.id,
+      nickname: user.profile.nickname,
+      sessionNonce,
+      layoutSeed: Number.parseInt(sessionNonce.slice(-8), 16) >>> 0,
+      status: 'ACTIVE',
+      lastSeenAt: now,
+      expiresAt: new Date(Date.parse(now) + COMPANION_PRESENCE_TTL_MS).toISOString(),
+      createdAt: existing && existing.createdAt || now,
+      updatedAt: now
+    };
+    if (existing) Object.assign(existing, next); else state.companionPresences.push(next);
+    return { joined: true, sessionToken: sessionNonce, sessionTtlSec: 90, heartbeatIntervalSec: 30, snapshot: publicMockPresenceSnapshot(now) };
+  }
+  if (action === 'companion.presence.heartbeat') {
+    const { sessionToken } = validateCompanionScene(input, true);
+    const user = requireActiveUser(true);
+    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+    const now = new Date().toISOString();
+    const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
+    const presence = state.companionPresences.find((item) => item.id === id && item.sessionNonce === sessionToken && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(now));
+    const refreshed = Boolean(presence && Date.parse(now) - Date.parse(presence.updatedAt) >= COMPANION_MIN_WRITE_INTERVAL_MS);
+    if (refreshed) Object.assign(presence, {
+      lastSeenAt: now,
+      expiresAt: new Date(Date.parse(now) + COMPANION_PRESENCE_TTL_MS).toISOString(),
+      updatedAt: now
+    });
+    return { joined: Boolean(presence), refreshed, serverNow: now, sessionTtlSec: 90, heartbeatIntervalSec: 30 };
+  }
+  if (action === 'companion.presence.leave') {
+    const { sessionToken } = validateCompanionScene(input, true);
+    const user = requireKnownUser();
+    const now = new Date().toISOString();
+    const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
+    const presence = state.companionPresences.find((item) => item.id === id);
+    if (presence && presence.sessionNonce === sessionToken) Object.assign(presence, { status: 'INACTIVE', expiresAt: now, updatedAt: now });
+    return { joined: false, serverNow: now };
+  }
   if (action === 'community.post.list') {
     assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '讨论筛选条件无效');
     assert(Object.keys(input).every((key) => ['cursor', 'limit', 'keyword'].includes(key)), 'VALIDATION_ERROR', '讨论筛选条件无效');
@@ -2364,7 +2462,8 @@ async function call(event) {
       ? opaqueSensitiveHash(stableSerialize(event.data || {}))
       : '';
     if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');
-    if (isMutation) requireUser();
+    if (isMutation && action === 'companion.presence.leave') requireKnownUser();
+    else if (isMutation) requireUser();
     if (idempotencyId && communityPayloadHash && state.idempotency[`${idempotencyId}:payload`]) {
       assert(state.idempotency[`${idempotencyId}:payload`] === communityPayloadHash, 'CONFLICT', '幂等键已用于其他社区内容');
     }

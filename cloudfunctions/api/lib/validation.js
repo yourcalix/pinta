@@ -3,6 +3,7 @@
 const { AppError, invariant } = require('./errors');
 const { decodeCursor, assertCommunityTextSafe, normalizeCommunityKeyword } = require('./community');
 const { decodeDirectCursor, assertDirectMessageTextSafe } = require('./direct-message');
+const { COMPANION_PRESENCE_SCENE } = require('./companion-presence');
 const { parseBirthDate, adultBirthLimit, compareCalendarDate } = require('./profile-birth-date');
 const {
   COORDINATE_SYSTEM,
@@ -313,6 +314,19 @@ function validateCommunityListInput(input = {}) {
   };
 }
 
+function validateCompanionPresenceInput(input = {}, options = {}) {
+  const requireSessionToken = options.requireSessionToken === true;
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  const allowedKeys = requireSessionToken ? ['scene', 'sessionToken'] : ['scene'];
+  invariant(Object.keys(input).every((key) => allowedKeys.includes(key)), 'VALIDATION_ERROR', '在线场景参数无效');
+  const scene = stringValue(input.scene, '在线场景', { required: true, max: 40 });
+  invariant(scene === COMPANION_PRESENCE_SCENE, 'VALIDATION_ERROR', '在线场景无效');
+  const sessionToken = requireSessionToken
+    ? stringValue(input.sessionToken, '在线会话令牌', { required: true, min: 16, max: 100 })
+    : '';
+  return { scene, sessionToken };
+}
+
 function validateCommunityPostCreateInput(input) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   return { content: assertCommunityTextSafe(stringValue(input.content, '讨论内容', { required: true, min: 2, max: 500 })) };
@@ -417,6 +431,7 @@ module.exports = {
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
+  validateCompanionPresenceInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,

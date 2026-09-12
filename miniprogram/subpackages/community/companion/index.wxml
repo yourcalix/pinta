@@ -1,0 +1,34 @@
+<view class="orbit-page" style="padding-top: {{contentTopInset}}px;" role="region" aria-label="{{accessibilityLabel}}">
+  <view class="orbit-navigation" style="height: {{contentTopInset}}px;">
+    <view class="orbit-nav-inner">
+      <button class="orbit-back" bindtap="handleBack" hover-class="orbit-control--pressed" hover-stay-time="70" aria-label="返回上一页"><text aria-hidden="true">‹</text></button>
+      <text class="orbit-title" role="heading" aria-level="1">寻找搭子</text>
+      <view class="orbit-nav-spacer" aria-hidden="true"></view>
+    </view>
+  </view>
+
+  <view class="orbit-stage">
+    <canvas id="companion-canvas" class="orbit-canvas" type="2d" aria-hidden="true"></canvas>
+    <view wx:if="{{status === 'loading'}}" class="orbit-overlay" role="status"><text>正在连接搭子星球…</text></view>
+    <view wx:elif="{{status === 'error'}}" class="orbit-overlay orbit-overlay--error" role="alert">
+      <text class="orbit-overlay-title">搭子星球暂时失联了</text>
+      <text class="orbit-overlay-copy">网络连接较慢，请稍后重试</text>
+      <button class="orbit-retry" bindtap="handleRetry" hover-class="orbit-control--pressed">重新连接</button>
+    </view>
+  </view>
+
+  <view class="orbit-bottom">
+    <view wx:if="{{status === 'ready'}}" class="orbit-count" role="status">
+      <block wx:if="{{onlineTotal > 0}}"><text>当前 </text><text class="orbit-count-number">{{onlineTotal}}</text><text> 人正在找搭子</text></block>
+      <text wx:else>此刻还没有搭子加入星球</text>
+    </view>
+    <view wx:else class="orbit-count orbit-count--muted">{{status === 'loading' ? '正在同步真实在线状态' : '暂时无法读取在线状态'}}</view>
+
+    <text wx:if="{{status === 'ready' && !joined}}" class="orbit-disclosure">加入后，你的昵称将在星球上短暂可见；离开页面后会自动隐身。</text>
+    <text wx:elif="{{status === 'ready' && joined}}" class="orbit-disclosure orbit-disclosure--joined">你已在星球中，离开页面后会自动隐身。</text>
+
+    <button wx:if="{{status === 'ready'}}" class="orbit-action {{joined ? 'orbit-action--joined' : ''}}" loading="{{joining}}" disabled="{{joining}}" bindtap="handleTogglePresence" hover-class="orbit-action--pressed" hover-stay-time="70" aria-label="{{actionAriaLabel}}">
+      {{joining ? '正在加入…' : (joined ? '你已在星球中 · 点击退出隐身' : (onlineTotal > 0 ? '加入搭子星球' : '成为第一个在线搭子'))}}
+    </button>
+  </view>
+</view>

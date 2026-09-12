@@ -29,6 +29,7 @@ const {
   validateActivityQuestionInput,
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
+  validateCompanionPresenceInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,
@@ -57,6 +58,16 @@ const {
   isCompleteRideProfile
 } = require('./passenger-avatar');
 const { safeSelfAvatar } = require('./profile-avatar');
+const {
+  COMPANION_PRESENCE_TTL_MS,
+  COMPANION_HEARTBEAT_INTERVAL_MS,
+  COMPANION_MIN_WRITE_INTERVAL_MS,
+  COMPANION_SAMPLE_LIMIT,
+  companionPresenceId,
+  layoutSeedForPresence,
+  safePresenceNickname,
+  publicCompanionSnapshot
+} = require('./companion-presence');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -73,6 +84,9 @@ const MUTATING_ACTIONS = new Set([
   'community.post.delete',
   'community.reply.delete',
   'community.like.set',
+  'companion.presence.enter',
+  'companion.presence.heartbeat',
+  'companion.presence.leave',
   'application.submit',
   'application.approve',
   'application.reject',
@@ -92,6 +106,8 @@ const MUTATING_ACTIONS = new Set([
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
   'community.like.set',
+  'companion.presence.heartbeat',
+  'companion.presence.leave',
   // Membership generation and current activity state must be checked on every
   // replay; the store owns idempotency for group messages.
   'group.message.send',
@@ -421,6 +437,11 @@ function createPinbaService(options) {
     return items[0] || null;
   }
 
+  async function companionSnapshot(actorId, at) {
+    const page = await store.snapshotCompanionPresence('companion_globe', at, COMPANION_SAMPLE_LIMIT);
+    return publicCompanionSnapshot(page, actorId, at);
+  }
+
   async function refreshCachedActivity(data, context, at) {
     if (!data || !data.activity || !data.activity.id) return data;
     const emptyCachedAvatarSlots = () => {
@@ -548,6 +569,13 @@ function createPinbaService(options) {
     return user;
   }
 
+  async function requireKnownUser(context) {
+    const actorId = requireActor(context);
+    const user = await store.getUser(actorId);
+    invariant(user, 'UNAUTHENTICATED');
+    return user;
+  }
+
   async function runAction(action, input, context) {
     const at = nowIso();
     if (REMOVED_ACTIONS.has(action)) throw new AppError('NOT_FOUND', '接口动作不存在');
@@ -656,6 +684,64 @@ function createPinbaService(options) {
         items: await publicActivities(page.items, {}, at),
         nextCursor: page.nextCursor || null
       };
+    }
+
+    if (action === 'companion.presence.snapshot') {
+      const { scene } = validateCompanionPresenceInput(input);
+      invariant(scene === 'companion_globe', 'VALIDATION_ERROR');
+      return companionSnapshot(context && context.actorId, at);
+    }
+
+    if (action === 'companion.presence.enter') {
+      validateCompanionPresenceInput(input);
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const id = companionPresenceId(user.id);
+      const sessionNonce = stableEntityId('presenceSession', idGenerator(), at);
+      const expiresAt = new Date(Date.parse(at) + COMPANION_PRESENCE_TTL_MS).toISOString();
+      await store.enterCompanionPresence({
+        id,
+        scene: 'companion_globe',
+        userId: user.id,
+        nickname: safePresenceNickname(user.profile.nickname),
+        sessionNonce,
+        layoutSeed: layoutSeedForPresence(sessionNonce),
+        status: 'ACTIVE',
+        lastSeenAt: at,
+        expiresAt,
+        updatedAt: at
+      });
+      return {
+        joined: true,
+        sessionToken: sessionNonce,
+        sessionTtlSec: COMPANION_PRESENCE_TTL_MS / 1000,
+        heartbeatIntervalSec: COMPANION_HEARTBEAT_INTERVAL_MS / 1000,
+        snapshot: await companionSnapshot(user.id, at)
+      };
+    }
+
+    if (action === 'companion.presence.heartbeat') {
+      const { sessionToken } = validateCompanionPresenceInput(input, { requireSessionToken: true });
+      const user = await requireActiveUser(context);
+      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const expiresAt = new Date(Date.parse(at) + COMPANION_PRESENCE_TTL_MS).toISOString();
+      const result = await store.heartbeatCompanionPresence(
+        companionPresenceId(user.id), sessionToken, at, expiresAt, COMPANION_MIN_WRITE_INTERVAL_MS
+      );
+      return {
+        joined: Boolean(result.presence),
+        refreshed: result.refreshed === true,
+        serverNow: at,
+        sessionTtlSec: COMPANION_PRESENCE_TTL_MS / 1000,
+        heartbeatIntervalSec: COMPANION_HEARTBEAT_INTERVAL_MS / 1000
+      };
+    }
+
+    if (action === 'companion.presence.leave') {
+      const { sessionToken } = validateCompanionPresenceInput(input, { requireSessionToken: true });
+      const user = await requireKnownUser(context);
+      await store.leaveCompanionPresence(companionPresenceId(user.id), sessionToken, at);
+      return { joined: false, serverNow: at };
     }
 
     if (action === 'activity.nearby') {
@@ -1341,7 +1427,8 @@ function createPinbaService(options) {
       if (MUTATING_ACTIONS.has(action)) {
         // Account status is checked before idempotency replay so a user disabled
         // after an earlier success cannot keep replaying privileged results.
-        await requireActiveUser(context, false);
+        if (action === 'companion.presence.leave') await requireKnownUser(context);
+        else await requireActiveUser(context, false);
         const actorId = requireActor(context);
         const key = requireIdempotencyKey(event.idempotencyKey);
         const payloadHash = crypto.createHash('sha256').update(stableSerialize(input)).digest('hex');

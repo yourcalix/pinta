@@ -95,6 +95,7 @@ class MemoryStore {
     this.communityPosts = new Map((seed.communityPosts || []).map((item) => [item.id, clone(item)]));
     this.communityReplies = new Map((seed.communityReplies || []).map((item) => [item.id, clone(item)]));
     this.communityLikes = new Map((seed.communityLikes || []).map((item) => [item.id, clone(item)]));
+    this.companionPresences = new Map((seed.companionPresences || []).map((item) => [item.id, clone(item)]));
     this.directConversations = new Map((seed.directConversations || []).map((item) => [item.id, clone(item)]));
     this.directMessages = new Map((seed.directMessages || []).map((item) => [item.id, clone(item)]));
     this.groupMessages = new Map((seed.groupMessages || []).map((item) => [item.id, clone(item)]));
@@ -1468,6 +1469,34 @@ class MemoryStore {
   async addNotification(notification) {
     this.notifications.set(notification.id, clone(notification));
     return clone(notification);
+  }
+
+  async enterCompanionPresence(presence) {
+    const current = this.companionPresences.get(presence.id);
+    const next = { ...clone(presence), createdAt: current && current.createdAt || presence.updatedAt };
+    this.companionPresences.set(next.id, next);
+    return clone(next);
+  }
+
+  async heartbeatCompanionPresence(id, sessionNonce, at, expiresAt, minimumIntervalMs) {
+    const current = this.companionPresences.get(id);
+    if (!current || current.sessionNonce !== sessionNonce || current.status !== 'ACTIVE' || Date.parse(current.expiresAt) <= Date.parse(at)) return { presence: null, refreshed: false };
+    if (Date.parse(at) - Date.parse(current.updatedAt) < minimumIntervalMs) return { presence: clone(current), refreshed: false };
+    Object.assign(current, { lastSeenAt: at, expiresAt, updatedAt: at });
+    return { presence: clone(current), refreshed: true };
+  }
+
+  async leaveCompanionPresence(id, sessionNonce, at) {
+    const current = this.companionPresences.get(id);
+    if (current && current.sessionNonce === sessionNonce) Object.assign(current, { status: 'INACTIVE', expiresAt: at, updatedAt: at });
+    return { joined: false };
+  }
+
+  async snapshotCompanionPresence(scene, at, limit) {
+    const items = [...this.companionPresences.values()]
+      .filter((item) => item.scene === scene && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(at))
+      .sort((left, right) => String(right.expiresAt).localeCompare(String(left.expiresAt)) || String(left.id).localeCompare(String(right.id)));
+    return { total: items.length, items: clone(items.slice(0, limit)) };
   }
 
   async listNotifications(userId) {

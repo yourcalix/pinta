@@ -14,9 +14,9 @@
 
     <scroll-view class="community-topic-rail" scroll-x="true" enhanced="true" enable-flex="true" show-scrollbar="false" aria-label="发现快捷入口">
       <view class="topic-card-track">
-        <button class="topic-card topic-card--companion" data-action="activities" bindtap="handleTopicAction" hover-class="topic-card--pressed" hover-stay-time="80" aria-label="寻找搭子，发现正在组队的活动">
+        <button class="topic-card topic-card--companion" data-action="companion" bindtap="handleTopicAction" hover-class="topic-card--pressed" hover-stay-time="80" aria-label="寻找搭子，进入在线搭子星球">
           <image class="topic-card-art" src="/assets/images/community/community-topic-companion.png" mode="aspectFit" aria-hidden="true"></image>
-          <view class="topic-card-copy"><text class="topic-card-label">#寻找搭子</text><text class="topic-card-description">发现正在组队</text></view>
+          <view class="topic-card-copy"><text class="topic-card-label">#寻找搭子</text><text class="topic-card-description">在线搭子星球</text></view>
           <text class="topic-card-arrow" aria-hidden="true">›</text>
         </button>
         <button class="topic-card topic-card--guidelines" data-action="guidelines" bindtap="handleTopicAction" hover-class="topic-card--pressed" hover-stay-time="80" aria-label="社区守则，查看友善交流与隐私安全规则">

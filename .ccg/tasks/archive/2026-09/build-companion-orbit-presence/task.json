@@ -1,0 +1,12 @@
+{
+  "id": "build-companion-orbit-presence",
+  "title": "将寻找搭子入口设计为在线用户旋转球体",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交已验证的功能变更",
+  "createdAt": "2026-09-12T00:00:00+08:00",
+  "branch": "main"
+}

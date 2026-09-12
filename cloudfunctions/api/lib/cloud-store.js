@@ -2181,6 +2181,42 @@ class CloudStore {
     return notification;
   }
 
+  async enterCompanionPresence(presence) {
+    const current = await this.getDocument('companionPresences', presence.id);
+    const next = { ...presence, createdAt: current && current.createdAt || presence.updatedAt };
+    await this.db.collection('companionPresences').doc(next.id).set({ data: document(next) });
+    return next;
+  }
+
+  async heartbeatCompanionPresence(id, sessionNonce, at, expiresAt, minimumIntervalMs) {
+    const current = await this.getDocument('companionPresences', id);
+    if (!current || current.sessionNonce !== sessionNonce || current.status !== 'ACTIVE' || Date.parse(current.expiresAt) <= Date.parse(at)) return { presence: null, refreshed: false };
+    if (Date.parse(at) - Date.parse(current.updatedAt) < minimumIntervalMs) return { presence: current, refreshed: false };
+    const next = { ...current, lastSeenAt: at, expiresAt, updatedAt: at };
+    const updated = await this.db.collection('companionPresences')
+      .where({ _id: id, sessionNonce, status: 'ACTIVE' })
+      .update({ data: { lastSeenAt: at, expiresAt, updatedAt: at } });
+    const changed = Number(updated && updated.stats && updated.stats.updated) > 0;
+    return { presence: changed ? next : null, refreshed: changed };
+  }
+
+  async leaveCompanionPresence(id, sessionNonce, at) {
+    await this.db.collection('companionPresences')
+      .where({ _id: id, sessionNonce })
+      .update({ data: { status: 'INACTIVE', expiresAt: at, updatedAt: at } });
+    return { joined: false };
+  }
+
+  async snapshotCompanionPresence(scene, at, limit) {
+    const where = { scene, status: 'ACTIVE', expiresAt: this.command.gt(at) };
+    const collection = this.db.collection('companionPresences').where(where);
+    const [countResult, sampleResult] = await Promise.all([
+      collection.count(),
+      this.db.collection('companionPresences').where(where).orderBy('expiresAt', 'desc').limit(limit).get()
+    ]);
+    return { total: Math.max(0, Number(countResult && countResult.total) || 0), items: (sampleResult.data || []).map(entity) };
+  }
+
   async listNotifications(userId) {
     const result = await this.db.collection('notifications').where({ userId }).orderBy('createdAt', 'desc').limit(100).get();
     return (result.data || []).map(entity);

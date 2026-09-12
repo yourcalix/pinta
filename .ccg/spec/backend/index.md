@@ -53,6 +53,9 @@
 
 ## 数据与隐私
 
+- “在线搭子星球”只统计用户主动点击加入后形成的短期在线事实。公开读取快照不得创建在线记录；登录、浏览、发帖、资料更新时间均不得推断为在线。在线记录固定按用户与场景派生确定性文档 ID，使用服务端时间、90 秒 TTL、30 秒心跳和至少 20 秒服务端写入间隔；离开时 best-effort 标记退出，过期时间作为最终正确性兜底。
+- `companion.presence.snapshot` 允许游客读取真实在线总数和最多 50 个真实在线样本，不分页、不补造节点。公开样本只允许短期展示令牌、昵称、球面布局种子和当前查看者是否为本人；不得返回用户 ID、openid、联系方式、生日、头像、位置或稳定跟踪标识。加入与续期必须重新校验 ACTIVE 账号、完整资料和成年确认。
+
 - 拼饭桌创建契约的 `typeData` 在既有 `venue / cuisine / budgetRange / dietaryNotes` 外，可选保存受控的 `paymentMethod: FIFTY_FIFTY | GO_DUTCH | TABLE_ONLY`、`genderPreference: MALE | FEMALE | ALL | ''` 与标准 MBTI 偏好；旧客户端省略 `paymentMethod` 时按已有“人均预算”语义兼容为 `FIFTY_FIFTY`。新客户端必须另提交由高德 POI 选点形成的 `meetingPoint`；自定义忌口在提交适配层合并进长度受控的 `dietaryNotes`。Mock 与 Cloud 必须共享枚举、长度、预算条件必填和缺省语义。
 - 拼同行创建契约的 `typeData.preferences` 只允许 `friendGender / mbti / navigationStyle / travelPace / photoHabit / silenceComfort / garlic / fragrance / slippers` 九个选填字段，各字段必须按服务端白名单接受严格英文枚举，缺省统一为空字符串；未知键、未知枚举及非对象输入一律拒绝。Cloud、Mock 与公开 DTO 必须保持同构，公开读取还须对白名单内历史脏值降级为空字符串，并对 `timeFlexibility / transportPreference / luggageType` 使用既有安全缺省。人数继续只保存含发起人在内的 `minMembers / maxMembers` 2—20 契约，不保存客户端“拼友数”展示语义。
 

@@ -51,19 +51,19 @@ Page({
 
   onShow() {
     selectTab(this, 1);
-    this.releaseActivityNavigation();
+    this.releaseCompanionNavigation();
     if (this._skipFirstShow) return void (this._skipFirstShow = false);
     return this.loadPosts(false, true);
   },
 
   onHide() {
     this._loadSeq = (this._loadSeq || 0) + 1;
-    this.releaseActivityNavigation();
+    this.releaseCompanionNavigation();
   },
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
-    this.releaseActivityNavigation();
+    this.releaseCompanionNavigation();
   },
 
   async onPullDownRefresh() {
@@ -146,20 +146,20 @@ Page({
     }
   },
 
-  handleSearchActivities() {
-    if (this._activityNavigationPending) return;
-    this._activityNavigationPending = true;
+  handleCompanionOrbit() {
+    if (this._companionNavigationPending) return;
+    this._companionNavigationPending = true;
     wx.navigateTo({
-      url: '/subpackages/activity/list/index',
+      url: '/subpackages/community/companion/index',
       fail: () => {
-        this.releaseActivityNavigation();
-        wx.showToast({ title: '暂时无法打开活动列表', icon: 'none' });
+        this.releaseCompanionNavigation();
+        wx.showToast({ title: '暂时无法连接搭子星球', icon: 'none' });
       }
     });
   },
 
-  releaseActivityNavigation() {
-    this._activityNavigationPending = false;
+  releaseCompanionNavigation() {
+    this._companionNavigationPending = false;
   },
 
   handleMessages() {
@@ -168,8 +168,8 @@ Page({
 
   handleTopicAction(event) {
     const action = String(event.currentTarget.dataset.action || '');
-    if (action === 'activities') {
-      this.handleSearchActivities();
+    if (action === 'companion') {
+      this.handleCompanionOrbit();
       return;
     }
     if (action === 'guidelines') {
