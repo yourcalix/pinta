@@ -1,0 +1,12 @@
+{
+  "id": "document-companion-orbit-setup",
+  "title": "整理在线搭子星球云端配置与真机验收步骤",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "guides",
+  "currentPhase": "completed",
+  "nextAction": "归档并向用户交付操作步骤",
+  "createdAt": "2026-09-12T00:00:00+08:00",
+  "branch": "main"
+}
