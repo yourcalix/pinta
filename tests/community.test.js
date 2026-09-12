@@ -110,6 +110,56 @@ test('帖子列表游标稳定分页，已删除内容不再公开', async () =>
   assert.deepEqual(second.data.items.map((item) => item.id), ['post-2', 'post-1']);
 });
 
+test('帖子搜索只匹配ACTIVE正文并把关键词绑定到分页游标', async () => {
+  const posts = [
+    { id: 'post-5', authorId: 'author-id', author: { nickname: '露营达人' }, content: '普通闲聊', replyCount: 0, status: 'ACTIVE', createdAt: '2026-08-30T09:00:05.000Z', updatedAt: NOW },
+    { id: 'post-4', authorId: 'author-id', author: { nickname: '阿明' }, content: '周末露营寻找搭子', replyCount: 0, status: 'ACTIVE', createdAt: '2026-08-30T09:00:04.000Z', updatedAt: NOW },
+    { id: 'post-3', authorId: 'author-id', author: { nickname: '阿明' }, content: '露营装备交流', replyCount: 0, status: 'SUSPENDED', createdAt: '2026-08-30T09:00:03.000Z', updatedAt: NOW },
+    { id: 'post-2', authorId: 'author-id', author: { nickname: '阿明' }, content: '第一次露营要准备什么', replyCount: 0, status: 'ACTIVE', createdAt: '2026-08-30T09:00:02.000Z', updatedAt: NOW },
+    { id: 'post-1', authorId: 'author-id', author: { nickname: '阿明' }, content: '羽毛球讨论', replyCount: 0, status: 'ACTIVE', createdAt: '2026-08-30T09:00:01.000Z', updatedAt: NOW }
+  ];
+  const { call } = setup({ communityPosts: posts });
+  const first = await call('community.post.list', { keyword: '露营', limit: 1 });
+  assert.deepEqual(first.data.items.map((item) => item.id), ['post-4']);
+  assert.ok(first.data.nextCursor);
+  const second = await call('community.post.list', { keyword: '露营', limit: 1, cursor: first.data.nextCursor });
+  assert.deepEqual(second.data.items.map((item) => item.id), ['post-2']);
+  const mismatch = await call('community.post.list', { keyword: '羽毛球', limit: 1, cursor: first.data.nextCursor });
+  assert.equal(mismatch.error.code, 'VALIDATION_ERROR');
+  const clearedMismatch = await call('community.post.list', { limit: 1, cursor: first.data.nextCursor });
+  assert.equal(clearedMismatch.error.code, 'VALIDATION_ERROR');
+  const unfiltered = await call('community.post.list', { limit: 1 });
+  const addedMismatch = await call('community.post.list', { keyword: '露营', limit: 1, cursor: unfiltered.data.nextCursor });
+  assert.equal(addedMismatch.error.code, 'VALIDATION_ERROR');
+  const nicknameOnly = await call('community.post.list', { keyword: '露营达人' });
+  assert.deepEqual(nicknameOnly.data.items, []);
+  const tooLong = await call('community.post.list', { keyword: '长'.repeat(31) });
+  assert.equal(tooLong.error.code, 'VALIDATION_ERROR');
+  const tooLongAfterNormalization = await call('community.post.list', { keyword: '\uFB03'.repeat(11) });
+  assert.equal(tooLongAfterNormalization.error.code, 'VALIDATION_ERROR');
+});
+
+test('稀疏帖子搜索以短页游标继续扫描且不会把未扫描区域误报为空', async () => {
+  const base = Date.parse('2026-08-30T09:10:00.000Z');
+  const posts = Array.from({ length: 502 }, (_, index) => ({
+    id: `sparse-${String(502 - index).padStart(3, '0')}`,
+    authorId: 'author-id',
+    author: { nickname: '阿明' },
+    content: index === 500 ? '深处的稀疏命中关键词' : `普通讨论 ${index}`,
+    replyCount: 0,
+    status: 'ACTIVE',
+    createdAt: new Date(base - index * 1000).toISOString(),
+    updatedAt: NOW
+  }));
+  const { call } = setup({ communityPosts: posts });
+  const first = await call('community.post.list', { keyword: '稀疏命中', limit: 12 });
+  assert.deepEqual(first.data.items, []);
+  assert.ok(first.data.nextCursor);
+  const second = await call('community.post.list', { keyword: '稀疏命中', limit: 12, cursor: first.data.nextCursor });
+  assert.deepEqual(second.data.items.map((item) => item.content), ['深处的稀疏命中关键词']);
+  assert.equal(second.data.nextCursor, null);
+});
+
 test('社区写入按用户和时间窗限流', async () => {
   const { call } = setup();
   for (let index = 0; index < 3; index += 1) {
@@ -129,12 +179,17 @@ test('同一幂等键绑定内容，不同正文不能错误重放', async () =>
   assert.equal(store.communityPosts.size, 1);
 });
 
-test('Cloud 社区分页使用 createdAt 与 _id 的复合边界而非固定多取', () => {
+test('Cloud 社区搜索使用复合边界和有界多批扫描而非只过滤当前页', () => {
   const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/cloud-store.js'), 'utf8');
   const postSection = source.slice(source.indexOf('async listCommunityPosts'), source.indexOf('async getCommunityPost'));
   const replySection = source.slice(source.indexOf('async listCommunityReplies'), source.indexOf('async createCommunityPost'));
   assert.match(postSection, /this\.command\.or/);
-  assert.match(postSection, /_id:\s*this\.command\.lt\(cursor\.id\)/);
+  assert.match(postSection, /_id:\s*this\.command\.lt\(scanCursor\.id\)/);
+  assert.match(postSection, /const scanLimit = 500/);
+  assert.match(postSection, /while \(items\.length <= limit && scanned < scanLimit/);
+  assert.match(postSection, /matchesCommunityKeyword\(candidate, keyword\)/);
+  assert.match(postSection, /items\.length > limit/);
+  assert.match(postSection, /encodeCursor\(continuation, keyword\)/);
   assert.match(replySection, /this\.command\.or/);
   assert.match(replySection, /_id:\s*this\.command\.gt\(cursor\.id\)/);
   assert.doesNotMatch(`${postSection}${replySection}`, /limit \+ 20/);
@@ -150,4 +205,73 @@ test('社区帖子和回复可进入统一举报契约', async () => {
   }, 'other-id', 'report-community-reply-001');
   assert.equal(postReport.ok, true);
   assert.equal(replyReport.ok, true);
+});
+
+test('Mock 社区搜索与正式契约同样只搜索正文并校验关键词', async (t) => {
+  const mockServer = require('../miniprogram/mocks/server');
+  mockServer.reset();
+  t.after(() => mockServer.reset());
+  mockServer.setPersona('u_owner');
+  const created = await mockServer.call({
+    action: 'community.post.create',
+    requestId: 'mock-community-search-create',
+    idempotencyKey: 'mock-community-search-create-001',
+    data: { content: '横琴口岸出行经验补充讨论' }
+  });
+  assert.equal(created.ok, true);
+  const matched = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-1',
+    data: { keyword: '横琴口岸', limit: 1 }
+  });
+  assert.equal(matched.ok, true);
+  assert.equal(matched.data.items.length, 1);
+  assert.ok(matched.data.nextCursor);
+  const next = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-1-next',
+    data: { keyword: '横琴口岸', limit: 1, cursor: matched.data.nextCursor }
+  });
+  assert.equal(next.ok, true);
+  assert.equal(next.data.items.length, 1);
+  assert.notEqual(next.data.items[0].id, matched.data.items[0].id);
+  const mismatchedChineseKeyword = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-1-mismatch',
+    data: { keyword: '横琴口岸之外', limit: 1, cursor: matched.data.nextCursor }
+  });
+  assert.equal(mismatchedChineseKeyword.error.code, 'VALIDATION_ERROR');
+  const clearedChineseKeyword = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-1-cleared',
+    data: { limit: 1, cursor: matched.data.nextCursor }
+  });
+  assert.equal(clearedChineseKeyword.error.code, 'VALIDATION_ERROR');
+
+  const replyOnly = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-2',
+    data: { keyword: '晚高峰', limit: 10 }
+  });
+  assert.equal(replyOnly.ok, true);
+  assert.deepEqual(replyOnly.data.items, []);
+
+  const invalid = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-3',
+    data: { keyword: '长'.repeat(31) }
+  });
+  assert.equal(invalid.error.code, 'VALIDATION_ERROR');
+  const invalidAfterNormalization = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-3-normalized',
+    data: { keyword: '\uFB03'.repeat(11) }
+  });
+  assert.equal(invalidAfterNormalization.error.code, 'VALIDATION_ERROR');
+  const invalidLimit = await mockServer.call({
+    action: 'community.post.list',
+    requestId: 'mock-community-search-4',
+    data: { keyword: '横琴', limit: 1.5 }
+  });
+  assert.equal(invalidLimit.error.code, 'VALIDATION_ERROR');
 });

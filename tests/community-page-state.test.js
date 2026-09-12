@@ -80,3 +80,58 @@ test('社区续页失败保留已有帖子并只显示安全的局部重试状�
     unloadCommunityPage(context);
   }
 });
+
+test('社区搜索只在显式提交后生效且刷新分页始终使用已提交关键词', async () => {
+  const originalListPosts = communityService.listPosts;
+  const calls = [];
+  communityService.listPosts = async (filters) => {
+    calls.push({ ...filters });
+    return { items: [], nextCursor: null };
+  };
+  const context = loadCommunityPage();
+  try {
+    context.page.setData({ loading: false });
+    context.page.handleKeywordInput({ detail: { value: '  露营  ' } });
+    assert.equal(context.page.data.keyword, '  露营  ');
+    assert.equal(context.page.data.appliedKeyword, '');
+    await context.page.handleSearchSubmit();
+    assert.equal(context.page.data.keyword, '露营');
+    assert.equal(context.page.data.appliedKeyword, '露营');
+    assert.equal(calls.at(-1).keyword, '露营');
+
+    context.page.handleKeywordInput({ detail: { value: '尚未提交' } });
+    await context.page.loadPosts(false, true);
+    assert.equal(calls.at(-1).keyword, '露营');
+
+    await context.page.handleClearKeyword();
+    assert.equal(context.page.data.keyword, '');
+    assert.equal(context.page.data.appliedKeyword, '');
+    assert.equal(calls.at(-1).keyword, undefined);
+  } finally {
+    communityService.listPosts = originalListPosts;
+    unloadCommunityPage(context);
+  }
+});
+
+test('键盘确认和搜索按钮的重复提交由现有loading状态收敛', async () => {
+  const originalListPosts = communityService.listPosts;
+  let resolveRequest;
+  let calls = 0;
+  communityService.listPosts = () => {
+    calls += 1;
+    return new Promise((resolve) => { resolveRequest = resolve; });
+  };
+  const context = loadCommunityPage();
+  try {
+    context.page.setData({ keyword: '运动', loading: false });
+    const first = context.page.handleSearchSubmit();
+    const second = context.page.handleSearchSubmit();
+    assert.equal(second, undefined);
+    assert.equal(calls, 1);
+    resolveRequest({ items: [], nextCursor: null });
+    await first;
+  } finally {
+    communityService.listPosts = originalListPosts;
+    unloadCommunityPage(context);
+  }
+});

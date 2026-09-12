@@ -15,7 +15,7 @@ test('底部导航按首页、发现、发布、消息、我的排列且路由�
   assert.equal(app.tabBar.list[1].pagePath, 'pages/community/index');
 });
 
-test('发现页采用参考式活动搜索、通知入口、真实主题动作和社区帖子流', () => {
+test('发现页采用真实讨论搜索、通知入口、真实主题动作和社区帖子流', () => {
   const template = read('pages/community/index.wxml');
   const style = read('pages/community/index.wxss');
   const script = read('pages/community/index.js');
@@ -24,9 +24,10 @@ test('发现页采用参考式活动搜索、通知入口、真实主题动作�
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
-  assert.match(template, /class="activity-search-entry"[^>]*bindtap="handleSearchActivities"/);
-  assert.match(template, /搜索同行与组队活动/);
-  assert.match(template, /class="activity-search-scope"[^>]*>找活动/);
+  assert.match(template, /class="discussion-search-input"[^>]*placeholder="搜索讨论内容…"[^>]*bindinput="handleKeywordInput"[^>]*bindconfirm="handleSearchSubmit"/);
+  assert.match(template, /class="discussion-search-clear"[^>]*bindtap="handleClearKeyword"/);
+  assert.match(template, /class="discussion-search-action"[^>]*bindtap="handleSearchSubmit"[^>]*>搜索/);
+  assert.match(template, /class="search-result-bar"[^>]*\{\{appliedKeyword\}\}/);
   assert.match(template, /class="community-notification"[^>]*bindtap="handleMessages"/);
   assert.match(template, /class="community-topic-rail"[^>]*enable-flex="true"/);
   assert.match(template, /data-action="activities"[^>]*bindtap="handleTopicAction"/);
@@ -34,12 +35,15 @@ test('发现页采用参考式活动搜索、通知入口、真实主题动作�
   assert.match(template, /data-action="compose"[^>]*bindtap="handleTopicAction"/);
   assert.match(template, /#寻找搭子|#社区守则|#发布讨论/);
   assert.match(script, /handleSearchActivities\(\)/);
+  assert.match(script, /handleSearchSubmit\(\)/);
+  assert.match(script, /keyword:\s*this\.data\.appliedKeyword \|\| undefined/);
   assert.match(script, /handleMessages\(\)/);
   assert.match(script, /handleTopicAction\(event\)/);
   assert.doesNotMatch(template, /discussion-tabs|精选推荐|关注|附近|问答/);
   assert.doesNotMatch(template, /community-fixed-background|community-shortcuts|新回|我发|我回|我赞/);
   assert.match(style, /\.community-page\s*\{[^}]*background:\s*#f9f7f2/s);
-  assert.match(style, /\.activity-search-entry\s*\{[^}]*min-height:\s*88rpx/s);
+  assert.match(style, /\.discussion-search-entry\s*\{[^}]*min-height:\s*88rpx/s);
+  assert.match(style, /\.discussion-search-action\s*\{[^}]*min-height:\s*88rpx/s);
   assert.match(style, /\.community-notification\s*\{[^}]*min-width:\s*88rpx/s);
   assert.match(style, /\.topic-card\s*\{[^}]*width:\s*210rpx/s);
   assert.match(style, /\.topic-card\s*\{[^}]*flex-shrink:\s*0/s);
@@ -81,6 +85,24 @@ test('发现主题动作复用既有守则、发帖、活动列表与消息路�
   assert.match(script, /pages\/messages\/index/);
   assert.match(script, /subpackages\/community\/compose\/index/);
   assert.doesNotMatch(script, /pages\/common\/webview|community\/rules/);
+});
+
+test('发现讨论搜索具备提交态、清空、空态、失败和分页语义', () => {
+  const template = read('pages/community/index.wxml');
+  const script = read('pages/community/index.js');
+  const style = read('pages/community/index.wxss');
+  assert.match(script, /keyword:\s*''/);
+  assert.match(script, /appliedKeyword:\s*''/);
+  assert.match(script, /handleKeywordInput\(event\)/);
+  assert.match(script, /handleClearKeyword\(\)/);
+  assert.match(script, /handleResetSearch\(\)/);
+  assert.match(template, /没有找到相关讨论/);
+  assert.match(template, /搜索暂时走丢了/);
+  assert.match(template, /重新搜索/);
+  assert.match(template, /还在查找更多讨论/);
+  assert.match(template, /bindtap="handleRetryLoadMore"[^>]*>继续查找/);
+  assert.match(template, /已显示全部相关讨论/);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.discussion-search-entry\s*\{[^}]*padding:\s*0 16rpx/s);
 });
 
 test('发现页新增 Image2 素材为本地透明 PNG 且总量不突破 90KB', () => {

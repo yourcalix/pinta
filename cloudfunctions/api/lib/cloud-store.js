@@ -27,6 +27,7 @@ const {
   COMMUNITY_LIKE_STATUS,
   communityLikeId,
   encodeCursor,
+  matchesCommunityKeyword,
   isAfterDescendingCursor,
   isAfterAscendingCursor
 } = require('./community');
@@ -908,22 +909,47 @@ class CloudStore {
     });
   }
 
-  async listCommunityPosts({ cursor, limit }) {
-    const where = cursor
-      ? this.command.or([
-          { status: COMMUNITY_POST_STATUS.ACTIVE, createdAt: this.command.lt(cursor.createdAt) },
-          { status: COMMUNITY_POST_STATUS.ACTIVE, createdAt: cursor.createdAt, _id: this.command.lt(cursor.id) }
-        ])
-      : { status: COMMUNITY_POST_STATUS.ACTIVE };
-    const result = await this.db.collection('communityPosts')
-      .where(where)
-      .orderBy('createdAt', 'desc')
-      .orderBy('_id', 'desc')
-      .limit(limit + 1)
-      .get();
-    const candidates = (result.data || []).map(entity).filter((item) => isAfterDescendingCursor(item, cursor));
-    const items = candidates.slice(0, limit);
-    return { items, nextCursor: candidates.length > limit ? encodeCursor(items[items.length - 1]) : null };
+  async listCommunityPosts({ cursor, limit, keyword }) {
+    const batchSize = 50;
+    const scanLimit = 500;
+    const items = [];
+    let scanCursor = cursor;
+    let scanned = 0;
+    let exhausted = false;
+    while (items.length <= limit && scanned < scanLimit && !exhausted) {
+      const fetchLimit = Math.min(batchSize, scanLimit - scanned);
+      const where = scanCursor
+        ? this.command.or([
+            { status: COMMUNITY_POST_STATUS.ACTIVE, createdAt: this.command.lt(scanCursor.createdAt) },
+            { status: COMMUNITY_POST_STATUS.ACTIVE, createdAt: scanCursor.createdAt, _id: this.command.lt(scanCursor.id) }
+          ])
+        : { status: COMMUNITY_POST_STATUS.ACTIVE };
+      const result = await this.db.collection('communityPosts')
+        .where(where)
+        .orderBy('createdAt', 'desc')
+        .orderBy('_id', 'desc')
+        .limit(fetchLimit)
+        .get();
+      const candidates = (result.data || []).map(entity).filter((item) => isAfterDescendingCursor(item, scanCursor));
+      if (!candidates.length) {
+        exhausted = true;
+        break;
+      }
+      let consumed = 0;
+      for (const candidate of candidates) {
+        scanCursor = candidate;
+        scanned += 1;
+        consumed += 1;
+        if (matchesCommunityKeyword(candidate, keyword)) items.push(candidate);
+        if (items.length > limit || scanned >= scanLimit) break;
+      }
+      exhausted = consumed === candidates.length && candidates.length < fetchLimit;
+    }
+    const pageItems = items.slice(0, limit);
+    const continuation = items.length > limit
+      ? pageItems[pageItems.length - 1]
+      : !exhausted ? scanCursor : null;
+    return { items: pageItems, nextCursor: continuation ? encodeCursor(continuation, keyword) : null };
   }
 
   async getCommunityPost(postId) {

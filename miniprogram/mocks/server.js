@@ -619,8 +619,23 @@ function asciiBase64Decode(value) {
   return result;
 }
 
-function encodeCommunityCursor(item) {
-  return asciiBase64Encode(JSON.stringify({ createdAt: item.createdAt, id: item.id }));
+function normalizeCommunityKeyword(value) {
+  const text = String(value || '').trim();
+  return (typeof text.normalize === 'function' ? text.normalize('NFKC') : text).toLowerCase();
+}
+
+function matchesCommunityKeyword(item, keyword) {
+  const normalized = normalizeCommunityKeyword(keyword);
+  return !normalized || normalizeCommunityKeyword(item && item.content).includes(normalized);
+}
+
+function encodeCommunityCursor(item, keyword = '') {
+  const normalizedKeyword = normalizeCommunityKeyword(keyword);
+  return asciiBase64Encode(JSON.stringify({
+    createdAt: item.createdAt,
+    id: item.id,
+    ...(normalizedKeyword ? { keyword: encodeURIComponent(normalizedKeyword) } : {})
+  }));
 }
 
 function encodeDirectCursor(item, timeField) {
@@ -635,11 +650,13 @@ function afterDirectCursor(item, cursor, timeField) {
   return !cursor || item[timeField] < cursor.createdAt || (item[timeField] === cursor.createdAt && item.id < cursor.id);
 }
 
-function decodeCommunityCursor(value) {
+function decodeCommunityCursor(value, keyword = '') {
   if (value === undefined || value === null || value === '') return null;
   try {
     const parsed = JSON.parse(asciiBase64Decode(value));
     assert(parsed && Number.isFinite(Date.parse(parsed.createdAt)) && typeof parsed.id === 'string' && parsed.id, 'VALIDATION_ERROR', '分页游标无效');
+    const cursorKeyword = parsed.keyword ? decodeURIComponent(parsed.keyword) : '';
+    assert(normalizeCommunityKeyword(cursorKeyword) === normalizeCommunityKeyword(keyword), 'VALIDATION_ERROR', '分页游标与搜索条件不匹配');
     return parsed;
   } catch (error) {
     if (error && error.ok === false) throw error;
@@ -1782,13 +1799,23 @@ function handle(action, input, idempotencyKey = '') {
   if (action === 'activity.question.ask') return askActivityQuestion(input);
   if (action === 'activity.question.answer') return answerActivityQuestion(input);
   if (action === 'community.post.list') {
-    const cursor = decodeCommunityCursor(input.cursor);
-    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
-    const items = state.communityPosts.filter((item) => item.status === 'ACTIVE')
+    assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '讨论筛选条件无效');
+    assert(Object.keys(input).every((key) => ['cursor', 'limit', 'keyword'].includes(key)), 'VALIDATION_ERROR', '讨论筛选条件无效');
+    const keyword = normalizeCommunityKeyword(optionalFilterString(input.keyword, '讨论搜索词', 90));
+    assert(keyword.length <= 30, 'VALIDATION_ERROR', '讨论搜索词长度不能超过30个字符', { field: '讨论搜索词' });
+    const cursor = decodeCommunityCursor(input.cursor, keyword);
+    const limit = Number(input.limit === undefined ? 20 : input.limit);
+    assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量必须在1到30之间');
+    const candidates = state.communityPosts.filter((item) => item.status === 'ACTIVE')
       .filter((item) => afterDescendingCommunityCursor(item, cursor))
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.id).localeCompare(String(a.id)));
-    const page = items.slice(0, limit + 1);
-    return { items: page.slice(0, limit).map(publicCommunityPost), nextCursor: page.length > limit ? encodeCommunityCursor(page[limit - 1]) : null };
+    const scanned = candidates.slice(0, 500);
+    const matched = scanned.filter((item) => matchesCommunityKeyword(item, keyword));
+    const items = matched.slice(0, limit);
+    const lookahead = matched.length > limit;
+    const exhausted = candidates.length <= scanned.length;
+    const continuation = lookahead ? items[items.length - 1] : !exhausted ? scanned[scanned.length - 1] : null;
+    return { items: items.map(publicCommunityPost), nextCursor: continuation ? encodeCommunityCursor(continuation, keyword) : null };
   }
   if (action === 'community.post.detail') {
     const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');

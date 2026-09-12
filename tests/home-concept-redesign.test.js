@@ -132,7 +132,8 @@ test('正式 Hero 插画使用透明发布版且保持一比二完整构图', ()
 test('新发现页只消费真实讨论并使用温暖生活方式内容流', () => {
   const template = read('pages/community/index.wxml');
   const style = read('pages/community/index.wxss');
-  assert.match(template, /class="activity-search-entry"[^>]*bindtap="handleSearchActivities"/);
+  assert.match(template, /class="discussion-search-input"[^>]*bindconfirm="handleSearchSubmit"/);
+  assert.match(template, /class="discussion-search-action"[^>]*>搜索/);
   assert.match(template, /class="community-topic-rail"/);
   assert.match(template, /data-action="compose"[^>]*bindtap="handleTopicAction"/);
   assert.match(template, /class="post-content-panel"/);

@@ -32,6 +32,8 @@ function decorate(item) {
 Page({
   data: {
     contentTopInset: 88,
+    keyword: '',
+    appliedKeyword: '',
     posts: [],
     nextCursor: '',
     hasMore: true,
@@ -80,7 +82,11 @@ Page({
       ? { loadingMore: true, loadMoreError: '' }
       : { loading: !keepContent, error: '', loadMoreError: '', ...(keepContent ? {} : { posts: [] }) });
     try {
-      const result = await communityService.listPosts({ limit: PAGE_SIZE, cursor: append ? this.data.nextCursor : undefined });
+      const result = await communityService.listPosts({
+        limit: PAGE_SIZE,
+        cursor: append ? this.data.nextCursor : undefined,
+        keyword: this.data.appliedKeyword || undefined
+      });
       if (seq !== this._loadSeq) return;
       const incoming = (result.items || []).map(decorate);
       this.setData({
@@ -98,8 +104,33 @@ Page({
         this.setData({ loadingMore: false, loadMoreError: '加载更多失败，请重试' });
         return;
       }
-      this.setData({ loading: false, loadingMore: false, error: '发现内容加载失败，请检查网络' });
+      this.setData({
+        loading: false,
+        loadingMore: false,
+        error: this.data.appliedKeyword ? '网络连接较慢，请稍后重试' : '发现内容加载失败，请检查网络'
+      });
     }
+  },
+
+  handleKeywordInput(event) {
+    this.setData({ keyword: String(event.detail.value || '').slice(0, 30) });
+  },
+
+  handleSearchSubmit() {
+    const appliedKeyword = String(this.data.keyword || '').trim();
+    if (this.data.loading && appliedKeyword === this.data.appliedKeyword) return;
+    this.setData({ keyword: appliedKeyword, appliedKeyword });
+    return this.loadPosts(false);
+  },
+
+  handleClearKeyword() {
+    if (!this.data.keyword && !this.data.appliedKeyword) return;
+    this.setData({ keyword: '', appliedKeyword: '' });
+    return this.loadPosts(false);
+  },
+
+  handleResetSearch() {
+    return this.handleClearKeyword();
   },
 
   async handleCompose() {

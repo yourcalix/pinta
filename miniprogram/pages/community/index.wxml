@@ -1,11 +1,12 @@
 <view class="page community-page" style="padding-top: {{contentTopInset}}px;">
   <view class="community-content">
     <view class="community-reference-header">
-      <button class="activity-search-entry" bindtap="handleSearchActivities" hover-class="community-control--pressed" hover-stay-time="80" aria-label="搜索同行与组队活动，进入全城活动列表">
+      <view class="discussion-search-entry" role="search">
         <view class="search-symbol" aria-hidden="true"></view>
-        <text class="activity-search-placeholder">搜索同行与组队活动…</text>
-        <text class="activity-search-scope">找活动<text class="activity-search-chevron" aria-hidden="true">›</text></text>
-      </button>
+        <input class="discussion-search-input" value="{{keyword}}" maxlength="30" placeholder="搜索讨论内容…" placeholder-class="discussion-search-placeholder" confirm-type="search" adjust-position="false" cursor-spacing="12" bindinput="handleKeywordInput" bindconfirm="handleSearchSubmit" aria-label="搜索讨论内容"></input>
+        <button wx:if="{{keyword}}" class="discussion-search-clear" bindtap="handleClearKeyword" hover-class="community-control--pressed" hover-stay-time="70" role="button" aria-label="清空输入框文字">×</button>
+        <button class="discussion-search-action" bindtap="handleSearchSubmit" hover-class="community-control--pressed" hover-stay-time="70" role="button" aria-label="搜索讨论帖子">搜索</button>
+      </view>
       <button class="community-notification" bindtap="handleMessages" hover-class="community-control--pressed" hover-stay-time="80" aria-label="打开消息">
         <image class="community-notification-image" src="/assets/images/community/community-notification-bell.png" mode="aspectFit" aria-hidden="true"></image>
       </button>
@@ -30,6 +31,11 @@
         </button>
       </view>
     </scroll-view>
+
+    <view wx:if="{{appliedKeyword}}" class="search-result-bar" role="status" aria-label="当前展示关于{{appliedKeyword}}的讨论，点击清除恢复全部">
+      <text class="search-result-text">关于「{{appliedKeyword}}」的讨论</text>
+      <button class="search-reset-link" bindtap="handleResetSearch" hover-class="community-control--pressed" hover-stay-time="70" aria-label="清除搜索，查看全部讨论">清除</button>
+    </view>
 
     <view wx:if="{{loading}}" class="skeleton-list" role="status" aria-label="正在加载发现内容">
       <view wx:for="{{[1,2,3]}}" wx:key="*this" class="skeleton-card" aria-hidden="true">
@@ -58,16 +64,18 @@
       <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" role="status">
         <view wx:if="{{loadingMore}}" class="footer-state"><view class="footer-spinner" aria-hidden="true"></view><text>正在加载更多讨论…</text></view>
         <button wx:elif="{{loadMoreError}}" class="footer-retry-button" bindtap="handleRetryLoadMore">加载失败，点击重试</button>
-        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">— 已经到底啦 · 拼吧发现 —</view>
+        <view wx:elif="{{!hasMore}}" class="footer-state footer-state--end">{{appliedKeyword ? '— 已显示全部相关讨论 —' : '— 已经到底啦 · 拼吧发现 —'}}</view>
       </view>
     </view>
 
     <view wx:else class="empty-card">
       <image class="empty-bubble" src="/assets/images/community/community-empty-discussion.png" mode="aspectFit" aria-hidden="true"></image>
-      <text class="empty-title">{{error ? '发现内容加载失败' : '这里还很安静'}}</text>
-      <text class="empty-description">{{error || '来写下第一个问题或结伴经验吧。'}}</text>
-      <button wx:if="{{!error}}" class="empty-action" hover-class="community-control--pressed" bindtap="handleCompose">发起讨论</button>
-      <button wx:else class="empty-action" hover-class="community-control--pressed" bindtap="handleRetry">点击重试</button>
+      <text class="empty-title">{{error ? (appliedKeyword ? '搜索暂时走丢了' : '发现内容加载失败') : (appliedKeyword ? (hasMore ? '还在查找更多讨论' : '没有找到相关讨论') : '这里还很安静')}}</text>
+      <text class="empty-description">{{error || (appliedKeyword ? (hasMore ? '暂未找到匹配内容，可以继续向后查找' : '没有找到包含“' + appliedKeyword + '”的内容，换个词试试吧') : '来写下第一个问题或结伴经验吧。')}}</text>
+      <button wx:if="{{error}}" class="empty-action" hover-class="community-control--pressed" bindtap="handleRetry">{{appliedKeyword ? '重新搜索' : '点击重试'}}</button>
+      <button wx:elif="{{appliedKeyword && hasMore}}" class="empty-action" hover-class="community-control--pressed" bindtap="handleRetryLoadMore">继续查找</button>
+      <button wx:elif="{{appliedKeyword}}" class="empty-action" hover-class="community-control--pressed" bindtap="handleResetSearch">清除搜索</button>
+      <button wx:else class="empty-action" hover-class="community-control--pressed" bindtap="handleCompose">发起讨论</button>
     </view>
   </view>
 </view>

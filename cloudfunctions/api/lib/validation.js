@@ -1,7 +1,7 @@
 'use strict';
 
 const { AppError, invariant } = require('./errors');
-const { decodeCursor, assertCommunityTextSafe } = require('./community');
+const { decodeCursor, assertCommunityTextSafe, normalizeCommunityKeyword } = require('./community');
 const { decodeDirectCursor, assertDirectMessageTextSafe } = require('./direct-message');
 const { parseBirthDate, adultBirthLimit, compareCalendarDate } = require('./profile-birth-date');
 const {
@@ -303,8 +303,12 @@ function validateActivityQuestionAnswerInput(input) {
 
 function validateCommunityListInput(input = {}) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['cursor', 'limit', 'keyword'].includes(key)), 'VALIDATION_ERROR', '讨论筛选条件无效');
+  const keyword = normalizeCommunityKeyword(optionalFilterString(input.keyword, '讨论搜索词', 90));
+  invariant(keyword.length <= 30, 'VALIDATION_ERROR', '讨论搜索词长度不能超过30个字符', { field: '讨论搜索词' });
   return {
-    cursor: decodeCursor(input.cursor),
+    cursor: decodeCursor(input.cursor, keyword),
+    keyword: keyword || undefined,
     limit: integerValue(input.limit === undefined ? 20 : input.limit, '分页数量', 1, 30)
   };
 }

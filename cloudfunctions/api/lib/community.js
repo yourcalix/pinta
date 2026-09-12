@@ -12,17 +12,33 @@ function communityLikeId(targetType, targetId, actorId) {
   return stableEntityId('communityLike', targetType, targetId, actorId);
 }
 
-function encodeCursor(item) {
-  if (!item) return null;
-  return Buffer.from(JSON.stringify({ createdAt: item.createdAt, id: item.id }), 'utf8').toString('base64url');
+function normalizeCommunityKeyword(value) {
+  const text = String(value || '').trim();
+  return (typeof text.normalize === 'function' ? text.normalize('NFKC') : text).toLowerCase();
 }
 
-function decodeCursor(value) {
+function matchesCommunityKeyword(item, keyword) {
+  const normalized = normalizeCommunityKeyword(keyword);
+  return !normalized || normalizeCommunityKeyword(item && item.content).includes(normalized);
+}
+
+function encodeCursor(item, keyword = '') {
+  if (!item) return null;
+  const normalizedKeyword = normalizeCommunityKeyword(keyword);
+  return Buffer.from(JSON.stringify({
+    createdAt: item.createdAt,
+    id: item.id,
+    ...(normalizedKeyword ? { keyword: normalizedKeyword } : {})
+  }), 'utf8').toString('base64url');
+}
+
+function decodeCursor(value, keyword = '') {
   if (value === undefined || value === null || value === '') return null;
   try {
     const parsed = JSON.parse(Buffer.from(String(value), 'base64url').toString('utf8'));
     invariant(parsed && typeof parsed.createdAt === 'string' && Number.isFinite(Date.parse(parsed.createdAt)), 'VALIDATION_ERROR', '分页游标无效');
     invariant(typeof parsed.id === 'string' && parsed.id.length > 0 && parsed.id.length <= 80, 'VALIDATION_ERROR', '分页游标无效');
+    invariant(normalizeCommunityKeyword(parsed.keyword) === normalizeCommunityKeyword(keyword), 'VALIDATION_ERROR', '分页游标与搜索条件不匹配');
     return parsed;
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -62,6 +78,8 @@ module.exports = {
   COMMUNITY_LIKE_STATUS,
   COMMUNITY_LIKE_TARGETS,
   communityLikeId,
+  normalizeCommunityKeyword,
+  matchesCommunityKeyword,
   encodeCursor,
   decodeCursor,
   compareDescending,

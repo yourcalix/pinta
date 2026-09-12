@@ -26,6 +26,7 @@ const {
   COMMUNITY_LIKE_STATUS,
   communityLikeId,
   encodeCursor,
+  matchesCommunityKeyword,
   compareDescending,
   compareAscending,
   isAfterDescendingCursor,
@@ -582,12 +583,17 @@ class MemoryStore {
     return clone(question);
   }
 
-  async listCommunityPosts({ cursor, limit }) {
+  async listCommunityPosts({ cursor, limit, keyword }) {
     const candidates = [...this.communityPosts.values()]
       .filter((item) => item.status === COMMUNITY_POST_STATUS.ACTIVE && isAfterDescendingCursor(item, cursor))
       .sort(compareDescending);
-    const page = candidates.slice(0, limit + 1);
-    return clone({ items: page.slice(0, limit), nextCursor: page.length > limit ? encodeCursor(page[limit - 1]) : null });
+    const scanned = candidates.slice(0, 500);
+    const matched = scanned.filter((item) => matchesCommunityKeyword(item, keyword));
+    const items = matched.slice(0, limit);
+    const lookahead = matched.length > limit;
+    const exhausted = candidates.length <= scanned.length;
+    const continuation = lookahead ? items[items.length - 1] : !exhausted ? scanned[scanned.length - 1] : null;
+    return clone({ items, nextCursor: continuation ? encodeCursor(continuation, keyword) : null });
   }
 
   async getCommunityPost(postId) {
