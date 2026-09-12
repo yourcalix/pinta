@@ -73,7 +73,7 @@ Page({
     if (append && (!this.data.nextCursor || this.data.loadingMore)) return;
     if (append) this._loadSeq = this._loadSeq || 0;
     const seq = append ? this._loadSeq : (this._loadSeq = (this._loadSeq || 0) + 1);
-    const likes=this.data.posts;
+    const likes=this.data.posts
     this.setData(append
       ? { loadingMore: true, loadMoreError: '' }
       : { loading: !keepContent, error: '', loadMoreError: '', ...(keepContent ? {} : { posts: [] }) });
@@ -86,9 +86,9 @@ Page({
       if (seq !== this._loadSeq) return;
       const currentById = new Map(this.data.posts.map((item) => [item.id, item]));
       const incoming = (result.items || []).map(decorate).map((item) => {
-        const now=currentById.get(item.id);
+        const now=currentById.get(item.id)
         if (!now) return item;
-        const was=likes.find((entry)=>entry.id===item.id);
+        const was=likes.find((entry)=>entry.id===item.id)
         return !was || now.likePending || now.viewerHasLiked !== was.viewerHasLiked || now.likeCount !== was.likeCount
           ? decorate({ ...item, viewerHasLiked: now.viewerHasLiked, likeCount: now.likeCount, likePending: now.likePending }) : item;
       });
@@ -132,9 +132,7 @@ Page({
     return this.loadPosts(false);
   },
 
-  handleResetSearch() {
-    return this.handleClearKeyword();
-  },
+  handleResetSearch(){return this.handleClearKeyword()},
 
   async ensureInteractionAccess() {
     if (this._accessPromise) return this._accessPromise;
@@ -227,9 +225,7 @@ Page({
     if (action === 'compose') this.handleCompose();
   },
 
-  handlePost(event) {
-    wx.navigateTo({ url: `/subpackages/community/detail/index?id=${encodeURIComponent(event.currentTarget.dataset.id)}` });
-  },
+  handlePost(e){const d=e.currentTarget.dataset,id=String(d.id||'').trim();if(id)wx.navigateTo({url:`/subpackages/community/detail/index?id=${encodeURIComponent(id)}${d.r==='1'?'&reply=1':''}`})},
 
   handleGuidelines() {
     if (typeof wx === 'undefined' || typeof wx.showModal !== 'function') return;
@@ -242,7 +238,6 @@ Page({
     });
   },
 
-  handleRetry() { this.loadPosts(false); },
-
-  handleRetryLoadMore() { this.loadPosts(true); }
+  handleRetry(){this.loadPosts(false)},
+  handleRetryLoadMore(){this.loadPosts(true)}
 });

@@ -49,12 +49,10 @@ button::after{display:none}
 .post-footer{min-height:54rpx;margin-top:14rpx;justify-content:space-between}
 .post-metrics{gap:12rpx;color:#797774;font-size:24rpx}
 .like-count{min-width:88rpx;min-height:88rpx;padding:0 8rpx;gap:8rpx;color:#797774;background:transparent;border:0;border-radius:44rpx;font-size:24rpx}
-.reply-count{gap:8rpx}
 .like-symbol{color:#a19b94;font-size:31rpx;line-height:1}
 .like-count--active .like-symbol{color:#e2554f;transform:scale(1.1)}
 .reply-bubble{position:relative;width:24rpx;height:18rpx;box-sizing:border-box;border:3rpx solid #858585;border-radius:9rpx}
 .reply-bubble::after{position:absolute;bottom:-7rpx;left:4rpx;width:7rpx;height:7rpx;content:'';border-left:3rpx solid #858585;transform:skew(-24deg)}
-.post-detail-link{color:#8a6500;font-size:24rpx;font-weight:750}
 .skeleton-card{min-height:300rpx;padding:24rpx}
 .skeleton-avatar{flex:0 0 72rpx;width:72rpx;height:72rpx;margin-right:16rpx;background:#e8e3dc;border-radius:50%}
 .skeleton-author{flex:1}

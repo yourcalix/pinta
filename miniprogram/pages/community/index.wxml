@@ -54,9 +54,8 @@
 <button class="like-count {{item.viewerHasLiked ? 'like-count--active' : ''}}" data-id="{{item.id}}" catchtap="handlePostLike" hover-class="community-control--pressed" aria-label="{{item.viewerHasLiked ? '已点赞，双击取消点赞' : '未点赞，双击点赞'}}，当前{{item.likeCount}}个赞">
 <text class="like-symbol" aria-hidden="true">{{item.viewerHasLiked ? '♥' : '♡'}}</text><text aria-hidden="true">{{item.likeCount}} 赞</text>
 </button>
-<view class="reply-count" aria-hidden="true"><view class="reply-bubble"></view><text>{{item.replyCount}} 回复</text></view>
+<button class="like-count reply-count" data-id="{{item.id}}" data-r="1" catchtap="handlePost" aria-label="评论，{{item.replyCount}}条回复"><view class="reply-bubble" aria-hidden="true"></view><text aria-hidden="true">{{item.replyCount}} 回复</text></button>
 </view>
-<text class="post-detail-link" aria-hidden="true">查看详情 ›</text>
 </view>
 </view>
 <view wx:if="{{loadingMore || loadMoreError || !hasMore}}" class="list-footer" role="status">

@@ -191,3 +191,83 @@ test('评论续页只合并回复，不覆盖主帖正在进行的点赞状态',
     unloadDetailPage(context);
   }
 });
+
+test('评论入口只在首次详情成功后聚焦，失焦与后续刷新不再拉起键盘', async () => {
+  const originalGetPost = communityService.getPost;
+  const originalLogin = userService.login;
+  userService.login = async () => ({ profileComplete: true });
+  communityService.getPost = async () => ({
+    post: { id: 'post', content: '讨论', createdAt: NOW, author: { nickname: '作者' } },
+    replies: [], nextCursor: null
+  });
+  const context = loadDetailPage();
+  try {
+    await context.page.onLoad({ id: 'post', reply: '1' });
+    assert.equal(context.page.data.replyInputFocus, true);
+    context.page.handleReplyBlur();
+    assert.equal(context.page.data.replyInputFocus, false);
+    await context.page.loadDetail(false);
+    assert.equal(context.page.data.replyInputFocus, false);
+  } finally {
+    communityService.getPost = originalGetPost;
+    userService.login = originalLogin;
+    unloadDetailPage(context);
+  }
+});
+
+test('普通详情、非法回复参数与首次加载失败均不自动聚焦', async () => {
+  const originalGetPost = communityService.getPost;
+  const originalLogin = userService.login;
+  userService.login = async () => ({ profileComplete: true });
+  let fail = true;
+  communityService.getPost = async () => {
+    if (fail) throw new Error('offline');
+    return { post: { id: 'post', content: '讨论', createdAt: NOW, author: { nickname: '作者' } }, replies: [], nextCursor: null };
+  };
+  const context = loadDetailPage();
+  try {
+    await context.page.onLoad({ id: 'post', reply: '1' });
+    assert.equal(context.page.data.replyInputFocus, false);
+    fail = false;
+    await context.page.handleRetryDetail();
+    assert.equal(context.page.data.replyInputFocus, false);
+    context.page.onUnload();
+
+    const ordinary = loadDetailPage();
+    try {
+      await ordinary.page.onLoad({ id: 'post', reply: 'true' });
+      assert.equal(ordinary.page.data.replyInputFocus, false);
+      const invalid = loadDetailPage();
+      try {
+        await invalid.page.onLoad({ id: '   ', reply: '1' });
+        assert.equal(invalid.page.data.loading, false);
+        assert.equal(invalid.page.data.error, '讨论参数无效');
+        assert.equal(invalid.page.data.replyInputFocus, false);
+      } finally { unloadDetailPage(invalid); }
+    } finally { unloadDetailPage(ordinary); }
+  } finally {
+    communityService.getPost = originalGetPost;
+    userService.login = originalLogin;
+    unloadDetailPage(context);
+  }
+});
+
+test('评论详情卸载后的晚到响应不会拉起键盘', async () => {
+  const originalGetPost = communityService.getPost;
+  const originalLogin = userService.login;
+  const response = deferred();
+  userService.login = async () => ({ profileComplete: true });
+  communityService.getPost = () => response.promise;
+  const context = loadDetailPage();
+  try {
+    const loading = context.page.onLoad({ id: 'post', reply: '1' });
+    context.page.onUnload();
+    response.resolve({ post: { id: 'post', createdAt: NOW, author: { nickname: '作者' } }, replies: [], nextCursor: null });
+    await loading;
+    assert.equal(context.page.data.replyInputFocus, false);
+  } finally {
+    communityService.getPost = originalGetPost;
+    userService.login = originalLogin;
+    unloadDetailPage(context);
+  }
+});

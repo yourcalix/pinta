@@ -38,16 +38,21 @@ Page({
   data: {
     postId: '', post: null, replies: [], replyContent: '', submitting: false,
     loading: true, error: '', nextCursor: '', hasMore: false,
-    loadingMore: false, loadMoreError: '', likingMap: {}
+    loadingMore: false, loadMoreError: '', likingMap: {}, replyInputFocus: false
   },
 
   onLoad(options) {
+    options = options || {};
     this._disposed = false;
-    this.setData({ postId: options.id || '' });
+    const postId = String(options.id || '').trim();
+    this._replyFocus = options.reply === '1' && Boolean(postId);
+    this.setData(postId ? { postId } : { postId: '', loading: false, error: '讨论参数无效' });
+    if (!postId) return;
     return this.loadDetail(false);
   },
   onUnload() {
     this._disposed = true;
+    this._replyFocus = false;
     this._loadSeq = (this._loadSeq || 0) + 1;
   },
 
@@ -64,12 +69,22 @@ Page({
         nextCursor: result.nextCursor || '', hasMore: Boolean(result.nextCursor),
         loading: false, loadingMore: false, loadMoreError: '', error: ''
       };
-      if (!append) nextData.post = decorate(result.post);
+      const focus = !append && this._replyFocus;
+      if (!append) {
+        nextData.post = decorate(result.post);
+        nextData.replyInputFocus = false;
+        this._replyFocus = false;
+      }
       this.setData(nextData);
+      if (focus && await this.ensureInteractionAccess() && !this._disposed && seq === this._loadSeq) {
+        this._replyAuthorized = true;
+        this.setData({ replyInputFocus: true });
+      }
     } catch (error) {
       if (this._disposed || seq !== this._loadSeq) return;
       if (append) return void this.setData({ loadingMore: false, loadMoreError: '更多回复加载失败，请重试' });
-      this.setData({ loading: false, loadingMore: false, post: null, replies: [], error: error.code === 'NOT_FOUND' ? '该讨论已被作者删除或不存在' : '讨论暂时无法查看，请稍后重试' });
+      this._replyFocus = false;
+      this.setData({ loading: false, loadingMore: false, post: null, replies: [], replyInputFocus: false, error: error.code === 'NOT_FOUND' ? '该讨论已被作者删除或不存在' : '讨论暂时无法查看，请稍后重试' });
     }
   },
 
@@ -89,7 +104,11 @@ Page({
   },
 
   handleReplyInput(event) { this.setData({ replyContent: event.detail.value.slice(0, 300) }); },
-  async handleReplyFocus() { await this.ensureInteractionAccess(); },
+  async handleReplyFocus() {
+    if (this._replyAuthorized) return void (this._replyAuthorized = false);
+    if (!await this.ensureInteractionAccess()) this.setData({ replyInputFocus: false });
+  },
+  handleReplyBlur() { if (this.data.replyInputFocus) this.setData({ replyInputFocus: false }); },
 
   async handleSendReply() {
     const content = this.data.replyContent.trim();
@@ -175,7 +194,7 @@ Page({
       wx.showToast({ title: '已收到举报', icon: 'success' });
     } catch (error) { if (!error.handled) wx.showToast({ title: error.message || '举报失败', icon: 'none' }); }
   },
-  handleRetryDetail() { this.loadDetail(false); },
+  handleRetryDetail() { return this.loadDetail(false); },
   handleRetryLoadMore() { this.loadDetail(true); },
   handleLoadMore() { this.loadDetail(true); },
   handleBackToCommunity() { wx.switchTab({ url: '/pages/community/index' }); }

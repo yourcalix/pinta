@@ -73,6 +73,24 @@ test('社区页把昵称装饰为受控单字头像且不生成位图路径', as
   }
 });
 
+test('帖子普通点击与评论点击分别进入普通详情和自动回复详情', () => {
+  const context = loadCommunityPage();
+  try {
+    context.page.handlePost({ currentTarget: { dataset: { id: 'post/1' } } });
+    context.page.handlePost({ currentTarget: { dataset: { id: 'post/1', r: '1' } } });
+    context.page.handlePost({ currentTarget: { dataset: { id: 'post/2', r: 'true' } } });
+    context.page.handlePost({ currentTarget: { dataset: { id: '   ', r: '1' } } });
+    context.page.handlePost({ currentTarget: { dataset: {} } });
+    assert.deepEqual(context.navigations.map((item) => item.url), [
+      '/subpackages/community/detail/index?id=post%2F1',
+      '/subpackages/community/detail/index?id=post%2F1&reply=1',
+      '/subpackages/community/detail/index?id=post%2F2'
+    ]);
+  } finally {
+    unloadCommunityPage(context);
+  }
+});
+
 test('社区续页失败保留已有帖子并只显示安全的局部重试状态', async () => {
   const originalListPosts = communityService.listPosts;
   communityService.listPosts = async () => { throw new Error('raw transport secret'); };

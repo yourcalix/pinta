@@ -66,7 +66,8 @@ test('发现页空状态与帖子卡使用白卡、受控单字头像和真实�
   assert.match(template, /\{\{item\.likeCount\}\}/);
   assert.match(template, /\{\{item\.replyCount\}\}/);
   assert.match(style, /\.post-card,\.skeleton-card,\.empty-card\s*\{[^}]*background:\s*#fff/s);
-  assert.match(template, /class="post-detail-link"[^>]*>查看详情/);
+  assert.doesNotMatch(template, /post-detail-link|查看详情/);
+  assert.match(template, /class="like-count reply-count"[^>]*data-r="1"[^>]*catchtap="handlePost"/);
   assert.match(template, /community-empty-discussion\.png/);
   assert.doesNotMatch(template, /认证邻居|关联活动|收藏|分享|帖子图片|post-image|围观|浏览量|#反诈提醒/);
   assert.match(script, /AVATAR_TONES/);
@@ -143,6 +144,8 @@ test('社区详情回复栏具备键盘与安全区避让，装饰头像退出�
   const style = read('subpackages/community/detail/index.wxss');
   assert.match(template, /cursor-spacing="120"/);
   assert.match(template, /adjust-position="true"/);
+  assert.match(template, /focus="\{\{replyInputFocus\}\}"/);
+  assert.match(template, /bindblur="handleReplyBlur"/);
   assert.match(template, /aria-hidden="true"/);
   assert.match(style, /env\(safe-area-inset-bottom\)/);
 });
