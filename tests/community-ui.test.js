@@ -75,6 +75,20 @@ test('发现页空状态与帖子卡使用白卡、受控单字头像和真实�
   assert.match(script, /发现内容加载失败/);
 });
 
+test('发现页帖子心形是独立点赞操作并以形状和文案表达状态', () => {
+  const template = read('pages/community/index.wxml');
+  const style = read('pages/community/index.wxss');
+  const script = read('pages/community/index.js');
+  assert.match(template, /class="like-count[^\"]*\{\{item\.viewerHasLiked \? 'like-count--active' : ''\}\}"/);
+  assert.match(template, /catchtap="handlePostLike"/);
+  assert.doesNotMatch(template, /\sdisabled="\{\{item\.likePending\}\}"/);
+  assert.match(template, /\{\{item\.viewerHasLiked \? '♥' : '♡'\}\}/);
+  assert.match(template, /aria-label="\{\{item\.viewerHasLiked[^\"]*当前\{\{item\.likeCount\}\}个赞"/);
+  assert.match(script, /communityService\.setLike\('post', postId, liked\)/);
+  assert.match(style, /\.like-count\s*\{[^}]*min-width:\s*88rpx[^}]*min-height:\s*88rpx/s);
+  assert.match(style, /\.like-count--active\s+\.like-symbol\s*\{[^}]*color:\s*#e2554f/s);
+});
+
 test('发现主题动作复用既有守则、发帖、在线星球与消息路由', () => {
   const script = read('pages/community/index.js');
   assert.match(script, /handleGuidelines\(\)\s*\{/);

@@ -16,16 +16,10 @@ function decorate(item) {
   const avatarTone = AVATAR_TONES[(avatarInitial.codePointAt(0) || 0) % AVATAR_TONES.length];
   const replyCount = Math.max(0, Number(item.replyCount) || 0);
   const likeCount = Math.max(0, Number(item.likeCount) || 0);
+  const viewerHasLiked = Boolean(item.viewerHasLiked);
   const timeLabel = minutes < 1 ? '刚刚' : minutes < 60 ? `${minutes}分钟前` : minutes < 1440 ? `${Math.floor(minutes / 60)}小时前` : `${Math.floor(minutes / 1440)}天前`;
-  return {
-    ...item,
-    authorNickname,
-    avatarInitial,
-    avatarTone,
-    replyCount,
-    likeCount,
-    timeLabel,
-    accessibilityLabel: `${authorNickname}发布的讨论：${String(item.content || '').slice(0, 30)}，${timeLabel}，${likeCount}个赞，${replyCount}条回复，双击查看详情`
+  return { ...item, authorNickname, avatarInitial, avatarTone, replyCount, likeCount, viewerHasLiked, likePending: Boolean(item.likePending), timeLabel,
+    accessibilityLabel: `${authorNickname}发布的讨论：${String(item.content || '').slice(0, 30)}，${timeLabel}，${likeCount}个赞，${replyCount}条回复，${viewerHasLiked ? '已点赞' : '未点赞'}，双击查看详情`
   };
 }
 
@@ -63,6 +57,7 @@ Page({
 
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
+    if (this._likeLocks) this._likeLocks.clear();
     this.releaseCompanionNavigation();
   },
 
@@ -78,6 +73,7 @@ Page({
     if (append && (!this.data.nextCursor || this.data.loadingMore)) return;
     if (append) this._loadSeq = this._loadSeq || 0;
     const seq = append ? this._loadSeq : (this._loadSeq = (this._loadSeq || 0) + 1);
+    const likes=this.data.posts;
     this.setData(append
       ? { loadingMore: true, loadMoreError: '' }
       : { loading: !keepContent, error: '', loadMoreError: '', ...(keepContent ? {} : { posts: [] }) });
@@ -88,9 +84,16 @@ Page({
         keyword: this.data.appliedKeyword || undefined
       });
       if (seq !== this._loadSeq) return;
-      const incoming = (result.items || []).map(decorate);
+      const currentById = new Map(this.data.posts.map((item) => [item.id, item]));
+      const incoming = (result.items || []).map(decorate).map((item) => {
+        const now=currentById.get(item.id);
+        if (!now) return item;
+        const was=likes.find((entry)=>entry.id===item.id);
+        return !was || now.likePending || now.viewerHasLiked !== was.viewerHasLiked || now.likeCount !== was.likeCount
+          ? decorate({ ...item, viewerHasLiked: now.viewerHasLiked, likeCount: now.likeCount, likePending: now.likePending }) : item;
+      });
       this.setData({
-        posts: append ? [...this.data.posts, ...incoming] : incoming,
+        posts: append ? [...this.data.posts, ...incoming.filter((item) => !currentById.has(item.id))] : incoming,
         nextCursor: result.nextCursor || '',
         hasMore: Boolean(result.nextCursor),
         loading: false,
@@ -131,6 +134,51 @@ Page({
 
   handleResetSearch() {
     return this.handleClearKeyword();
+  },
+
+  async ensureInteractionAccess() {
+    if (this._accessPromise) return this._accessPromise;
+    this._accessPromise = userService.login()
+      .then((user) => user.profileComplete ? true : (wx.navigateTo({ url: '/subpackages/profile/edit/index' }), false))
+      .catch((error) => { if (!error.handled) wx.showToast({ title: error.message || '暂时无法登录', icon: 'none' }); return false; })
+      .finally(() => { this._accessPromise = null; });
+    return this._accessPromise;
+  },
+
+  updatePostLike(postId, viewerHasLiked, likeCount, likePending) {
+    const index = this.data.posts.findIndex((item) => item.id === postId);
+    if (index < 0) return false;
+    const posts = [...this.data.posts];
+    posts[index] = decorate({ ...posts[index], viewerHasLiked, likeCount, likePending });
+    this.setData({ posts });
+  },
+
+  async handlePostLike(event) {
+    const postId = String(event.currentTarget.dataset.id || '');
+    if (!postId) return;
+    this._likeLocks = this._likeLocks || new Set();
+    const key = `post:${postId}`;
+    if (this._likeLocks.has(key)) return;
+    this._likeLocks.add(key);
+    let before = null;
+    try {
+      if (!await this.ensureInteractionAccess()) return;
+      const target = this.data.posts.find((item) => item.id === postId);
+      if (!target) return;
+      before = { liked: Boolean(target.viewerHasLiked), count: Math.max(0, Number(target.likeCount) || 0) };
+      const liked = !before.liked;
+      this.updatePostLike(postId, liked, before.count + (liked ? 1 : -1), true);
+      const result = await communityService.setLike('post', postId, liked);
+      const current = this.data.posts.find((item) => item.id === postId);
+      if (!current || !current.likePending || current.viewerHasLiked !== liked) return;
+      this.updatePostLike(postId, result.liked, result.likeCount, false);
+    } catch (error) {
+      const current = this.data.posts.find((item) => item.id === postId);
+      if (before && current && current.likePending && current.viewerHasLiked !== before.liked) this.updatePostLike(postId, before.liked, before.count, false);
+      if (!error.handled) wx.showToast({ title: '点赞失败，请重试', icon: 'none' });
+    } finally {
+      this._likeLocks.delete(key);
+    }
   },
 
   async handleCompose() {

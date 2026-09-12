@@ -1,0 +1,12 @@
+{
+  "id": "add-community-feed-like-toggle",
+  "title": "为发现页帖子增加心形点赞切换",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-12T21:35:00+08:00",
+  "branch": "main"
+}
