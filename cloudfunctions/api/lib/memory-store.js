@@ -1499,6 +1499,11 @@ class MemoryStore {
     return { total: items.length, items: clone(items.slice(0, limit)) };
   }
 
+  async findCompanionPresenceByProfileNavNonce(profileNavNonce) {
+    const item = [...this.companionPresences.values()].find((presence) => presence.profileNavNonce === profileNavNonce);
+    return item ? clone(item) : null;
+  }
+
   async listNotifications(userId) {
     return clone(
       [...this.notifications.values()]

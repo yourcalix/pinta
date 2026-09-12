@@ -1,0 +1,12 @@
+{
+  "id": "open-companion-profile-from-orbit",
+  "title": "点击在线搭子星球圆点跳转对应用户主页",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付云函数部署包",
+  "createdAt": "2026-09-12T16:45:00+08:00",
+  "branch": "main"
+}

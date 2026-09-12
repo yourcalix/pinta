@@ -95,7 +95,8 @@ const PUBLIC_ACTIONS = new Set([
   'activity.question.list',
   'community.post.list',
   'community.post.detail',
-  'companion.presence.snapshot'
+  'companion.presence.snapshot',
+  'profile.public.get'
 ]);
 const MAX_PUBLIC_SCAN = 500;
 const mockSensitiveHashSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
@@ -104,6 +105,7 @@ const COMPANION_PRESENCE_SCENE = 'companion_globe';
 const COMPANION_PRESENCE_TTL_MS = 90 * 1000;
 const COMPANION_MIN_WRITE_INTERVAL_MS = 20 * 1000;
 const COMPANION_SAMPLE_LIMIT = 50;
+const COMPANION_PROFILE_NAV_BUCKET_MS = 30 * 1000;
 
 function isMockLocalAvatarPath(value) {
   return typeof value === 'string'
@@ -273,17 +275,41 @@ function validateCompanionScene(input, requireSessionToken = false) {
   return { scene: input.scene, sessionToken: requireSessionToken ? input.sessionToken : '' };
 }
 
+function mockOpaque56(...parts) {
+  return Array.from({ length: 4 }, (_, index) => stableMockEntityId('h', ...parts, index).split('_').pop()).join('').slice(0, 56);
+}
+
+function mockProfileNavToken(profileNavNonce, sessionNonce, bucket) {
+  if (!/^[a-f0-9]{56}$/.test(profileNavNonce || '') || !sessionNonce) return '';
+  return `companionProfileNa_${profileNavNonce}_${Number(bucket).toString(36)}_${mockOpaque56(profileNavNonce, sessionNonce, bucket)}`;
+}
+
+function mockProfileNavNonceFromToken(token) {
+  const match = /^companionProfileNa_([a-f0-9]{56})_([0-9a-z]+)_([a-f0-9]{56})$/.exec(String(token || ''));
+  return match ? match[1] : '';
+}
+
+function validateMockPublicProfileInput(input) {
+  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '公开主页参数无效');
+  assert(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
+  assert(/^companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}$/.test(input.profileNavToken || ''), 'NOT_FOUND');
+  return input.profileNavToken;
+}
+
 function publicMockPresenceSnapshot(at) {
   const active = state.companionPresences
     .filter((item) => item.scene === COMPANION_PRESENCE_SCENE && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(at))
     .sort((left, right) => String(right.expiresAt).localeCompare(String(left.expiresAt)) || String(left.id).localeCompare(String(right.id)));
   const bucket = Math.floor(Date.parse(at) / 15000);
+  const profileBucket = Math.floor(Date.parse(at) / COMPANION_PROFILE_NAV_BUCKET_MS);
   const users = active.slice(0, COMPANION_SAMPLE_LIMIT).map((item) => {
     const nickname = Array.from(String(item.nickname || '').trim() || '匿名搭子').slice(0, 12).join('');
     const sessionKey = item.sessionNonce
       || stableMockEntityId('legacyPresenceWindow', nickname, item.expiresAt, bucket);
     return {
       displayToken: stableMockEntityId('presenceView', sessionKey, bucket),
+      profileNavToken: item.profileNavNonce && item.sessionNonce ? mockProfileNavToken(item.profileNavNonce, item.sessionNonce, profileBucket) : '',
+      profileNavExpiresAt: item.profileNavNonce && item.sessionNonce ? new Date(Math.min(Date.parse(item.expiresAt), (profileBucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString() : null,
       nickname,
       layoutSeed: Number.parseInt(sessionKey.slice(-8), 16) >>> 0,
       viewerIsSelf: item.userId === currentUserId
@@ -1687,6 +1713,36 @@ function handle(action, input, idempotencyKey = '') {
     };
   }
   if (action === 'profile.get') return { user: selfUser(requireUser()) };
+  if (action === 'profile.public.get') {
+    const token = validateMockPublicProfileInput(input);
+    const now = new Date().toISOString();
+    const bucket = Math.floor(Date.parse(now) / COMPANION_PROFILE_NAV_BUCKET_MS);
+    const profileNavNonce = mockProfileNavNonceFromToken(token);
+    const presence = state.companionPresences.find((item) => item.profileNavNonce === profileNavNonce
+      && item.scene === COMPANION_PRESENCE_SCENE
+      && item.status === 'ACTIVE'
+      && Date.parse(item.expiresAt) > Date.parse(now)
+      && [bucket, bucket - 1].some((candidate) => mockProfileNavToken(item.profileNavNonce, item.sessionNonce, candidate) === token));
+    assert(presence, 'NOT_FOUND', '目标不存在或已失效');
+    const target = state.users.find((item) => item.id === presence.userId && item.status === 'ACTIVE' && item.profile);
+    assert(target, 'NOT_FOUND', '目标不存在或已失效');
+    const profile = target.profile;
+    return {
+      profile: {
+        nickname: Array.from(String(profile.nickname || '').trim() || '匿名搭子').slice(0, 12).join(''),
+        avatarKind: avatarKindFromGender(profile.gender),
+        gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
+        age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)),
+        mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
+        city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
+        interests: Array.isArray(profile.interests) ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
+        online: true,
+        viewerIsSelf: target.id === currentUserId
+      },
+      serverNow: now,
+      expiresAt: new Date(Math.min(Date.parse(presence.expiresAt), (bucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString()
+    };
+  }
   if (action === 'profile.update') {
     const user = requireUser();
     user.profile = validateMockProfile(input, user.profile);
@@ -1856,12 +1912,14 @@ function handle(action, input, idempotencyKey = '') {
     const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
     const existing = state.companionPresences.find((item) => item.id === id);
     const sessionNonce = stableMockEntityId('presenceSession', now, idempotencyKey);
+    const profileNavNonce = mockOpaque56('profileNavNonce', now, idempotencyKey);
     const next = {
       id,
       scene: COMPANION_PRESENCE_SCENE,
       userId: user.id,
       nickname: user.profile.nickname,
       sessionNonce,
+      profileNavNonce,
       layoutSeed: Number.parseInt(sessionNonce.slice(-8), 16) >>> 0,
       status: 'ACTIVE',
       lastSeenAt: now,

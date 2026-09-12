@@ -1,0 +1,52 @@
+page { width: 100%; min-height: 100%; background: #0d0c1b; color: #fff; }
+button { margin: 0; padding: 0; line-height: 1.2; }
+button::after { display: none; }
+
+.public-profile-page { width: 100vw; min-height: 100vh; overflow-x: hidden; background: #0d0c1b; }
+.public-profile-nav { position: fixed; z-index: 20; top: 0; right: 0; left: 0; background: linear-gradient(180deg, rgba(13,12,27,.96), rgba(13,12,27,.2), transparent); }
+.public-profile-nav-inner { display: flex; position: absolute; right: 0; bottom: 0; left: 0; height: 88rpx; align-items: center; justify-content: space-between; padding: 0 24rpx; box-sizing: border-box; }
+.public-profile-back, .public-profile-nav-spacer { width: 112rpx; min-width: 112rpx; height: 88rpx; }
+.public-profile-back { display: flex; align-items: center; color: #fff; background: transparent; border: 0; font-size: 64rpx; font-weight: 300; }
+.public-profile-title { position: absolute; left: 50%; color: rgba(255,255,255,.94); font-size: 32rpx; font-weight: 700; transform: translateX(-50%); }
+.public-control--pressed { opacity: .58; transform: scale(.98); }
+
+.public-stage { display: flex; position: relative; min-height: 500rpx; align-items: center; flex-direction: column; justify-content: center; overflow: hidden; box-sizing: border-box; background: radial-gradient(circle at 50% 38%, #2b4665 0%, #182942 46%, #0d0c1b 100%); }
+.public-stage-glow { position: absolute; width: 420rpx; height: 420rpx; background: radial-gradient(circle, rgba(110,231,216,.2), transparent 68%); border-radius: 50%; pointer-events: none; }
+.public-avatar-shell { position: relative; z-index: 1; width: 154rpx; height: 154rpx; padding: 5rpx; overflow: hidden; background: rgba(255,255,255,.94); border: 3rpx solid rgba(255,255,255,.78); border-radius: 50%; box-shadow: 0 18rpx 48rpx rgba(0,0,0,.32); box-sizing: border-box; }
+.public-avatar { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.public-name-row { display: flex; position: relative; z-index: 1; max-width: 640rpx; min-height: 60rpx; align-items: center; justify-content: center; gap: 14rpx; margin-top: 20rpx; }
+.public-name { max-width: 470rpx; overflow: hidden; font-size: 38rpx; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.public-self { padding: 5rpx 13rpx; color: #0d3833; background: #79eadc; border-radius: 999rpx; font-size: 22rpx; font-weight: 700; }
+.public-online { display: flex; position: relative; z-index: 1; min-height: 48rpx; align-items: center; gap: 10rpx; color: rgba(255,255,255,.7); font-size: 24rpx; }
+.public-online-dot { width: 14rpx; height: 14rpx; background: #6ee7d8; border-radius: 50%; box-shadow: 0 0 16rpx rgba(110,231,216,.75); }
+
+.public-sheet { position: relative; z-index: 2; min-height: calc(100vh - 470rpx); margin-top: -30rpx; padding: 48rpx 28rpx calc(48rpx + env(safe-area-inset-bottom)); color: #111827; background: #f9f7f2; border-radius: 38rpx 38rpx 0 0; box-sizing: border-box; }
+.public-section { margin-bottom: 34rpx; }
+.public-section-title { display: block; margin-bottom: 18rpx; font-size: 30rpx; font-weight: 800; }
+.public-facts, .public-interests { display: flex; flex-wrap: wrap; gap: 14rpx; }
+.public-fact, .public-interest { display: inline-flex; min-height: 64rpx; align-items: center; padding: 0 22rpx; color: #374151; background: #fff; border: 1rpx solid #ebe7de; border-radius: 32rpx; box-shadow: 0 8rpx 22rpx rgba(110,100,90,.07); font-size: 26rpx; box-sizing: border-box; }
+.public-interest { color: #175f58; background: #effaf7; border-color: #d6f0ea; }
+.public-empty-copy { color: #78716c; font-size: 26rpx; line-height: 1.6; }
+.public-privacy { display: flex; min-height: 92rpx; align-items: center; gap: 14rpx; margin-top: 18rpx; padding: 18rpx 22rpx; color: #78716c; background: #fff; border: 1rpx solid #eee9df; border-radius: 22rpx; font-size: 24rpx; line-height: 1.5; box-sizing: border-box; }
+.public-privacy-icon { flex: 0 0 auto; color: #16a36a; font-size: 30rpx; }
+
+.public-state { display: flex; width: 100vw; min-height: 100vh; align-items: center; flex-direction: column; justify-content: center; padding: 48rpx 42rpx calc(72rpx + env(safe-area-inset-bottom)); box-sizing: border-box; text-align: center; }
+.public-state--dark { background: radial-gradient(circle at 50% 40%, #1b1934, #0d0c1b 68%); }
+.public-state-title { margin-top: 28rpx; font-size: 34rpx; font-weight: 800; }
+.public-state-copy { margin-top: 14rpx; color: rgba(255,255,255,.58); font-size: 25rpx; line-height: 1.6; }
+.public-state-action { display: flex; width: 420rpx; max-width: 100%; min-height: 92rpx; align-items: center; justify-content: center; margin-top: 38rpx; color: #06231f; background: #79eadc; border: 0; border-radius: 46rpx; font-size: 28rpx; font-weight: 800; }
+.public-state-symbol { display: flex; width: 96rpx; height: 96rpx; align-items: center; justify-content: center; color: #0d0c1b; background: #f3d0d1; border-radius: 50%; font-size: 42rpx; font-weight: 800; }
+.public-state-orbit { position: relative; width: 126rpx; height: 126rpx; border: 2rpx solid rgba(185,244,239,.28); border-radius: 50%; }
+.public-state-dot { position: absolute; top: 12rpx; right: 6rpx; width: 22rpx; height: 22rpx; background: #b9f4ef; border-radius: 50%; box-shadow: 0 0 18rpx rgba(185,244,239,.6); }
+.public-avatar-skeleton { width: 148rpx; height: 148rpx; border-radius: 50%; }
+.public-line-skeleton { width: 260rpx; height: 38rpx; margin: 26rpx 0; border-radius: 19rpx; }
+.public-shimmer { background: linear-gradient(100deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.16) 42%, rgba(255,255,255,.06) 60%); background-size: 240% 100%; animation: public-shimmer 1.4s linear infinite; }
+@keyframes public-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+@media (max-width: 340px) {
+  .public-stage { min-height: 450rpx; }
+  .public-avatar-shell { width: 132rpx; height: 132rpx; }
+  .public-name { max-width: 380rpx; font-size: 34rpx; }
+  .public-sheet { min-height: calc(100vh - 422rpx); padding-right: 22rpx; padding-left: 22rpx; }
+  .public-fact, .public-interest { min-height: 60rpx; padding: 0 18rpx; font-size: 24rpx; }
+}

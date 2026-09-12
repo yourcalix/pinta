@@ -24,7 +24,7 @@ function pageTemplates() {
   ].sort();
 }
 
-test('除独立视觉首页、发现、发布讨论、在线星球、活动列表、附近、成团记忆、选点、详情与资料页外，其余页面共用拼图纸纹背景', () => {
+test('除独立视觉首页、发现、发布讨论、在线星球、公开主页、活动列表、附近、成团记忆、选点、详情与资料页外，其余页面共用拼图纸纹背景', () => {
   const templates = pageTemplates();
   const referenceBackgroundPages = new Set([
     'pages/discover/index.wxml',
@@ -32,6 +32,7 @@ test('除独立视觉首页、发现、发布讨论、在线星球、活动列�
     'pages/messages/index.wxml',
     'subpackages/community/compose/index.wxml',
     'subpackages/community/companion/index.wxml',
+    'subpackages/profile/public/index.wxml',
     'subpackages/activity/list/index.wxml',
     'subpackages/activity/nearby/index.wxml',
     'subpackages/activity/memories/index.wxml',
@@ -39,7 +40,7 @@ test('除独立视觉首页、发现、发布讨论、在线星球、活动列�
     'subpackages/profile/edit/index.wxml',
     'subpackages/publish/location-picker/index.wxml'
   ]);
-  assert.equal(templates.length, 20);
+  assert.equal(templates.length, 21);
   templates.filter((relativePath) => !referenceBackgroundPages.has(relativePath)).forEach((relativePath) => {
     const template = read(relativePath);
     assert.equal((template.match(/shared-paper-bg\.jpg/g) || []).length, 1, relativePath);
@@ -80,6 +81,7 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
       'pages/messages/index.json': '#F9F7F2',
       'subpackages/community/compose/index.json': '#F9F7F2',
       'subpackages/community/companion/index.json': '#0D0C1B',
+      'subpackages/profile/public/index.json': '#0D0C1B',
       'subpackages/activity/list/index.json': '#F9F7F2',
       'subpackages/activity/nearby/index.json': '#F9F7F2',
       'subpackages/activity/memories/index.json': '#F9F7F2',
@@ -89,7 +91,11 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
     };
     if (lightBackgrounds[relativePath]) {
       assert.equal(config.backgroundColor, lightBackgrounds[relativePath], relativePath);
-      assert.equal(config.backgroundTextStyle, relativePath === 'subpackages/community/companion/index.json' ? 'light' : 'dark', relativePath);
+      assert.equal(
+        config.backgroundTextStyle,
+        ['subpackages/community/companion/index.json', 'subpackages/profile/public/index.json'].includes(relativePath) ? 'light' : 'dark',
+        relativePath
+      );
       return;
     }
     assert.equal(config.backgroundColor, '#075AA7', relativePath);

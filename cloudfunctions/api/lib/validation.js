@@ -327,6 +327,14 @@ function validateCompanionPresenceInput(input = {}, options = {}) {
   return { scene, sessionToken };
 }
 
+function validatePublicProfileGetInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
+  const profileNavToken = stringValue(input.profileNavToken, '公开主页凭据', { required: true, min: 120, max: 160 });
+  invariant(/^companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}$/.test(profileNavToken), 'NOT_FOUND');
+  return { profileNavToken };
+}
+
 function validateCommunityPostCreateInput(input) {
   invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
   return { content: assertCommunityTextSafe(stringValue(input.content, '讨论内容', { required: true, min: 2, max: 500 })) };
@@ -432,6 +440,7 @@ module.exports = {
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCompanionPresenceInput,
+  validatePublicProfileGetInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,

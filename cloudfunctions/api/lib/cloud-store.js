@@ -2217,6 +2217,11 @@ class CloudStore {
     return { total: Math.max(0, Number(countResult && countResult.total) || 0), items: (sampleResult.data || []).map(entity) };
   }
 
+  async findCompanionPresenceByProfileNavNonce(profileNavNonce) {
+    const result = await this.db.collection('companionPresences').where({ profileNavNonce }).limit(1).get();
+    return entity(first(result.data || []));
+  }
+
   async listNotifications(userId) {
     const result = await this.db.collection('notifications').where({ userId }).orderBy('createdAt', 'desc').limit(100).get();
     return (result.data || []).map(entity);

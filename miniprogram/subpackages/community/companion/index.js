@@ -2,7 +2,9 @@
 
 const presenceService = require('../../../services/companion-presence');
 const userService = require('../../../services/user');
+const ephemeralProfileNavigation = require('../../../services/ephemeral-profile-navigation');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
+const { resolveCanvasTap, selectHitNode } = require('./hit-test');
 
 const MAX_RENDERED_USERS = 50;
 const MAX_VISIBLE_LABELS = 18;
@@ -59,6 +61,8 @@ Page({
     this._visible = true;
     this._hasShown = false;
     this._loadSeq = 0;
+    this._hitNodes = [];
+    this._navigating = false;
     this.setData({ contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx) });
     return this.loadSnapshot(true);
   },
@@ -67,6 +71,8 @@ Page({
 
   onShow() {
     this._visible = true;
+    this._navigating = false;
+    this.refreshCanvasRect();
     if (this._hasShown) this.loadSnapshot(false);
     this._hasShown = true;
     this.startAnimation();
@@ -82,6 +88,7 @@ Page({
     this._disposed = true;
     this._visible = false;
     this._loadSeq += 1;
+    if (this._navigationTimer) clearTimeout(this._navigationTimer);
     this.stopRuntime(true);
   },
 
@@ -103,6 +110,7 @@ Page({
     const onlineTotal = Math.max(0, Number(snapshot && snapshot.onlineTotal) || 0);
     const isJoined = Boolean(joined && users.some((item) => item.viewerIsSelf));
     this._nodes = buildSphereNodes(users);
+    this._hitNodes = [];
     this.setData({
       status: 'ready',
       onlineTotal,
@@ -143,7 +151,7 @@ Page({
   confirmJoinDisclosure() {
     return new Promise((resolve) => wx.showModal({
       title: '加入搭子星球',
-      content: '加入后，你的昵称将在星球上短暂可见；离开页面后会自动隐身。不会公开头像、联系方式或位置。',
+      content: '加入后，你的昵称与已填写的公开资料可从星球短暂查看；离开页面后会自动隐身。不会公开完整生日、联系方式或实时位置。',
       confirmText: '确认加入',
       cancelText: '暂不加入',
       confirmColor: '#16A36A',
@@ -214,7 +222,7 @@ Page({
 
   initCanvas() {
     if (this._canvas || typeof wx === 'undefined' || typeof wx.createSelectorQuery !== 'function') return;
-    wx.createSelectorQuery().in(this).select('#companion-canvas').fields({ node: true, size: true }).exec((result) => {
+    wx.createSelectorQuery().in(this).select('#companion-canvas').fields({ node: true, size: true, rect: true }).exec((result) => {
       const target = result && result[0];
       if (!target || !target.node || !target.width || !target.height || this._disposed) return;
       const info = typeof wx.getWindowInfo === 'function' ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -228,9 +236,18 @@ Page({
       this._context = context;
       this._canvasWidth = target.width;
       this._canvasHeight = target.height;
+      this._canvasRect = { left: target.left || 0, top: target.top || 0, width: target.width, height: target.height };
       this._rotation = 0;
       this.startAnimation();
     });
+  },
+
+  refreshCanvasRect() {
+    if (typeof wx === 'undefined' || typeof wx.createSelectorQuery !== 'function') return;
+    wx.createSelectorQuery().in(this).select('#companion-canvas').boundingClientRect((rect) => {
+      if (!rect || this._disposed) return;
+      this._canvasRect = { left: rect.left || 0, top: rect.top || 0, width: rect.width, height: rect.height };
+    }).exec();
   },
 
   startAnimation() {
@@ -273,7 +290,12 @@ Page({
     }).sort((left, right) => left.depth - right.depth);
     projected.forEach((node) => this.drawNode(context, node, timestamp));
     const frontNodes = projected.filter((node) => node.depth > .08).sort((left, right) => right.depth - left.depth).slice(0, MAX_VISIBLE_LABELS);
-    this.drawLabels(context, frontNodes, width, height);
+    const labelBounds = this.drawLabels(context, frontNodes, width, height);
+    this._hitNodes = projected.filter((node) => node.depth > .05 && node.profileNavToken).map((node) => ({
+      ...node,
+      hitRadius: 22,
+      textBounds: labelBounds.get(node.displayToken) || null
+    }));
   },
 
   drawSphereGuide(context, x, y, radius) {
@@ -302,11 +324,18 @@ Page({
       context.lineWidth = 1.5;
       context.beginPath(); context.arc(node.screenX, node.screenY, size + pulse, 0, Math.PI * 2); context.stroke();
     }
+    if (node.displayToken === this._selectedDisplayToken && Date.now() < Number(this._selectedUntil || 0)) {
+      context.globalAlpha = .9;
+      context.strokeStyle = '#7ff5e5';
+      context.lineWidth = 2;
+      context.beginPath(); context.arc(node.screenX, node.screenY, size + 11, 0, Math.PI * 2); context.stroke();
+    }
     context.restore();
   },
 
   drawLabels(context, nodes, width, height) {
     const occupied = [];
+    const boundsByToken = new Map();
     context.save();
     context.textBaseline = 'middle';
     nodes.forEach((node) => {
@@ -320,6 +349,7 @@ Page({
       if (box.left < 4 || box.right > width - 4 || box.top < 4 || box.bottom > height - 4) return;
       if (occupied.some((other) => !(box.right < other.left || box.left > other.right || box.bottom < other.top || box.top > other.bottom))) return;
       occupied.push(box);
+      boundsByToken.set(node.displayToken, box);
       context.globalAlpha = Math.min(.94, .48 + node.depth * .46);
       context.fillStyle = '#f5f1f5';
       context.shadowColor = 'rgba(0,0,0,.72)';
@@ -327,6 +357,40 @@ Page({
       context.fillText(label, x, y, 110);
     });
     context.restore();
+    return boundsByToken;
+  },
+
+  handleCanvasTap(event) {
+    if (this.data.status !== 'ready' || this._navigating) return;
+    const point = resolveCanvasTap(event, this._canvasRect || {});
+    const node = selectHitNode(point, this._hitNodes || []);
+    if (!node) return;
+    this._navigating = true;
+    this._selectedDisplayToken = node.displayToken;
+    this._selectedUntil = Date.now() + 500;
+    if (node.viewerIsSelf) {
+      this._navigationTimer = setTimeout(() => {
+        wx.switchTab({
+          url: '/pages/user/index',
+          fail: () => { this._navigating = false; }
+        });
+      }, 100);
+      return;
+    }
+    const key = ephemeralProfileNavigation.issue({
+      profileNavToken: node.profileNavToken,
+      profileNavExpiresAt: node.profileNavExpiresAt
+    });
+    this._navigationTimer = setTimeout(() => {
+      wx.navigateTo({
+        url: `/subpackages/profile/public/index?k=${encodeURIComponent(key)}`,
+        fail: () => {
+          ephemeralProfileNavigation.revoke(key);
+          this._navigating = false;
+          wx.showToast({ title: '暂时无法打开主页', icon: 'none' });
+        }
+      });
+    }, 100);
   },
 
   handleRetry() { return this.loadSnapshot(true); },

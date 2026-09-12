@@ -9,7 +9,7 @@ const { MemoryStore } = require('../cloudfunctions/api/lib/memory-store');
 const mockServer = require('../miniprogram/mocks/server');
 
 function profile(nickname) {
-  return { nickname, gender: 'FEMALE', city: '澳门', interests: ['运动'], adultConfirmed: true };
+  return { nickname, gender: 'FEMALE', city: '澳门', interests: ['运动'], birthDate: '2000-09-13', mbti: 'INFP', adultConfirmed: true };
 }
 
 function setup() {
@@ -24,7 +24,7 @@ function setup() {
   const service = createPinbaService({ store, clock: () => new Date(now), idGenerator: () => `presence-${++request}` });
   const call = (action, actorId, key, data = {}) => service.execute({
     action,
-    data: { scene: 'companion_globe', ...data },
+    data: action === 'profile.public.get' ? data : { scene: 'companion_globe', ...data },
     requestId: `presence-request-${++request}`,
     ...(key ? { idempotencyKey: key } : {})
   }, actorId ? { actorId } : {});
@@ -54,8 +54,75 @@ test('游客快照不创建在线事实，只有合格账号主动加入才计�
   assert.equal(joined.data.snapshot.onlineTotal, 1);
   assert.equal(joined.data.snapshot.users[0].nickname, '小琴');
   assert.equal(joined.data.snapshot.users[0].viewerIsSelf, true);
+  assert.match(joined.data.snapshot.users[0].profileNavToken, /^companionProfileNa_/);
+  assert.equal(Date.parse(joined.data.snapshot.users[0].profileNavExpiresAt) > Date.parse('2026-09-12T08:00:00.000Z'), true);
   const serialized = JSON.stringify(joined.data.snapshot);
   for (const forbidden of ['user-a', 'openid', 'contactInfo', 'birthDate', 'avatar']) assert.equal(serialized.includes(forbidden), false);
+});
+
+test('短期星球凭据只在目标在线会话内解析公开资料', async () => {
+  const { store, call, advance } = setup();
+  const entered = await call('companion.presence.enter', 'user-b', 'presence-enter-public-profile');
+  const token = entered.data.snapshot.users[0].profileNavToken;
+  const read = (actorId, profileNavToken) => call('profile.public.get', actorId, null, { profileNavToken });
+
+  const publicResult = await read('user-a', token);
+  assert.equal(publicResult.ok, true);
+  assert.deepEqual(publicResult.data.profile, {
+    nickname: '阿明',
+    avatarKind: 'PASSENGER_B',
+    gender: 'FEMALE',
+    age: 25,
+    mbti: 'INFP',
+    city: '澳门',
+    interests: ['运动'],
+    online: true,
+    viewerIsSelf: false
+  });
+  const serialized = JSON.stringify(publicResult.data);
+  for (const forbidden of ['user-b', 'openid', 'birthDate', 'contactInfo', 'sessionNonce', 'sessionToken', 'fileID']) {
+    assert.equal(serialized.includes(forbidden), false);
+  }
+
+  const selfResult = await read('user-b', token);
+  assert.equal(selfResult.data.profile.viewerIsSelf, true);
+  assert.equal((await read('user-a', `${token}tampered`)).error.code, 'NOT_FOUND');
+
+  await call('companion.presence.leave', 'user-b', 'presence-leave-public-profile', { sessionToken: entered.data.sessionToken });
+  assert.equal((await read('user-a', token)).error.code, 'NOT_FOUND');
+
+  const reentered = await call('companion.presence.enter', 'user-b', 'presence-reenter-public-profile');
+  const freshToken = reentered.data.snapshot.users[0].profileNavToken;
+  assert.notEqual(freshToken, token);
+  advance(61_000);
+  assert.equal((await read('user-a', freshToken)).error.code, 'NOT_FOUND');
+
+  store.users.get('user-b').status = 'DISABLED';
+  assert.equal((await read('user-a', freshToken)).error.code, 'NOT_FOUND');
+});
+
+test('公开主页按短期随机定位片段复核在线事实，不依赖当前前50个展示样本', async () => {
+  const { store, call } = setup();
+  const entered = await call('companion.presence.enter', 'user-b', 'presence-enter-outside-sample');
+  const token = entered.data.snapshot.users[0].profileNavToken;
+  for (let index = 0; index < 50; index += 1) {
+    store.companionPresences.set(`newer-${index}`, {
+      id: `newer-${index}`,
+      scene: 'companion_globe',
+      userId: `other-${index}`,
+      nickname: `新搭子${index}`,
+      status: 'ACTIVE',
+      sessionNonce: `session-${index}`,
+      profileNavNonce: String(index + 1).padStart(56, '0'),
+      expiresAt: '2026-09-12T08:02:00.000Z',
+      updatedAt: '2026-09-12T08:00:30.000Z'
+    });
+  }
+  const snapshot = await call('companion.presence.snapshot');
+  assert.equal(snapshot.data.users.some((item) => item.nickname === '阿明'), false);
+  const result = await call('profile.public.get', 'user-a', null, { profileNavToken: token });
+  assert.equal(result.ok, true);
+  assert.equal(result.data.profile.nickname, '阿明');
 });
 
 test('在线事实按确定性用户记录续期、限频、退出并由服务端时间过期', async () => {
@@ -114,6 +181,8 @@ test('公开球面样本不可分页且最多返回50个真实在线节点', asy
     userId: `internal-${index}`,
     nickname: `搭子${index}`,
     status: 'ACTIVE',
+    sessionNonce: `session-${index}`,
+    profileNavNonce: String(index + 1).padStart(56, '0'),
     layoutSeed: index + 1,
     lastSeenAt: at,
     expiresAt: '2026-09-12T08:01:30.000Z'
@@ -124,6 +193,7 @@ test('公开球面样本不可分页且最多返回50个真实在线节点', asy
   assert.equal(result.data.users.length, 50);
   assert.equal(Object.prototype.hasOwnProperty.call(result.data, 'nextCursor'), false);
   assert.equal(JSON.stringify(result.data).includes('internal-'), false);
+  assert.equal(result.data.users.every((item) => item.profileNavToken && item.profileNavExpiresAt), true);
 });
 
 test('Cloud presence 查询使用 scene 与 expiresAt 且不读取用户全表', () => {
@@ -135,6 +205,7 @@ test('Cloud presence 查询使用 scene 与 expiresAt 且不读取用户全表',
   assert.match(section, /\.count\(\)/);
   assert.match(section, /orderBy\('expiresAt', 'desc'\)\.limit\(limit\)/);
   assert.match(section, /where\(\{ _id: id, sessionNonce/);
+  assert.match(section, /where\(\{ profileNavNonce \}\)\.limit\(1\)/);
   assert.doesNotMatch(section, /collection\('users'\)/);
 });
 

@@ -30,6 +30,7 @@ const {
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCompanionPresenceInput,
+  validatePublicProfileGetInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,
@@ -58,6 +59,7 @@ const {
   isCompleteRideProfile
 } = require('./passenger-avatar');
 const { safeSelfAvatar } = require('./profile-avatar');
+const { calculateAgeOnMacauDate } = require('./profile-birth-date');
 const {
   COMPANION_PRESENCE_TTL_MS,
   COMPANION_HEARTBEAT_INTERVAL_MS,
@@ -66,6 +68,10 @@ const {
   companionPresenceId,
   layoutSeedForPresence,
   safePresenceNickname,
+  createProfileNavNonce,
+  profileNavNonceFromToken,
+  profileNavExpiresAt,
+  resolveProfileNavPresence,
   publicCompanionSnapshot
 } = require('./companion-presence');
 
@@ -170,6 +176,24 @@ function selfUser(user) {
         }
       : null,
     profileComplete: isCompleteRideProfile(user.profile)
+  };
+}
+
+function publicCompanionProfile(user, viewerId, at) {
+  const profile = user && user.profile || {};
+  const interests = Array.isArray(profile.interests)
+    ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8)
+    : [];
+  return {
+    nickname: safePresenceNickname(profile.nickname),
+    avatarKind: avatarKindFromGender(profile.gender),
+    gender: USER_GENDERS.includes(profile.gender) ? profile.gender : null,
+    age: calculateAgeOnMacauDate(profile.birthDate, at),
+    mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
+    city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
+    interests,
+    online: true,
+    viewerIsSelf: Boolean(viewerId && user && user.id === viewerId)
   };
 }
 
@@ -596,6 +620,23 @@ function createPinbaService(options) {
       return { user: selfUser(await requireActiveUser(context, false)) };
     }
 
+    if (action === 'profile.public.get') {
+      const { profileNavToken } = validatePublicProfileGetInput(input);
+      const profileNavNonce = profileNavNonceFromToken(profileNavToken);
+      const candidate = profileNavNonce && typeof store.findCompanionPresenceByProfileNavNonce === 'function'
+        ? await store.findCompanionPresenceByProfileNavNonce(profileNavNonce)
+        : null;
+      const presence = resolveProfileNavPresence(candidate, profileNavToken, at);
+      invariant(presence, 'NOT_FOUND');
+      const target = await store.getUser(presence.userId);
+      invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+      return {
+        profile: publicCompanionProfile(target, context && context.actorId, at),
+        serverNow: at,
+        expiresAt: profileNavExpiresAt(presence, at)
+      };
+    }
+
     if (action === 'profile.update') {
       const actorId = requireActor(context);
       const currentUser = assertActiveAccount(await store.ensureUser(actorId, at));
@@ -698,6 +739,7 @@ function createPinbaService(options) {
       invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
       const id = companionPresenceId(user.id);
       const sessionNonce = stableEntityId('presenceSession', idGenerator(), at);
+      const profileNavNonce = createProfileNavNonce(idGenerator(), at);
       const expiresAt = new Date(Date.parse(at) + COMPANION_PRESENCE_TTL_MS).toISOString();
       await store.enterCompanionPresence({
         id,
@@ -705,6 +747,7 @@ function createPinbaService(options) {
         userId: user.id,
         nickname: safePresenceNickname(user.profile.nickname),
         sessionNonce,
+        profileNavNonce,
         layoutSeed: layoutSeedForPresence(sessionNonce),
         status: 'ACTIVE',
         lastSeenAt: at,
@@ -1461,5 +1504,6 @@ module.exports = {
   publicCommunityPost,
   publicCommunityReply,
   publicNotification,
-  selfUser
+  selfUser,
+  publicCompanionProfile
 };
