@@ -1,0 +1,12 @@
+{
+  "id": "interactive-companion-globe-gestures",
+  "title": "为在线搭子星球增加左右滑动和双指缩放",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付",
+  "createdAt": "2026-09-12T18:00:00+08:00",
+  "branch": "main"
+}

@@ -28,7 +28,10 @@ test('在线星球使用原生Canvas低速自转并完整清理动画与心跳',
   assert.equal(config.disableScroll, true);
   assert.match(template, /type="2d"/);
   assert.match(template, /aria-hidden="true"/);
-  assert.doesNotMatch(template, /bindtouch(?:start|move|end)/);
+  assert.match(template, /bindtouchstart="handleCanvasTouchStart"/);
+  assert.match(template, /bindtouchmove="handleCanvasTouchMove"/);
+  assert.match(template, /bindtouchend="handleCanvasTouchEnd"/);
+  assert.match(template, /bindtouchcancel="handleCanvasTouchCancel"/);
   assert.match(style, /pointer-events:\s*auto/);
   assert.match(style, /#0d0c1b/i);
   assert.match(script, /Math\.min\([^\n]*pixelRatio[^\n]*2\.5/);
@@ -42,6 +45,9 @@ test('在线星球使用原生Canvas低速自转并完整清理动画与心跳',
   assert.match(script, /onShow\(\)[\s\S]*this\.loadSnapshot\(false\)/);
   assert.doesNotMatch(script, /this\.data\.joined\s*=/);
   assert.doesNotMatch(script, /setData\([^)]*rotation/);
+  assert.match(script, /INERTIA_FRICTION_PER_FRAME\s*=\s*\.92/);
+  assert.match(script, /AUTO_RESUME_DELAY_MS\s*=\s*800/);
+  assert.match(script, /visualScaleForZoom/);
 });
 
 test('在线星球具备真实状态、主动加入披露与昵称景深剔除', () => {

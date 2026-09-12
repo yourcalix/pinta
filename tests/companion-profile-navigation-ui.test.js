@@ -45,11 +45,16 @@ test('星球节点可点击且公开主页保持短期只读与完整失效态',
   const orbitScript = read('subpackages/community/companion/index.js');
   const orbitTemplate = read('subpackages/community/companion/index.wxml');
   const orbitStyle = read('subpackages/community/companion/index.wxss');
-  assert.match(orbitTemplate, /bindtap="handleCanvasTap"/);
-  assert.match(orbitTemplate, /点击星球中的圆点或昵称/);
+  assert.doesNotMatch(orbitTemplate, /bindtap="handleCanvasTap"/);
+  assert.match(orbitTemplate, /bindtouchstart="handleCanvasTouchStart"/);
+  assert.match(orbitTemplate, /bindtouchmove="handleCanvasTouchMove"/);
+  assert.match(orbitTemplate, /bindtouchend="handleCanvasTouchEnd"/);
+  assert.match(orbitTemplate, /bindtouchcancel="handleCanvasTouchCancel"/);
+  assert.match(orbitTemplate, /左右滑动旋转，双指捏合缩放/);
   assert.doesNotMatch(orbitStyle, /orbit-canvas\s*\{[^}]*pointer-events:\s*none/s);
   assert.match(orbitScript, /this\._hitNodes/);
   assert.match(orbitScript, /refreshCanvasRect/);
+  assert.match(orbitScript, /performCanvasHitTest/);
   assert.match(orbitScript, /ephemeralProfileNavigation\.issue/);
   assert.match(orbitScript, /profileNavToken/);
   assert.doesNotMatch(orbitScript, /setStorage|profileNavToken[^\n]*url/);

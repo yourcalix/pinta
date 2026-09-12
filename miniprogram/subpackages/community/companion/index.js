@@ -5,12 +5,25 @@ const userService = require('../../../services/user');
 const ephemeralProfileNavigation = require('../../../services/ephemeral-profile-navigation');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { resolveCanvasTap, selectHitNode } = require('./hit-test');
+const {
+  GESTURE_MODE,
+  beginGesture,
+  updateGesture,
+  finishGesture,
+  cancelGesture,
+  visualScaleForZoom
+} = require('./gesture');
 
 const MAX_RENDERED_USERS = 50;
 const MAX_VISIBLE_LABELS = 18;
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const SNAPSHOT_INTERVAL_MS = 20_000;
 const REVOLUTION_MS = 48_000;
+const AUTO_SPIN_RADIANS_PER_MS = Math.PI * 2 / REVOLUTION_MS;
+const INERTIA_FRICTION_PER_FRAME = .92;
+const INERTIA_STOP_RADIANS_PER_FRAME = .001;
+const AUTO_RESUME_DELAY_MS = 800;
+const FRAME_MS = 1000 / 60;
 const COLORS = ['#b9f4ef', '#f3d0d1', '#91dfdc', '#d9c7d7', '#c8eee9'];
 
 function actionCopy(joined, onlineTotal) {
@@ -63,6 +76,7 @@ Page({
     this._loadSeq = 0;
     this._hitNodes = [];
     this._navigating = false;
+    this.resetGestureRuntime(true);
     this.setData({ contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx) });
     return this.loadSnapshot(true);
   },
@@ -72,6 +86,7 @@ Page({
   onShow() {
     this._visible = true;
     this._navigating = false;
+    this.resetGestureRuntime(true);
     this.refreshCanvasRect();
     if (this._hasShown) this.loadSnapshot(false);
     this._hasShown = true;
@@ -82,6 +97,7 @@ Page({
   onHide() {
     this._visible = false;
     this.stopRuntime(true);
+    this.resetGestureRuntime(true);
   },
 
   onUnload() {
@@ -90,6 +106,7 @@ Page({
     this._loadSeq += 1;
     if (this._navigationTimer) clearTimeout(this._navigationTimer);
     this.stopRuntime(true);
+    this.resetGestureRuntime(true);
   },
 
   async loadSnapshot(initial = false) {
@@ -257,7 +274,7 @@ Page({
       if (!this._visible || this._disposed || !this._canvas) return;
       const delta = this._lastFrameAt ? Math.min(50, timestamp - this._lastFrameAt) : 16;
       this._lastFrameAt = timestamp;
-      this._rotation = (this._rotation + delta * Math.PI * 2 / REVOLUTION_MS) % (Math.PI * 2);
+      this.advanceRotation(delta);
       this.drawScene(timestamp);
       this._animationFrame = this._canvas.requestAnimationFrame(frame);
     };
@@ -270,6 +287,36 @@ Page({
     this._lastFrameAt = 0;
   },
 
+  resetGestureRuntime(resetScale = false) {
+    this._gesture = null;
+    this._inertiaVelocity = 0;
+    this._resumeAutoAt = 0;
+    this._autoSpinBlend = 1;
+    if (resetScale) this._zoomScale = 1;
+  },
+
+  scheduleAutoSpinResume() {
+    this._inertiaVelocity = 0;
+    this._resumeAutoAt = Date.now() + AUTO_RESUME_DELAY_MS;
+    this._autoSpinBlend = 0;
+  },
+
+  advanceRotation(delta) {
+    const gestureBlocksRotation = this._gesture && this._gesture.mode !== GESTURE_MODE.BYPASS;
+    if (gestureBlocksRotation) return;
+    const frameRatio = delta / FRAME_MS;
+    if (Math.abs(this._inertiaVelocity || 0) >= INERTIA_STOP_RADIANS_PER_FRAME) {
+      this._rotation = (this._rotation + this._inertiaVelocity * frameRatio) % (Math.PI * 2);
+      this._inertiaVelocity *= Math.pow(INERTIA_FRICTION_PER_FRAME, frameRatio);
+      if (Math.abs(this._inertiaVelocity) < INERTIA_STOP_RADIANS_PER_FRAME) this.scheduleAutoSpinResume();
+      return;
+    }
+    if (Date.now() < Number(this._resumeAutoAt || 0)) return;
+    const blendStep = 1 - Math.exp(-delta / 100);
+    this._autoSpinBlend = Math.min(1, Number(this._autoSpinBlend || 0) + (1 - Number(this._autoSpinBlend || 0)) * blendStep);
+    this._rotation = (this._rotation + delta * AUTO_SPIN_RADIANS_PER_MS * this._autoSpinBlend) % (Math.PI * 2);
+  },
+
   drawScene(timestamp) {
     const context = this._context;
     const width = this._canvasWidth;
@@ -278,7 +325,9 @@ Page({
     context.clearRect(0, 0, width, height);
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = Math.min(width, height) * .39;
+    const zoomScale = Number(this._zoomScale) || 1;
+    const visualScale = visualScaleForZoom(zoomScale);
+    const radius = Math.min(width, height) * .39 * zoomScale;
     this.drawSphereGuide(context, centerX, centerY, radius);
     const cosine = Math.cos(this._rotation || 0);
     const sine = Math.sin(this._rotation || 0);
@@ -286,14 +335,14 @@ Page({
       const x = node.x * cosine + node.z * sine;
       const z = -node.x * sine + node.z * cosine;
       const scale = .72 + (z + 1) * .22;
-      return { ...node, depth: z, scale, screenX: centerX + x * radius * scale, screenY: centerY + node.y * radius * .92 * scale };
+      return { ...node, depth: z, scale, visualScale, screenX: centerX + x * radius * scale, screenY: centerY + node.y * radius * .92 * scale };
     }).sort((left, right) => left.depth - right.depth);
     projected.forEach((node) => this.drawNode(context, node, timestamp));
     const frontNodes = projected.filter((node) => node.depth > .08).sort((left, right) => right.depth - left.depth).slice(0, MAX_VISIBLE_LABELS);
     const labelBounds = this.drawLabels(context, frontNodes, width, height);
     this._hitNodes = projected.filter((node) => node.depth > .05 && node.profileNavToken).map((node) => ({
       ...node,
-      hitRadius: 22,
+      hitRadius: Math.max(18, 22 * visualScale),
       textBounds: labelBounds.get(node.displayToken) || null
     }));
   },
@@ -309,7 +358,7 @@ Page({
   },
 
   drawNode(context, node, timestamp) {
-    const size = 2.4 + node.scale * 4.6;
+    const size = (2.4 + node.scale * 4.6) * node.visualScale;
     const alpha = .2 + (node.depth + 1) * .34;
     context.save();
     context.globalAlpha = Math.max(.16, Math.min(1, alpha));
@@ -339,11 +388,13 @@ Page({
     context.save();
     context.textBaseline = 'middle';
     nodes.forEach((node) => {
-      const fontSize = Math.round(11 + node.scale * 2.4);
+      const fontSize = Math.max(11, Math.min(16, Math.round((11 + node.scale * 2.4) * node.visualScale)));
       context.font = `600 ${fontSize}px sans-serif`;
       const label = String(node.nickname || '匿名搭子');
-      const textWidth = Math.min(110, context.measureText(label).width);
-      const x = node.labelSide > 0 ? node.screenX + 11 : node.screenX - textWidth - 11;
+      const maxTextWidth = 110 * node.visualScale;
+      const textWidth = Math.min(maxTextWidth, context.measureText(label).width);
+      const gap = 11 * node.visualScale;
+      const x = node.labelSide > 0 ? node.screenX + gap : node.screenX - textWidth - gap;
       const y = node.screenY - 8;
       const box = { left: x - 3, right: x + textWidth + 3, top: y - fontSize, bottom: y + fontSize };
       if (box.left < 4 || box.right > width - 4 || box.top < 4 || box.bottom > height - 4) return;
@@ -354,15 +405,59 @@ Page({
       context.fillStyle = '#f5f1f5';
       context.shadowColor = 'rgba(0,0,0,.72)';
       context.shadowBlur = 4;
-      context.fillText(label, x, y, 110);
+      context.fillText(label, x, y, maxTextWidth);
     });
     context.restore();
     return boundsByToken;
   },
 
-  handleCanvasTap(event) {
+  handleCanvasTouchStart(event) {
     if (this.data.status !== 'ready' || this._navigating) return;
-    const point = resolveCanvasTap(event, this._canvasRect || {});
+    this._gesture = beginGesture(this._gesture, event.touches || [], this._canvasRect || {}, this._zoomScale || 1, Date.now());
+    if (this._gesture && this._gesture.mode !== GESTURE_MODE.BYPASS) {
+      this._inertiaVelocity = 0;
+      this._resumeAutoAt = 0;
+      this._autoSpinBlend = 0;
+    }
+  },
+
+  handleCanvasTouchMove(event) {
+    if (!this._gesture || this._navigating) return;
+    const result = updateGesture(this._gesture, event.touches || [], this._zoomScale || 1, Date.now());
+    this._gesture = result.gesture;
+    this._zoomScale = result.scale;
+    if (result.rotationDelta) this._rotation = (this._rotation + result.rotationDelta) % (Math.PI * 2);
+  },
+
+  handleCanvasTouchEnd(event) {
+    if (!this._gesture || this._navigating) return;
+    const result = finishGesture(this._gesture, event.touches || [], event.changedTouches || [], Date.now());
+    this._gesture = result.gesture;
+    if (result.action === 'tap') {
+      this.scheduleAutoSpinResume();
+      this.performCanvasHitTest(result.touch);
+    } else if (result.action === 'inertia') {
+      this._inertiaVelocity = result.angularVelocity;
+      this._resumeAutoAt = 0;
+    } else if (result.action === 'resume') {
+      this.scheduleAutoSpinResume();
+    }
+  },
+
+  handleCanvasTouchCancel() {
+    if (!this._gesture) return;
+    if (this._gesture.mode === GESTURE_MODE.BYPASS) {
+      this._gesture = null;
+      return;
+    }
+    const result = cancelGesture(this._gesture);
+    this._gesture = result.gesture;
+    this.scheduleAutoSpinResume();
+  },
+
+  performCanvasHitTest(touch) {
+    if (this.data.status !== 'ready' || this._navigating) return;
+    const point = resolveCanvasTap({ changedTouches: [touch] }, this._canvasRect || {});
     const node = selectHitNode(point, this._hitNodes || []);
     if (!node) return;
     this._navigating = true;
