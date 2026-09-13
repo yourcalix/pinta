@@ -1,0 +1,12 @@
+{
+  "id": "document-community-activity-deployment",
+  "title": "提供讨论动态 CloudBase 配置与部署步骤",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "guides",
+  "currentPhase": "completed",
+  "nextAction": "用户按步骤完成云端配置与双账号验收",
+  "createdAt": "2026-09-13T00:00:00+08:00",
+  "branch": "main"
+}
