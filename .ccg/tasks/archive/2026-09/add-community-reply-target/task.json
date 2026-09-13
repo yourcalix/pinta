@@ -1,0 +1,12 @@
+{
+  "id": "add-community-reply-target",
+  "title": "支持点击评论直接回复对应用户",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已完成实现、测试与分域复审，归档任务",
+  "createdAt": "2026-09-13T00:00:00+08:00",
+  "branch": "main"
+}

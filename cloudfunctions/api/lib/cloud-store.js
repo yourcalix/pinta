@@ -1033,6 +1033,18 @@ class CloudStore {
     return { items, nextCursor: candidates.length > limit ? encodeCursor(items[items.length - 1]) : null };
   }
 
+  async getCommunityRepliesByIds(replyIds = []) {
+    const ids = [...new Set(replyIds)].filter(Boolean);
+    const replies = [];
+    for (let index = 0; index < ids.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
+      const chunk = ids.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
+      if (!chunk.length) continue;
+      const result = await this.db.collection('communityReplies').where({ _id: this.command.in(chunk) }).limit(chunk.length).get();
+      replies.push(...(result.data || []).map(entity));
+    }
+    return replies;
+  }
+
   async getCommunityLikeStates(actorId, targets) {
     const ids = (targets || []).map(({ targetType, targetId }) => communityLikeId(targetType, targetId, actorId));
     const active = new Set();
@@ -1131,6 +1143,13 @@ class CloudStore {
         invariant(existing.submissionKeyHash === reply.submissionKeyHash && existing.payloadHash === reply.payloadHash, 'CONFLICT', '幂等键已用于其他回复内容');
         return existing;
       }
+      const targetReply = reply.replyToId
+        ? await getTransactionDocument(transaction.collection('communityReplies').doc(reply.replyToId))
+        : null;
+      if (reply.replyToId) invariant(targetReply && targetReply.status === COMMUNITY_REPLY_STATUS.ACTIVE && targetReply.postId === reply.postId, 'NOT_FOUND');
+      const expectedRecipientId = targetReply ? targetReply.authorId : post.authorId;
+      if (expectedRecipientId === reply.authorId) invariant(!activity, 'CONFLICT');
+      else invariant(activity && activity.recipientId === expectedRecipientId, 'CONFLICT');
       await replyReference.set({ data: document(reply) });
       await postReference.update({ data: { replyCount: Number(post.replyCount || 0) + 1, updatedAt: reply.createdAt } });
       if (activity) await transaction.collection('communityActivities').doc(activity.id).set({ data: document(activity) });

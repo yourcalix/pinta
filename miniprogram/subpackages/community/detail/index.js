@@ -40,6 +40,8 @@ function formatCommunityTime(value, now = Date.now()) {
 function decorate(item) {
   const nickname = String(item && item.author && item.author.nickname || '拼吧用户').trim() || '拼吧用户';
   const avatarInitial = Array.from(nickname)[0] || '拼';
+  const replyTo = item && item.replyTo && ['ACTIVE', 'UNAVAILABLE'].includes(item.replyTo.status) ? item.replyTo : null;
+  const replyToNickname = replyTo && replyTo.status === 'ACTIVE' ? String(replyTo.nickname || '').trim() : '';
   return {
     ...item,
     avatarSlot: normalizeAvatarSlots([item && item.author && item.author.avatar], 1)[0],
@@ -50,6 +52,11 @@ function decorate(item) {
     displayTime: formatCommunityTime(item && item.createdAt),
     likeCount: Math.max(0, Number(item && item.likeCount) || 0),
     viewerHasLiked: Boolean(item && item.viewerHasLiked),
+    replyTo,
+    replyToNickname,
+    replyToDisplayName: replyTo ? (replyTo.status === 'ACTIVE' ? `@${replyToNickname}` : '已删除评论') : '',
+    replyToUnavailable: Boolean(replyTo && replyTo.status !== 'ACTIVE'),
+    replyContextLabel: replyTo ? `回复${replyToNickname || '已删除评论'}，` : '',
     likePending: false
   };
 }
@@ -62,7 +69,8 @@ function mergeReplies(current, incoming) {
 Page({
   data: {
     contentTopInset: 88,
-    postId: '', post: null, replies: [], replyContent: '', submitting: false,
+    postId: '', post: null, replies: [], replyContent: '', replyTarget: null,
+    replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120, submitting: false,
     loading: true, error: '', nextCursor: '', hasMore: false,
     loadingMore: false, loadMoreError: '', likingMap: {}, replyInputFocus: false
   },
@@ -138,6 +146,26 @@ Page({
   },
   handleReplyBlur() { if (this.data.replyInputFocus) this.setData({ replyInputFocus: false }); },
 
+  async handleSelectReplyTarget(event) {
+    const replyId = String(event.currentTarget.dataset.id || '');
+    const target = this.data.replies.find((item) => item.id === replyId);
+    if (!target || this._disposed || !await this.ensureInteractionAccess() || this._disposed) return;
+    this._replyAuthorized = true;
+    if (target.viewerIsAuthor) {
+      return void this.setData({ replyTarget: null, replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120, replyInputFocus: true });
+    }
+    this.setData({
+      replyTarget: { id: target.id, nickname: target.authorNickname },
+      replyPlaceholder: `回复 @${target.authorNickname}…`,
+      replyCursorSpacing: 160,
+      replyInputFocus: true
+    });
+  },
+  handleCancelReplyTarget() {
+    this._replyAuthorized = true;
+    this.setData({ replyTarget: null, replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120, replyInputFocus: true });
+  },
+
   handlePostAvatarError() {
     if (this.data.post) this.setData({ post: this.fallbackAuthorAvatar(this.data.post) });
   },
@@ -155,13 +183,21 @@ Page({
   async handleSendReply() {
     const content = this.data.replyContent.trim();
     if (!content || this.data.submitting || !await this.ensureInteractionAccess()) return;
+    const replyToId = this.data.replyTarget && this.data.replyTarget.id || '';
     this.setData({ submitting: true });
     try {
-      const result = await communityService.createReply(this.data.postId, content);
-      this.setData({ replyContent: '', replies: mergeReplies(this.data.replies, [decorate(result.reply)]), 'post.replyCount': Math.max(0, Number(result.replyCount) || 0) });
+      const result = await communityService.createReply(this.data.postId, content, replyToId);
+      if (this._disposed) return;
+      this.setData({
+        replyContent: '', replyTarget: null, replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120, replyInputFocus: false,
+        replies: mergeReplies(this.data.replies, [decorate(result.reply)]),
+        'post.replyCount': Math.max(0, Number(result.replyCount) || 0)
+      });
     } catch (error) {
-      if (!error.handled) wx.showToast({ title: error.message || '回复失败，请重试', icon: 'none' });
-    } finally { this.setData({ submitting: false }); }
+      if (!this._disposed && !error.handled) wx.showToast({ title: error.message || '回复失败，请重试', icon: 'none' });
+    } finally {
+      if (!this._disposed) this.setData({ submitting: false });
+    }
   },
 
   updateLikeTarget(targetType, targetId, patch) {
@@ -239,7 +275,13 @@ Page({
           return;
         }
         const deleted = await communityService.deleteReply(targetId);
-        if (!this._disposed) this.setData({ replies: this.data.replies.filter((item) => item.id !== targetId), 'post.replyCount': Math.max(0, Number(deleted.replyCount) || 0) });
+        if (!this._disposed) this.setData({
+          replies: this.data.replies.filter((item) => item.id !== targetId),
+          'post.replyCount': Math.max(0, Number(deleted.replyCount) || 0),
+          ...(this.data.replyTarget && this.data.replyTarget.id === targetId
+            ? { replyTarget: null, replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120 }
+            : {})
+        });
         return;
       }
       operation = 'report';

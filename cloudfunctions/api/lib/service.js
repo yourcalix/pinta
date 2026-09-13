@@ -386,7 +386,10 @@ function publicCommunityPost(post, viewerId = '', viewerHasLiked = false, profil
   };
 }
 
-function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false, profilesByUserId = {}) {
+function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false, profilesByUserId = {}, replyTargetsById = new Map()) {
+  const target = reply.replyToId ? replyTargetsById.get(reply.replyToId) : null;
+  const targetActive = Boolean(target && target.status === COMMUNITY_REPLY_STATUS.ACTIVE && target.postId === reply.postId);
+  const targetAuthor = targetActive ? publicCommunityAuthor(target, profilesByUserId) : null;
   return {
     id: reply.id,
     postId: reply.postId,
@@ -396,7 +399,8 @@ function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false, prof
     createdAt: reply.createdAt,
     updatedAt: reply.updatedAt,
     viewerIsAuthor: Boolean(viewerId && reply.authorId === viewerId),
-    viewerHasLiked: Boolean(viewerHasLiked)
+    viewerHasLiked: Boolean(viewerHasLiked),
+    ...(reply.replyToId ? { replyTo: targetAuthor ? { status: 'ACTIVE', nickname: targetAuthor.nickname } : { status: 'UNAVAILABLE', nickname: '' } } : {})
   };
 }
 
@@ -529,10 +533,28 @@ function createPinbaService(options) {
     }
   }
 
+  async function communityReplyTargets(items = []) {
+    const ids = [...new Set(items.map((item) => item && item.replyToId).filter(Boolean))];
+    if (!ids.length) return new Map();
+    const targets = typeof store.getCommunityRepliesByIds === 'function'
+      ? await store.getCommunityRepliesByIds(ids)
+      : await Promise.all(ids.map((id) => store.getCommunityReply(id)));
+    return new Map((targets || []).filter(Boolean).map((item) => [item.id, item]));
+  }
+
   async function refreshCachedActivity(data, context, at) {
     const communityKey = data && data.post && data.post.author ? 'post' : data && data.reply && data.reply.author ? 'reply' : '';
     if (communityKey) {
       const cachedItem = data[communityKey];
+      if (communityKey === 'reply' && cachedItem.id) {
+        const storedReply = await store.getCommunityReply(cachedItem.id);
+        if (storedReply && storedReply.replyToId) {
+          const replyTargetsById = await communityReplyTargets([storedReply]);
+          const profilesByUserId = await communityAuthorProfiles([storedReply, ...replyTargetsById.values()]);
+          const refreshed = publicCommunityReply(storedReply, context && context.actorId, cachedItem.viewerHasLiked, profilesByUserId, replyTargetsById);
+          return { ...data, reply: { ...cachedItem, author: refreshed.author, replyTo: refreshed.replyTo } };
+        }
+      }
       const authorItem = { authorId: context && context.actorId, author: cachedItem.author };
       const profilesByUserId = await communityAuthorProfiles([authorItem]);
       return { ...data, [communityKey]: { ...cachedItem, author: publicCommunityAuthor(authorItem, profilesByUserId) } };
@@ -907,10 +929,11 @@ function createPinbaService(options) {
       const actorId = context && context.actorId;
       const targets = [{ targetType: 'post', targetId: post.id }, ...page.items.map((item) => ({ targetType: 'reply', targetId: item.id }))];
       const likeStates = actorId ? await store.getCommunityLikeStates(actorId, targets) : {};
-      const profilesByUserId = await communityAuthorProfiles([post, ...page.items]);
+      const replyTargetsById = await communityReplyTargets(page.items);
+      const profilesByUserId = await communityAuthorProfiles([post, ...page.items, ...replyTargetsById.values()]);
       return {
         post: publicCommunityPost(post, actorId, likeStates[`post:${post.id}`], profilesByUserId),
-        replies: page.items.map((item) => publicCommunityReply(item, actorId, likeStates[`reply:${item.id}`], profilesByUserId)),
+        replies: page.items.map((item) => publicCommunityReply(item, actorId, likeStates[`reply:${item.id}`], profilesByUserId, replyTargetsById)),
         nextCursor: page.nextCursor || null
       };
     }
@@ -943,6 +966,13 @@ function createPinbaService(options) {
       const user = await requireActiveUser(context);
       invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
       const payload = validateCommunityReplyCreateInput(input);
+      const post = await store.getCommunityPost(payload.postId);
+      invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
+      const targetReply = payload.replyToId ? await store.getCommunityReply(payload.replyToId) : null;
+      // Only existing/idempotent replies may render an unavailable target; a new write is still rejected by the Store transaction.
+      const activeTargetReply = targetReply && targetReply.status === COMMUNITY_REPLY_STATUS.ACTIVE && targetReply.postId === payload.postId
+        ? targetReply
+        : null;
       await moderation.check([payload.content], { actorId: user.id, scene: 2 });
       await store.consumeCommunityRateLimit(user.id, 'reply', at, 15, 10 * 60 * 1000);
       const reply = {
@@ -951,6 +981,7 @@ function createPinbaService(options) {
         authorId: user.id,
         author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
         content: payload.content,
+        ...(payload.replyToId ? { replyToId: payload.replyToId } : {}),
         status: COMMUNITY_REPLY_STATUS.ACTIVE,
         submissionKeyHash: operationId(context, 'submission'),
         payloadHash: context.payloadHash,
@@ -958,12 +989,12 @@ function createPinbaService(options) {
         updatedAt: at
       };
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityReply', targetId: reply.id, at };
-      const post = await store.getCommunityPost(payload.postId);
-      const activity = post && post.authorId !== user.id ? {
+      const recipientId = activeTargetReply ? activeTargetReply.authorId : post.authorId;
+      const activity = recipientId !== user.id ? {
         id: communityReplyActivityId(reply.id),
         type: COMMUNITY_ACTIVITY_TYPES.POST_REPLIED,
         status: COMMUNITY_ACTIVITY_STATUS.ACTIVE,
-        recipientId: post.authorId,
+        recipientId,
         postId: post.id,
         replyId: reply.id,
         actorId: user.id,
@@ -975,8 +1006,9 @@ function createPinbaService(options) {
       } : null;
       const createdReply = await store.createCommunityReply(reply, audit, activity);
       const updatedPost = await store.getCommunityPost(payload.postId);
-      const profilesByUserId = await communityAuthorProfiles([createdReply]);
-      return { reply: publicCommunityReply(createdReply, user.id, false, profilesByUserId), replyCount: Number(updatedPost && updatedPost.replyCount || 0) };
+      const replyTargetsById = targetReply ? new Map([[targetReply.id, targetReply]]) : new Map();
+      const profilesByUserId = await communityAuthorProfiles([createdReply, targetReply].filter(Boolean));
+      return { reply: publicCommunityReply(createdReply, user.id, false, profilesByUserId, replyTargetsById), replyCount: Number(updatedPost && updatedPost.replyCount || 0) };
     }
 
     if (action === 'community.post.delete') {

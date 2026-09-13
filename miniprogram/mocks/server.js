@@ -635,6 +635,8 @@ function publicCommunityPost(item) {
 
 function publicCommunityReply(item) {
   const like = state.communityLikes.find((entry) => entry.targetType === 'reply' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
+  const target = item.replyToId ? state.communityReplies.find((entry) => entry.id === item.replyToId) : null;
+  const targetActive = Boolean(target && target.status === 'ACTIVE' && target.postId === item.postId);
   return {
     id: item.id,
     postId: item.postId,
@@ -644,7 +646,8 @@ function publicCommunityReply(item) {
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     viewerIsAuthor: item.authorId === currentUserId,
-    viewerHasLiked: Boolean(like)
+    viewerHasLiked: Boolean(like),
+    ...(item.replyToId ? { replyTo: targetActive ? { status: 'ACTIVE', nickname: publicCommunityAuthor(target).nickname } : { status: 'UNAVAILABLE', nickname: '' } } : {})
   };
 }
 
@@ -2087,19 +2090,28 @@ function handle(action, input, idempotencyKey = '') {
   if (action === 'community.reply.create') {
     const user = requireUser();
     assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');
+    assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '回复参数无效');
+    assert(Object.keys(input).every((key) => ['postId', 'content', 'replyToId'].includes(key)), 'VALIDATION_ERROR', '回复参数无效');
+    const postId = validatedId(input.postId, '帖子ID');
+    const replyToId = input.replyToId === undefined || input.replyToId === null || input.replyToId === ''
+      ? ''
+      : validatedId(input.replyToId, '目标回复ID');
+    const post = state.communityPosts.find((item) => item.id === postId && item.status === 'ACTIVE');
     assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
+    const targetReply = replyToId ? state.communityReplies.find((item) => item.id === replyToId && item.status === 'ACTIVE' && item.postId === post.id) : null;
+    if (replyToId) assert(targetReply, 'NOT_FOUND', '目标回复不存在或已被删除');
     const now = new Date().toISOString();
     const reply = {
       id: nextId('communityReply'), postId: post.id, authorId: user.id,
       author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
-      content: assertCommunityContent(input.content, 300), status: 'ACTIVE', createdAt: now, updatedAt: now
+      content: assertCommunityContent(input.content, 300), ...(replyToId ? { replyToId } : {}), status: 'ACTIVE', createdAt: now, updatedAt: now
     };
     state.communityReplies.push(reply);
     post.replyCount = Number(post.replyCount || 0) + 1;
-    if (post.authorId !== user.id) state.communityActivities.push({
+    const recipientId = targetReply ? targetReply.authorId : post.authorId;
+    if (recipientId !== user.id) state.communityActivities.push({
       id: stableMockEntityId('communityActivity', 'reply', reply.id),
-      type: 'POST_REPLIED', status: 'ACTIVE', recipientId: post.authorId, postId: post.id, replyId: reply.id,
+      type: 'POST_REPLIED', status: 'ACTIVE', recipientId, postId: post.id, replyId: reply.id,
       actorId: user.id, actor: clone(reply.author), read: false, readAt: null, createdAt: now, updatedAt: now
     });
     return { reply: publicCommunityReply(reply), replyCount: post.replyCount };

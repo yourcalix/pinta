@@ -1,4 +1,4 @@
-<view class="detail-page" style="padding-top: {{contentTopInset}}px;">
+<view class="detail-page {{replyTarget ? 'detail-page--reply-target' : ''}}" style="padding-top: {{contentTopInset}}px;">
   <view class="detail-navigation" style="height: {{contentTopInset}}px;">
     <view class="detail-nav-inner">
       <button class="detail-back" bindtap="handleBack" hover-class="detail-control--pressed" hover-stay-time="70" aria-label="返回上一页"><text aria-hidden="true">‹</text></button>
@@ -47,25 +47,31 @@
 
       <view class="reply-heading"><text>全部回复</text><text class="reply-count">{{post.replyCount}}</text></view>
       <view wx:if="{{replies.length}}" class="reply-list">
-        <view wx:for="{{replies}}" wx:key="id" class="reply-card surface" role="article" aria-label="{{item.authorNickname}}回复：{{item.content}}，{{item.displayTime}}">
+        <view wx:for="{{replies}}" wx:key="id" class="reply-card surface" role="article" aria-label="{{item.authorNickname}}{{item.replyContextLabel}}回复：{{item.content}}，{{item.displayTime}}">
           <image wx:if="{{!item.avatarSlot.empty}}" class="reply-avatar reply-avatar-image" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" lazy-load="true" data-id="{{item.id}}" binderror="handleReplyAvatarError" aria-hidden="true"></image>
           <view wx:else class="reply-avatar avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
           <view class="reply-body">
             <view class="reply-meta">
-              <view class="reply-author-line"><text class="reply-author">{{item.authorNickname}}</text><text class="reply-time">{{item.displayTime}}</text></view>
+              <view class="reply-author-line">
+                <text class="reply-author">{{item.authorNickname}}</text>
+                <block wx:if="{{item.replyTo}}"><text class="reply-relation">回复</text><text class="reply-target-name">{{item.replyToDisplayName}}</text></block>
+                <text class="reply-time">{{item.displayTime}}</text>
+              </view>
               <view class="reply-operations">
                 <button
                   class="reply-like {{item.viewerHasLiked ? 'like-button--active' : ''}} {{item.likePending ? 'like-button--pending' : ''}}"
                   data-target-type="reply"
                   data-target-id="{{item.id}}"
-                  bindtap="handleLike"
+                  catchtap="handleLike"
                   hover-class="like-button--pressed"
                   aria-label="{{item.viewerHasLiked ? '取消点赞' : '点赞'}}这条回复，当前{{item.likeCount}}个赞"
                 ><text class="reply-heart" aria-hidden="true">{{item.viewerHasLiked ? '♥' : '♡'}}</text><text class="like-count-value" aria-hidden="true">{{item.likeCount}}</text></button>
                 <button class="more-button reply-more" data-id="{{item.id}}" catchtap="handleReplyMore" hover-class="detail-control--pressed" aria-label="回复操作菜单，点击可{{item.viewerIsAuthor ? '删除或举报内容' : '举报内容'}}">···</button>
               </view>
             </view>
-            <text class="reply-content" user-select="true">{{item.content}}</text>
+            <button class="reply-content-target" data-id="{{item.id}}" catchtap="handleSelectReplyTarget" hover-class="reply-content-target--pressed" aria-label="回复{{item.authorNickname}}：{{item.content}}">
+              <text class="reply-content" user-select="true">{{item.content}}</text>
+            </button>
           </view>
         </view>
         <button wx:if="{{hasMore}}" class="load-more-button" loading="{{loadingMore}}" disabled="{{loadingMore}}" bindtap="handleLoadMore" aria-label="加载更多回复">加载更多回复</button>
@@ -79,22 +85,28 @@
   </view>
 
   <view wx:if="{{post && !error}}" class="reply-composer">
-    <input
-      class="reply-input"
-      value="{{replyContent}}"
-      maxlength="300"
-      placeholder="写下你的回复…"
-      placeholder-class="reply-placeholder"
-      confirm-type="send"
-      cursor-spacing="120"
-      adjust-position="true"
-      focus="{{replyInputFocus}}"
-      aria-label="回复内容，最多300字"
-      bindinput="handleReplyInput"
-      bindfocus="handleReplyFocus"
-      bindblur="handleReplyBlur"
-      bindconfirm="handleSendReply"
-    />
-    <button class="send-button" disabled="{{!replyContent || submitting}}" loading="{{submitting}}" bindtap="handleSendReply">发送</button>
+    <view wx:if="{{replyTarget}}" class="reply-target-banner" role="status" aria-label="正在回复{{replyTarget.nickname}}">
+      <text class="reply-target-label">正在回复 @{{replyTarget.nickname}}</text>
+      <button class="reply-target-cancel" catchtap="handleCancelReplyTarget" hover-class="detail-control--pressed" aria-label="取消回复{{replyTarget.nickname}}">×</button>
+    </view>
+    <view class="reply-input-row">
+      <input
+        class="reply-input"
+        value="{{replyContent}}"
+        maxlength="300"
+        placeholder="{{replyPlaceholder}}"
+        placeholder-class="reply-placeholder"
+        confirm-type="send"
+        cursor-spacing="{{replyCursorSpacing}}"
+        adjust-position="true"
+        focus="{{replyInputFocus}}"
+        aria-label="{{replyPlaceholder}}，最多300字"
+        bindinput="handleReplyInput"
+        bindfocus="handleReplyFocus"
+        bindblur="handleReplyBlur"
+        bindconfirm="handleSendReply"
+      />
+      <button class="send-button" disabled="{{!replyContent || submitting}}" loading="{{submitting}}" bindtap="handleSendReply">发送</button>
+    </view>
   </view>
 </view>

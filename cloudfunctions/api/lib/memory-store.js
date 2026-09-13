@@ -632,6 +632,10 @@ class MemoryStore {
     return clone({ items: page.slice(0, limit), nextCursor: page.length > limit ? encodeCursor(page[limit - 1]) : null });
   }
 
+  async getCommunityRepliesByIds(replyIds = []) {
+    return clone([...new Set(replyIds)].map((replyId) => this.communityReplies.get(replyId)).filter(Boolean));
+  }
+
   async getCommunityLikeStates(actorId, targets) {
     const result = {};
     (targets || []).forEach(({ targetType, targetId }) => {
@@ -701,6 +705,11 @@ class MemoryStore {
       invariant(existing.submissionKeyHash === reply.submissionKeyHash && existing.payloadHash === reply.payloadHash, 'CONFLICT', '幂等键已用于其他回复内容');
       return clone(existing);
     }
+    const targetReply = reply.replyToId ? this.communityReplies.get(reply.replyToId) : null;
+    if (reply.replyToId) invariant(targetReply && targetReply.status === COMMUNITY_REPLY_STATUS.ACTIVE && targetReply.postId === reply.postId, 'NOT_FOUND');
+    const expectedRecipientId = targetReply ? targetReply.authorId : post.authorId;
+    if (expectedRecipientId === reply.authorId) invariant(!activity, 'CONFLICT');
+    else invariant(activity && activity.recipientId === expectedRecipientId, 'CONFLICT');
     this.communityReplies.set(reply.id, clone(reply));
     post.replyCount = Number(post.replyCount || 0) + 1;
     post.updatedAt = reply.createdAt;

@@ -342,10 +342,15 @@ function validateCommunityPostCreateInput(input) {
 }
 
 function validateCommunityReplyCreateInput(input) {
-  invariant(input && typeof input === 'object', 'VALIDATION_ERROR');
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['postId', 'content', 'replyToId'].includes(key)), 'VALIDATION_ERROR', '回复参数无效');
+  const replyToId = input.replyToId === undefined || input.replyToId === null || input.replyToId === ''
+    ? ''
+    : validateId(input.replyToId, '目标回复ID');
   return {
     postId: validateId(input.postId, '帖子ID'),
-    content: assertCommunityTextSafe(stringValue(input.content, '回复内容', { required: true, min: 1, max: 300 }))
+    content: assertCommunityTextSafe(stringValue(input.content, '回复内容', { required: true, min: 1, max: 300 })),
+    ...(replyToId ? { replyToId } : {})
   };
 }
 

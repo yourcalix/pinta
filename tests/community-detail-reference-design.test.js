@@ -47,7 +47,8 @@ test('讨论详情保留真实交互并以文字分段高亮话题', () => {
   assert.match(template, /handleReplyMore/);
   assert.match(template, /catchtap="handlePostMore"[^>]*删除或举报内容/);
   assert.match(template, /catchtap="handleReplyMore"[^>]*删除或举报内容/);
-  assert.match(template, /placeholder="写下你的回复…"/);
+  assert.match(template, /placeholder="\{\{replyPlaceholder\}\}"/);
+  assert.match(read('subpackages/community/detail/index.js'), /replyPlaceholder:\s*'写下你的回复…'/);
   assert.doesNotMatch(template, /图片|image-picker|chooseMedia/);
   assert.doesNotMatch(read('subpackages/community/detail/index.js'), /itemColor\s*:/);
   assert.doesNotMatch(read('pages/community/index.js'), /itemColor\s*:/);
@@ -71,7 +72,8 @@ test('讨论详情时间使用克制的相对时间并对旧时间回退日期',
 test('底部回复栏保留键盘、安全区和小屏弹性', () => {
   const template = read('subpackages/community/detail/index.wxml');
   const style = read('subpackages/community/detail/index.wxss');
-  assert.match(template, /cursor-spacing="120"/);
+  assert.match(template, /cursor-spacing="\{\{replyCursorSpacing\}\}"/);
+  assert.match(read('subpackages/community/detail/index.js'), /replyCursorSpacing:\s*120/);
   assert.match(template, /adjust-position="true"/);
   assert.match(style, /env\(safe-area-inset-bottom\)/);
   assert.match(style, /@media\s*\(max-width:\s*340px\)/);

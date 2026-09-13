@@ -157,7 +157,8 @@ test('发现页新增 Image2 素材为本地透明 PNG 且总量不突破 90KB',
 test('社区详情回复栏具备键盘与安全区避让，装饰头像退出无障碍树', () => {
   const template = read('subpackages/community/detail/index.wxml');
   const style = read('subpackages/community/detail/index.wxss');
-  assert.match(template, /cursor-spacing="120"/);
+  assert.match(template, /cursor-spacing="\{\{replyCursorSpacing\}\}"/);
+  assert.match(read('subpackages/community/detail/index.js'), /replyCursorSpacing:\s*120/);
   assert.match(template, /adjust-position="true"/);
   assert.match(template, /focus="\{\{replyInputFocus\}\}"/);
   assert.match(template, /bindblur="handleReplyBlur"/);

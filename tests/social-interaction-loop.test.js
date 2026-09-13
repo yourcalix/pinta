@@ -24,8 +24,9 @@ function setup() {
 
 function deferred() {
   let resolve;
-  const promise = new Promise((done) => { resolve = done; });
-  return { promise, resolve };
+  let reject;
+  const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
 }
 
 function loadDetailPage() {
@@ -364,4 +365,113 @@ test('评论详情卸载后的晚到响应不会拉起键盘', async () => {
     userService.login = originalLogin;
     unloadDetailPage(context);
   }
+});
+
+test('点击他人评论进入定向回复，取消时保留草稿并继续聚焦', async () => {
+  const originalLogin = userService.login;
+  userService.login = async () => ({ profileComplete: true });
+  const context = loadDetailPage();
+  try {
+    context.page.setData({
+      replyContent: '已经输入的草稿',
+      replies: [{ id: 'reply-b', authorNickname: '用户B', viewerIsAuthor: false }]
+    });
+    await context.page.handleSelectReplyTarget({ currentTarget: { dataset: { id: 'reply-b' } } });
+    assert.deepEqual(context.page.data.replyTarget, { id: 'reply-b', nickname: '用户B' });
+    assert.equal(context.page.data.replyPlaceholder, '回复 @用户B…');
+    assert.equal(context.page.data.replyCursorSpacing, 160);
+    assert.equal(context.page.data.replyContent, '已经输入的草稿');
+    assert.equal(context.page.data.replyInputFocus, true);
+
+    context.page.handleCancelReplyTarget();
+    assert.equal(context.page.data.replyTarget, null);
+    assert.equal(context.page.data.replyPlaceholder, '写下你的回复…');
+    assert.equal(context.page.data.replyContent, '已经输入的草稿');
+    assert.equal(context.page.data.replyInputFocus, true);
+  } finally {
+    userService.login = originalLogin;
+    unloadDetailPage(context);
+  }
+});
+
+test('点击自己的评论降级为普通回复且不会形成自我目标', async () => {
+  const originalLogin = userService.login;
+  userService.login = async () => ({ profileComplete: true });
+  const context = loadDetailPage();
+  try {
+    context.page.setData({
+      replyTarget: { id: 'other', nickname: '别人' },
+      replies: [{ id: 'mine', authorNickname: '我', viewerIsAuthor: true }]
+    });
+    await context.page.handleSelectReplyTarget({ currentTarget: { dataset: { id: 'mine' } } });
+    assert.equal(context.page.data.replyTarget, null);
+    assert.equal(context.page.data.replyInputFocus, true);
+  } finally {
+    userService.login = originalLogin;
+    unloadDetailPage(context);
+  }
+});
+
+test('定向回复发送成功清空目标，失败保留草稿与目标', async () => {
+  const originalLogin = userService.login;
+  const originalCreateReply = communityService.createReply;
+  userService.login = async () => ({ profileComplete: true });
+  const calls = [];
+  communityService.createReply = async (...args) => {
+    calls.push(args);
+    return { reply: { id: 'created', content: args[1], author: { nickname: '作者' }, createdAt: NOW }, replyCount: 2 };
+  };
+  const context = loadDetailPage();
+  try {
+    context.page.setData({ postId: 'post', post: { id: 'post', replyCount: 1 }, replies: [], replyContent: '定向内容', replyTarget: { id: 'reply-b', nickname: '用户B' } });
+    await context.page.handleSendReply();
+    assert.deepEqual(calls[0], ['post', '定向内容', 'reply-b']);
+    assert.equal(context.page.data.replyTarget, null);
+    assert.equal(context.page.data.replyContent, '');
+
+    communityService.createReply = async () => { throw Object.assign(new Error('offline'), { handled: true }); };
+    context.page.setData({ replyContent: '失败草稿', replyTarget: { id: 'reply-c', nickname: '用户C' } });
+    await context.page.handleSendReply();
+    assert.equal(context.page.data.replyContent, '失败草稿');
+    assert.deepEqual(context.page.data.replyTarget, { id: 'reply-c', nickname: '用户C' });
+  } finally {
+    userService.login = originalLogin;
+    communityService.createReply = originalCreateReply;
+    unloadDetailPage(context);
+  }
+});
+
+test('定向回复请求返回前卸载不会更新页面或弹出错误', async () => {
+  const originalLogin = userService.login;
+  const originalCreateReply = communityService.createReply;
+  const response = deferred();
+  userService.login = async () => ({ profileComplete: true });
+  communityService.createReply = () => response.promise;
+  const context = loadDetailPage();
+  let toastCalls = 0;
+  global.wx.showToast = () => { toastCalls += 1; };
+  try {
+    context.page.setData({ postId: 'post', post: { id: 'post' }, replyContent: '等待发送', replyTarget: { id: 'reply-b', nickname: '用户B' } });
+    const sending = context.page.handleSendReply();
+    await new Promise((resolve) => setImmediate(resolve));
+    let destroyedSetDataCalls = 0;
+    context.page.onUnload();
+    context.page.setData = () => { destroyedSetDataCalls += 1; };
+    response.reject(new Error('offline'));
+    await sending;
+    assert.equal(destroyedSetDataCalls, 0);
+    assert.equal(toastCalls, 0);
+  } finally {
+    userService.login = originalLogin;
+    communityService.createReply = originalCreateReply;
+    unloadDetailPage(context);
+  }
+});
+
+test('定向回复WXML提供评论内容热区、取消入口和动态键盘避让', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../miniprogram/subpackages/community/detail/index.wxml'), 'utf8');
+  assert.match(source, /catchtap="handleSelectReplyTarget"/);
+  assert.match(source, /正在回复 @\{\{replyTarget\.nickname\}\}/);
+  assert.match(source, /catchtap="handleCancelReplyTarget"/);
+  assert.match(source, /cursor-spacing="\{\{replyCursorSpacing\}\}"/);
 });
