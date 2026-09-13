@@ -1,0 +1,12 @@
+{
+  "id": "center-community-activity-empty-button",
+  "title": "调整讨论动态空态按钮文字尺寸与居中",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成并归档",
+  "createdAt": "2026-09-13T00:00:00+08:00",
+  "branch": "main"
+}

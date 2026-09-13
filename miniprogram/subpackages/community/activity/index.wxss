@@ -45,7 +45,7 @@ button::after{display:none}
 .state-bubble::after{position:absolute;right:19rpx;bottom:-12rpx;width:28rpx;height:28rpx;content:'';background:#ffdc86;border-radius:0 0 24rpx 0;transform:skewY(-32deg)}
 .state-title{margin-top:32rpx;color:#28241f;font-size:30rpx;font-weight:850}
 .state-description{max-width:500rpx;margin-top:12rpx;color:#817b73;font-size:24rpx;line-height:38rpx}
-.state-action{min-width:220rpx;min-height:88rpx;margin-top:30rpx;color:#6f4900;background:linear-gradient(135deg,#ffe88b,#ffc94f);border:0;border-radius:44rpx;box-shadow:0 8rpx 20rpx rgba(220,164,36,.18);font-size:27rpx;font-weight:850}
+.state-action{display:flex;min-width:220rpx;min-height:88rpx;margin-top:30rpx;align-items:center;justify-content:center;color:#6f4900;background:linear-gradient(135deg,#ffe88b,#ffc94f);border:0;border-radius:44rpx;box-shadow:0 8rpx 20rpx rgba(220,164,36,.18);font-size:28rpx;font-weight:850;line-height:1}
 .activity-skeleton{min-height:250rpx}
 .skeleton-avatar{flex:0 0 104rpx;width:104rpx;height:104rpx;margin-right:22rpx;background:#e9e4dc;border-radius:50%;animation:activity-pulse 1s ease-in-out infinite alternate}
 .skeleton-body{flex:1;min-width:0}
