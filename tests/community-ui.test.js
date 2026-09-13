@@ -96,7 +96,7 @@ test('发现页帖子更多按钮隔离整卡导航并保持标准触控热区',
   const style = read('pages/community/index.wxss');
   const script = read('pages/community/index.js');
   assert.match(template, /class="post-more"[^>]*data-id="\{\{item\.id\}\}"[^>]*catchtap="handlePostAction"/);
-  assert.match(template, /aria-label="帖子操作菜单，点击可\{\{item\.viewerIsAuthor \? '删除内容' : '举报内容'\}\}"/);
+  assert.match(template, /aria-label="帖子操作菜单，点击可\{\{item\.viewerIsAuthor \? '删除或举报内容' : '举报内容'\}\}"/);
   assert.doesNotMatch(template, /<view class="post-more">/);
   assert.match(style, /\.post-more\s*\{[^}]*min-width:\s*88rpx[^}]*min-height:\s*88rpx/s);
   assert.match(script, /communityService\.deletePost\(postId\)/);

@@ -197,7 +197,7 @@ Page({
   },
 
   showPostActionSheet(isAuthor) {
-    const itemList = isAuthor ? ['删除内容'] : COMMUNITY_REPORT_REASONS.map((item) => item.label);
+    const itemList = isAuthor ? ['删除内容', '举报'] : ['举报'];
     return new Promise((resolve) => {
       const options = {
         itemList,
@@ -207,6 +207,14 @@ Page({
       if (isAuthor) options.itemColor = '#E5484D';
       wx.showActionSheet(options);
     });
+  },
+
+  showPostReportReasonSheet() {
+    return new Promise((resolve) => wx.showActionSheet({
+      itemList: COMMUNITY_REPORT_REASONS.map((item) => item.label),
+      success: (result) => resolve(Number.isInteger(result.tapIndex) ? result.tapIndex : -1),
+      fail: () => resolve(-1)
+    }));
   },
 
   confirmPostDelete() {
@@ -227,12 +235,13 @@ Page({
     this._postActionLocks = this._postActionLocks || new Set();
     if (this._postActionLocks.has(postId)) return;
     this._postActionLocks.add(postId);
+    let operation = '';
     try {
       const isAuthor = Boolean(post.viewerIsAuthor);
-      if (!isAuthor && !await this.ensureInteractionAccess()) return;
       const selectedIndex = await this.showPostActionSheet(isAuthor);
       if (selectedIndex < 0) return;
-      if (isAuthor) {
+      if (isAuthor && selectedIndex === 0) {
+        operation = 'delete';
         if (!await this.confirmPostDelete()) return;
         await communityService.deletePost(postId);
         this._deletedPostIds = this._deletedPostIds || new Set();
@@ -241,12 +250,15 @@ Page({
         wx.showToast({ title: '已删除', icon: 'success' });
         return;
       }
-      const reason = COMMUNITY_REPORT_REASONS[selectedIndex];
+      operation = 'report';
+      if (!await this.ensureInteractionAccess()) return;
+      const reasonIndex = await this.showPostReportReasonSheet();
+      const reason = COMMUNITY_REPORT_REASONS[reasonIndex];
       if (!reason) return;
       await safetyService.report({ targetType: 'communityPost', targetId: postId, reason: reason.value, description: '' });
       wx.showToast({ title: '已收到举报', icon: 'success' });
     } catch (error) {
-      if (!error.handled) wx.showToast({ title: post.viewerIsAuthor ? '删除失败，请重试' : '举报失败，请重试', icon: 'none' });
+      if (!error.handled) wx.showToast({ title: operation === 'delete' ? '删除失败，请重试' : '举报失败，请重试', icon: 'none' });
     } finally {
       this._postActionLocks.delete(postId);
     }

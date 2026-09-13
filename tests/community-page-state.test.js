@@ -112,7 +112,7 @@ test('作者菜单二次确认后删除帖子且同一目标操作防重', async
   };
   const context = loadCommunityPage();
   global.wx.showActionSheet = ({ itemList, itemColor, success }) => {
-    assert.deepEqual(itemList, ['删除内容']);
+    assert.deepEqual(itemList, ['删除内容', '举报']);
     assert.equal(itemColor, '#E5484D');
     success({ tapIndex: 0 });
   };
@@ -162,7 +162,14 @@ test('非作者通过资料门禁后选择举报原因并提交', async () => {
   userService.login = async () => ({ profileComplete: true });
   safetyService.report = async (payload) => { reports.push(payload); return { ok: true }; };
   const context = loadCommunityPage();
+  let actionSheetCalls = 0;
   global.wx.showActionSheet = ({ itemList, success }) => {
+    actionSheetCalls += 1;
+    if (actionSheetCalls === 1) {
+      assert.deepEqual(itemList, ['举报']);
+      success({ tapIndex: 0 });
+      return;
+    }
     assert.deepEqual(itemList, ['虚假或误导信息', '诈骗或广告导流', '骚扰或不当内容', '其他问题']);
     success({ tapIndex: 2 });
   };
@@ -178,16 +185,49 @@ test('非作者通过资料门禁后选择举报原因并提交', async () => {
   }
 });
 
-test('未通过资料门禁时不展示举报菜单', async () => {
+test('作者菜单也可选择举报并提交标准原因', async () => {
+  const originalLogin = userService.login;
+  const originalReport = safetyService.report;
+  const reports = [];
+  userService.login = async () => ({ profileComplete: true });
+  safetyService.report = async (payload) => { reports.push(payload); return { ok: true }; };
+  const context = loadCommunityPage();
+  let actionSheetCalls = 0;
+  global.wx.showActionSheet = ({ itemList, success }) => {
+    actionSheetCalls += 1;
+    if (actionSheetCalls === 1) {
+      assert.deepEqual(itemList, ['删除内容', '举报']);
+      success({ tapIndex: 1 });
+      return;
+    }
+    assert.deepEqual(itemList, ['虚假或误导信息', '诈骗或广告导流', '骚扰或不当内容', '其他问题']);
+    success({ tapIndex: 3 });
+  };
+  try {
+    context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: true }] });
+    await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    assert.deepEqual(reports, [{ targetType: 'communityPost', targetId: 'post-1', reason: 'OTHER', description: '' }]);
+  } finally {
+    userService.login = originalLogin;
+    safetyService.report = originalReport;
+    unloadCommunityPage(context);
+  }
+});
+
+test('选择举报但未通过资料门禁时不展示原因菜单', async () => {
   const originalLogin = userService.login;
   let actionSheetCalls = 0;
   userService.login = async () => ({ profileComplete: false });
   const context = loadCommunityPage();
-  global.wx.showActionSheet = () => { actionSheetCalls += 1; };
+  global.wx.showActionSheet = ({ itemList, success }) => {
+    actionSheetCalls += 1;
+    assert.deepEqual(itemList, ['举报']);
+    success({ tapIndex: 0 });
+  };
   try {
     context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: false }] });
     await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
-    assert.equal(actionSheetCalls, 0);
+    assert.equal(actionSheetCalls, 1);
     assert.equal(context.navigations.at(-1).url, '/subpackages/profile/edit/index');
   } finally {
     userService.login = originalLogin;

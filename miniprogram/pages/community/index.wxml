@@ -47,7 +47,7 @@
 <image wx:if="{{!item.avatarSlot.empty}}" class="post-avatar post-avatar-image" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" lazy-load="true" data-id="{{item.id}}" binderror="handlePostAvatarError" aria-hidden="true"></image>
 <view wx:else class="post-avatar post-avatar--{{item.avatarTone}}">{{item.avatarInitial}}</view>
 <view class="post-author-copy"><text class="post-author">{{item.authorNickname}}</text><text class="post-time">{{item.timeLabel}}</text></view>
-<button class="post-more" data-id="{{item.id}}" catchtap="handlePostAction" hover-class="post-more--pressed" hover-stay-time="70" aria-label="帖子操作菜单，点击可{{item.viewerIsAuthor ? '删除内容' : '举报内容'}}"><text class="post-more-dots" aria-hidden="true">•••</text></button>
+<button class="post-more" data-id="{{item.id}}" catchtap="handlePostAction" hover-class="post-more--pressed" hover-stay-time="70" aria-label="帖子操作菜单，点击可{{item.viewerIsAuthor ? '删除或举报内容' : '举报内容'}}"><text class="post-more-dots" aria-hidden="true">•••</text></button>
 </view>
 <view class="post-content-panel" aria-hidden="true"><text class="post-preview">{{item.content}}</text></view>
 <view class="post-footer">
