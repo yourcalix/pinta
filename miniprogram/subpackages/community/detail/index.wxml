@@ -23,7 +23,7 @@
             <text class="author-name">{{post.authorNickname}}</text>
             <text class="post-time">{{post.displayTime}}</text>
           </view>
-          <button class="more-button" bindtap="handlePostMore" hover-class="detail-control--pressed" aria-label="更多帖子操作">···</button>
+          <button class="more-button" catchtap="handlePostMore" hover-class="detail-control--pressed" aria-label="帖子操作菜单，点击可{{post.viewerIsAuthor ? '删除或举报内容' : '举报内容'}}">···</button>
         </view>
 
         <view class="post-content" user-select="true">
@@ -62,7 +62,7 @@
                   hover-class="like-button--pressed"
                   aria-label="{{item.viewerHasLiked ? '取消点赞' : '点赞'}}这条回复，当前{{item.likeCount}}个赞"
                 ><text class="reply-heart" aria-hidden="true">{{item.viewerHasLiked ? '♥' : '♡'}}</text><text class="like-count-value" aria-hidden="true">{{item.likeCount}}</text></button>
-                <button class="more-button reply-more" data-id="{{item.id}}" bindtap="handleReplyMore" hover-class="detail-control--pressed" aria-label="更多回复操作">···</button>
+                <button class="more-button reply-more" data-id="{{item.id}}" catchtap="handleReplyMore" hover-class="detail-control--pressed" aria-label="回复操作菜单，点击可{{item.viewerIsAuthor ? '删除或举报内容' : '举报内容'}}">···</button>
               </view>
             </view>
             <text class="reply-content" user-select="true">{{item.content}}</text>

@@ -204,7 +204,6 @@ Page({
         success: (result) => resolve(Number.isInteger(result.tapIndex) ? result.tapIndex : -1),
         fail: () => resolve(-1)
       };
-      if (isAuthor) options.itemColor = '#E5484D';
       wx.showActionSheet(options);
     });
   },

@@ -113,7 +113,7 @@ test('作者菜单二次确认后删除帖子且同一目标操作防重', async
   const context = loadCommunityPage();
   global.wx.showActionSheet = ({ itemList, itemColor, success }) => {
     assert.deepEqual(itemList, ['删除内容', '举报']);
-    assert.equal(itemColor, '#E5484D');
+    assert.equal(itemColor, undefined);
     success({ tapIndex: 0 });
   };
   global.wx.showModal = ({ title, success }) => {

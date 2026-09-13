@@ -45,8 +45,12 @@ test('讨论详情保留真实交互并以文字分段高亮话题', () => {
   assert.match(template, /data-target-type="reply"/);
   assert.match(template, /handlePostMore/);
   assert.match(template, /handleReplyMore/);
+  assert.match(template, /catchtap="handlePostMore"[^>]*删除或举报内容/);
+  assert.match(template, /catchtap="handleReplyMore"[^>]*删除或举报内容/);
   assert.match(template, /placeholder="写下你的回复…"/);
   assert.doesNotMatch(template, /图片|image-picker|chooseMedia/);
+  assert.doesNotMatch(read('subpackages/community/detail/index.js'), /itemColor\s*:/);
+  assert.doesNotMatch(read('pages/community/index.js'), /itemColor\s*:/);
 
   assert.deepEqual(script.splitContentSegments('一起去吧 #寻找搭子 ☀️'), [
     { type: 'text', text: '一起去吧 ' },

@@ -81,6 +81,7 @@ Page({
     this._disposed = true;
     this._replyFocus = false;
     this._loadSeq = (this._loadSeq || 0) + 1;
+    if (this._actionLocks) this._actionLocks.clear();
   },
 
   async loadDetail(append = false) {
@@ -202,38 +203,57 @@ Page({
     }
   },
 
-  handlePostMore() { this.showContentActions('communityPost', this.data.post.id, this.data.post.viewerIsAuthor); },
+  handlePostMore() { return this.showContentActions('communityPost', this.data.post.id, this.data.post.viewerIsAuthor); },
   handleReplyMore(event) {
     const item = this.data.replies.find((reply) => reply.id === event.currentTarget.dataset.id);
-    if (item) this.showContentActions('communityReply', item.id, item.viewerIsAuthor);
+    if (item) return this.showContentActions('communityReply', item.id, item.viewerIsAuthor);
   },
-  showContentActions(targetType, targetId, isAuthor) {
-    const itemList = isAuthor ? ['删除内容'] : COMMUNITY_REPORT_REASONS.map((item) => item.label);
-    wx.showActionSheet({ itemList, success: (result) => isAuthor ? this.confirmDelete(targetType, targetId) : this.reportContent(targetType, targetId, COMMUNITY_REPORT_REASONS[result.tapIndex].value) });
+  showActionSheet(itemList) {
+    return new Promise((resolve) => wx.showActionSheet({
+      itemList,
+      success: (result) => resolve(Number.isInteger(result.tapIndex) ? result.tapIndex : -1),
+      fail: () => resolve(-1)
+    }));
   },
-  confirmDelete(targetType, targetId) {
-    wx.showModal({
+  confirmDelete() {
+    return new Promise((resolve) => wx.showModal({
       title: '确认删除', content: '删除后其他用户将无法再查看，且无法恢复。', confirmText: '删除', confirmColor: '#E5484D',
-      success: async (result) => {
-        if (!result.confirm) return;
-        try {
-          if (targetType === 'communityPost') {
-            await communityService.deletePost(targetId);
-            wx.switchTab({ url: '/pages/community/index' });
-          } else {
-            const deleted = await communityService.deleteReply(targetId);
-            this.setData({ replies: this.data.replies.filter((item) => item.id !== targetId), 'post.replyCount': Math.max(0, Number(deleted.replyCount) || 0) });
-          }
-        } catch (error) { if (!error.handled) wx.showToast({ title: error.message || '删除失败', icon: 'none' }); }
-      }
-    });
+      success: (result) => resolve(Boolean(result.confirm)), fail: () => resolve(false)
+    }));
   },
-  async reportContent(targetType, targetId, reason) {
-    if (!await this.ensureInteractionAccess()) return;
+  async showContentActions(targetType, targetId, isAuthor) {
+    const lockKey = `${targetType}:${targetId}`;
+    this._actionLocks = this._actionLocks || new Set();
+    if (this._disposed || this._actionLocks.has(lockKey)) return;
+    this._actionLocks.add(lockKey);
+    let operation = '';
     try {
-      await safetyService.report({ targetType, targetId, reason, description: '' });
-      wx.showToast({ title: '已收到举报', icon: 'success' });
-    } catch (error) { if (!error.handled) wx.showToast({ title: error.message || '举报失败', icon: 'none' }); }
+      const selectedIndex = await this.showActionSheet(isAuthor ? ['删除内容', '举报'] : ['举报']);
+      if (this._disposed || selectedIndex < 0) return;
+      if (isAuthor && selectedIndex === 0) {
+        operation = 'delete';
+        if (!await this.confirmDelete() || this._disposed) return;
+        if (targetType === 'communityPost') {
+          await communityService.deletePost(targetId);
+          if (!this._disposed) wx.switchTab({ url: '/pages/community/index' });
+          return;
+        }
+        const deleted = await communityService.deleteReply(targetId);
+        if (!this._disposed) this.setData({ replies: this.data.replies.filter((item) => item.id !== targetId), 'post.replyCount': Math.max(0, Number(deleted.replyCount) || 0) });
+        return;
+      }
+      operation = 'report';
+      if (!await this.ensureInteractionAccess() || this._disposed) return;
+      const reasonIndex = await this.showActionSheet(COMMUNITY_REPORT_REASONS.map((item) => item.label));
+      const reason = COMMUNITY_REPORT_REASONS[reasonIndex];
+      if (!reason || this._disposed) return;
+      await safetyService.report({ targetType, targetId, reason: reason.value, description: '' });
+      if (!this._disposed) wx.showToast({ title: '已收到举报', icon: 'success' });
+    } catch (error) {
+      if (!this._disposed && !error.handled) wx.showToast({ title: operation === 'delete' ? '删除失败，请重试' : '举报失败，请重试', icon: 'none' });
+    } finally {
+      this._actionLocks.delete(lockKey);
+    }
   },
   handleRetryDetail() { return this.loadDetail(false); },
   handleRetryLoadMore() { this.loadDetail(true); },

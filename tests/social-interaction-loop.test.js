@@ -8,6 +8,7 @@ const { MemoryStore } = require('../cloudfunctions/api/lib/memory-store');
 const mockServer = require('../miniprogram/mocks/server');
 const communityService = require('../miniprogram/services/community');
 const userService = require('../miniprogram/services/user');
+const safetyService = require('../miniprogram/services/safety');
 
 const NOW = '2026-09-04T03:00:00.000Z';
 const user = (id) => ({ id, role: 'user', status: 'ACTIVE', profile: { nickname: id, gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true }, createdAt: NOW, updatedAt: NOW });
@@ -136,6 +137,97 @@ test('前端呈现当前用户头像、单字回退、双计数、评论续页�
   assert.match(script, /nextCursor/);
   assert.match(script, /new Map/);
   assert.doesNotMatch(`${list}${detail}`, /私信TA|发私信/);
+});
+
+test('详情页作者可从黑色第一层菜单选择举报并提交标准原因', async () => {
+  const originalLogin = userService.login;
+  const originalReport = safetyService.report;
+  const reports = [];
+  userService.login = async () => ({ profileComplete: true });
+  safetyService.report = async (payload) => { reports.push(payload); return { ok: true }; };
+  const context = loadDetailPage();
+  let actionSheetCalls = 0;
+  global.wx.showActionSheet = ({ itemList, itemColor, success }) => {
+    actionSheetCalls += 1;
+    assert.equal(itemColor, undefined);
+    if (actionSheetCalls === 1) {
+      assert.deepEqual(itemList, ['删除内容', '举报']);
+      success({ tapIndex: 1 });
+      return;
+    }
+    assert.deepEqual(itemList, ['虚假或误导信息', '诈骗或广告导流', '骚扰或不当内容', '其他问题']);
+    success({ tapIndex: 0 });
+  };
+  try {
+    context.page.setData({ post: { id: 'post', viewerIsAuthor: true } });
+    await context.page.handlePostMore();
+    assert.deepEqual(reports, [{ targetType: 'communityPost', targetId: 'post', reason: 'FALSE_INFORMATION', description: '' }]);
+  } finally {
+    userService.login = originalLogin;
+    safetyService.report = originalReport;
+    unloadDetailPage(context);
+  }
+});
+
+test('详情页作者确认删除回复后移除回复并校准计数', async () => {
+  const originalDeleteReply = communityService.deleteReply;
+  communityService.deleteReply = async () => ({ replyCount: 1 });
+  const context = loadDetailPage();
+  global.wx.showActionSheet = ({ itemList, success }) => {
+    assert.deepEqual(itemList, ['删除内容', '举报']);
+    success({ tapIndex: 0 });
+  };
+  global.wx.showModal = ({ confirmColor, success }) => {
+    assert.equal(confirmColor, '#E5484D');
+    success({ confirm: true });
+  };
+  try {
+    context.page.setData({ post: { id: 'post', replyCount: 2 }, replies: [{ id: 'reply', viewerIsAuthor: true }, { id: 'kept' }] });
+    await context.page.handleReplyMore({ currentTarget: { dataset: { id: 'reply' } } });
+    assert.deepEqual(context.page.data.replies.map((item) => item.id), ['kept']);
+    assert.equal(context.page.data['post.replyCount'], 1);
+  } finally {
+    communityService.deleteReply = originalDeleteReply;
+    unloadDetailPage(context);
+  }
+});
+
+test('详情页菜单取消静默释放目标锁并允许再次打开', async () => {
+  const context = loadDetailPage();
+  let actionSheetCalls = 0;
+  global.wx.showActionSheet = ({ fail }) => { actionSheetCalls += 1; fail({ errMsg: 'showActionSheet:fail cancel' }); };
+  try {
+    context.page.setData({ post: { id: 'post', viewerIsAuthor: true } });
+    await context.page.handlePostMore();
+    await context.page.handlePostMore();
+    assert.equal(actionSheetCalls, 2);
+    assert.equal(context.page._actionLocks.size, 0);
+  } finally {
+    unloadDetailPage(context);
+  }
+});
+
+test('详情页删除请求返回前卸载不会更新或跳转', async () => {
+  const originalDeletePost = communityService.deletePost;
+  const deletion = deferred();
+  communityService.deletePost = () => deletion.promise;
+  const context = loadDetailPage();
+  let switchTabCalls = 0;
+  global.wx.showActionSheet = ({ success }) => success({ tapIndex: 0 });
+  global.wx.showModal = ({ success }) => success({ confirm: true });
+  global.wx.switchTab = () => { switchTabCalls += 1; };
+  try {
+    context.page.setData({ post: { id: 'post', viewerIsAuthor: true } });
+    const action = context.page.handlePostMore();
+    await new Promise((resolve) => setImmediate(resolve));
+    context.page.onUnload();
+    deletion.resolve({ deleted: true });
+    await action;
+    assert.equal(switchTabCalls, 0);
+  } finally {
+    communityService.deletePost = originalDeletePost;
+    unloadDetailPage(context);
+  }
 });
 
 test('点赞鉴权在途时同一目标只允许一个请求，卸载后不再setData', async () => {
