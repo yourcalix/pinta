@@ -39,7 +39,8 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   const positions = markers.map((marker) => template.indexOf(marker));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
-  assert.match(template, /世界很大，/);
+  assert.match(template, /世界很大/);
+  assert.doesNotMatch(template, /世界很大，/);
   assert.match(template, /先来拼吧/);
   assert.match(template, /data-action="activities"/);
   assert.match(template, /class="shortcut-subtitle shortcut-subtitle--activities">看看大家都在聊什么<\/text>/);
