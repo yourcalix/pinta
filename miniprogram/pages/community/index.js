@@ -2,6 +2,8 @@
 
 const communityService = require('../../services/community');
 const userService = require('../../services/user');
+const safetyService = require('../../services/safety');
+const { COMMUNITY_REPORT_REASONS } = require('../../utils/community-report-reasons');
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { selectTab } = require('../../utils/tab-bar');
 const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../utils/passenger-avatar');
@@ -60,6 +62,8 @@ Page({
   onUnload() {
     this._loadSeq = (this._loadSeq || 0) + 1;
     if (this._likeLocks) this._likeLocks.clear();
+    if (this._postActionLocks) this._postActionLocks.clear();
+    if (this._deletedPostIds) this._deletedPostIds.clear();
     this.releaseCompanionNavigation();
   },
 
@@ -87,7 +91,8 @@ Page({
       });
       if (seq !== this._loadSeq) return;
       const currentById = new Map(this.data.posts.map((item) => [item.id, item]));
-      const incoming = (result.items || []).map(decorate).map((item) => {
+      const deletedPostIds = this._deletedPostIds || new Set();
+      const incoming = (result.items || []).filter((item) => !deletedPostIds.has(item.id)).map(decorate).map((item) => {
         const now=currentById.get(item.id)
         if (!now) return item;
         const was=likes.find((entry)=>entry.id===item.id)
@@ -188,6 +193,62 @@ Page({
       if (!error.handled) wx.showToast({ title: '点赞失败，请重试', icon: 'none' });
     } finally {
       this._likeLocks.delete(key);
+    }
+  },
+
+  showPostActionSheet(isAuthor) {
+    const itemList = isAuthor ? ['删除内容'] : COMMUNITY_REPORT_REASONS.map((item) => item.label);
+    return new Promise((resolve) => {
+      const options = {
+        itemList,
+        success: (result) => resolve(Number.isInteger(result.tapIndex) ? result.tapIndex : -1),
+        fail: () => resolve(-1)
+      };
+      if (isAuthor) options.itemColor = '#E5484D';
+      wx.showActionSheet(options);
+    });
+  },
+
+  confirmPostDelete() {
+    return new Promise((resolve) => wx.showModal({
+      title: '确认删除',
+      content: '删除后其他用户将无法再查看，且无法恢复。',
+      confirmText: '删除',
+      confirmColor: '#E5484D',
+      success: (result) => resolve(Boolean(result.confirm)),
+      fail: () => resolve(false)
+    }));
+  },
+
+  async handlePostAction(event) {
+    const postId = String(event.currentTarget.dataset.id || '');
+    const post = this.data.posts.find((item) => item.id === postId);
+    if (!postId || !post) return;
+    this._postActionLocks = this._postActionLocks || new Set();
+    if (this._postActionLocks.has(postId)) return;
+    this._postActionLocks.add(postId);
+    try {
+      const isAuthor = Boolean(post.viewerIsAuthor);
+      if (!isAuthor && !await this.ensureInteractionAccess()) return;
+      const selectedIndex = await this.showPostActionSheet(isAuthor);
+      if (selectedIndex < 0) return;
+      if (isAuthor) {
+        if (!await this.confirmPostDelete()) return;
+        await communityService.deletePost(postId);
+        this._deletedPostIds = this._deletedPostIds || new Set();
+        this._deletedPostIds.add(postId);
+        this.setData({ posts: this.data.posts.filter((item) => item.id !== postId) });
+        wx.showToast({ title: '已删除', icon: 'success' });
+        return;
+      }
+      const reason = COMMUNITY_REPORT_REASONS[selectedIndex];
+      if (!reason) return;
+      await safetyService.report({ targetType: 'communityPost', targetId: postId, reason: reason.value, description: '' });
+      wx.showToast({ title: '已收到举报', icon: 'success' });
+    } catch (error) {
+      if (!error.handled) wx.showToast({ title: post.viewerIsAuthor ? '删除失败，请重试' : '举报失败，请重试', icon: 'none' });
+    } finally {
+      this._postActionLocks.delete(postId);
     }
   },
 

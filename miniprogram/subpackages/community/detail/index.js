@@ -3,18 +3,12 @@
 const communityService = require('../../../services/community');
 const userService = require('../../../services/user');
 const safetyService = require('../../../services/safety');
+const { COMMUNITY_REPORT_REASONS } = require('../../../utils/community-report-reasons');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../../utils/passenger-avatar');
 
 const PAGE_SIZE = 20;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
-const REPORT_REASONS = [
-  { label: '虚假或误导信息', value: 'FALSE_INFORMATION' },
-  { label: '诈骗或广告导流', value: 'FRAUD_OR_DIVERSION' },
-  { label: '骚扰或不当内容', value: 'HARASSMENT' },
-  { label: '其他问题', value: 'OTHER' }
-];
-
 function splitContentSegments(content) {
   const source = String(content || '');
   const segments = [];
@@ -214,8 +208,8 @@ Page({
     if (item) this.showContentActions('communityReply', item.id, item.viewerIsAuthor);
   },
   showContentActions(targetType, targetId, isAuthor) {
-    const itemList = isAuthor ? ['删除内容'] : REPORT_REASONS.map((item) => item.label);
-    wx.showActionSheet({ itemList, success: (result) => isAuthor ? this.confirmDelete(targetType, targetId) : this.reportContent(targetType, targetId, REPORT_REASONS[result.tapIndex].value) });
+    const itemList = isAuthor ? ['删除内容'] : COMMUNITY_REPORT_REASONS.map((item) => item.label);
+    wx.showActionSheet({ itemList, success: (result) => isAuthor ? this.confirmDelete(targetType, targetId) : this.reportContent(targetType, targetId, COMMUNITY_REPORT_REASONS[result.tapIndex].value) });
   },
   confirmDelete(targetType, targetId) {
     wx.showModal({

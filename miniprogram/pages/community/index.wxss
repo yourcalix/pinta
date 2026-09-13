@@ -44,7 +44,9 @@ button::after{display:none}
 .post-author-copy{display:flex;flex:1;min-width:0;flex-direction:column}
 .post-author{overflow:hidden;color:#201f1d;font-size:28rpx;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
 .post-time{margin-top:5rpx;color:#96918b;font-size:24rpx}
-.post-more{flex-shrink:0;margin-left:10rpx;color:#989898;font-size:28rpx;font-weight:800;letter-spacing:3rpx}
+.post-more{display:flex;flex:0 0 88rpx;width:88rpx;min-width:88rpx;min-height:88rpx;align-items:center;justify-content:center;margin:-8rpx -12rpx -8rpx 2rpx;color:#989898;background:transparent;border:0;border-radius:44rpx}
+.post-more-dots{font-size:28rpx;font-weight:800;letter-spacing:3rpx;line-height:1}
+.post-more--pressed{background:rgba(120,113,108,.08)}
 .post-content-panel{min-height:112rpx;margin-top:20rpx;padding:18rpx 20rpx;box-sizing:border-box;background:#faf8f4;border-radius:18rpx}
 .post-preview{display:-webkit-box;overflow:hidden;color:#32302d;font-size:28rpx;line-height:46rpx;white-space:normal;word-break:break-all;word-wrap:break-word;overflow-wrap:anywhere;-webkit-box-orient:vertical;-webkit-line-clamp:4}
 .post-footer{min-height:54rpx;margin-top:14rpx;justify-content:space-between}

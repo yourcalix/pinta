@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 
 const communityService = require('../miniprogram/services/community');
 const userService = require('../miniprogram/services/user');
+const safetyService = require('../miniprogram/services/safety');
 
 function deferred() {
   let resolve;
@@ -96,6 +97,123 @@ test('帖子普通点击与评论点击分别进入普通详情和自动回复�
       '/subpackages/community/detail/index?id=post%2F2'
     ]);
   } finally {
+    unloadCommunityPage(context);
+  }
+});
+
+test('作者菜单二次确认后删除帖子且同一目标操作防重', async () => {
+  const originalDeletePost = communityService.deletePost;
+  const deletion = deferred();
+  let deleteCalls = 0;
+  communityService.deletePost = async (postId) => {
+    deleteCalls += 1;
+    assert.equal(postId, 'post-1');
+    return deletion.promise;
+  };
+  const context = loadCommunityPage();
+  global.wx.showActionSheet = ({ itemList, itemColor, success }) => {
+    assert.deepEqual(itemList, ['删除内容']);
+    assert.equal(itemColor, '#E5484D');
+    success({ tapIndex: 0 });
+  };
+  global.wx.showModal = ({ title, success }) => {
+    assert.equal(title, '确认删除');
+    success({ confirm: true });
+  };
+  try {
+    context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: true }, { id: 'post-2', viewerIsAuthor: false }] });
+    const event = { currentTarget: { dataset: { id: 'post-1' } } };
+    const first = context.page.handlePostAction(event);
+    const second = context.page.handlePostAction(event);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(deleteCalls, 1);
+    deletion.resolve({ deleted: true });
+    await Promise.all([first, second]);
+    assert.deepEqual(context.page.data.posts.map((item) => item.id), ['post-2']);
+    assert.equal(context.toasts.at(-1).title, '已删除');
+  } finally {
+    communityService.deletePost = originalDeletePost;
+    unloadCommunityPage(context);
+  }
+});
+
+test('作者取消删除时不调用接口且保留帖子', async () => {
+  const originalDeletePost = communityService.deletePost;
+  let deleteCalls = 0;
+  communityService.deletePost = async () => { deleteCalls += 1; };
+  const context = loadCommunityPage();
+  global.wx.showActionSheet = ({ success }) => success({ tapIndex: 0 });
+  global.wx.showModal = ({ success }) => success({ confirm: false });
+  try {
+    context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: true }] });
+    await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    assert.equal(deleteCalls, 0);
+    assert.equal(context.page.data.posts.length, 1);
+  } finally {
+    communityService.deletePost = originalDeletePost;
+    unloadCommunityPage(context);
+  }
+});
+
+test('非作者通过资料门禁后选择举报原因并提交', async () => {
+  const originalLogin = userService.login;
+  const originalReport = safetyService.report;
+  const reports = [];
+  userService.login = async () => ({ profileComplete: true });
+  safetyService.report = async (payload) => { reports.push(payload); return { ok: true }; };
+  const context = loadCommunityPage();
+  global.wx.showActionSheet = ({ itemList, success }) => {
+    assert.deepEqual(itemList, ['虚假或误导信息', '诈骗或广告导流', '骚扰或不当内容', '其他问题']);
+    success({ tapIndex: 2 });
+  };
+  try {
+    context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: false }] });
+    await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    assert.deepEqual(reports, [{ targetType: 'communityPost', targetId: 'post-1', reason: 'HARASSMENT', description: '' }]);
+    assert.equal(context.toasts.at(-1).title, '已收到举报');
+  } finally {
+    userService.login = originalLogin;
+    safetyService.report = originalReport;
+    unloadCommunityPage(context);
+  }
+});
+
+test('未通过资料门禁时不展示举报菜单', async () => {
+  const originalLogin = userService.login;
+  let actionSheetCalls = 0;
+  userService.login = async () => ({ profileComplete: false });
+  const context = loadCommunityPage();
+  global.wx.showActionSheet = () => { actionSheetCalls += 1; };
+  try {
+    context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: false }] });
+    await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    assert.equal(actionSheetCalls, 0);
+    assert.equal(context.navigations.at(-1).url, '/subpackages/profile/edit/index');
+  } finally {
+    userService.login = originalLogin;
+    unloadCommunityPage(context);
+  }
+});
+
+test('删除墓碑过滤删除期间发起的晚到刷新结果', async () => {
+  const originalListPosts = communityService.listPosts;
+  const originalDeletePost = communityService.deletePost;
+  const listResponse = deferred();
+  communityService.listPosts = () => listResponse.promise;
+  communityService.deletePost = async () => ({ deleted: true });
+  const context = loadCommunityPage();
+  global.wx.showActionSheet = ({ success }) => success({ tapIndex: 0 });
+  global.wx.showModal = ({ success }) => success({ confirm: true });
+  try {
+    context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: true }], loading: false });
+    const refresh = context.page.loadPosts(false, true);
+    await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    listResponse.resolve({ items: [{ id: 'post-1', viewerIsAuthor: true, author: { nickname: '作者' }, content: '旧快照', createdAt: new Date().toISOString() }], nextCursor: null });
+    await refresh;
+    assert.deepEqual(context.page.data.posts, []);
+  } finally {
+    communityService.listPosts = originalListPosts;
+    communityService.deletePost = originalDeletePost;
     unloadCommunityPage(context);
   }
 });
