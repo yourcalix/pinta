@@ -10,7 +10,7 @@ button::after{display:none}
 .discussion-search-input{flex:1;min-width:0;height:72rpx;color:#111827;font-size:28rpx}
 .discussion-search-placeholder{color:#9ca3af}
 .discussion-search-clear{flex:0 0 56rpx;min-width:56rpx;min-height:88rpx;color:#8b8d90;background:transparent;border:0;font-size:32rpx}
-.discussion-search-action{flex:0 0 88rpx;min-width:88rpx;min-height:88rpx;color:#8a6500;background:transparent;border:0;font-size:24rpx;font-weight:750}
+.discussion-search-action{display:flex;flex:0 0 88rpx;min-width:88rpx;min-height:88rpx;align-items:center;justify-content:center;color:#8a6500;background:transparent;border:0;font-size:24rpx;font-weight:750;line-height:1}
 .community-notification{display:flex;flex:0 0 88rpx;min-width:88rpx;min-height:88rpx;align-items:center;justify-content:center;background:transparent;border:0;transition:opacity 120ms ease,transform 120ms ease}
 .community-notification-image{width:78rpx;height:78rpx}
 .community-control--pressed{opacity:.76;transform:scale(.97)}

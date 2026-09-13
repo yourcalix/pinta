@@ -1,0 +1,12 @@
+{
+  "id": "fix-community-search-button-alignment",
+  "title": "修复发现页搜索按钮文字垂直偏高",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-13T00:00:00+08:00",
+  "branch": "main"
+}

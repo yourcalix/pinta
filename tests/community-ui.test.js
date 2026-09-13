@@ -44,6 +44,7 @@ test('发现页采用真实讨论搜索、通知入口、真实主题动作和�
   assert.match(style, /\.community-page\s*\{[^}]*background:\s*#f9f7f2/s);
   assert.match(style, /\.discussion-search-entry\s*\{[^}]*min-height:\s*88rpx/s);
   assert.match(style, /\.discussion-search-action\s*\{[^}]*min-height:\s*88rpx/s);
+  assert.match(style, /\.discussion-search-action\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center[^}]*justify-content:\s*center/s);
   assert.match(style, /\.community-notification\s*\{[^}]*min-width:\s*88rpx/s);
   assert.match(style, /\.topic-card\s*\{[^}]*width:\s*210rpx/s);
   assert.match(style, /\.topic-card\s*\{[^}]*flex-shrink:\s*0/s);
