@@ -59,6 +59,7 @@ const MUTATING_ACTIONS = new Set([
   'community.post.delete',
   'community.reply.delete',
   'community.like.set',
+  'community.activity.read',
   'companion.presence.enter',
   'companion.presence.heartbeat',
   'companion.presence.leave',
@@ -403,7 +404,7 @@ function seedState() {
   const rideStartsAt = rideStartDate.toISOString();
   const rideWindowEnd = new Date(rideStartDate.getTime() + 60 * 60 * 1000).toISOString();
   return {
-    schemaVersion: 10,
+    schemaVersion: 11,
     sequence: 100,
     users: [
       { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
@@ -539,6 +540,7 @@ function seedState() {
       }
     ],
     communityLikes: [],
+    communityActivities: [],
     companionPresences: [],
     directConversations: directPreview.conversations,
     directMessages: directPreview.messages,
@@ -566,7 +568,7 @@ function writeStorage(key, value) {
 }
 
 let state = readStorage(STATE_KEY) || seedState();
-if (!state || state.schemaVersion !== 10) state = seedState();
+if (!state || state.schemaVersion !== 11) state = seedState();
 let currentUserId = readStorage(PERSONA_KEY) || 'u_owner';
 if (!state.idempotency) state.idempotency = {};
 if (!state.activityQuestions) state.activityQuestions = [];
@@ -580,6 +582,7 @@ if (!state.memberContacts) state.memberContacts = [];
 if (!state.communityPosts) state.communityPosts = [];
 if (!state.communityReplies) state.communityReplies = [];
 if (!state.communityLikes) state.communityLikes = [];
+if (!state.communityActivities) state.communityActivities = [];
 if (!state.companionPresences) state.companionPresences = [];
 if (!state.groupMessages) state.groupMessages = [];
 if (!state.groupReadStates) state.groupReadStates = [];
@@ -642,6 +645,31 @@ function publicCommunityReply(item) {
     updatedAt: item.updatedAt,
     viewerIsAuthor: item.authorId === currentUserId,
     viewerHasLiked: Boolean(like)
+  };
+}
+
+function publicCommunityActivity(item) {
+  const post = state.communityPosts.find((entry) => entry.id === item.postId);
+  const reply = item.replyId ? state.communityReplies.find((entry) => entry.id === item.replyId) : null;
+  const postActive = Boolean(post && post.status === 'ACTIVE');
+  const replyActive = Boolean(reply && reply.status === 'ACTIVE');
+  const actorItems = item.type === 'POST_LIKED'
+    ? item.recentActors || []
+    : item.actorId ? [{ actorId: item.actorId, author: item.actor }] : [];
+  return {
+    id: item.id,
+    type: item.type,
+    postId: item.postId,
+    ...(item.replyId ? { replyId: item.replyId } : {}),
+    actors: actorItems.map((actor) => publicCommunityAuthor({ authorId: actor.actorId, author: actor.author })).filter(Boolean),
+    actorCount: item.type === 'POST_LIKED' ? Math.max(0, Number(item.actorCount) || 0) : actorItems.length,
+    postPreview: postActive ? String(post.content || '').slice(0, 100) : '',
+    contentPreview: postActive && item.type === 'POST_REPLIED' && replyActive ? String(reply.content || '').slice(0, 100) : '',
+    message: item.type === 'POST_STATUS' ? String(item.message || '').slice(0, 120) : '',
+    removed: !postActive,
+    read: item.read === true,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
   };
 }
 
@@ -738,6 +766,27 @@ function decodeCommunityCursor(value, keyword = '') {
     if (error && error.ok === false) throw error;
     throw fail('VALIDATION_ERROR', '分页游标无效');
   }
+}
+
+function encodeCommunityActivityCursor(item, tab) {
+  return asciiBase64Encode(JSON.stringify({ updatedAt: item.updatedAt, id: item.id, tab }));
+}
+
+function decodeCommunityActivityCursor(value, tab) {
+  if (value === undefined || value === null || value === '') return null;
+  try {
+    const parsed = JSON.parse(asciiBase64Decode(value));
+    assert(parsed && Number.isFinite(Date.parse(parsed.updatedAt)) && typeof parsed.id === 'string' && parsed.id, 'VALIDATION_ERROR', '动态分页游标无效');
+    assert(parsed.tab === tab, 'VALIDATION_ERROR', '动态分页游标与筛选条件不匹配');
+    return parsed;
+  } catch (error) {
+    if (error && error.ok === false) throw error;
+    throw fail('VALIDATION_ERROR', '动态分页游标无效');
+  }
+}
+
+function afterCommunityActivityCursor(item, cursor) {
+  return !cursor || item.updatedAt < cursor.updatedAt || (item.updatedAt === cursor.updatedAt && item.id < cursor.id);
 }
 
 function afterDescendingCommunityCursor(item, cursor) {
@@ -1984,6 +2033,34 @@ function handle(action, input, idempotencyKey = '') {
     const continuation = lookahead ? items[items.length - 1] : !exhausted ? scanned[scanned.length - 1] : null;
     return { items: items.map(publicCommunityPost), nextCursor: continuation ? encodeCommunityCursor(continuation, keyword) : null };
   }
+  if (action === 'community.activity.list') {
+    requireActiveUser();
+    assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '动态筛选条件无效');
+    assert(Object.keys(input).every((key) => ['tab', 'cursor', 'limit'].includes(key)), 'VALIDATION_ERROR', '动态筛选条件无效');
+    const tab = input.tab === undefined ? 'ALL' : input.tab;
+    assert(['ALL', 'REPLIES', 'LIKES'].includes(tab), 'VALIDATION_ERROR', '动态筛选选项无效');
+    const cursor = decodeCommunityActivityCursor(input.cursor, tab);
+    const limit = Number(input.limit === undefined ? 20 : input.limit);
+    assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量必须在1到30之间');
+    const type = tab === 'REPLIES' ? 'POST_REPLIED' : tab === 'LIKES' ? 'POST_LIKED' : '';
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const candidates = state.communityActivities
+      .filter((item) => item.recipientId === currentUserId && item.status === 'ACTIVE' && (!type || item.type === type))
+      .filter((item) => Date.parse(item.updatedAt) >= cutoff && afterCommunityActivityCursor(item, cursor))
+      .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
+    const page = candidates.slice(0, limit + 1);
+    const items = page.slice(0, limit);
+    return { items: items.map(publicCommunityActivity), nextCursor: page.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null };
+  }
+  if (action === 'community.activity.read') {
+    requireActiveUser();
+    const activityId = validatedId(input && input.activityId, '动态ID');
+    const item = state.communityActivities.find((entry) => entry.id === activityId && entry.recipientId === currentUserId);
+    assert(item, 'NOT_FOUND', '动态不存在');
+    item.read = true;
+    item.readAt = new Date().toISOString();
+    return { activityId, read: true, readAt: item.readAt };
+  }
   if (action === 'community.post.detail') {
     const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');
     assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
@@ -2020,6 +2097,11 @@ function handle(action, input, idempotencyKey = '') {
     };
     state.communityReplies.push(reply);
     post.replyCount = Number(post.replyCount || 0) + 1;
+    if (post.authorId !== user.id) state.communityActivities.push({
+      id: stableMockEntityId('communityActivity', 'reply', reply.id),
+      type: 'POST_REPLIED', status: 'ACTIVE', recipientId: post.authorId, postId: post.id, replyId: reply.id,
+      actorId: user.id, actor: clone(reply.author), read: false, readAt: null, createdAt: now, updatedAt: now
+    });
     return { reply: publicCommunityReply(reply), replyCount: post.replyCount };
   }
   if (action === 'community.post.delete') {
@@ -2058,6 +2140,24 @@ function handle(action, input, idempotencyKey = '') {
       state.communityLikes.push(like);
     }
     Object.assign(like, { status: input.liked ? 'ACTIVE' : 'DELETED', updatedAt: now });
+    if (input.targetType === 'post' && target.authorId !== user.id && wasLiked !== input.liked) {
+      const activityId = stableMockEntityId('communityActivity', 'like', target.authorId, target.id);
+      let activity = state.communityActivities.find((item) => item.id === activityId);
+      if (!activity) {
+        activity = { id: activityId, type: 'POST_LIKED', recipientId: target.authorId, postId: target.id, actorCount: 0, recentActors: [], read: false, readAt: null, createdAt: now };
+        state.communityActivities.push(activity);
+      }
+      activity.actorCount = Math.max(0, Number(activity.actorCount || 0) + (input.liked ? 1 : -1));
+      activity.recentActors = (activity.recentActors || []).filter((item) => item.actorId !== user.id);
+      if (input.liked) activity.recentActors.unshift({ actorId: user.id, author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) } });
+      Object.assign(activity, {
+        recentActors: activity.recentActors.slice(0, 2),
+        status: activity.actorCount > 0 ? 'ACTIVE' : 'INACTIVE',
+        read: input.liked ? false : Boolean(activity.read),
+        readAt: input.liked ? null : activity.readAt || null,
+        updatedAt: now
+      });
+    }
     return { targetType: input.targetType, targetId, liked: input.liked, likeCount: Number(target.likeCount || 0) };
   }
   if (action === 'activity.mine') {

@@ -2,6 +2,7 @@
 
 const { AppError, invariant } = require('./errors');
 const { decodeCursor, assertCommunityTextSafe, normalizeCommunityKeyword } = require('./community');
+const { COMMUNITY_ACTIVITY_TABS, decodeCommunityActivityCursor } = require('./community-activity');
 const { decodeDirectCursor, assertDirectMessageTextSafe } = require('./direct-message');
 const { COMPANION_PRESENCE_SCENE } = require('./companion-presence');
 const { parseBirthDate, adultBirthLimit, compareCalendarDate } = require('./profile-birth-date');
@@ -355,6 +356,23 @@ function validateCommunityLikeInput(input) {
   return { targetType: input.targetType, targetId: validateId(input.targetId, '点赞目标ID'), liked: input.liked };
 }
 
+function validateCommunityActivityListInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['tab', 'cursor', 'limit'].includes(key)), 'VALIDATION_ERROR', '动态筛选条件无效');
+  const tab = input.tab === undefined ? 'ALL' : enumValue(input.tab, '动态筛选', COMMUNITY_ACTIVITY_TABS);
+  return {
+    tab,
+    cursor: decodeCommunityActivityCursor(input.cursor, tab),
+    limit: integerValue(input.limit === undefined ? 20 : input.limit, '分页数量', 1, 30)
+  };
+}
+
+function validateCommunityActivityReadInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => key === 'activityId'), 'VALIDATION_ERROR', '动态已读参数无效');
+  return { activityId: validateId(input.activityId, '动态ID') };
+}
+
 function validateDirectMessageListInput(input = {}) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   return {
@@ -444,6 +462,8 @@ module.exports = {
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,
+  validateCommunityActivityListInput,
+  validateCommunityActivityReadInput,
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,
   validateDirectMessageCreateInput,

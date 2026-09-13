@@ -33,6 +33,13 @@ const {
   isAfterAscendingCursor
 } = require('./community');
 const {
+  COMMUNITY_ACTIVITY_STATUS,
+  activityTypeForTab,
+  encodeCommunityActivityCursor,
+  compareCommunityActivityDescending,
+  isAfterCommunityActivityCursor
+} = require('./community-activity');
+const {
   encodeDirectCursor,
   compareDirectDescending,
   isAfterDirectCursor
@@ -95,6 +102,7 @@ class MemoryStore {
     this.communityPosts = new Map((seed.communityPosts || []).map((item) => [item.id, clone(item)]));
     this.communityReplies = new Map((seed.communityReplies || []).map((item) => [item.id, clone(item)]));
     this.communityLikes = new Map((seed.communityLikes || []).map((item) => [item.id, clone(item)]));
+    this.communityActivities = new Map((seed.communityActivities || []).map((item) => [item.id, clone(item)]));
     this.companionPresences = new Map((seed.companionPresences || []).map((item) => [item.id, clone(item)]));
     this.directConversations = new Map((seed.directConversations || []).map((item) => [item.id, clone(item)]));
     this.directMessages = new Map((seed.directMessages || []).map((item) => [item.id, clone(item)]));
@@ -633,7 +641,7 @@ class MemoryStore {
     return result;
   }
 
-  async setCommunityLikeAtomic({ targetType, targetId, actorId, liked, at, audit }) {
+  async setCommunityLikeAtomic({ targetType, targetId, actorId, liked, at, audit, activity }) {
     const target = targetType === 'post' ? this.communityPosts.get(targetId) : this.communityReplies.get(targetId);
     invariant(target && target.status === (targetType === 'post' ? COMMUNITY_POST_STATUS.ACTIVE : COMMUNITY_REPLY_STATUS.ACTIVE), 'NOT_FOUND');
     if (targetType === 'reply') {
@@ -645,6 +653,23 @@ class MemoryStore {
     const wasLiked = Boolean(existing && existing.status === COMMUNITY_LIKE_STATUS.ACTIVE);
     if (wasLiked !== liked) target.likeCount = Math.max(0, Number(target.likeCount || 0) + (liked ? 1 : -1));
     this.communityLikes.set(id, { id, targetType, targetId, postId: targetType === 'reply' ? target.postId : targetId, actorId, status: liked ? COMMUNITY_LIKE_STATUS.ACTIVE : COMMUNITY_LIKE_STATUS.DELETED, createdAt: existing && existing.createdAt || at, updatedAt: at });
+    if (activity && wasLiked !== liked) {
+      const current = this.communityActivities.get(activity.id);
+      const actorCount = Math.max(0, Number(current && current.actorCount || 0) + (liked ? 1 : -1));
+      const recentActors = (current && current.recentActors || []).filter((item) => item.actorId !== actorId);
+      if (liked) recentActors.unshift({ actorId, author: clone(activity.actor) });
+      const next = {
+        ...(current || activity),
+        actorCount,
+        recentActors: recentActors.slice(0, 2),
+        status: actorCount > 0 ? COMMUNITY_ACTIVITY_STATUS.ACTIVE : COMMUNITY_ACTIVITY_STATUS.INACTIVE,
+        read: liked ? false : Boolean(current && current.read),
+        readAt: liked ? null : current && current.readAt || null,
+        createdAt: current && current.createdAt || at,
+        updatedAt: at
+      };
+      this.communityActivities.set(next.id, clone(next));
+    }
     if (audit) this.auditLogs.set(audit.id, clone(audit));
     return { targetType, targetId, liked, likeCount: Number(target.likeCount || 0) };
   }
@@ -668,7 +693,7 @@ class MemoryStore {
     this.communityRateLimits.set(key, current + 1);
   }
 
-  async createCommunityReply(reply, audit) {
+  async createCommunityReply(reply, audit, activity) {
     const post = this.communityPosts.get(reply.postId);
     invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
     const existing = this.communityReplies.get(reply.id);
@@ -679,8 +704,34 @@ class MemoryStore {
     this.communityReplies.set(reply.id, clone(reply));
     post.replyCount = Number(post.replyCount || 0) + 1;
     post.updatedAt = reply.createdAt;
+    if (activity) this.communityActivities.set(activity.id, clone(activity));
     if (audit) this.auditLogs.set(audit.id, clone(audit));
     return clone(reply);
+  }
+
+  async getCommunityReply(replyId) {
+    return clone(this.communityReplies.get(replyId) || null);
+  }
+
+  async listCommunityActivities(recipientId, { tab, cursor, limit, cutoff }) {
+    const type = activityTypeForTab(tab);
+    const candidates = [...this.communityActivities.values()]
+      .filter((item) => item.recipientId === recipientId && item.status === COMMUNITY_ACTIVITY_STATUS.ACTIVE)
+      .filter((item) => !type || item.type === type)
+      .filter((item) => !cutoff || Date.parse(item.updatedAt) >= Date.parse(cutoff))
+      .filter((item) => isAfterCommunityActivityCursor(item, cursor))
+      .sort(compareCommunityActivityDescending);
+    const page = candidates.slice(0, limit + 1);
+    const items = page.slice(0, limit);
+    return clone({ items, nextCursor: page.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null });
+  }
+
+  async markCommunityActivityRead(activityId, recipientId, at) {
+    const activity = this.communityActivities.get(activityId);
+    invariant(activity && activity.recipientId === recipientId, 'NOT_FOUND');
+    activity.read = true;
+    activity.readAt = at;
+    return clone(activity);
   }
 
   async deleteCommunityPost(postId, authorId, at, audit) {

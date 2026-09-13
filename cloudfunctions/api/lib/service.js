@@ -34,6 +34,8 @@ const {
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,
+  validateCommunityActivityListInput,
+  validateCommunityActivityReadInput,
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,
   validateDirectMessageCreateInput,
@@ -47,6 +49,12 @@ const {
 const { encodeNearbyCursor } = require('./activity-location');
 const { createLocalModeration } = require('./moderation');
 const { COMMUNITY_POST_STATUS, COMMUNITY_REPLY_STATUS } = require('./community');
+const {
+  COMMUNITY_ACTIVITY_TYPES,
+  COMMUNITY_ACTIVITY_STATUS,
+  communityReplyActivityId,
+  communityLikeActivityId
+} = require('./community-activity');
 const { resolveNotificationTarget } = require('./notification-target');
 const { parsePublicCursor, normalizeActivityForRead } = require('./public-activity-page');
 const {
@@ -90,6 +98,7 @@ const MUTATING_ACTIONS = new Set([
   'community.post.delete',
   'community.reply.delete',
   'community.like.set',
+  'community.activity.read',
   'companion.presence.enter',
   'companion.presence.heartbeat',
   'companion.presence.leave',
@@ -388,6 +397,30 @@ function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false, prof
     updatedAt: reply.updatedAt,
     viewerIsAuthor: Boolean(viewerId && reply.authorId === viewerId),
     viewerHasLiked: Boolean(viewerHasLiked)
+  };
+}
+
+function publicCommunityActivity(activity, post, reply, profilesByUserId = {}) {
+  const postActive = Boolean(post && post.status === COMMUNITY_POST_STATUS.ACTIVE);
+  const replyActive = Boolean(reply && reply.status === COMMUNITY_REPLY_STATUS.ACTIVE);
+  const actorItems = activity.type === COMMUNITY_ACTIVITY_TYPES.POST_LIKED
+    ? (activity.recentActors || [])
+    : activity.actorId ? [{ actorId: activity.actorId, author: activity.actor }] : [];
+  const actors = actorItems.map((item) => publicCommunityAuthor({ authorId: item.actorId, author: item.author }, profilesByUserId)).filter(Boolean);
+  return {
+    id: activity.id,
+    type: activity.type,
+    postId: activity.postId,
+    ...(activity.replyId ? { replyId: activity.replyId } : {}),
+    actors,
+    actorCount: activity.type === COMMUNITY_ACTIVITY_TYPES.POST_LIKED ? Math.max(0, Number(activity.actorCount) || 0) : actors.length,
+    postPreview: postActive ? String(post.content || '').slice(0, 100) : '',
+    contentPreview: postActive && activity.type === COMMUNITY_ACTIVITY_TYPES.POST_REPLIED && replyActive ? String(reply.content || '').slice(0, 100) : '',
+    message: activity.type === COMMUNITY_ACTIVITY_TYPES.POST_STATUS ? String(activity.message || '').slice(0, 120) : '',
+    removed: !postActive,
+    read: activity.read === true,
+    createdAt: activity.createdAt,
+    updatedAt: activity.updatedAt
   };
 }
 
@@ -925,7 +958,22 @@ function createPinbaService(options) {
         updatedAt: at
       };
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: 'communityReply', targetId: reply.id, at };
-      const createdReply = await store.createCommunityReply(reply, audit);
+      const post = await store.getCommunityPost(payload.postId);
+      const activity = post && post.authorId !== user.id ? {
+        id: communityReplyActivityId(reply.id),
+        type: COMMUNITY_ACTIVITY_TYPES.POST_REPLIED,
+        status: COMMUNITY_ACTIVITY_STATUS.ACTIVE,
+        recipientId: post.authorId,
+        postId: post.id,
+        replyId: reply.id,
+        actorId: user.id,
+        actor: reply.author,
+        read: false,
+        readAt: null,
+        createdAt: at,
+        updatedAt: at
+      } : null;
+      const createdReply = await store.createCommunityReply(reply, audit, activity);
       const updatedPost = await store.getCommunityPost(payload.postId);
       const profilesByUserId = await communityAuthorProfiles([createdReply]);
       return { reply: publicCommunityReply(createdReply, user.id, false, profilesByUserId), replyCount: Number(updatedPost && updatedPost.replyCount || 0) };
@@ -953,7 +1001,47 @@ function createPinbaService(options) {
       invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
       const payload = validateCommunityLikeInput(input);
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: payload.targetType === 'post' ? 'communityPost' : 'communityReply', targetId: payload.targetId, at };
-      return store.setCommunityLikeAtomic({ ...payload, actorId: user.id, at, audit });
+      const post = payload.targetType === 'post' ? await store.getCommunityPost(payload.targetId) : null;
+      const activity = post && post.authorId !== user.id ? {
+        id: communityLikeActivityId(post.authorId, post.id),
+        type: COMMUNITY_ACTIVITY_TYPES.POST_LIKED,
+        status: COMMUNITY_ACTIVITY_STATUS.ACTIVE,
+        recipientId: post.authorId,
+        postId: post.id,
+        actor: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
+        actorCount: 0,
+        recentActors: [],
+        read: false,
+        readAt: null,
+        createdAt: at,
+        updatedAt: at
+      } : null;
+      return store.setCommunityLikeAtomic({ ...payload, actorId: user.id, at, audit, activity });
+    }
+
+    if (action === 'community.activity.list') {
+      const user = await requireActiveUser(context, false);
+      const payload = validateCommunityActivityListInput(input);
+      const cutoff = new Date(Date.parse(at) - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const page = await store.listCommunityActivities(user.id, { ...payload, cutoff });
+      const posts = await Promise.all(page.items.map((item) => store.getCommunityPost(item.postId)));
+      const replies = await Promise.all(page.items.map((item) => item.replyId ? store.getCommunityReply(item.replyId) : null));
+      const actorItems = page.items.flatMap((item) => item.type === COMMUNITY_ACTIVITY_TYPES.POST_LIKED
+        ? item.recentActors || []
+        : item.actorId ? [{ actorId: item.actorId, author: item.actor }] : [])
+        .map((item) => ({ authorId: item.actorId, author: item.author }));
+      const profilesByUserId = await communityAuthorProfiles(actorItems);
+      return {
+        items: page.items.map((item, index) => publicCommunityActivity(item, posts[index], replies[index], profilesByUserId)),
+        nextCursor: page.nextCursor || null
+      };
+    }
+
+    if (action === 'community.activity.read') {
+      const user = await requireActiveUser(context, false);
+      const { activityId } = validateCommunityActivityReadInput(input);
+      await store.markCommunityActivityRead(activityId, user.id, at);
+      return { activityId, read: true, readAt: at };
     }
 
     if (action === 'activity.question.list') {
@@ -1545,6 +1633,7 @@ module.exports = {
   publicActivityQuestion,
   publicCommunityPost,
   publicCommunityReply,
+  publicCommunityActivity,
   publicNotification,
   selfUser,
   publicCompanionProfile

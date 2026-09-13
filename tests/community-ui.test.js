@@ -105,14 +105,14 @@ test('发现页帖子更多按钮隔离整卡导航并保持标准触控热区',
   assert.match(script, /_deletedPostIds/);
 });
 
-test('发现主题动作复用既有守则、发帖、在线星球与消息路由', () => {
+test('发现主题动作复用既有守则、发帖、在线星球与讨论动态路由', () => {
   const script = read('pages/community/index.js');
   assert.match(script, /handleGuidelines\(\)\s*\{/);
   assert.match(script, /wx\.showModal\(\{/);
   assert.match(script, /title:\s*'拼吧发现守则'/);
   assert.match(script, /showCancel:\s*false/);
   assert.match(script, /subpackages\/community\/companion\/index/);
-  assert.match(script, /pages\/messages\/index/);
+  assert.match(script, /subpackages\/community\/activity\/index/);
   assert.match(script, /subpackages\/community\/compose\/index/);
   assert.doesNotMatch(script, /pages\/common\/webview|community\/rules/);
 });
@@ -162,5 +162,31 @@ test('社区详情回复栏具备键盘与安全区避让，装饰头像退出�
   assert.match(template, /focus="\{\{replyInputFocus\}\}"/);
   assert.match(template, /bindblur="handleReplyBlur"/);
   assert.match(template, /aria-hidden="true"/);
+  assert.match(style, /env\(safe-area-inset-bottom\)/);
+});
+
+test('发现页保留铃铛并进入真实讨论动态分包页', () => {
+  const app = JSON.parse(read('app.json'));
+  const discoverTemplate = read('pages/community/index.wxml');
+  const discoverScript = read('pages/community/index.js');
+  const template = read('subpackages/community/activity/index.wxml');
+  const style = read('subpackages/community/activity/index.wxss');
+  const script = read('subpackages/community/activity/index.js');
+  assert.ok(app.subPackages.find((item) => item.root === 'subpackages/community').pages.includes('activity/index'));
+  assert.match(discoverTemplate, /community-notification-bell\.png/);
+  assert.match(discoverScript, /subpackages\/community\/activity\/index/);
+  assert.match(template, /讨论动态/);
+  assert.match(script, /label:\s*'全部'/);
+  assert.match(script, /label:\s*'回复我的'/);
+  assert.match(script, /label:\s*'收到的赞'/);
+  assert.match(template, /该讨论已被删除或下架/);
+  assert.match(script, /communityService\.listActivities/);
+  assert.match(script, /communityService\.readActivity/);
+  assert.match(script, /_navigationPending/);
+  assert.match(script, /fail:\s*\(\)\s*=>\s*\{ this\._navigationPending = false; \}/);
+  assert.match(style, /background:\s*#f9f7f2/);
+  assert.match(style, /\.activity-avatar-wrap\s*\{[^}]*position:\s*relative[^}]*\}/s);
+  assert.doesNotMatch(style.match(/\.activity-avatar-wrap\s*\{[^}]*\}/s)[0], /overflow:\s*hidden/);
+  assert.match(style, /\.activity-card\s*\{[^}]*border-radius:\s*28rpx/s);
   assert.match(style, /env\(safe-area-inset-bottom\)/);
 });

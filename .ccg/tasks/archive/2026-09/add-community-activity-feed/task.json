@@ -1,0 +1,12 @@
+{
+  "id": "add-community-activity-feed",
+  "title": "新增讨论动态页面并保留发现页铃铛入口",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-13T00:00:00+08:00",
+  "branch": "main"
+}

@@ -12,7 +12,8 @@
       "pages": [
         "detail/index",
         "compose/index",
-        "companion/index"
+        "companion/index",
+        "activity/index"
       ]
     },
     {

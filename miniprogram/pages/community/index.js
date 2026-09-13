@@ -50,6 +50,7 @@ Page({
   onShow() {
     selectTab(this, 1);
     this.releaseCompanionNavigation();
+    this._activityNavigationPending = false;
     if (this._skipFirstShow) return void (this._skipFirstShow = false);
     return this.loadPosts(false, true);
   },
@@ -293,7 +294,15 @@ Page({
   },
 
   handleMessages() {
-    wx.switchTab({ url: '/pages/messages/index' });
+    if (this._activityNavigationPending) return;
+    this._activityNavigationPending = true;
+    wx.navigateTo({
+      url: '/subpackages/community/activity/index',
+      fail: () => {
+        this._activityNavigationPending = false;
+        wx.showToast({ title: '暂时无法打开讨论动态', icon: 'none' });
+      }
+    });
   },
 
   handleTopicAction(event) {

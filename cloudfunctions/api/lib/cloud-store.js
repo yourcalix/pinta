@@ -32,6 +32,12 @@ const {
   isAfterAscendingCursor
 } = require('./community');
 const {
+  COMMUNITY_ACTIVITY_STATUS,
+  activityTypeForTab,
+  encodeCommunityActivityCursor,
+  compareCommunityActivityDescending
+} = require('./community-activity');
+const {
   encodeDirectCursor,
   compareDirectDescending,
   isAfterDirectCursor
@@ -1041,7 +1047,7 @@ class CloudStore {
     return states;
   }
 
-  async setCommunityLikeAtomic({ targetType, targetId, actorId, liked, at, audit }) {
+  async setCommunityLikeAtomic({ targetType, targetId, actorId, liked, at, audit, activity }) {
     return this.db.runTransaction(async (transaction) => {
       const collection = targetType === 'post' ? 'communityPosts' : 'communityReplies';
       const targetReference = transaction.collection(collection).doc(targetId);
@@ -1058,6 +1064,23 @@ class CloudStore {
       const likeCount = Math.max(0, Number(target.likeCount || 0) + (wasLiked === liked ? 0 : liked ? 1 : -1));
       await likeReference.set({ data: document({ id, targetType, targetId, postId: targetType === 'reply' ? target.postId : targetId, actorId, status: liked ? COMMUNITY_LIKE_STATUS.ACTIVE : COMMUNITY_LIKE_STATUS.DELETED, createdAt: existing && existing.createdAt || at, updatedAt: at }) });
       if (wasLiked !== liked) await targetReference.update({ data: { likeCount, updatedAt: at } });
+      if (activity && wasLiked !== liked) {
+        const activityReference = transaction.collection('communityActivities').doc(activity.id);
+        const current = await getTransactionDocument(activityReference);
+        const actorCount = Math.max(0, Number(current && current.actorCount || 0) + (liked ? 1 : -1));
+        const recentActors = (current && current.recentActors || []).filter((item) => item.actorId !== actorId);
+        if (liked) recentActors.unshift({ actorId, author: activity.actor });
+        await activityReference.set({ data: document({
+          ...(current || activity),
+          actorCount,
+          recentActors: recentActors.slice(0, 2),
+          status: actorCount > 0 ? COMMUNITY_ACTIVITY_STATUS.ACTIVE : COMMUNITY_ACTIVITY_STATUS.INACTIVE,
+          read: liked ? false : Boolean(current && current.read),
+          readAt: liked ? null : current && current.readAt || null,
+          createdAt: current && current.createdAt || at,
+          updatedAt: at
+        }) });
+      }
       if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
       return { targetType, targetId, liked, likeCount };
     });
@@ -1097,7 +1120,7 @@ class CloudStore {
     });
   }
 
-  async createCommunityReply(reply, audit) {
+  async createCommunityReply(reply, audit, activity) {
     return this.db.runTransaction(async (transaction) => {
       const postReference = transaction.collection('communityPosts').doc(reply.postId);
       const replyReference = transaction.collection('communityReplies').doc(reply.id);
@@ -1110,9 +1133,46 @@ class CloudStore {
       }
       await replyReference.set({ data: document(reply) });
       await postReference.update({ data: { replyCount: Number(post.replyCount || 0) + 1, updatedAt: reply.createdAt } });
+      if (activity) await transaction.collection('communityActivities').doc(activity.id).set({ data: document(activity) });
       if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
       return reply;
     });
+  }
+
+  async getCommunityReply(replyId) {
+    return this.getDocument('communityReplies', replyId);
+  }
+
+  async listCommunityActivities(recipientId, { tab, cursor, limit, cutoff }) {
+    const type = activityTypeForTab(tab);
+    const base = { recipientId, status: COMMUNITY_ACTIVITY_STATUS.ACTIVE, ...(type ? { type } : {}) };
+    const query = (where) => this.db.collection('communityActivities')
+      .where(where).orderBy('updatedAt', 'desc').orderBy('_id', 'desc').limit(limit + 1).get();
+    let candidates;
+    if (!cursor) {
+      const result = await query({ ...base, updatedAt: this.command.gte(cutoff) });
+      candidates = (result.data || []).map(entity);
+    } else if (Date.parse(cursor.updatedAt) < Date.parse(cutoff)) {
+      candidates = [];
+    } else {
+      const [earlier, sameTime] = await Promise.all([
+        query({ ...base, updatedAt: this.command.lt(cursor.updatedAt) }),
+        query({ ...base, updatedAt: cursor.updatedAt, _id: this.command.lt(cursor.id) })
+      ]);
+      candidates = [...(sameTime.data || []), ...(earlier.data || [])]
+        .map(entity)
+        .filter((item) => Date.parse(item.updatedAt) >= Date.parse(cutoff))
+        .sort(compareCommunityActivityDescending);
+    }
+    const items = candidates.slice(0, limit);
+    return { items, nextCursor: candidates.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null };
+  }
+
+  async markCommunityActivityRead(activityId, recipientId, at) {
+    const activity = await this.getDocument('communityActivities', activityId);
+    invariant(activity && activity.recipientId === recipientId, 'NOT_FOUND');
+    if (!activity.read) await this.db.collection('communityActivities').doc(activityId).update({ data: { read: true, readAt: at } });
+    return { ...activity, read: true, readAt: activity.readAt || at };
   }
 
   async deleteCommunityPost(postId, authorId, at, audit) {

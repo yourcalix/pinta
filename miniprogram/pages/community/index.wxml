@@ -7,7 +7,7 @@
 <button wx:if="{{keyword}}" class="discussion-search-clear" bindtap="handleClearKeyword" hover-class="community-control--pressed" hover-stay-time="70" role="button" aria-label="清空输入框文字">×</button>
 <button class="discussion-search-action" bindtap="handleSearchSubmit" hover-class="community-control--pressed" hover-stay-time="70" role="button" aria-label="搜索讨论帖子">搜索</button>
 </view>
-<button class="community-notification" bindtap="handleMessages" hover-class="community-control--pressed" hover-stay-time="80" aria-label="打开消息">
+<button class="community-notification" bindtap="handleMessages" hover-class="community-control--pressed" hover-stay-time="80" aria-label="打开讨论动态">
 <image class="community-notification-image" src="/assets/images/community/community-notification-bell.png" mode="aspectFit" aria-hidden="true"></image>
 </button>
 </view>

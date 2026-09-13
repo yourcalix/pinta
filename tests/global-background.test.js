@@ -33,6 +33,7 @@ test('除独立视觉首页、发现、发布讨论、在线星球、公开主�
     'subpackages/community/compose/index.wxml',
     'subpackages/community/companion/index.wxml',
     'subpackages/community/detail/index.wxml',
+    'subpackages/community/activity/index.wxml',
     'subpackages/profile/public/index.wxml',
     'subpackages/activity/list/index.wxml',
     'subpackages/activity/nearby/index.wxml',
@@ -41,7 +42,7 @@ test('除独立视觉首页、发现、发布讨论、在线星球、公开主�
     'subpackages/profile/edit/index.wxml',
     'subpackages/publish/location-picker/index.wxml'
   ]);
-  assert.equal(templates.length, 21);
+  assert.equal(templates.length, 22);
   templates.filter((relativePath) => !referenceBackgroundPages.has(relativePath)).forEach((relativePath) => {
     const template = read(relativePath);
     assert.equal((template.match(/shared-paper-bg\.jpg/g) || []).length, 1, relativePath);
@@ -83,6 +84,7 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
       'subpackages/community/compose/index.json': '#F9F7F2',
       'subpackages/community/companion/index.json': '#0D0C1B',
       'subpackages/community/detail/index.json': '#F9F7F2',
+      'subpackages/community/activity/index.json': '#F9F7F2',
       'subpackages/profile/public/index.json': '#0D0C1B',
       'subpackages/activity/list/index.json': '#F9F7F2',
       'subpackages/activity/nearby/index.json': '#F9F7F2',
