@@ -1,0 +1,12 @@
+{
+  "id": "fix-community-detail-like-jitter",
+  "title": "修复讨论详情点赞时页面抖动",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-13T00:00:00Z",
+  "branch": "main"
+}
