@@ -1,0 +1,12 @@
+{
+  "id": "design-community-activity-icon",
+  "title": "为发现页讨论区动态消息入口制定 Image2 素材提示词",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend-design",
+  "currentPhase": "completed",
+  "nextAction": "等待用户生成并回传透明 PNG",
+  "createdAt": "2026-09-13T00:00:00+08:00",
+  "branch": "main"
+}
