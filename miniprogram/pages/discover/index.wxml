@@ -10,9 +10,9 @@
       </view>
     </view>
 
-    <view class="home-hero" role="region" aria-label="你的搭子，刚刚好。发现身边同频的人和活动">
+    <view class="home-hero" role="region" aria-label="世界很大，先来拼吧。发现身边同频的人和活动">
       <view class="hero-copy">
-        <view class="hero-title"><text>你的搭子，</text><text class="hero-title-accent">刚刚好</text></view>
+        <view class="hero-title"><text>世界很大，</text><text class="hero-title-accent">先来拼吧</text></view>
         <text class="hero-subtitle">发现身边同频的人和活动</text>
       </view>
       <view class="hero-actions" aria-label="首页消息与搜索">

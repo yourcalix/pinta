@@ -23,7 +23,7 @@ test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨�
   const template = read('pages/discover/index.wxml');
   const style = read('pages/discover/index.wxss');
   assert.match(template, /class="home-greeting"[^>]*aria-label="\{\{greetingSalutation\}\}，\{\{greetingNickname\}\}，欢迎你回到拼吧"/);
-  assert.match(template, /class="hero-title"[\s\S]*你的搭子，[\s\S]*刚刚好/);
+  assert.match(template, /class="hero-title"[\s\S]*世界很大，[\s\S]*先来拼吧/);
   assert.match(template, /class="home-shortcuts"[\s\S]*组队拼团[\s\S]*琐碎回忆[\s\S]*暂定/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2/s);
   assert.match(style, /\.home-hero\s*\{[^}]*height:\s*709rpx[^}]*border-radius:\s*32rpx/s);
