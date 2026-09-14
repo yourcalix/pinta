@@ -6,6 +6,7 @@ const { stableEntityId } = require('./ids');
 const COMMUNITY_ACTIVITY_TYPES = Object.freeze({
   POST_REPLIED: 'POST_REPLIED',
   POST_LIKED: 'POST_LIKED',
+  REPLY_LIKED: 'REPLY_LIKED',
   POST_STATUS: 'POST_STATUS'
 });
 const COMMUNITY_ACTIVITY_TABS = Object.freeze(['ALL', 'REPLIES', 'LIKES']);
@@ -19,10 +20,14 @@ function communityLikeActivityId(recipientId, postId) {
   return stableEntityId('communityActivity', 'like', recipientId, postId);
 }
 
-function activityTypeForTab(tab) {
-  if (tab === 'REPLIES') return COMMUNITY_ACTIVITY_TYPES.POST_REPLIED;
-  if (tab === 'LIKES') return COMMUNITY_ACTIVITY_TYPES.POST_LIKED;
-  return '';
+function communityReplyLikeActivityId(recipientId, replyId) {
+  return stableEntityId('communityActivity', 'like', recipientId, 'reply', replyId);
+}
+
+function activityTypesForTab(tab) {
+  if (tab === 'REPLIES') return [COMMUNITY_ACTIVITY_TYPES.POST_REPLIED];
+  if (tab === 'LIKES') return [COMMUNITY_ACTIVITY_TYPES.POST_LIKED, COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED];
+  return [];
 }
 
 function encodeCommunityActivityCursor(item, tab) {
@@ -58,7 +63,8 @@ module.exports = {
   COMMUNITY_ACTIVITY_STATUS,
   communityReplyActivityId,
   communityLikeActivityId,
-  activityTypeForTab,
+  communityReplyLikeActivityId,
+  activityTypesForTab,
   encodeCommunityActivityCursor,
   decodeCommunityActivityCursor,
   compareCommunityActivityDescending,

@@ -180,7 +180,8 @@ test('发现页保留铃铛并进入真实讨论动态分包页', () => {
   assert.match(script, /label:\s*'全部'/);
   assert.match(script, /label:\s*'回复我的'/);
   assert.match(script, /label:\s*'收到的赞'/);
-  assert.match(template, /该讨论已被删除或下架/);
+  assert.match(template, /\{\{item\.removedText\}\}/);
+  assert.match(script, /该内容已被删除或下架/);
   assert.match(script, /communityService\.listActivities/);
   assert.match(script, /communityService\.readActivity/);
   assert.match(script, /_navigationPending/);

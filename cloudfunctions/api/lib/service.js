@@ -53,7 +53,8 @@ const {
   COMMUNITY_ACTIVITY_TYPES,
   COMMUNITY_ACTIVITY_STATUS,
   communityReplyActivityId,
-  communityLikeActivityId
+  communityLikeActivityId,
+  communityReplyLikeActivityId
 } = require('./community-activity');
 const { resolveNotificationTarget } = require('./notification-target');
 const { parsePublicCursor, normalizeActivityForRead } = require('./public-activity-page');
@@ -407,7 +408,11 @@ function publicCommunityReply(reply, viewerId = '', viewerHasLiked = false, prof
 function publicCommunityActivity(activity, post, reply, profilesByUserId = {}) {
   const postActive = Boolean(post && post.status === COMMUNITY_POST_STATUS.ACTIVE);
   const replyActive = Boolean(reply && reply.status === COMMUNITY_REPLY_STATUS.ACTIVE);
-  const actorItems = activity.type === COMMUNITY_ACTIVITY_TYPES.POST_LIKED
+  const isPostLike = activity.type === COMMUNITY_ACTIVITY_TYPES.POST_LIKED;
+  const isReplyLike = activity.type === COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED;
+  const isLike = isPostLike || isReplyLike;
+  const removed = !postActive || (isReplyLike && !replyActive);
+  const actorItems = isLike
     ? (activity.recentActors || [])
     : activity.actorId ? [{ actorId: activity.actorId, author: activity.actor }] : [];
   const actors = actorItems.map((item) => publicCommunityAuthor({ authorId: item.actorId, author: item.author }, profilesByUserId)).filter(Boolean);
@@ -416,12 +421,13 @@ function publicCommunityActivity(activity, post, reply, profilesByUserId = {}) {
     type: activity.type,
     postId: activity.postId,
     ...(activity.replyId ? { replyId: activity.replyId } : {}),
+    ...(isLike ? { likeTargetType: isReplyLike ? 'reply' : 'post' } : {}),
     actors,
-    actorCount: activity.type === COMMUNITY_ACTIVITY_TYPES.POST_LIKED ? Math.max(0, Number(activity.actorCount) || 0) : actors.length,
-    postPreview: postActive ? String(post.content || '').slice(0, 100) : '',
-    contentPreview: postActive && activity.type === COMMUNITY_ACTIVITY_TYPES.POST_REPLIED && replyActive ? String(reply.content || '').slice(0, 100) : '',
+    actorCount: isLike ? Math.max(0, Number(activity.actorCount) || 0) : actors.length,
+    postPreview: removed ? '' : String(post.content || '').slice(0, 100),
+    contentPreview: !removed && (activity.type === COMMUNITY_ACTIVITY_TYPES.POST_REPLIED || isReplyLike) && replyActive ? String(reply.content || '').slice(0, 100) : '',
     message: activity.type === COMMUNITY_ACTIVITY_TYPES.POST_STATUS ? String(activity.message || '').slice(0, 120) : '',
-    removed: !postActive,
+    removed,
     read: activity.read === true,
     createdAt: activity.createdAt,
     updatedAt: activity.updatedAt
@@ -1033,13 +1039,19 @@ function createPinbaService(options) {
       invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
       const payload = validateCommunityLikeInput(input);
       const audit = { id: operationId(context, 'audit'), actorId: user.id, action, targetType: payload.targetType === 'post' ? 'communityPost' : 'communityReply', targetId: payload.targetId, at };
-      const post = payload.targetType === 'post' ? await store.getCommunityPost(payload.targetId) : null;
-      const activity = post && post.authorId !== user.id ? {
-        id: communityLikeActivityId(post.authorId, post.id),
-        type: COMMUNITY_ACTIVITY_TYPES.POST_LIKED,
+      const target = payload.targetType === 'post'
+        ? await store.getCommunityPost(payload.targetId)
+        : await store.getCommunityReply(payload.targetId);
+      const postId = target && (payload.targetType === 'post' ? target.id : target.postId);
+      const activity = target && target.authorId !== user.id ? {
+        id: payload.targetType === 'post'
+          ? communityLikeActivityId(target.authorId, target.id)
+          : communityReplyLikeActivityId(target.authorId, target.id),
+        type: payload.targetType === 'post' ? COMMUNITY_ACTIVITY_TYPES.POST_LIKED : COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED,
         status: COMMUNITY_ACTIVITY_STATUS.ACTIVE,
-        recipientId: post.authorId,
-        postId: post.id,
+        recipientId: target.authorId,
+        postId,
+        ...(payload.targetType === 'reply' ? { replyId: target.id } : {}),
         actor: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
         actorCount: 0,
         recentActors: [],
@@ -1058,7 +1070,7 @@ function createPinbaService(options) {
       const page = await store.listCommunityActivities(user.id, { ...payload, cutoff });
       const posts = await Promise.all(page.items.map((item) => store.getCommunityPost(item.postId)));
       const replies = await Promise.all(page.items.map((item) => item.replyId ? store.getCommunityReply(item.replyId) : null));
-      const actorItems = page.items.flatMap((item) => item.type === COMMUNITY_ACTIVITY_TYPES.POST_LIKED
+      const actorItems = page.items.flatMap((item) => [COMMUNITY_ACTIVITY_TYPES.POST_LIKED, COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED].includes(item.type)
         ? item.recentActors || []
         : item.actorId ? [{ actorId: item.actorId, author: item.actor }] : [])
         .map((item) => ({ authorId: item.actorId, author: item.author }));

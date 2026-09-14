@@ -32,8 +32,9 @@ const {
   isAfterAscendingCursor
 } = require('./community');
 const {
+  COMMUNITY_ACTIVITY_TYPES,
   COMMUNITY_ACTIVITY_STATUS,
-  activityTypeForTab,
+  activityTypesForTab,
   encodeCommunityActivityCursor,
   compareCommunityActivityDescending
 } = require('./community-activity');
@@ -1069,6 +1070,13 @@ class CloudStore {
         const post = await getTransactionDocument(transaction.collection('communityPosts').doc(target.postId));
         invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
       }
+      const expectedType = targetType === 'post' ? COMMUNITY_ACTIVITY_TYPES.POST_LIKED : COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED;
+      if (target.authorId === actorId) invariant(!activity, 'CONFLICT');
+      else {
+        invariant(activity && activity.type === expectedType && activity.recipientId === target.authorId, 'CONFLICT');
+        invariant(activity.postId === (targetType === 'post' ? target.id : target.postId), 'CONFLICT');
+        if (targetType === 'reply') invariant(activity.replyId === target.id, 'CONFLICT');
+      }
       const id = communityLikeId(targetType, targetId, actorId);
       const likeReference = transaction.collection('communityLikes').doc(id);
       const existing = await getTransactionDocument(likeReference);
@@ -1079,6 +1087,11 @@ class CloudStore {
       if (activity && wasLiked !== liked) {
         const activityReference = transaction.collection('communityActivities').doc(activity.id);
         const current = await getTransactionDocument(activityReference);
+        if (current) {
+          invariant(current.type === activity.type && current.recipientId === target.authorId, 'CONFLICT');
+          invariant(current.postId === activity.postId, 'CONFLICT');
+          if (targetType === 'reply') invariant(current.replyId === target.id, 'CONFLICT');
+        }
         const actorCount = Math.max(0, Number(current && current.actorCount || 0) + (liked ? 1 : -1));
         const recentActors = (current && current.recentActors || []).filter((item) => item.actorId !== actorId);
         if (liked) recentActors.unshift({ actorId, author: activity.actor });
@@ -1163,26 +1176,29 @@ class CloudStore {
   }
 
   async listCommunityActivities(recipientId, { tab, cursor, limit, cutoff }) {
-    const type = activityTypeForTab(tab);
-    const base = { recipientId, status: COMMUNITY_ACTIVITY_STATUS.ACTIVE, ...(type ? { type } : {}) };
+    const types = activityTypesForTab(tab);
+    const bases = types.length
+      ? types.map((type) => ({ recipientId, status: COMMUNITY_ACTIVITY_STATUS.ACTIVE, type }))
+      : [{ recipientId, status: COMMUNITY_ACTIVITY_STATUS.ACTIVE }];
     const query = (where) => this.db.collection('communityActivities')
       .where(where).orderBy('updatedAt', 'desc').orderBy('_id', 'desc').limit(limit + 1).get();
-    let candidates;
-    if (!cursor) {
-      const result = await query({ ...base, updatedAt: this.command.gte(cutoff) });
-      candidates = (result.data || []).map(entity);
-    } else if (Date.parse(cursor.updatedAt) < Date.parse(cutoff)) {
-      candidates = [];
-    } else {
+    const loadStream = async (base) => {
+      if (!cursor) {
+        const result = await query({ ...base, updatedAt: this.command.gte(cutoff) });
+        return (result.data || []).map(entity);
+      }
+      if (Date.parse(cursor.updatedAt) < Date.parse(cutoff)) return [];
       const [earlier, sameTime] = await Promise.all([
         query({ ...base, updatedAt: this.command.lt(cursor.updatedAt) }),
         query({ ...base, updatedAt: cursor.updatedAt, _id: this.command.lt(cursor.id) })
       ]);
-      candidates = [...(sameTime.data || []), ...(earlier.data || [])]
+      return [...(sameTime.data || []), ...(earlier.data || [])]
         .map(entity)
-        .filter((item) => Date.parse(item.updatedAt) >= Date.parse(cutoff))
-        .sort(compareCommunityActivityDescending);
-    }
+        .filter((item) => Date.parse(item.updatedAt) >= Date.parse(cutoff));
+    };
+    const streams = await Promise.all(bases.map(loadStream));
+    const candidates = [...new Map(streams.flat().map((item) => [item.id, item])).values()]
+      .sort(compareCommunityActivityDescending);
     const items = candidates.slice(0, limit);
     return { items, nextCursor: candidates.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null };
   }

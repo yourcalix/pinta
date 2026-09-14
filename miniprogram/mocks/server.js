@@ -656,7 +656,11 @@ function publicCommunityActivity(item) {
   const reply = item.replyId ? state.communityReplies.find((entry) => entry.id === item.replyId) : null;
   const postActive = Boolean(post && post.status === 'ACTIVE');
   const replyActive = Boolean(reply && reply.status === 'ACTIVE');
-  const actorItems = item.type === 'POST_LIKED'
+  const isPostLike = item.type === 'POST_LIKED';
+  const isReplyLike = item.type === 'REPLY_LIKED';
+  const isLike = isPostLike || isReplyLike;
+  const removed = !postActive || (isReplyLike && !replyActive);
+  const actorItems = isLike
     ? item.recentActors || []
     : item.actorId ? [{ actorId: item.actorId, author: item.actor }] : [];
   return {
@@ -664,12 +668,13 @@ function publicCommunityActivity(item) {
     type: item.type,
     postId: item.postId,
     ...(item.replyId ? { replyId: item.replyId } : {}),
+    ...(isLike ? { likeTargetType: isReplyLike ? 'reply' : 'post' } : {}),
     actors: actorItems.map((actor) => publicCommunityAuthor({ authorId: actor.actorId, author: actor.author })).filter(Boolean),
-    actorCount: item.type === 'POST_LIKED' ? Math.max(0, Number(item.actorCount) || 0) : actorItems.length,
-    postPreview: postActive ? String(post.content || '').slice(0, 100) : '',
-    contentPreview: postActive && item.type === 'POST_REPLIED' && replyActive ? String(reply.content || '').slice(0, 100) : '',
+    actorCount: isLike ? Math.max(0, Number(item.actorCount) || 0) : actorItems.length,
+    postPreview: removed ? '' : String(post.content || '').slice(0, 100),
+    contentPreview: !removed && (item.type === 'POST_REPLIED' || isReplyLike) && replyActive ? String(reply.content || '').slice(0, 100) : '',
     message: item.type === 'POST_STATUS' ? String(item.message || '').slice(0, 120) : '',
-    removed: !postActive,
+    removed,
     read: item.read === true,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt
@@ -2045,10 +2050,10 @@ function handle(action, input, idempotencyKey = '') {
     const cursor = decodeCommunityActivityCursor(input.cursor, tab);
     const limit = Number(input.limit === undefined ? 20 : input.limit);
     assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量必须在1到30之间');
-    const type = tab === 'REPLIES' ? 'POST_REPLIED' : tab === 'LIKES' ? 'POST_LIKED' : '';
+    const types = tab === 'REPLIES' ? ['POST_REPLIED'] : tab === 'LIKES' ? ['POST_LIKED', 'REPLY_LIKED'] : [];
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const candidates = state.communityActivities
-      .filter((item) => item.recipientId === currentUserId && item.status === 'ACTIVE' && (!type || item.type === type))
+      .filter((item) => item.recipientId === currentUserId && item.status === 'ACTIVE' && (!types.length || types.includes(item.type)))
       .filter((item) => Date.parse(item.updatedAt) >= cutoff && afterCommunityActivityCursor(item, cursor))
       .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
     const page = candidates.slice(0, limit + 1);
@@ -2152,11 +2157,20 @@ function handle(action, input, idempotencyKey = '') {
       state.communityLikes.push(like);
     }
     Object.assign(like, { status: input.liked ? 'ACTIVE' : 'DELETED', updatedAt: now });
-    if (input.targetType === 'post' && target.authorId !== user.id && wasLiked !== input.liked) {
-      const activityId = stableMockEntityId('communityActivity', 'like', target.authorId, target.id);
+    if (target.authorId !== user.id && wasLiked !== input.liked) {
+      const activityId = input.targetType === 'post'
+        ? stableMockEntityId('communityActivity', 'like', target.authorId, target.id)
+        : stableMockEntityId('communityActivity', 'like', target.authorId, 'reply', target.id);
       let activity = state.communityActivities.find((item) => item.id === activityId);
       if (!activity) {
-        activity = { id: activityId, type: 'POST_LIKED', recipientId: target.authorId, postId: target.id, actorCount: 0, recentActors: [], read: false, readAt: null, createdAt: now };
+        activity = {
+          id: activityId,
+          type: input.targetType === 'post' ? 'POST_LIKED' : 'REPLY_LIKED',
+          recipientId: target.authorId,
+          postId: input.targetType === 'post' ? target.id : target.postId,
+          ...(input.targetType === 'reply' ? { replyId: target.id } : {}),
+          actorCount: 0, recentActors: [], read: false, readAt: null, createdAt: now
+        };
         state.communityActivities.push(activity);
       }
       activity.actorCount = Math.max(0, Number(activity.actorCount || 0) + (input.liked ? 1 : -1));

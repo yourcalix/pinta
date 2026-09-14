@@ -32,15 +32,20 @@ function decorateActivity(item) {
   const actorName = String(firstActor.nickname || '社区小助手').trim() || '社区小助手';
   const avatarInitial = Array.from(actorName)[0] || '拼';
   const isReply = item && item.type === 'POST_REPLIED';
-  const isLike = item && item.type === 'POST_LIKED';
+  const isPostLike = item && item.type === 'POST_LIKED';
+  const isReplyLike = item && item.type === 'REPLY_LIKED';
+  const isLike = isPostLike || isReplyLike;
   const actorCount = Math.max(isLike ? 1 : 0, Number(item && item.actorCount) || 0);
   const removed = Boolean(item && item.removed);
   const postPreview = removed ? '该讨论已被删除或下架' : String(item && item.postPreview || '');
   const contentPreview = removed ? '' : String(item && item.contentPreview || '');
   let actionText = '发布了社区动态';
   if (isReply) actionText = '回复了你的讨论';
-  if (isLike) actionText = '赞了你的讨论';
+  if (isPostLike) actionText = '赞了你的讨论';
+  if (isReplyLike) actionText = '赞了你的评论';
   const countText = isLike && actorCount > 1 ? ` 等 ${actorCount} 人` : '';
+  const panelLabel = isReplyLike ? '原讨论：' : '我的讨论：';
+  const removedText = isReplyLike ? '该评论或原讨论已被删除或下架' : '该讨论已被删除或下架';
   return {
     ...item,
     actors,
@@ -50,18 +55,22 @@ function decorateActivity(item) {
     countText,
     actionText,
     isReply,
+    isPostLike,
+    isReplyLike,
     isLike,
     isSystem: !isReply && !isLike,
     removed,
     postPreview,
     contentPreview,
+    panelLabel,
+    removedText,
     displayTime: formatActivityTime(item && item.updatedAt),
     avatarSlot: normalizeAvatarSlots([firstActor.avatar], 1)[0],
     avatarInitial,
     avatarTone: AVATAR_TONES[(avatarInitial.codePointAt(0) || 0) % AVATAR_TONES.length],
     accessibilityLabel: removed
-      ? `${actorName}${actionText}，原讨论已被删除或下架，${item && item.read ? '已读' : '未读'}`
-      : `${actorName}${countText}${actionText}，${contentPreview || item && item.message || ''}，我的讨论：${postPreview}，${item && item.read ? '已读' : '未读'}，点击查看讨论`
+      ? `${actorName}${actionText}，${removedText}，${item && item.read ? '已读' : '未读'}`
+      : `${actorName}${countText}${actionText}，${isReplyLike ? `我的评论：${contentPreview}，原讨论：` : contentPreview || item && item.message || '我的讨论：'}${postPreview}，${item && item.read ? '已读' : '未读'}，点击查看讨论`
   };
 }
 
@@ -164,7 +173,7 @@ Page({
     try {
       if (!wasRead) await communityService.readActivity(id);
       if (this._disposed) return;
-      if (item.removed) return void wx.showToast({ title: '该讨论已被删除或下架', icon: 'none' });
+      if (item.removed) return void wx.showToast({ title: '该内容已被删除或下架', icon: 'none' });
       if (item.postId && !this._navigationPending) {
         this._navigationPending = true;
         return void wx.navigateTo({

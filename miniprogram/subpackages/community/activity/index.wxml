@@ -46,10 +46,14 @@
           </view>
 
           <text wx:if="{{item.isReply && item.contentPreview}}" class="activity-reply-preview">“{{item.contentPreview}}”</text>
+          <view wx:if="{{item.isReplyLike && item.contentPreview}}" class="activity-my-reply-panel">
+            <text class="activity-my-reply-label">我的评论：</text>
+            <text class="activity-my-reply-preview">“{{item.contentPreview}}”</text>
+          </view>
           <text wx:if="{{item.isSystem && item.message}}" class="activity-system-message">{{item.message}}</text>
           <view wx:if="{{!item.isSystem || item.postPreview}}" class="activity-post-panel {{item.removed ? 'activity-post-panel--removed' : ''}}">
-            <text wx:if="{{!item.removed}}" class="activity-post-label">我的讨论：</text>
-            <text wx:if="{{item.removed}}" class="activity-post-preview">该讨论已被删除或下架</text>
+            <text wx:if="{{!item.removed}}" class="activity-post-label">{{item.panelLabel}}</text>
+            <text wx:if="{{item.removed}}" class="activity-post-preview">{{item.removedText}}</text>
             <text wx:else class="activity-post-preview">{{item.postPreview}}</text>
           </view>
         </view>

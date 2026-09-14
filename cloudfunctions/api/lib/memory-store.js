@@ -33,8 +33,9 @@ const {
   isAfterAscendingCursor
 } = require('./community');
 const {
+  COMMUNITY_ACTIVITY_TYPES,
   COMMUNITY_ACTIVITY_STATUS,
-  activityTypeForTab,
+  activityTypesForTab,
   encodeCommunityActivityCursor,
   compareCommunityActivityDescending,
   isAfterCommunityActivityCursor
@@ -652,6 +653,13 @@ class MemoryStore {
       const post = this.communityPosts.get(target.postId);
       invariant(post && post.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
     }
+    const expectedType = targetType === 'post' ? COMMUNITY_ACTIVITY_TYPES.POST_LIKED : COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED;
+    if (target.authorId === actorId) invariant(!activity, 'CONFLICT');
+    else {
+      invariant(activity && activity.type === expectedType && activity.recipientId === target.authorId, 'CONFLICT');
+      invariant(activity.postId === (targetType === 'post' ? target.id : target.postId), 'CONFLICT');
+      if (targetType === 'reply') invariant(activity.replyId === target.id, 'CONFLICT');
+    }
     const id = communityLikeId(targetType, targetId, actorId);
     const existing = this.communityLikes.get(id);
     const wasLiked = Boolean(existing && existing.status === COMMUNITY_LIKE_STATUS.ACTIVE);
@@ -659,6 +667,11 @@ class MemoryStore {
     this.communityLikes.set(id, { id, targetType, targetId, postId: targetType === 'reply' ? target.postId : targetId, actorId, status: liked ? COMMUNITY_LIKE_STATUS.ACTIVE : COMMUNITY_LIKE_STATUS.DELETED, createdAt: existing && existing.createdAt || at, updatedAt: at });
     if (activity && wasLiked !== liked) {
       const current = this.communityActivities.get(activity.id);
+      if (current) {
+        invariant(current.type === activity.type && current.recipientId === target.authorId, 'CONFLICT');
+        invariant(current.postId === activity.postId, 'CONFLICT');
+        if (targetType === 'reply') invariant(current.replyId === target.id, 'CONFLICT');
+      }
       const actorCount = Math.max(0, Number(current && current.actorCount || 0) + (liked ? 1 : -1));
       const recentActors = (current && current.recentActors || []).filter((item) => item.actorId !== actorId);
       if (liked) recentActors.unshift({ actorId, author: clone(activity.actor) });
@@ -723,10 +736,10 @@ class MemoryStore {
   }
 
   async listCommunityActivities(recipientId, { tab, cursor, limit, cutoff }) {
-    const type = activityTypeForTab(tab);
+    const types = activityTypesForTab(tab);
     const candidates = [...this.communityActivities.values()]
       .filter((item) => item.recipientId === recipientId && item.status === COMMUNITY_ACTIVITY_STATUS.ACTIVE)
-      .filter((item) => !type || item.type === type)
+      .filter((item) => !types.length || types.includes(item.type))
       .filter((item) => !cutoff || Date.parse(item.updatedAt) >= Date.parse(cutoff))
       .filter((item) => isAfterCommunityActivityCursor(item, cursor))
       .sort(compareCommunityActivityDescending);
