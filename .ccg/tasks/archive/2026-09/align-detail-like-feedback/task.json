@@ -1,0 +1,12 @@
+{
+  "id": "align-detail-like-feedback",
+  "title": "统一讨论详情点赞反馈并消除页面抖动",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-14T17:35:00+08:00",
+  "branch": "main"
+}

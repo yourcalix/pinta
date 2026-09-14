@@ -34,11 +34,12 @@
 
         <view class="post-actions">
           <button
-            class="post-action-button post-like {{post.viewerHasLiked ? 'like-button--active' : ''}} {{post.likePending ? 'like-button--pending' : ''}}"
+            class="post-action-button post-like {{post.viewerHasLiked ? 'like-button--active' : ''}}"
             data-target-type="post"
             data-target-id="{{post.id}}"
             bindtap="handleLike"
             hover-class="like-button--pressed"
+            hover-stay-time="70"
             aria-label="{{post.viewerHasLiked ? '取消点赞' : '点赞'}}这条讨论，当前{{post.likeCount}}个赞"
           ><text class="heart-icon" aria-hidden="true">{{post.viewerHasLiked ? '♥' : '♡'}}</text><text class="like-count-value" aria-hidden="true">{{post.likeCount}}</text></button>
           <view class="post-action-button post-reply-total" aria-label="共{{post.replyCount}}条回复">
@@ -62,11 +63,12 @@
               </button>
               <view class="reply-operations">
                 <button
-                  class="reply-like {{item.viewerHasLiked ? 'like-button--active' : ''}} {{item.likePending ? 'like-button--pending' : ''}}"
+                  class="reply-like {{item.viewerHasLiked ? 'like-button--active' : ''}}"
                   data-target-type="reply"
                   data-target-id="{{item.id}}"
                   catchtap="handleLike"
                   hover-class="like-button--pressed"
+                  hover-stay-time="70"
                   aria-label="{{item.viewerHasLiked ? '取消点赞' : '点赞'}}这条回复，当前{{item.likeCount}}个赞"
                 ><text class="reply-heart" aria-hidden="true">{{item.viewerHasLiked ? '♥' : '♡'}}</text><text class="like-count-value" aria-hidden="true">{{item.likeCount}}</text></button>
                 <button class="more-button reply-more" data-id="{{item.id}}" catchtap="handleReplyMore" hover-class="detail-control--pressed" aria-label="回复操作菜单，点击可{{item.viewerIsAuthor ? '删除或举报内容' : '举报内容'}}">···</button>

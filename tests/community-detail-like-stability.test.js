@@ -12,13 +12,19 @@ test('详情点赞切换不触发原生禁用态或操作区几何变化', () =>
   const style = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8');
 
   assert.doesNotMatch(template, /disabled="\{\{(?:post|item)\.likePending\}\}"/);
+  assert.doesNotMatch(template, /like-button--pending/);
   assert.match(template, /class="heart-icon"/);
   assert.match(template, /class="reply-heart"/);
   assert.match(template, /class="like-count-value"/);
   assert.match(style, /\.post-like\s*\{[^}]*flex:\s*0 0 126rpx[^}]*width:\s*126rpx/s);
   assert.match(style, /\.reply-like\s*\{[^}]*flex:\s*0 0 108rpx[^}]*width:\s*108rpx/s);
-  assert.match(style, /\.heart-icon[^}]*width:\s*44rpx/s);
-  assert.match(style, /\.like-count-value[^}]*min-width:\s*44rpx/s);
+  assert.match(style, /\.heart-icon[^}]*width:\s*44rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
+  assert.match(style, /\.reply-heart[^}]*width:\s*38rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
+  assert.match(style, /\.like-count-value[^}]*flex:\s*0 0 44rpx[^}]*width:\s*44rpx[^}]*color:\s*#797774/s);
+  assert.match(style, /\.like-button--active \.heart-icon,\s*\.like-button--active \.reply-heart\s*\{[^}]*color:\s*#e2554f[^}]*transform:\s*scale\(1\.1\)/s);
+  assert.match(style, /\.like-button--pressed \.heart-icon,\s*\.like-button--pressed \.reply-heart\s*\{[^}]*transform:\s*scale\(\.9\)/s);
+  assert.doesNotMatch(style, /\.like-button--pending/);
+  assert.doesNotMatch(style, /\.like-button--pressed\s*\{[^}]*(?:background|opacity):/s);
   assert.doesNotMatch(style, /\.like-button--pressed\s*\{[^}]*transform:/s);
   assert.match(style, /\.detail-page\s*\{[^}]*overflow-x:\s*hidden/s);
 });

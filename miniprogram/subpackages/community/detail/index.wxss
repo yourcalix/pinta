@@ -35,14 +35,13 @@ button::after { display: none; }
 .topic-pill { display: inline-flex; margin: 0 4rpx 4rpx 0; padding: 4rpx 16rpx; color: #b86108; background: #fef3c7; border-radius: 999rpx; font-size: 25rpx; font-weight: 700; line-height: 1.35; vertical-align: middle; white-space: nowrap; }
 .post-actions { display: flex; align-items: center; gap: 38rpx; margin-top: 26rpx; padding-top: 20rpx; border-top: 1rpx solid #f0ede7; }
 .post-action-button { display: flex; min-width: 92rpx; min-height: 88rpx; align-items: center; gap: 12rpx; color: #77736f; background: transparent; border: 0; font-size: 26rpx; }
-.post-like { flex: 0 0 126rpx; width: 126rpx; justify-content: flex-start; }
-.heart-icon { display: flex; flex: 0 0 44rpx; width: 44rpx; height: 48rpx; align-items: center; justify-content: center; color: #a29e99; font-family: Arial, sans-serif; font-size: 42rpx; line-height: 48rpx; }
-.like-count-value { display: block; min-width: 44rpx; font-variant-numeric: tabular-nums; text-align: left; white-space: nowrap; }
-.post-like.like-button--active .heart-icon, .post-like.like-button--active { color: #ef5b57; }
+.post-like { flex: 0 0 126rpx; width: 126rpx; justify-content: flex-start; color: #797774; }
+.heart-icon { display: flex; flex: 0 0 44rpx; width: 44rpx; height: 48rpx; align-items: center; justify-content: center; color: #a19b94; font-family: Arial, sans-serif; font-size: 42rpx; line-height: 1; text-align: center; transition: color 120ms ease, transform 120ms ease; pointer-events: none; }
+.like-count-value { display: block; flex: 0 0 44rpx; width: 44rpx; min-width: 44rpx; overflow: hidden; color: #797774; font-variant-numeric: tabular-nums; line-height: 1; text-align: left; white-space: nowrap; }
 .comment-bubble-icon { position: relative; width: 34rpx; height: 28rpx; box-sizing: border-box; border: 4rpx solid #aaa6a1; border-radius: 14rpx; }
 .comment-bubble-icon::after { position: absolute; bottom: -8rpx; left: 5rpx; width: 8rpx; height: 8rpx; box-sizing: border-box; background: #fff; border-right: 4rpx solid #aaa6a1; border-bottom: 4rpx solid #aaa6a1; content: ''; transform: rotate(45deg); }
-.like-button--pending { opacity: .58; }
-.like-button--pressed { background: rgba(239, 91, 87, .06); opacity: .82; }
+.like-button--active .heart-icon, .like-button--active .reply-heart { color: #e2554f; transform: scale(1.1); }
+.like-button--pressed .heart-icon, .like-button--pressed .reply-heart { transform: scale(.9); }
 .reply-heading { display: flex; align-items: baseline; gap: 10rpx; margin: 34rpx 6rpx 18rpx; color: #171717; font-size: 31rpx; font-weight: 850; }
 .reply-count { color: #9a938e; font-size: 24rpx; font-weight: 650; }
 .reply-list { display: flex; flex-direction: column; gap: 16rpx; }
@@ -57,9 +56,8 @@ button::after { display: none; }
 .reply-target-name { overflow: hidden; max-width: 150rpx; color: #b86108; font-size: 23rpx; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .reply-time { flex: 0 0 auto; color: #9a938e; font-size: 22rpx; white-space: nowrap; }
 .reply-operations { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8rpx; }
-.reply-like { display: flex; flex: 0 0 108rpx; width: 108rpx; min-height: 88rpx; align-items: center; justify-content: flex-start; gap: 4rpx; color: #8d8984; background: transparent; border: 0; font-size: 22rpx; }
-.reply-heart { display: flex; flex: 0 0 38rpx; width: 38rpx; height: 44rpx; align-items: center; justify-content: center; font-family: Arial, sans-serif; font-size: 35rpx; line-height: 44rpx; }
-.reply-like.like-button--active { color: #ef5b57; }
+.reply-like { display: flex; flex: 0 0 108rpx; width: 108rpx; min-height: 88rpx; align-items: center; justify-content: flex-start; gap: 4rpx; color: #797774; background: transparent; border: 0; font-size: 22rpx; }
+.reply-heart { display: flex; flex: 0 0 38rpx; width: 38rpx; height: 44rpx; align-items: center; justify-content: center; color: #a19b94; font-family: Arial, sans-serif; font-size: 35rpx; line-height: 1; text-align: center; transition: color 120ms ease, transform 120ms ease; pointer-events: none; }
 .reply-more { flex-basis: 88rpx; min-width: 88rpx; min-height: 88rpx; font-size: 27rpx; line-height: 88rpx; }
 .reply-content { display: block; margin-top: 6rpx; padding-right: 8rpx; color: #3f3b37; font-size: 28rpx; line-height: 1.64; word-break: break-all; overflow-wrap: anywhere; }
 .reply-content-target { display: block; grid-column: 2; width: 100%; min-height: 88rpx; color: inherit; background: transparent; border: 0; text-align: left; }
