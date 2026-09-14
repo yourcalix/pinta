@@ -7,6 +7,7 @@ const path = require('node:path');
 const { createPinbaService } = require('../cloudfunctions/api/lib/service');
 const { MemoryStore } = require('../cloudfunctions/api/lib/memory-store');
 const mockServer = require('../miniprogram/mocks/server');
+const api = require('../miniprogram/services/api');
 
 const ROOT = path.resolve(__dirname, '..');
 const profile = (nickname) => ({ nickname, gender: 'FEMALE', city: '澳门', interests: ['散步'], birthDate: '2000-01-01', mbti: 'INFP', adultConfirmed: true });
@@ -45,6 +46,10 @@ test('社区实体只在点击时签发绑定访问者的短期主页凭据且�
 
   const foreign = await call('profile.public.get', { profileNavToken: issued.data.profileNavToken }, 'other');
   assert.equal(foreign.error.code, 'NOT_FOUND');
+});
+
+test('客户端把社区主页凭据签发识别为幂等写动作', () => {
+  assert.equal(api.isMutatingAction('community.profile.nav.create'), true);
 });
 
 test('本人分流、过期票据与删除来源均安全收敛', async () => {

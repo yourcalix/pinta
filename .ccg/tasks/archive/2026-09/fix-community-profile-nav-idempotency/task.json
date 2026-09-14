@@ -1,0 +1,12 @@
+{
+  "id": "fix-community-profile-nav-idempotency",
+  "title": "修复点击讨论作者时幂等键为空",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交修复",
+  "createdAt": "2026-09-14T15:55:00+08:00",
+  "branch": "main"
+}

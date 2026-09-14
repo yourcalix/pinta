@@ -20,6 +20,7 @@ const MUTATING_ACTIONS = new Set([
   'community.reply.delete',
   'community.like.set',
   'community.activity.read',
+  'community.profile.nav.create',
   'companion.presence.enter',
   'companion.presence.heartbeat',
   'companion.presence.leave',
