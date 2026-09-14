@@ -1,0 +1,12 @@
+{
+  "id": "define-official-system-notifications",
+  "title": "限定系统通知为官方下发内容",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-14T00:00:00+08:00",
+  "branch": "main"
+}
