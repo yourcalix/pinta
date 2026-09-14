@@ -7,6 +7,7 @@ const { COMMUNITY_REPORT_REASONS } = require('../../utils/community-report-reaso
 const { calculateContentTopInset } = require('../../utils/navigation-layout');
 const { selectTab } = require('../../utils/tab-bar');
 const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../utils/passenger-avatar');
+const { openCommunityAuthor } = require('../../utils/open-community-author');
 
 const PAGE_SIZE = 12;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
@@ -42,25 +43,30 @@ Page({
   },
 
   onLoad() {
+    this._disposed = false;
     this.setData({ contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx) });
     this._skipFirstShow = true;
     return this.loadPosts(false);
   },
 
   onShow() {
+    this._disposed = false;
     selectTab(this, 1);
     this.releaseCompanionNavigation();
     this._activityNavigationPending = false;
+    this._authorNavPending = false;
     if (this._skipFirstShow) return void (this._skipFirstShow = false);
     return this.loadPosts(false, true);
   },
 
   onHide() {
+    this._disposed = true;
     this._loadSeq = (this._loadSeq || 0) + 1;
     this.releaseCompanionNavigation();
   },
 
   onUnload() {
+    this._disposed = true;
     this._loadSeq = (this._loadSeq || 0) + 1;
     if (this._likeLocks) this._likeLocks.clear();
     if (this._postActionLocks) this._postActionLocks.clear();
@@ -319,6 +325,11 @@ Page({
   },
 
   handlePost(e){const d=e.currentTarget.dataset,id=String(d.id||'').trim();if(id)wx.navigateTo({url:`/subpackages/community/detail/index?id=${encodeURIComponent(id)}${d.r==='1'?'&reply=1':''}`})},
+
+  handleAuthorProfile(event) {
+    const sourceId = String(event.currentTarget.dataset.id || '').trim();
+    if (sourceId) return openCommunityAuthor(this, 'post', sourceId);
+  },
 
   handleGuidelines() {
     if (typeof wx === 'undefined' || typeof wx.showModal !== 'function') return;

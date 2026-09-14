@@ -31,6 +31,7 @@ const {
   validateCommunityListInput,
   validateCompanionPresenceInput,
   validatePublicProfileGetInput,
+  validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,
@@ -83,6 +84,11 @@ const {
   resolveProfileNavPresence,
   publicCompanionSnapshot
 } = require('./companion-presence');
+const {
+  createCommunityProfileNavTicket,
+  communityProfileNavTicketId,
+  resolveCommunityProfileNavTicket
+} = require('./community-profile-navigation');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -100,6 +106,7 @@ const MUTATING_ACTIONS = new Set([
   'community.reply.delete',
   'community.like.set',
   'community.activity.read',
+  'community.profile.nav.create',
   'companion.presence.enter',
   'companion.presence.heartbeat',
   'companion.presence.leave',
@@ -154,6 +161,7 @@ const REMOVED_ACTIONS = new Set([
 const PAYLOAD_BOUND_IDEMPOTENT_ACTIONS = new Set([
   'community.post.create',
   'community.reply.create',
+  'community.profile.nav.create',
   'dm.message.send',
   'group.message.send'
 ]);
@@ -189,7 +197,7 @@ function selfUser(user) {
   };
 }
 
-function publicCompanionProfile(user, viewerId, at) {
+function publicCompanionProfile(user, viewerId, at, online = true) {
   const profile = user && user.profile || {};
   const interests = Array.isArray(profile.interests)
     ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8)
@@ -202,7 +210,7 @@ function publicCompanionProfile(user, viewerId, at) {
     mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
     city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
     interests,
-    online: true,
+    online,
     viewerIsSelf: Boolean(viewerId && user && user.id === viewerId)
   };
 }
@@ -720,6 +728,30 @@ function createPinbaService(options) {
 
     if (action === 'profile.public.get') {
       const { profileNavToken } = validatePublicProfileGetInput(input);
+      if (profileNavToken.startsWith('communityProfileNa_')) {
+        const viewer = await requireActiveUser(context, false);
+        const ticketId = communityProfileNavTicketId(profileNavToken);
+        const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
+          ? await store.getPublicProfileNavTicket(ticketId)
+          : null;
+        const ticket = resolveCommunityProfileNavTicket(candidate, profileNavToken, viewer.id, at);
+        invariant(ticket, 'NOT_FOUND');
+        const source = ticket.sourceType === 'post'
+          ? await store.getCommunityPost(ticket.sourceId)
+          : await store.getCommunityReply(ticket.sourceId);
+        invariant(source && source.authorId === ticket.targetUserId && source.status === (ticket.sourceType === 'post' ? COMMUNITY_POST_STATUS.ACTIVE : COMMUNITY_REPLY_STATUS.ACTIVE), 'NOT_FOUND');
+        if (ticket.sourceType === 'reply') {
+          const parent = await store.getCommunityPost(source.postId);
+          invariant(parent && parent.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
+        }
+        const target = await store.getUser(ticket.targetUserId);
+        invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+        return {
+          profile: publicCompanionProfile(target, viewer.id, at, false),
+          serverNow: at,
+          expiresAt: ticket.expiresAt
+        };
+      }
       const profileNavNonce = profileNavNonceFromToken(profileNavToken);
       const candidate = profileNavNonce && typeof store.findCompanionPresenceByProfileNavNonce === 'function'
         ? await store.findCompanionPresenceByProfileNavNonce(profileNavNonce)
@@ -942,6 +974,31 @@ function createPinbaService(options) {
         replies: page.items.map((item) => publicCommunityReply(item, actorId, likeStates[`reply:${item.id}`], profilesByUserId, replyTargetsById)),
         nextCursor: page.nextCursor || null
       };
+    }
+
+    if (action === 'community.profile.nav.create') {
+      const viewer = await requireActiveUser(context, false);
+      const payload = validateCommunityProfileNavCreateInput(input);
+      const source = payload.sourceType === 'post'
+        ? await store.getCommunityPost(payload.sourceId)
+        : await store.getCommunityReply(payload.sourceId);
+      invariant(source && source.status === (payload.sourceType === 'post' ? COMMUNITY_POST_STATUS.ACTIVE : COMMUNITY_REPLY_STATUS.ACTIVE), 'NOT_FOUND');
+      if (payload.sourceType === 'reply') {
+        const parent = await store.getCommunityPost(source.postId);
+        invariant(parent && parent.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
+      }
+      const target = await store.getUser(source.authorId);
+      invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+      if (target.id === viewer.id) return { target: 'self' };
+      const issued = createCommunityProfileNavTicket({
+        viewerId: viewer.id,
+        targetUserId: target.id,
+        sourceType: payload.sourceType,
+        sourceId: payload.sourceId,
+        at
+      });
+      await store.createPublicProfileNavTicket(issued.ticket);
+      return { target: 'public', profileNavToken: issued.profileNavToken, expiresAt: issued.expiresAt };
     }
 
     if (action === 'community.post.create') {

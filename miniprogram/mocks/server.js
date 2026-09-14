@@ -1,13 +1,11 @@
 'use strict';
-
 const {
-  PILOT_CITY,
-  PILOT_DISTRICTS,
-  RIDE_ROUTES,
-  getRideRoute
+PILOT_CITY,
+PILOT_DISTRICTS,
+RIDE_ROUTES,
+getRideRoute
 } = require('../config/locations');
 const { parseBirthDate, adultBirthLimit, calculateAgeOnMacauDate } = require('../utils/profile-birth-date');
-
 const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
 const FOOD_PAYMENT_METHODS = Object.freeze(['FIFTY_FIFTY', 'GO_DUTCH', 'TABLE_ONLY']);
 const FOOD_GENDER_PREFERENCES = Object.freeze(['MALE', 'FEMALE', 'ALL']);
@@ -15,89 +13,89 @@ const COMPANION_TIME_FLEXIBILITY = Object.freeze(['ON_TIME', 'WITHIN_30_MIN', 'W
 const COMPANION_TRANSPORT_PREFERENCES = Object.freeze(['PUBLIC_TRANSIT', 'LICENSED_TAXI', 'DISCUSS_AFTER_FORMED']);
 const MEMBER_LUGGAGE_TYPES = Object.freeze(['NONE', 'SMALL', 'LARGE']);
 const COMPANION_PREFERENCE_VALUES = Object.freeze({
-  friendGender: Object.freeze(['ANY', 'FEMALE', 'MALE']),
-  mbti: Object.freeze(['E', 'I', 'ANY']),
-  navigationStyle: Object.freeze(['GUIDE', 'FOLLOW', 'LOST_CONFIDENT']),
-  travelPace: Object.freeze(['FAST', 'RELAXED', 'SPONTANEOUS']),
-  photoHabit: Object.freeze(['FIRST', 'CASUAL', 'NO_CAMERA']),
-  silenceComfort: Object.freeze(['CHATTY', 'NATURAL', 'HEADPHONES']),
-  garlic: Object.freeze(['OK', 'FRESHEN', 'AVOID']),
-  fragrance: Object.freeze(['ANY', 'LIGHT', 'NONE']),
-  slippers: Object.freeze(['RELAXED', 'CONTEXT', 'NEAT'])
+friendGender: Object.freeze(['ANY', 'FEMALE', 'MALE']),
+mbti: Object.freeze(['E', 'I', 'ANY']),
+navigationStyle: Object.freeze(['GUIDE', 'FOLLOW', 'LOST_CONFIDENT']),
+travelPace: Object.freeze(['FAST', 'RELAXED', 'SPONTANEOUS']),
+photoHabit: Object.freeze(['FIRST', 'CASUAL', 'NO_CAMERA']),
+silenceComfort: Object.freeze(['CHATTY', 'NATURAL', 'HEADPHONES']),
+garlic: Object.freeze(['OK', 'FRESHEN', 'AVOID']),
+fragrance: Object.freeze(['ANY', 'LIGHT', 'NONE']),
+slippers: Object.freeze(['RELAXED', 'CONTEXT', 'NEAT'])
 });
 const LEGACY_ACTIVITY_TYPE_MAP = Object.freeze({ ride: 'companion', buddy: 'sport', product: 'food' });
 const REMOVED_ACTIONS = new Set([
-  'student.verification.get', 'student.verification.submit', 'student.document.prepare',
-  'student.document.confirm', 'admin.studentVerification.review',
-  'onboarding.selectRole',
-  'driver.application.get', 'driver.application.submit', 'driver.document.prepare',
-  'driver.document.confirm', 'driver.application.withdraw', 'admin.driverApplication.review',
-  'ride.join', 'ride.driver.profile', 'ride.driver.mine', 'ride.driver.memberContacts',
-  'ride.driver.accept', 'ride.driver.cancel'
+'student.verification.get', 'student.verification.submit', 'student.document.prepare',
+'student.document.confirm', 'admin.studentVerification.review',
+'onboarding.selectRole',
+'driver.application.get', 'driver.application.submit', 'driver.document.prepare',
+'driver.document.confirm', 'driver.application.withdraw', 'admin.driverApplication.review',
+'ride.join', 'ride.driver.profile', 'ride.driver.mine', 'ride.driver.memberContacts',
+'ride.driver.accept', 'ride.driver.cancel'
 ]);
-
 const STATE_KEY = 'pinba_mock_state_v3';
 const PERSONA_KEY = 'pinba_mock_persona_v1';
 const MUTATING_ACTIONS = new Set([
-  'profile.update',
-  'profile.avatar.prepare',
-  'profile.avatar.confirm',
-  'profile.avatar.clear',
-  'onboarding.selectRole',
-  'driver.application.submit',
-  'driver.document.prepare',
-  'driver.document.confirm',
-  'driver.application.withdraw',
-  'admin.driverApplication.review',
-  'activity.create',
-  'activity.cancel',
-  'activity.complete',
-  'activity.question.ask',
-  'activity.question.answer',
-  'community.post.create',
-  'community.reply.create',
-  'community.post.delete',
-  'community.reply.delete',
-  'community.like.set',
-  'community.activity.read',
-  'companion.presence.enter',
-  'companion.presence.heartbeat',
-  'companion.presence.leave',
-  'application.submit',
-  'application.approve',
-  'application.reject',
-  'application.withdraw',
-  'ride.join',
-  'member.leave',
-  'group.contact.share',
-  'group.contact.revoke',
-  'group.message.send',
-  'group.message.read',
-  'dm.conversation.create',
-  'dm.consult.create',
-  'dm.message.send',
-  'dm.conversation.read',
-  'notification.read',
-  'report.create',
-  'admin.activity.suspend',
-  'ride.driver.accept',
-  'ride.driver.cancel'
+'profile.update',
+'profile.avatar.prepare',
+'profile.avatar.confirm',
+'profile.avatar.clear',
+'onboarding.selectRole',
+'driver.application.submit',
+'driver.document.prepare',
+'driver.document.confirm',
+'driver.application.withdraw',
+'admin.driverApplication.review',
+'activity.create',
+'activity.cancel',
+'activity.complete',
+'activity.question.ask',
+'activity.question.answer',
+'community.post.create',
+'community.reply.create',
+'community.post.delete',
+'community.reply.delete',
+'community.like.set',
+'community.activity.read',
+'community.profile.nav.create',
+'companion.presence.enter',
+'companion.presence.heartbeat',
+'companion.presence.leave',
+'application.submit',
+'application.approve',
+'application.reject',
+'application.withdraw',
+'ride.join',
+'member.leave',
+'group.contact.share',
+'group.contact.revoke',
+'group.message.send',
+'group.message.read',
+'dm.conversation.create',
+'dm.consult.create',
+'dm.message.send',
+'dm.conversation.read',
+'notification.read',
+'report.create',
+'admin.activity.suspend',
+'ride.driver.accept',
+'ride.driver.cancel'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
-  'driver.application.submit', 'admin.driverApplication.review', 'community.like.set',
-  'companion.presence.heartbeat', 'companion.presence.leave',
-  'group.message.send', 'group.message.read', 'dm.consult.create', 'dm.message.send'
+'driver.application.submit', 'admin.driverApplication.review', 'community.like.set',
+'companion.presence.heartbeat', 'companion.presence.leave',
+'group.message.send', 'group.message.read', 'dm.consult.create', 'dm.message.send'
 ]);
 const PUBLIC_ACTIONS = new Set([
-  'activity.list',
-  'activity.nearby',
-  'activity.memories',
-  'activity.detail',
-  'activity.question.list',
-  'community.post.list',
-  'community.post.detail',
-  'companion.presence.snapshot',
-  'profile.public.get'
+'activity.list',
+'activity.nearby',
+'activity.memories',
+'activity.detail',
+'activity.question.list',
+'community.post.list',
+'community.post.detail',
+'companion.presence.snapshot',
+'profile.public.get'
 ]);
 const MAX_PUBLIC_SCAN = 500;
 const mockSensitiveHashSalt = `${Date.now()}:${Math.random()}:${Math.random()}`;
@@ -107,466 +105,438 @@ const COMPANION_PRESENCE_TTL_MS = 90 * 1000;
 const COMPANION_MIN_WRITE_INTERVAL_MS = 20 * 1000;
 const COMPANION_SAMPLE_LIMIT = 50;
 const COMPANION_PROFILE_NAV_BUCKET_MS = 30 * 1000;
-
 function isMockLocalAvatarPath(value) {
-  return typeof value === 'string'
-    && /^(?:wxfile:\/\/|http:\/\/(?:tmp|usr)\/|\/tmp\/|\/var\/)/.test(value.trim());
+return typeof value === 'string'
+&& /^(?:wxfile:\/\/|http:\/\/(?:tmp|usr)\/|\/tmp\/|\/var\/)/.test(value.trim());
 }
-
 function isMockDisplayAvatarPath(value) {
-  return typeof value === 'string'
-    && (/^https:\/\//.test(value.trim()) || isMockLocalAvatarPath(value));
+return typeof value === 'string'
+&& (/^https:\/\//.test(value.trim()) || isMockLocalAvatarPath(value));
 }
-
 function avatarKindFromGender(gender) {
-  if (gender === 'MALE') return 'PASSENGER_A';
-  if (gender === 'FEMALE') return 'PASSENGER_B';
-  return null;
+if (gender === 'MALE') return 'PASSENGER_A';
+if (gender === 'FEMALE') return 'PASSENGER_B';
+return null;
 }
-
 function completeRideProfile(profile) {
-  return Boolean(profile && profile.adultConfirmed === true && ['MALE', 'FEMALE'].includes(profile.gender));
+return Boolean(profile && profile.adultConfirmed === true && ['MALE', 'FEMALE'].includes(profile.gender));
 }
-
 const USER_MBTI_TYPES = Object.freeze([
-  'INTJ', 'INTP', 'ENTJ', 'ENTP',
-  'INFJ', 'INFP', 'ENFJ', 'ENFP',
-  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
-  'ISTP', 'ISFP', 'ESTP', 'ESFP'
+'INTJ', 'INTP', 'ENTJ', 'ENTP',
+'INFJ', 'INFP', 'ENFJ', 'ENFP',
+'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
+'ISTP', 'ISFP', 'ESTP', 'ESFP'
 ]);
-
 function compareCalendarDate(left, right) {
-  return left.year - right.year || left.month - right.month || left.day - right.day;
+return left.year - right.year || left.month - right.month || left.day - right.day;
 }
-
 function validateMockProfile(input, currentProfile) {
-  assert(input && typeof input === 'object', 'VALIDATION_ERROR', '资料格式无效');
-  const nickname = typeof input.nickname === 'string' ? input.nickname.trim() : '';
-  assert(nickname.length >= 2 && nickname.length <= 20, 'VALIDATION_ERROR', '昵称需为2—20个字');
-  assert(['MALE', 'FEMALE'].includes(input.gender), 'VALIDATION_ERROR', '请选择性别');
-  assert(input.adultConfirmed === true, 'VALIDATION_ERROR', 'MVP 仅面向18岁及以上用户');
-  const profile = {
-    nickname,
-    gender: input.gender,
-    city: typeof input.city === 'string' && input.city.trim() ? input.city.trim() : PILOT_CITY,
-    interests: Array.isArray(input.interests) ? input.interests.slice(0, 8).map((item) => String(item).trim()).filter(Boolean) : [],
-    adultConfirmed: true
-  };
-  if (currentProfile && currentProfile.avatar) profile.avatar = clone(currentProfile.avatar);
-  const suppliedBirthDate = Object.prototype.hasOwnProperty.call(input, 'birthDate');
-  if (suppliedBirthDate) {
-    const parsed = parseBirthDate(input.birthDate);
-    assert(parsed, 'VALIDATION_ERROR', '生日格式无效', { field: 'birthDate' });
-    assert(compareCalendarDate(parsed, adultBirthLimit(new Date())) <= 0, 'VALIDATION_ERROR', '用户须年满18岁', { field: 'birthDate' });
-    profile.birthDate = input.birthDate;
-  } else if (currentProfile && currentProfile.birthDate) {
-    profile.birthDate = currentProfile.birthDate;
-  }
-  if (Object.prototype.hasOwnProperty.call(input, 'mbti') && input.mbti !== undefined) {
-    if (input.mbti === null || (typeof input.mbti === 'string' && !input.mbti.trim())) {
-      profile.mbti = null;
-    } else {
-      assert(typeof input.mbti === 'string', 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
-      const mbti = input.mbti.trim().toUpperCase();
-      assert(USER_MBTI_TYPES.includes(mbti), 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
-      profile.mbti = mbti;
-    }
-  } else if (currentProfile && Object.prototype.hasOwnProperty.call(currentProfile, 'mbti')) {
-    profile.mbti = currentProfile.mbti;
-  }
-  return profile;
+assert(input && typeof input === 'object', 'VALIDATION_ERROR', '资料格式无效');
+const nickname = typeof input.nickname === 'string' ? input.nickname.trim() : '';
+assert(nickname.length >= 2 && nickname.length <= 20, 'VALIDATION_ERROR', '昵称需为2—20个字');
+assert(['MALE', 'FEMALE'].includes(input.gender), 'VALIDATION_ERROR', '请选择性别');
+assert(input.adultConfirmed === true, 'VALIDATION_ERROR', 'MVP 仅面向18岁及以上用户');
+const profile = {
+nickname,
+gender: input.gender,
+city: typeof input.city === 'string' && input.city.trim() ? input.city.trim() : PILOT_CITY,
+interests: Array.isArray(input.interests) ? input.interests.slice(0, 8).map((item) => String(item).trim()).filter(Boolean) : [],
+adultConfirmed: true
+};
+if (currentProfile && currentProfile.avatar) profile.avatar = clone(currentProfile.avatar);
+const suppliedBirthDate = Object.prototype.hasOwnProperty.call(input, 'birthDate');
+if (suppliedBirthDate) {
+const parsed = parseBirthDate(input.birthDate);
+assert(parsed, 'VALIDATION_ERROR', '生日格式无效', { field: 'birthDate' });
+assert(compareCalendarDate(parsed, adultBirthLimit(new Date())) <= 0, 'VALIDATION_ERROR', '用户须年满18岁', { field: 'birthDate' });
+profile.birthDate = input.birthDate;
+} else if (currentProfile && currentProfile.birthDate) {
+profile.birthDate = currentProfile.birthDate;
 }
-
+if (Object.prototype.hasOwnProperty.call(input, 'mbti') && input.mbti !== undefined) {
+if (input.mbti === null || (typeof input.mbti === 'string' && !input.mbti.trim())) {
+profile.mbti = null;
+} else {
+assert(typeof input.mbti === 'string', 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
+const mbti = input.mbti.trim().toUpperCase();
+assert(USER_MBTI_TYPES.includes(mbti), 'VALIDATION_ERROR', 'MBTI选项无效', { field: 'mbti' });
+profile.mbti = mbti;
+}
+} else if (currentProfile && Object.prototype.hasOwnProperty.call(currentProfile, 'mbti')) {
+profile.mbti = currentProfile.mbti;
+}
+return profile;
+}
 function normalizeAvatarRoster(roster) {
-  if (!Array.isArray(roster)) return [];
-  const seen = new Set();
-  return roster.filter((item) => {
-    if (!item || typeof item.memberId !== 'string' || !item.memberId.trim() || seen.has(item.memberId)) return false;
-    seen.add(item.memberId);
-    return true;
-  }).slice(0, 20).map((item) => ({
-    memberId: item.memberId,
-    avatarKind: PASSENGER_AVATAR_KINDS.includes(item.avatarKind) ? item.avatarKind : null
-  }));
+if (!Array.isArray(roster)) return [];
+const seen = new Set();
+return roster.filter((item) => {
+if (!item || typeof item.memberId !== 'string' || !item.memberId.trim() || seen.has(item.memberId)) return false;
+seen.add(item.memberId);
+return true;
+}).slice(0, 20).map((item) => ({
+memberId: item.memberId,
+avatarKind: PASSENGER_AVATAR_KINDS.includes(item.avatarKind) ? item.avatarKind : null
+}));
 }
-
 function upsertAvatarRoster(roster, memberId, avatarKind) {
-  const next = normalizeAvatarRoster(roster);
-  if (!PASSENGER_AVATAR_KINDS.includes(avatarKind)) return next;
-  const existing = next.find((item) => item.memberId === memberId);
-  if (existing) existing.avatarKind = avatarKind;
-  else if (next.length < 20) next.push({ memberId, avatarKind });
-  return next;
+const next = normalizeAvatarRoster(roster);
+if (!PASSENGER_AVATAR_KINDS.includes(avatarKind)) return next;
+const existing = next.find((item) => item.memberId === memberId);
+if (existing) existing.avatarKind = avatarKind;
+else if (next.length < 20) next.push({ memberId, avatarKind });
+return next;
 }
-
 function publicAvatarSlots(roster, capacity = 7, profilesByMemberId = {}) {
-  const total = Math.max(1, Math.min(20, Math.floor(Number(capacity)) || 7));
-  const slots = normalizeAvatarRoster(roster).slice(0, total)
-    .map((item) => publicAvatarSlot(profilesByMemberId[item.memberId]));
-  while (slots.length < total) slots.push({ kind: 'EMPTY' });
-  return slots;
+const total = Math.max(1, Math.min(20, Math.floor(Number(capacity)) || 7));
+const slots = normalizeAvatarRoster(roster).slice(0, total)
+.map((item) => publicAvatarSlot(profilesByMemberId[item.memberId]));
+while (slots.length < total) slots.push({ kind: 'EMPTY' });
+return slots;
 }
-
 function publicAvatarSlot(profile) {
-  const fallback = profile && profile.gender === 'MALE'
-    ? 'MALE_DEFAULT'
-    : profile && profile.gender === 'FEMALE' ? 'FEMALE_DEFAULT' : '';
-  if (!fallback) return { kind: 'EMPTY' };
-  const avatar = profile.avatar;
-  const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
-    ? avatar.fileID.trim()
-    : '';
-  const src = isMockDisplayAvatarPath(candidate)
-    && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
-    ? candidate
-    : '';
-  return src ? { kind: 'CUSTOM', src, fallback } : { kind: 'DEFAULT', fallback };
+const fallback = profile && profile.gender === 'MALE'
+? 'MALE_DEFAULT'
+: profile && profile.gender === 'FEMALE' ? 'FEMALE_DEFAULT' : '';
+if (!fallback) return { kind: 'EMPTY' };
+const avatar = profile.avatar;
+const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
+? avatar.fileID.trim()
+: '';
+const src = isMockDisplayAvatarPath(candidate)
+&& !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
+? candidate
+: '';
+return src ? { kind: 'CUSTOM', src, fallback } : { kind: 'DEFAULT', fallback };
 }
-
 function resolveNotificationTarget(type) {
-  if (type === 'NEW_APPLICATION') return 'MANAGE';
-  if (type === 'GROUP_FORMED') return 'GROUP';
-  return 'DETAIL';
+if (type === 'NEW_APPLICATION') return 'MANAGE';
+if (type === 'GROUP_FORMED') return 'GROUP';
+return 'DETAIL';
 }
-
 function parsePublicCursor(value) {
-  if (value === undefined || value === null || value === '') return 0;
-  const validNumber = typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-  const validString = typeof value === 'string' && /^(0|[1-9]\d*)$/.test(value) && Number.isSafeInteger(Number(value));
-  assert(validNumber || validString, 'VALIDATION_ERROR', '分页游标无效');
-  return Number(value);
+if (value === undefined || value === null || value === '') return 0;
+const validNumber = typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+const validString = typeof value === 'string' && /^(0|[1-9]\d*)$/.test(value) && Number.isSafeInteger(Number(value));
+assert(validNumber || validString, 'VALIDATION_ERROR', '分页游标无效');
+return Number(value);
 }
-
 function stableSerialize(value) {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
-  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(',')}}`;
+if (value === null || typeof value !== 'object') return JSON.stringify(value);
+if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
+return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(',')}}`;
 }
-
 function opaqueSensitiveHash(value) {
-  let hashA = 0x811c9dc5;
-  let hashB = 0x9e3779b9;
-  const input = `${mockSensitiveHashSalt}:${value}`;
-  for (let index = 0; index < input.length; index += 1) {
-    const code = input.charCodeAt(index);
-    hashA = Math.imul(hashA ^ code, 0x01000193) >>> 0;
-    hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
-  }
-  return `${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+let hashA = 0x811c9dc5;
+let hashB = 0x9e3779b9;
+const input = `${mockSensitiveHashSalt}:${value}`;
+for (let index = 0; index < input.length; index += 1) {
+const code = input.charCodeAt(index);
+hashA = Math.imul(hashA ^ code, 0x01000193) >>> 0;
+hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
 }
-
+return `${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+}
 function stableMockEntityId(prefix, ...parts) {
-  let hashA = 0x811c9dc5;
-  let hashB = 0x9e3779b9;
-  const input = parts.map((part) => String(part)).join('\u001f');
-  for (let index = 0; index < input.length; index += 1) {
-    const code = input.charCodeAt(index);
-    hashA = Math.imul(hashA ^ code, 0x01000193) >>> 0;
-    hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
-  }
-  return `${prefix}_${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+let hashA = 0x811c9dc5;
+let hashB = 0x9e3779b9;
+const input = parts.map((part) => String(part)).join('\u001f');
+for (let index = 0; index < input.length; index += 1) {
+const code = input.charCodeAt(index);
+hashA = Math.imul(hashA ^ code, 0x01000193) >>> 0;
+hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
 }
-
+return `${prefix}_${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+}
 function validateCompanionScene(input, requireSessionToken = false) {
-  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '在线场景参数无效');
-  const allowedKeys = requireSessionToken ? ['scene', 'sessionToken'] : ['scene'];
-  assert(Object.keys(input).every((key) => allowedKeys.includes(key)), 'VALIDATION_ERROR', '在线场景参数无效');
-  assert(input.scene === COMPANION_PRESENCE_SCENE, 'VALIDATION_ERROR', '在线场景无效');
-  if (requireSessionToken) assert(typeof input.sessionToken === 'string' && input.sessionToken.length >= 16 && input.sessionToken.length <= 100, 'VALIDATION_ERROR', '在线会话令牌无效');
-  return { scene: input.scene, sessionToken: requireSessionToken ? input.sessionToken : '' };
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '在线场景参数无效');
+const allowedKeys = requireSessionToken ? ['scene', 'sessionToken'] : ['scene'];
+assert(Object.keys(input).every((key) => allowedKeys.includes(key)), 'VALIDATION_ERROR', '在线场景参数无效');
+assert(input.scene === COMPANION_PRESENCE_SCENE, 'VALIDATION_ERROR', '在线场景无效');
+if (requireSessionToken) assert(typeof input.sessionToken === 'string' && input.sessionToken.length >= 16 && input.sessionToken.length <= 100, 'VALIDATION_ERROR', '在线会话令牌无效');
+return { scene: input.scene, sessionToken: requireSessionToken ? input.sessionToken : '' };
 }
-
 function mockOpaque56(...parts) {
-  return Array.from({ length: 4 }, (_, index) => stableMockEntityId('h', ...parts, index).split('_').pop()).join('').slice(0, 56);
+return Array.from({ length: 4 }, (_, index) => stableMockEntityId('h', ...parts, index).split('_').pop()).join('').slice(0, 56);
 }
-
 function mockProfileNavToken(profileNavNonce, sessionNonce, bucket) {
-  if (!/^[a-f0-9]{56}$/.test(profileNavNonce || '') || !sessionNonce) return '';
-  return `companionProfileNa_${profileNavNonce}_${Number(bucket).toString(36)}_${mockOpaque56(profileNavNonce, sessionNonce, bucket)}`;
+if (!/^[a-f0-9]{56}$/.test(profileNavNonce || '') || !sessionNonce) return '';
+return `companionProfileNa_${profileNavNonce}_${Number(bucket).toString(36)}_${mockOpaque56(profileNavNonce, sessionNonce, bucket)}`;
 }
-
 function mockProfileNavNonceFromToken(token) {
-  const match = /^companionProfileNa_([a-f0-9]{56})_([0-9a-z]+)_([a-f0-9]{56})$/.exec(String(token || ''));
-  return match ? match[1] : '';
+const match = /^companionProfileNa_([a-f0-9]{56})_([0-9a-z]+)_([a-f0-9]{56})$/.exec(String(token || ''));
+return match ? match[1] : '';
 }
-
 function validateMockPublicProfileInput(input) {
-  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '公开主页参数无效');
-  assert(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
-  assert(/^companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}$/.test(input.profileNavToken || ''), 'NOT_FOUND');
-  return input.profileNavToken;
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '公开主页参数无效');
+assert(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
+assert(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|communityProfileNa_[a-f0-9]{64})$/.test(input.profileNavToken || ''), 'NOT_FOUND');
+return input.profileNavToken;
 }
-
+function mockCommunityProfileNavToken(...parts) {
+return `communityProfileNa_${(mockOpaque56(...parts) + stableMockEntityId('h', ...parts).split('_').pop()).slice(0, 64)}`;
+}
 function publicMockPresenceSnapshot(at) {
-  const active = state.companionPresences
-    .filter((item) => item.scene === COMPANION_PRESENCE_SCENE && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(at))
-    .sort((left, right) => String(right.expiresAt).localeCompare(String(left.expiresAt)) || String(left.id).localeCompare(String(right.id)));
-  const bucket = Math.floor(Date.parse(at) / 15000);
-  const profileBucket = Math.floor(Date.parse(at) / COMPANION_PROFILE_NAV_BUCKET_MS);
-  const users = active.slice(0, COMPANION_SAMPLE_LIMIT).map((item) => {
-    const nickname = Array.from(String(item.nickname || '').trim() || '匿名搭子').slice(0, 12).join('');
-    const sessionKey = item.sessionNonce
-      || stableMockEntityId('legacyPresenceWindow', nickname, item.expiresAt, bucket);
-    return {
-      displayToken: stableMockEntityId('presenceView', sessionKey, bucket),
-      profileNavToken: item.profileNavNonce && item.sessionNonce ? mockProfileNavToken(item.profileNavNonce, item.sessionNonce, profileBucket) : '',
-      profileNavExpiresAt: item.profileNavNonce && item.sessionNonce ? new Date(Math.min(Date.parse(item.expiresAt), (profileBucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString() : null,
-      nickname,
-      layoutSeed: Number.parseInt(sessionKey.slice(-8), 16) >>> 0,
-      viewerIsSelf: item.userId === currentUserId
-    };
-  }).sort((left, right) => left.displayToken.localeCompare(right.displayToken));
-  return { onlineTotal: active.length, sampleLimit: COMPANION_SAMPLE_LIMIT, users, serverNow: at };
+const active = state.companionPresences
+.filter((item) => item.scene === COMPANION_PRESENCE_SCENE && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(at))
+.sort((left, right) => String(right.expiresAt).localeCompare(String(left.expiresAt)) || String(left.id).localeCompare(String(right.id)));
+const bucket = Math.floor(Date.parse(at) / 15000);
+const profileBucket = Math.floor(Date.parse(at) / COMPANION_PROFILE_NAV_BUCKET_MS);
+const users = active.slice(0, COMPANION_SAMPLE_LIMIT).map((item) => {
+const nickname = Array.from(String(item.nickname || '').trim() || '匿名搭子').slice(0, 12).join('');
+const sessionKey = item.sessionNonce
+|| stableMockEntityId('legacyPresenceWindow', nickname, item.expiresAt, bucket);
+return {
+displayToken: stableMockEntityId('presenceView', sessionKey, bucket),
+profileNavToken: item.profileNavNonce && item.sessionNonce ? mockProfileNavToken(item.profileNavNonce, item.sessionNonce, profileBucket) : '',
+profileNavExpiresAt: item.profileNavNonce && item.sessionNonce ? new Date(Math.min(Date.parse(item.expiresAt), (profileBucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString() : null,
+nickname,
+layoutSeed: Number.parseInt(sessionKey.slice(-8), 16) >>> 0,
+viewerIsSelf: item.userId === currentUserId
+};
+}).sort((left, right) => left.displayToken.localeCompare(right.displayToken));
+return { onlineTotal: active.length, sampleLimit: COMPANION_SAMPLE_LIMIT, users, serverNow: at };
 }
-
 function normalizeActivityForRead(activity, now) {
-  if (!activity) return activity;
-  if (activity.type === 'ride') {
-    activity = {
-      ...activity,
-      targetMembers: 7,
-      minMembers: 7,
-      maxMembers: 7,
-      minPassengers: 7,
-      maxPassengers: 7,
-      status: ['RECRUITING', 'FORMED'].includes(activity.status)
-        ? (Number(activity.memberCount || 0) >= 7 ? 'FORMED' : 'RECRUITING')
-        : activity.status
-    };
-  }
-  const deadline = Date.parse(activity.deadlineAt);
-  const at = Date.parse(now);
-  if (!Number.isFinite(at)) return activity;
-  if (activity.type !== 'ride' && activity.status === 'RECRUITING' && Number.isFinite(deadline) && deadline <= at) {
-    return { ...activity, status: 'EXPIRED' };
-  }
-  const pickupWindowEnd = Date.parse(activity.typeData && activity.typeData.pickupWindowEnd);
-  if (activity.type === 'ride'
-    && ['RECRUITING', 'FORMED'].includes(activity.status)
-    && (!activity.rideFulfillment || activity.rideFulfillment.status === 'UNASSIGNED')
-    && Number.isFinite(pickupWindowEnd)
-    && pickupWindowEnd <= at) {
-    return { ...activity, status: 'EXPIRED', rideJoinable: false };
-  }
-  return activity;
+if (!activity) return activity;
+if (activity.type === 'ride') {
+activity = {
+...activity,
+targetMembers: 7,
+minMembers: 7,
+maxMembers: 7,
+minPassengers: 7,
+maxPassengers: 7,
+status: ['RECRUITING', 'FORMED'].includes(activity.status)
+? (Number(activity.memberCount || 0) >= 7 ? 'FORMED' : 'RECRUITING')
+: activity.status
+};
 }
-
+const deadline = Date.parse(activity.deadlineAt);
+const at = Date.parse(now);
+if (!Number.isFinite(at)) return activity;
+if (activity.type !== 'ride' && activity.status === 'RECRUITING' && Number.isFinite(deadline) && deadline <= at) {
+return { ...activity, status: 'EXPIRED' };
+}
+const pickupWindowEnd = Date.parse(activity.typeData && activity.typeData.pickupWindowEnd);
+if (activity.type === 'ride'
+&& ['RECRUITING', 'FORMED'].includes(activity.status)
+&& (!activity.rideFulfillment || activity.rideFulfillment.status === 'UNASSIGNED')
+&& Number.isFinite(pickupWindowEnd)
+&& pickupWindowEnd <= at) {
+return { ...activity, status: 'EXPIRED', rideJoinable: false };
+}
+return activity;
+}
 function isoAfter(hours) {
-  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 }
-
 function clone(value) {
-  return JSON.parse(JSON.stringify(value));
+return JSON.parse(JSON.stringify(value));
 }
-
 function hasRidePrice(text) {
-  return /(?:[¥￥$]\s*\d)|(?:\d+(?:\.\d+)?\s*(?:元|块|rmb|RMB))/.test(text || '');
+return /(?:[¥￥$]\s*\d)|(?:\d+(?:\.\d+)?\s*(?:元|块|rmb|RMB))/.test(text || '');
 }
-
 function validRidePhone(value) {
-  return /^(?:\+8536\d{7}|\+861\d{10}|\+852[569]\d{7})$/.test(String(value || '').replace(/[\s()-]+/g, ''));
+return /^(?:\+8536\d{7}|\+861\d{10}|\+852[569]\d{7})$/.test(String(value || '').replace(/[\s()-]+/g, ''));
 }
-
 function directMessagePreviewSeed(referenceTime = new Date().toISOString()) {
-  const baseTime = Number.isFinite(Date.parse(referenceTime)) ? Date.parse(referenceTime) : Date.now();
-  const at = (minutesAgo) => new Date(baseTime - minutesAgo * 60 * 1000).toISOString();
-  const conversationId = 'conversation_demo_buddy_owner_member';
-  const messages = [
-    { id: 'directMessage_demo_1', conversationId, senderId: 'u_owner', text: '你好，想确认一下明天下午的集合地点。', status: 'SENT', createdAt: at(12), updatedAt: at(12) },
-    { id: 'directMessage_demo_2', conversationId, senderId: 'u_member', text: '可以呀，我们在体育馆一楼前台旁见。', status: 'SENT', createdAt: at(10), updatedAt: at(10) },
-    { id: 'directMessage_demo_3', conversationId, senderId: 'u_member', text: '我会提前十分钟到，也会带一筒球。', status: 'SENT', createdAt: at(9), updatedAt: at(9) },
-    { id: 'directMessage_demo_4', conversationId, senderId: 'u_owner', text: '没问题，我带球拍，明天见。', status: 'SENT', createdAt: at(5), updatedAt: at(5) },
-    { id: 'directMessage_demo_5', conversationId, senderId: 'u_member', text: '好的，明天见～', status: 'SENT', createdAt: at(2), updatedAt: at(2) }
-  ];
-  return {
-    conversations: [{
-      id: conversationId,
-      participantAId: 'u_member',
-      participantBId: 'u_owner',
-      source: { type: 'activity', id: 'a_buddy', title: '周末新手羽毛球双打' },
-      lastMessageId: messages[messages.length - 1].id,
-      lastMessagePreview: messages[messages.length - 1].text,
-      lastMessageAt: messages[messages.length - 1].createdAt,
-      lastSenderId: messages[messages.length - 1].senderId,
-      unreadByUser: { u_owner: 1, u_member: 0 },
-      createdAt: messages[0].createdAt,
-      updatedAt: messages[messages.length - 1].createdAt
-    }],
-    messages
-  };
+const baseTime = Number.isFinite(Date.parse(referenceTime)) ? Date.parse(referenceTime) : Date.now();
+const at = (minutesAgo) => new Date(baseTime - minutesAgo * 60 * 1000).toISOString();
+const conversationId = 'conversation_demo_buddy_owner_member';
+const messages = [
+{ id: 'directMessage_demo_1', conversationId, senderId: 'u_owner', text: '你好，想确认一下明天下午的集合地点。', status: 'SENT', createdAt: at(12), updatedAt: at(12) },
+{ id: 'directMessage_demo_2', conversationId, senderId: 'u_member', text: '可以呀，我们在体育馆一楼前台旁见。', status: 'SENT', createdAt: at(10), updatedAt: at(10) },
+{ id: 'directMessage_demo_3', conversationId, senderId: 'u_member', text: '我会提前十分钟到，也会带一筒球。', status: 'SENT', createdAt: at(9), updatedAt: at(9) },
+{ id: 'directMessage_demo_4', conversationId, senderId: 'u_owner', text: '没问题，我带球拍，明天见。', status: 'SENT', createdAt: at(5), updatedAt: at(5) },
+{ id: 'directMessage_demo_5', conversationId, senderId: 'u_member', text: '好的，明天见～', status: 'SENT', createdAt: at(2), updatedAt: at(2) }
+];
+return {
+conversations: [{
+id: conversationId,
+participantAId: 'u_member',
+participantBId: 'u_owner',
+source: { type: 'activity', id: 'a_buddy', title: '周末新手羽毛球双打' },
+lastMessageId: messages[messages.length - 1].id,
+lastMessagePreview: messages[messages.length - 1].text,
+lastMessageAt: messages[messages.length - 1].createdAt,
+lastSenderId: messages[messages.length - 1].senderId,
+unreadByUser: { u_owner: 1, u_member: 0 },
+createdAt: messages[0].createdAt,
+updatedAt: messages[messages.length - 1].createdAt
+}],
+messages
+};
 }
-
 function seedState() {
-  const now = new Date().toISOString();
-  const directPreview = directMessagePreviewSeed(now);
-  const rideStartDate = new Date(Date.now() + 26 * 60 * 60 * 1000);
-  rideStartDate.setMinutes(Math.ceil(rideStartDate.getMinutes() / 15) * 15, 0, 0);
-  const rideStartsAt = rideStartDate.toISOString();
-  const rideWindowEnd = new Date(rideStartDate.getTime() + 60 * 60 * 1000).toISOString();
-  return {
-    schemaVersion: 11,
-    sequence: 100,
-    users: [
-      { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
-      { id: 'u_member', role: 'user', status: 'ACTIVE', profile: { nickname: '阿同', gender: 'FEMALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
-      { id: 'u_driver', role: 'user', status: 'ACTIVE', onboarding: { roleIntent: 'DRIVER', completedAt: now }, profile: { nickname: '林师傅', gender: 'MALE', city: '澳门', interests: ['邻里互助'], adultConfirmed: true } },
-      { id: 'u_student', role: 'user', status: 'ACTIVE', profile: { nickname: '小满', gender: 'FEMALE', city: '澳门', interests: ['城市活动'], adultConfirmed: true } },
-      { id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', gender: 'FEMALE', city: '澳门', interests: ['凑单'], adultConfirmed: true } },
-      { id: 'u_admin', role: 'admin', status: 'ACTIVE', profile: { nickname: '运营', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } },
-      { id: 'u_disabled', role: 'user', status: 'DISABLED', profile: { nickname: '受限账号', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } }
-    ],
-    activities: [
-      {
-        id: 'a_ride', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'companion',
-        title: '周五晚一起去凼仔', description: '寻找同路伙伴，成团后共同商量合规出行方式。',
-        city: '澳门', district: '澳门城区', placeLabel: '青茂口岸 → 凼仔',
-        startsAt: rideStartsAt, deadlineAt: isoAfter(18), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
-        rules: '成团后在公共区域集合，自主选择合法出行方式。',
-        meetingPoint: { label: '青茂口岸', address: '澳门青茂口岸联检大楼', latitude: 22.2094, longitude: 113.5381, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-qingmao' },
-        typeData: {
-          originLabel: '青茂口岸', destinationLabel: '凼仔',
-          timeFlexibility: 'WITHIN_60_MIN', transportPreference: 'DISCUSS_AFTER_FORMED', luggageType: 'NONE'
-        },
-        status: 'RECRUITING', avatarRoster: [{ memberId: 'm_ride_owner', avatarKind: 'PASSENGER_A' }], version: 1, createdAt: now, updatedAt: now
-      },
-      {
-        id: 'a_product', ownerId: 'u_merchant', owner: { nickname: '邻里团长' }, type: 'food',
-        title: '今晚一起吃火锅', description: '想找几位伙伴一起拼桌，口味和时间成团后商量。',
-        city: '澳门', district: '澳门城区', placeLabel: '附近餐厅',
-        startsAt: isoAfter(40), deadlineAt: isoAfter(28), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
-        rules: '各自到店消费，不代收款、不提供配送。',
-        meetingPoint: { label: '附近餐厅', address: '澳门半岛公共餐厅', latitude: 22.1969, longitude: 113.5455, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-food' },
-        typeData: {
-          venue: '附近餐厅', cuisine: '火锅', budgetRange: '人均约 80', dietaryNotes: '可选清汤锅',
-          paymentMethod: 'FIFTY_FIFTY', genderPreference: '', mbtiPreference: ''
-        },
-        status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
-      },
-      {
-        id: 'a_buddy', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'sport',
-        title: '周末新手羽毛球双打', description: '新手友好，轻松运动一小时，场地费AA。',
-        city: '澳门', district: '澳门城区', placeLabel: '附近体育馆',
-        startsAt: isoAfter(10), deadlineAt: isoAfter(5), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 2,
-        rules: '体育馆一楼前台旁会合，请自带球拍。',
-        meetingPoint: { label: '附近体育馆', address: '澳门公共体育馆', latitude: 22.1938, longitude: 113.5482, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-sport' },
-        typeData: { sportType: '羽毛球', venue: '附近体育馆', level: 'BEGINNER', intensity: 'RELAXED', equipment: '自带球拍' },
-        status: 'FORMED', version: 2, formedAt: now, createdAt: now, updatedAt: now
-      },
-      {
-        id: 'a_suspended', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'buddy',
-        title: '已下架活动测试数据', description: '仅用于验证下架状态，不应出现在公开列表或详情中。',
-        city: '澳门', district: '澳门城区', placeLabel: '测试地点',
-        startsAt: isoAfter(12), deadlineAt: isoAfter(6), targetMembers: 2, memberCount: 1,
-        contactInfo: '微信号 pinba_suspended', rules: '内部测试规则',
-        typeData: { category: '测试', costMode: 'AA', level: 'BEGINNER', equipment: '' },
-        status: 'SUSPENDED', version: 2,
-        suspension: { adminId: 'admin_mock', reason: '测试运营处置原因', at: now },
-        createdAt: now, updatedAt: now
-      }
-    ],
-    drivers: [
-      { userId: 'u_driver', status: 'ACTIVE', reviewStatus: 'APPROVED', reviewedAt: now }
-    ],
-    driverApplications: [
-      {
-        id: 'u_driver', userId: 'u_driver', status: 'APPROVED', revision: 1,
-        summary: {
-          legalNameMasked: '林**', identityType: 'MACAU_RESIDENT_ID', identityLast4: '1234',
-          driverLicenseLast4: '5678', vehicleType: '七座轿车', passengerCapacity: 7,
-          plateMasked: '***28', documentKinds: ['identityFront', 'driverLicense', 'vehicleExterior']
-        },
-        submittedAt: now, updatedAt: now
-      }
-    ],
-    driverDocumentUploads: [],
-    profileAvatarUploads: [],
-    vehicles: [
-      { id: 'vehicle_driver_1', driverId: 'u_driver', status: 'ACTIVE', reviewStatus: 'APPROVED', type: '七座轿车', plateMasked: '澳·***28', passengerCapacity: 7 }
-    ],
-    rideFulfillments: [
-      { activityId: 'a_ride', status: 'UNASSIGNED', pickupAt: null, driverId: null, vehicleId: null }
-    ],
-    applications: [
-      {
-        id: 'app_ride_member', activityId: 'a_ride', applicantId: 'u_member', applicant: { nickname: '阿同' },
-        status: 'PENDING', note: '一个20寸行李箱，时间合适。', autoJoinConsent: true, createdAt: now, updatedAt: now
-      },
-      {
-        id: 'app_buddy_member', activityId: 'a_buddy', applicantId: 'u_member', applicant: { nickname: '阿同' },
-        status: 'APPROVED', note: '新手，想一起练习。', autoJoinConsent: true, createdAt: now, updatedAt: now
-      }
-    ],
-    members: [
-      { id: 'm_ride_owner', activityId: 'a_ride', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now, luggageType: 'NONE', avatarKind: 'PASSENGER_A' },
-      { id: 'm_product_owner', activityId: 'a_product', userId: 'u_merchant', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
-      { id: 'm_buddy_owner', activityId: 'a_buddy', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
-      { id: 'm_buddy_member', activityId: 'a_buddy', userId: 'u_member', role: 'MEMBER', status: 'ACTIVE', joinedAt: now }
-    ],
-    memberContacts: [
-      { id: 'mc_ride_owner', activityId: 'a_ride', memberId: 'm_ride_owner', userId: 'u_owner', phone: '+85361234567', status: 'ACTIVE', createdAt: now, updatedAt: now }
-    ],
-    notifications: [
-      {
-        id: 'n_owner_apply', userId: 'u_owner', type: 'NEW_APPLICATION', activityId: 'a_ride',
-        title: '“青茂口岸到凼仔同行”有新的加入申请', read: false, createdAt: now,
-        url: 'https://untrusted.example/should-not-leak', page: 'untrusted/free-form/path'
-      },
-      { id: 'n_member_formed', userId: 'u_member', type: 'GROUP_FORMED', activityId: 'a_buddy', title: '“周末新手羽毛球双打”已成团', read: false, createdAt: now }
-    ],
-    activityQuestions: [
-      {
-        id: 'q_ride_luggage', activityId: 'a_ride', askerId: 'u_member', asker: { nickname: '阿同' },
-        content: '可以带一个20寸行李箱吗？',
-        answer: {
-          responderId: 'u_owner', responder: { nickname: '小拼' }, content: '可以，请提前说明行李数量。',
-          answeredAt: now, operationKeyHash: 'mock-seed-answer'
-        },
-        submissionKeyHash: 'mock-seed-question', createdAt: now, updatedAt: now
-      }
-    ],
-    communityPosts: [
-      {
-        id: 'community_welcome', authorId: 'u_member',
-        author: { nickname: '阿同', avatarKind: 'PASSENGER_B' },
-        content: '大家从横琴口岸去凼仔时，通常会提前多久出发？想听听大家的经验。',
-        replyCount: 1, status: 'ACTIVE', createdAt: now, updatedAt: now
-      }
-    ],
-    communityReplies: [
-      {
-        id: 'community_reply_welcome', postId: 'community_welcome', authorId: 'u_owner',
-        author: { nickname: '小拼', avatarKind: 'PASSENGER_A' }, content: '晚高峰建议多预留半小时。',
-        status: 'ACTIVE', createdAt: now, updatedAt: now
-      }
-    ],
-    communityLikes: [],
-    communityActivities: [],
-    companionPresences: [],
-    directConversations: directPreview.conversations,
-    directMessages: directPreview.messages,
-    groupMessages: [],
-    groupReadStates: [],
-    reports: [],
-    idempotency: {}
-  };
+const now = new Date().toISOString();
+const directPreview = directMessagePreviewSeed(now);
+const rideStartDate = new Date(Date.now() + 26 * 60 * 60 * 1000);
+rideStartDate.setMinutes(Math.ceil(rideStartDate.getMinutes() / 15) * 15, 0, 0);
+const rideStartsAt = rideStartDate.toISOString();
+const rideWindowEnd = new Date(rideStartDate.getTime() + 60 * 60 * 1000).toISOString();
+return {
+schemaVersion: 11,
+sequence: 100,
+users: [
+{ id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
+{ id: 'u_member', role: 'user', status: 'ACTIVE', profile: { nickname: '阿同', gender: 'FEMALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
+{ id: 'u_driver', role: 'user', status: 'ACTIVE', onboarding: { roleIntent: 'DRIVER', completedAt: now }, profile: { nickname: '林师傅', gender: 'MALE', city: '澳门', interests: ['邻里互助'], adultConfirmed: true } },
+{ id: 'u_student', role: 'user', status: 'ACTIVE', profile: { nickname: '小满', gender: 'FEMALE', city: '澳门', interests: ['城市活动'], adultConfirmed: true } },
+{ id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', gender: 'FEMALE', city: '澳门', interests: ['凑单'], adultConfirmed: true } },
+{ id: 'u_admin', role: 'admin', status: 'ACTIVE', profile: { nickname: '运营', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } },
+{ id: 'u_disabled', role: 'user', status: 'DISABLED', profile: { nickname: '受限账号', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } }
+],
+activities: [
+{
+id: 'a_ride', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'companion',
+title: '周五晚一起去凼仔', description: '寻找同路伙伴，成团后共同商量合规出行方式。',
+city: '澳门', district: '澳门城区', placeLabel: '青茂口岸 → 凼仔',
+startsAt: rideStartsAt, deadlineAt: isoAfter(18), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
+rules: '成团后在公共区域集合，自主选择合法出行方式。',
+meetingPoint: { label: '青茂口岸', address: '澳门青茂口岸联检大楼', latitude: 22.2094, longitude: 113.5381, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-qingmao' },
+typeData: {
+originLabel: '青茂口岸', destinationLabel: '凼仔',
+timeFlexibility: 'WITHIN_60_MIN', transportPreference: 'DISCUSS_AFTER_FORMED', luggageType: 'NONE'
+},
+status: 'RECRUITING', avatarRoster: [{ memberId: 'm_ride_owner', avatarKind: 'PASSENGER_A' }], version: 1, createdAt: now, updatedAt: now
+},
+{
+id: 'a_product', ownerId: 'u_merchant', owner: { nickname: '邻里团长' }, type: 'food',
+title: '今晚一起吃火锅', description: '想找几位伙伴一起拼桌，口味和时间成团后商量。',
+city: '澳门', district: '澳门城区', placeLabel: '附近餐厅',
+startsAt: isoAfter(40), deadlineAt: isoAfter(28), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 1,
+rules: '各自到店消费，不代收款、不提供配送。',
+meetingPoint: { label: '附近餐厅', address: '澳门半岛公共餐厅', latitude: 22.1969, longitude: 113.5455, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-food' },
+typeData: {
+venue: '附近餐厅', cuisine: '火锅', budgetRange: '人均约 80', dietaryNotes: '可选清汤锅',
+paymentMethod: 'FIFTY_FIFTY', genderPreference: '', mbtiPreference: ''
+},
+status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
+},
+{
+id: 'a_buddy', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'sport',
+title: '周末新手羽毛球双打', description: '新手友好，轻松运动一小时，场地费AA。',
+city: '澳门', district: '澳门城区', placeLabel: '附近体育馆',
+startsAt: isoAfter(10), deadlineAt: isoAfter(5), targetMembers: 4, minMembers: 2, maxMembers: 4, memberCount: 2,
+rules: '体育馆一楼前台旁会合，请自带球拍。',
+meetingPoint: { label: '附近体育馆', address: '澳门公共体育馆', latitude: 22.1938, longitude: 113.5482, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'mock-sport' },
+typeData: { sportType: '羽毛球', venue: '附近体育馆', level: 'BEGINNER', intensity: 'RELAXED', equipment: '自带球拍' },
+status: 'FORMED', version: 2, formedAt: now, createdAt: now, updatedAt: now
+},
+{
+id: 'a_suspended', ownerId: 'u_owner', owner: { nickname: '小拼' }, type: 'buddy',
+title: '已下架活动测试数据', description: '仅用于验证下架状态，不应出现在公开列表或详情中。',
+city: '澳门', district: '澳门城区', placeLabel: '测试地点',
+startsAt: isoAfter(12), deadlineAt: isoAfter(6), targetMembers: 2, memberCount: 1,
+contactInfo: '微信号 pinba_suspended', rules: '内部测试规则',
+typeData: { category: '测试', costMode: 'AA', level: 'BEGINNER', equipment: '' },
+status: 'SUSPENDED', version: 2,
+suspension: { adminId: 'admin_mock', reason: '测试运营处置原因', at: now },
+createdAt: now, updatedAt: now
 }
-
+],
+drivers: [
+{ userId: 'u_driver', status: 'ACTIVE', reviewStatus: 'APPROVED', reviewedAt: now }
+],
+driverApplications: [
+{
+id: 'u_driver', userId: 'u_driver', status: 'APPROVED', revision: 1,
+summary: {
+legalNameMasked: '林**', identityType: 'MACAU_RESIDENT_ID', identityLast4: '1234',
+driverLicenseLast4: '5678', vehicleType: '七座轿车', passengerCapacity: 7,
+plateMasked: '***28', documentKinds: ['identityFront', 'driverLicense', 'vehicleExterior']
+},
+submittedAt: now, updatedAt: now
+}
+],
+driverDocumentUploads: [],
+profileAvatarUploads: [],
+vehicles: [
+{ id: 'vehicle_driver_1', driverId: 'u_driver', status: 'ACTIVE', reviewStatus: 'APPROVED', type: '七座轿车', plateMasked: '澳·***28', passengerCapacity: 7 }
+],
+rideFulfillments: [
+{ activityId: 'a_ride', status: 'UNASSIGNED', pickupAt: null, driverId: null, vehicleId: null }
+],
+applications: [
+{
+id: 'app_ride_member', activityId: 'a_ride', applicantId: 'u_member', applicant: { nickname: '阿同' },
+status: 'PENDING', note: '一个20寸行李箱，时间合适。', autoJoinConsent: true, createdAt: now, updatedAt: now
+},
+{
+id: 'app_buddy_member', activityId: 'a_buddy', applicantId: 'u_member', applicant: { nickname: '阿同' },
+status: 'APPROVED', note: '新手，想一起练习。', autoJoinConsent: true, createdAt: now, updatedAt: now
+}
+],
+members: [
+{ id: 'm_ride_owner', activityId: 'a_ride', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now, luggageType: 'NONE', avatarKind: 'PASSENGER_A' },
+{ id: 'm_product_owner', activityId: 'a_product', userId: 'u_merchant', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
+{ id: 'm_buddy_owner', activityId: 'a_buddy', userId: 'u_owner', role: 'OWNER', status: 'ACTIVE', joinedAt: now },
+{ id: 'm_buddy_member', activityId: 'a_buddy', userId: 'u_member', role: 'MEMBER', status: 'ACTIVE', joinedAt: now }
+],
+memberContacts: [
+{ id: 'mc_ride_owner', activityId: 'a_ride', memberId: 'm_ride_owner', userId: 'u_owner', phone: '+85361234567', status: 'ACTIVE', createdAt: now, updatedAt: now }
+],
+notifications: [
+{
+id: 'n_owner_apply', userId: 'u_owner', type: 'NEW_APPLICATION', activityId: 'a_ride',
+title: '“青茂口岸到凼仔同行”有新的加入申请', read: false, createdAt: now,
+url: 'https://untrusted.example/should-not-leak', page: 'untrusted/free-form/path'
+},
+{ id: 'n_member_formed', userId: 'u_member', type: 'GROUP_FORMED', activityId: 'a_buddy', title: '“周末新手羽毛球双打”已成团', read: false, createdAt: now }
+],
+activityQuestions: [
+{
+id: 'q_ride_luggage', activityId: 'a_ride', askerId: 'u_member', asker: { nickname: '阿同' },
+content: '可以带一个20寸行李箱吗？',
+answer: {
+responderId: 'u_owner', responder: { nickname: '小拼' }, content: '可以，请提前说明行李数量。',
+answeredAt: now, operationKeyHash: 'mock-seed-answer'
+},
+submissionKeyHash: 'mock-seed-question', createdAt: now, updatedAt: now
+}
+],
+communityPosts: [
+{
+id: 'community_welcome', authorId: 'u_member',
+author: { nickname: '阿同', avatarKind: 'PASSENGER_B' },
+content: '大家从横琴口岸去凼仔时，通常会提前多久出发？想听听大家的经验。',
+replyCount: 1, status: 'ACTIVE', createdAt: now, updatedAt: now
+}
+],
+communityReplies: [
+{
+id: 'community_reply_welcome', postId: 'community_welcome', authorId: 'u_owner',
+author: { nickname: '小拼', avatarKind: 'PASSENGER_A' }, content: '晚高峰建议多预留半小时。',
+status: 'ACTIVE', createdAt: now, updatedAt: now
+}
+],
+communityLikes: [],
+communityActivities: [],
+companionPresences: [],
+publicProfileNavTickets: [],
+directConversations: directPreview.conversations,
+directMessages: directPreview.messages,
+groupMessages: [],
+groupReadStates: [],
+reports: [],
+idempotency: {}
+};
+}
 function readStorage(key) {
-  try {
-    return typeof wx !== 'undefined' ? wx.getStorageSync(key) : null;
-  } catch (error) {
-    return null;
-  }
+try {
+return typeof wx !== 'undefined' ? wx.getStorageSync(key) : null;
+} catch (error) {
+return null;
 }
-
+}
 function writeStorage(key, value) {
-  try {
-    if (typeof wx !== 'undefined') wx.setStorageSync(key, value);
-  } catch (error) {
-    // Demo storage failure should not break the in-memory session.
-  }
+try {
+if (typeof wx !== 'undefined') wx.setStorageSync(key, value);
+} catch (error) {
+// Demo storage failure should not break the in-memory session.
 }
-
+}
 let state = readStorage(STATE_KEY) || seedState();
 if (!state || state.schemaVersion !== 11) state = seedState();
 let currentUserId = readStorage(PERSONA_KEY) || 'u_owner';
@@ -587,2118 +557,2075 @@ if (!state.companionPresences) state.companionPresences = [];
 if (!state.groupMessages) state.groupMessages = [];
 if (!state.groupReadStates) state.groupReadStates = [];
 if (!Array.isArray(state.directConversations)
-  || !Array.isArray(state.directMessages)
-  || (!state.directConversations.length && !state.directMessages.length)) {
-  const directPreview = directMessagePreviewSeed();
-  state.directConversations = directPreview.conversations;
-  state.directMessages = directPreview.messages;
+|| !Array.isArray(state.directMessages)
+|| (!state.directConversations.length && !state.directMessages.length)) {
+const directPreview = directMessagePreviewSeed();
+state.directConversations = directPreview.conversations;
+state.directMessages = directPreview.messages;
 }
 function initializeActivityCommunication(target) {
-  target.activities.forEach((activity) => {
-  if (!Number.isSafeInteger(activity.groupSequence) || activity.groupSequence < 0) activity.groupSequence = 0;
-  });
-  target.members.forEach((member) => {
-  if (!member.groupWindow && member.status === 'ACTIVE') {
-    const activity = target.activities.find((item) => item.id === member.activityId);
-    member.groupWindow = { generation: 1, after: activity && activity.groupSequence || 0 };
-  }
-  });
-  return target;
+target.activities.forEach((activity) => {
+if (!Number.isSafeInteger(activity.groupSequence) || activity.groupSequence < 0) activity.groupSequence = 0;
+});
+target.members.forEach((member) => {
+if (!member.groupWindow && member.status === 'ACTIVE') {
+const activity = target.activities.find((item) => item.id === member.activityId);
+member.groupWindow = { generation: 1, after: activity && activity.groupSequence || 0 };
+}
+});
+return target;
 }
 initializeActivityCommunication(state);
-
 function publicCommunityAuthor(item) {
-  if (!item || !item.author) return null;
-  const current = userById(item.authorId);
-  const legacyProfile = { gender: item.author.avatarKind === 'PASSENGER_A' ? 'MALE' : item.author.avatarKind === 'PASSENGER_B' ? 'FEMALE' : null };
-  return {
-    nickname: item.author.nickname,
-    avatarKind: item.author.avatarKind,
-    avatar: publicAvatarSlot(current && current.status === 'ACTIVE' && current.profile ? current.profile : legacyProfile)
-  };
+if (!item || !item.author) return null;
+const current = userById(item.authorId);
+const legacyProfile = { gender: item.author.avatarKind === 'PASSENGER_A' ? 'MALE' : item.author.avatarKind === 'PASSENGER_B' ? 'FEMALE' : null };
+return {
+nickname: item.author.nickname,
+avatarKind: item.author.avatarKind,
+avatar: publicAvatarSlot(current && current.status === 'ACTIVE' && current.profile ? current.profile : legacyProfile)
+};
 }
-
 function publicCommunityPost(item) {
-  const like = state.communityLikes.find((entry) => entry.targetType === 'post' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
-  return {
-    id: item.id,
-    author: publicCommunityAuthor(item),
-    content: item.content,
-    replyCount: Number(item.replyCount || 0),
-    likeCount: Number(item.likeCount || 0),
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    viewerIsAuthor: item.authorId === currentUserId,
-    viewerHasLiked: Boolean(like)
-  };
+const like = state.communityLikes.find((entry) => entry.targetType === 'post' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
+return {
+id: item.id,
+author: publicCommunityAuthor(item),
+content: item.content,
+replyCount: Number(item.replyCount || 0),
+likeCount: Number(item.likeCount || 0),
+createdAt: item.createdAt,
+updatedAt: item.updatedAt,
+viewerIsAuthor: item.authorId === currentUserId,
+viewerHasLiked: Boolean(like)
+};
 }
-
 function publicCommunityReply(item) {
-  const like = state.communityLikes.find((entry) => entry.targetType === 'reply' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
-  const target = item.replyToId ? state.communityReplies.find((entry) => entry.id === item.replyToId) : null;
-  const targetActive = Boolean(target && target.status === 'ACTIVE' && target.postId === item.postId);
-  return {
-    id: item.id,
-    postId: item.postId,
-    author: publicCommunityAuthor(item),
-    content: item.content,
-    likeCount: Number(item.likeCount || 0),
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    viewerIsAuthor: item.authorId === currentUserId,
-    viewerHasLiked: Boolean(like),
-    ...(item.replyToId ? { replyTo: targetActive ? { status: 'ACTIVE', nickname: publicCommunityAuthor(target).nickname } : { status: 'UNAVAILABLE', nickname: '' } } : {})
-  };
+const like = state.communityLikes.find((entry) => entry.targetType === 'reply' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
+const target = item.replyToId ? state.communityReplies.find((entry) => entry.id === item.replyToId) : null;
+const targetActive = Boolean(target && target.status === 'ACTIVE' && target.postId === item.postId);
+return {
+id: item.id,
+postId: item.postId,
+author: publicCommunityAuthor(item),
+content: item.content,
+likeCount: Number(item.likeCount || 0),
+createdAt: item.createdAt,
+updatedAt: item.updatedAt,
+viewerIsAuthor: item.authorId === currentUserId,
+viewerHasLiked: Boolean(like),
+...(item.replyToId ? { replyTo: targetActive ? { status: 'ACTIVE', nickname: publicCommunityAuthor(target).nickname } : { status: 'UNAVAILABLE', nickname: '' } } : {})
+};
 }
-
 function publicCommunityActivity(item) {
-  const post = state.communityPosts.find((entry) => entry.id === item.postId);
-  const reply = item.replyId ? state.communityReplies.find((entry) => entry.id === item.replyId) : null;
-  const postActive = Boolean(post && post.status === 'ACTIVE');
-  const replyActive = Boolean(reply && reply.status === 'ACTIVE');
-  const isPostLike = item.type === 'POST_LIKED';
-  const isReplyLike = item.type === 'REPLY_LIKED';
-  const isLike = isPostLike || isReplyLike;
-  const removed = !postActive || (isReplyLike && !replyActive);
-  const actorItems = isLike
-    ? item.recentActors || []
-    : item.actorId ? [{ actorId: item.actorId, author: item.actor }] : [];
-  return {
-    id: item.id,
-    type: item.type,
-    postId: item.postId,
-    ...(item.replyId ? { replyId: item.replyId } : {}),
-    ...(isLike ? { likeTargetType: isReplyLike ? 'reply' : 'post' } : {}),
-    actors: actorItems.map((actor) => publicCommunityAuthor({ authorId: actor.actorId, author: actor.author })).filter(Boolean),
-    actorCount: isLike ? Math.max(0, Number(item.actorCount) || 0) : actorItems.length,
-    postPreview: removed ? '' : String(post.content || '').slice(0, 100),
-    contentPreview: !removed && (item.type === 'POST_REPLIED' || isReplyLike) && replyActive ? String(reply.content || '').slice(0, 100) : '',
-    message: item.type === 'POST_STATUS' ? String(item.message || '').slice(0, 120) : '',
-    removed,
-    read: item.read === true,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt
-  };
+const post = state.communityPosts.find((entry) => entry.id === item.postId);
+const reply = item.replyId ? state.communityReplies.find((entry) => entry.id === item.replyId) : null;
+const postActive = Boolean(post && post.status === 'ACTIVE');
+const replyActive = Boolean(reply && reply.status === 'ACTIVE');
+const isPostLike = item.type === 'POST_LIKED';
+const isReplyLike = item.type === 'REPLY_LIKED';
+const isLike = isPostLike || isReplyLike;
+const removed = !postActive || (isReplyLike && !replyActive);
+const actorItems = isLike
+? item.recentActors || []
+: item.actorId ? [{ actorId: item.actorId, author: item.actor }] : [];
+return {
+id: item.id,
+type: item.type,
+postId: item.postId,
+...(item.replyId ? { replyId: item.replyId } : {}),
+...(isLike ? { likeTargetType: isReplyLike ? 'reply' : 'post' } : {}),
+actors: actorItems.map((actor) => publicCommunityAuthor({ authorId: actor.actorId, author: actor.author })).filter(Boolean),
+actorCount: isLike ? Math.max(0, Number(item.actorCount) || 0) : actorItems.length,
+postPreview: removed ? '' : String(post.content || '').slice(0, 100),
+contentPreview: !removed && (item.type === 'POST_REPLIED' || isReplyLike) && replyActive ? String(reply.content || '').slice(0, 100) : '',
+message: item.type === 'POST_STATUS' ? String(item.message || '').slice(0, 120) : '',
+removed,
+read: item.read === true,
+createdAt: item.createdAt,
+updatedAt: item.updatedAt
+};
 }
-
 function assertCommunityContent(content, max) {
-  const normalized = String(content || '').trim();
-  const compact = normalized.replace(/[\s._\-—:：·（）()]+/g, '');
-  assert(normalized.length >= 1 && normalized.length <= max, 'VALIDATION_ERROR', `内容长度不能超过${max}个字符`);
-  const forbidden = /(?:https?:\/\/|www\.|(?:weixin|wechat|微信|vx|v信|微讯|qq|群号)[A-Za-z0-9]{4,}|(?:\+?\d[\d\s()-]{6,}\d)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i;
-  assert(!forbidden.test(normalized) && !forbidden.test(compact), 'VALIDATION_ERROR', '讨论区不支持外链或联系方式');
-  return normalized;
+const normalized = String(content || '').trim();
+const compact = normalized.replace(/[\s._\-—:：·（）()]+/g, '');
+assert(normalized.length >= 1 && normalized.length <= max, 'VALIDATION_ERROR', `内容长度不能超过${max}个字符`);
+const forbidden = /(?:https?:\/\/|www\.|(?:weixin|wechat|微信|vx|v信|微讯|qq|群号)[A-Za-z0-9]{4,}|(?:\+?\d[\d\s()-]{6,}\d)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i;
+assert(!forbidden.test(normalized) && !forbidden.test(compact), 'VALIDATION_ERROR', '讨论区不支持外链或联系方式');
+return normalized;
 }
-
 function assertDirectMessageContent(content) {
-  const normalized = String(content || '').trim();
-  assert(normalized.length >= 1 && normalized.length <= 500, 'VALIDATION_ERROR', '消息内容长度不符合要求');
-  const compact = normalized.replace(/[\s._\-—:：·（）()]+/g, '');
-  const forbidden = /(?:https?:\/\/|www\.|(?:weixin|wechat|微信|vx|v信|微讯|qq|群号)[A-Za-z0-9]{4,}|(?:\+?\d[\d\s()-]{6,}\d)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i;
-  assert(!forbidden.test(normalized) && !forbidden.test(compact), 'VALIDATION_ERROR', '私信暂不支持外链或联系方式');
-  return normalized;
+const normalized = String(content || '').trim();
+assert(normalized.length >= 1 && normalized.length <= 500, 'VALIDATION_ERROR', '消息内容长度不符合要求');
+const compact = normalized.replace(/[\s._\-—:：·（）()]+/g, '');
+const forbidden = /(?:https?:\/\/|www\.|(?:weixin|wechat|微信|vx|v信|微讯|qq|群号)[A-Za-z0-9]{4,}|(?:\+?\d[\d\s()-]{6,}\d)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i;
+assert(!forbidden.test(normalized) && !forbidden.test(compact), 'VALIDATION_ERROR', '私信暂不支持外链或联系方式');
+return normalized;
 }
-
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 function asciiBase64Encode(value) {
-  let result = '';
-  for (let index = 0; index < value.length; index += 3) {
-    const first = value.charCodeAt(index);
-    const second = index + 1 < value.length ? value.charCodeAt(index + 1) : NaN;
-    const third = index + 2 < value.length ? value.charCodeAt(index + 2) : NaN;
-    result += BASE64_ALPHABET[first >> 2];
-    result += BASE64_ALPHABET[((first & 3) << 4) | (Number.isNaN(second) ? 0 : second >> 4)];
-    result += Number.isNaN(second) ? '=' : BASE64_ALPHABET[((second & 15) << 2) | (Number.isNaN(third) ? 0 : third >> 6)];
-    result += Number.isNaN(third) ? '=' : BASE64_ALPHABET[third & 63];
-  }
-  return result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+let result = '';
+for (let index = 0; index < value.length; index += 3) {
+const first = value.charCodeAt(index);
+const second = index + 1 < value.length ? value.charCodeAt(index + 1) : NaN;
+const third = index + 2 < value.length ? value.charCodeAt(index + 2) : NaN;
+result += BASE64_ALPHABET[first >> 2];
+result += BASE64_ALPHABET[((first & 3) << 4) | (Number.isNaN(second) ? 0 : second >> 4)];
+result += Number.isNaN(second) ? '=' : BASE64_ALPHABET[((second & 15) << 2) | (Number.isNaN(third) ? 0 : third >> 6)];
+result += Number.isNaN(third) ? '=' : BASE64_ALPHABET[third & 63];
 }
-
+return result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 function asciiBase64Decode(value) {
-  const normalized = String(value).replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
-  let result = '';
-  for (let index = 0; index < padded.length; index += 4) {
-    const a = BASE64_ALPHABET.indexOf(padded[index]);
-    const b = BASE64_ALPHABET.indexOf(padded[index + 1]);
-    const c = padded[index + 2] === '=' ? -1 : BASE64_ALPHABET.indexOf(padded[index + 2]);
-    const d = padded[index + 3] === '=' ? -1 : BASE64_ALPHABET.indexOf(padded[index + 3]);
-    if (a < 0 || b < 0 || c < -1 || d < -1) throw new Error('invalid base64');
-    result += String.fromCharCode((a << 2) | (b >> 4));
-    if (c >= 0) result += String.fromCharCode(((b & 15) << 4) | (c >> 2));
-    if (d >= 0) result += String.fromCharCode(((c & 3) << 6) | d);
-  }
-  return result;
+const normalized = String(value).replace(/-/g, '+').replace(/_/g, '/');
+const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+let result = '';
+for (let index = 0; index < padded.length; index += 4) {
+const a = BASE64_ALPHABET.indexOf(padded[index]);
+const b = BASE64_ALPHABET.indexOf(padded[index + 1]);
+const c = padded[index + 2] === '=' ? -1 : BASE64_ALPHABET.indexOf(padded[index + 2]);
+const d = padded[index + 3] === '=' ? -1 : BASE64_ALPHABET.indexOf(padded[index + 3]);
+if (a < 0 || b < 0 || c < -1 || d < -1) throw new Error('invalid base64');
+result += String.fromCharCode((a << 2) | (b >> 4));
+if (c >= 0) result += String.fromCharCode(((b & 15) << 4) | (c >> 2));
+if (d >= 0) result += String.fromCharCode(((c & 3) << 6) | d);
 }
-
+return result;
+}
 function normalizeCommunityKeyword(value) {
-  const text = String(value || '').trim();
-  return (typeof text.normalize === 'function' ? text.normalize('NFKC') : text).toLowerCase();
+const text = String(value || '').trim();
+return (typeof text.normalize === 'function' ? text.normalize('NFKC') : text).toLowerCase();
 }
-
 function matchesCommunityKeyword(item, keyword) {
-  const normalized = normalizeCommunityKeyword(keyword);
-  return !normalized || normalizeCommunityKeyword(item && item.content).includes(normalized);
+const normalized = normalizeCommunityKeyword(keyword);
+return !normalized || normalizeCommunityKeyword(item && item.content).includes(normalized);
 }
-
 function encodeCommunityCursor(item, keyword = '') {
-  const normalizedKeyword = normalizeCommunityKeyword(keyword);
-  return asciiBase64Encode(JSON.stringify({
-    createdAt: item.createdAt,
-    id: item.id,
-    ...(normalizedKeyword ? { keyword: encodeURIComponent(normalizedKeyword) } : {})
-  }));
+const normalizedKeyword = normalizeCommunityKeyword(keyword);
+return asciiBase64Encode(JSON.stringify({
+createdAt: item.createdAt,
+id: item.id,
+...(normalizedKeyword ? { keyword: encodeURIComponent(normalizedKeyword) } : {})
+}));
 }
-
 function encodeDirectCursor(item, timeField) {
-  return asciiBase64Encode(JSON.stringify({ createdAt: item[timeField], id: item.id }));
+return asciiBase64Encode(JSON.stringify({ createdAt: item[timeField], id: item.id }));
 }
-
 function decodeDirectCursor(value) {
-  return decodeCommunityCursor(value);
+return decodeCommunityCursor(value);
 }
-
 function afterDirectCursor(item, cursor, timeField) {
-  return !cursor || item[timeField] < cursor.createdAt || (item[timeField] === cursor.createdAt && item.id < cursor.id);
+return !cursor || item[timeField] < cursor.createdAt || (item[timeField] === cursor.createdAt && item.id < cursor.id);
 }
-
 function decodeCommunityCursor(value, keyword = '') {
-  if (value === undefined || value === null || value === '') return null;
-  try {
-    const parsed = JSON.parse(asciiBase64Decode(value));
-    assert(parsed && Number.isFinite(Date.parse(parsed.createdAt)) && typeof parsed.id === 'string' && parsed.id, 'VALIDATION_ERROR', '分页游标无效');
-    const cursorKeyword = parsed.keyword ? decodeURIComponent(parsed.keyword) : '';
-    assert(normalizeCommunityKeyword(cursorKeyword) === normalizeCommunityKeyword(keyword), 'VALIDATION_ERROR', '分页游标与搜索条件不匹配');
-    return parsed;
-  } catch (error) {
-    if (error && error.ok === false) throw error;
-    throw fail('VALIDATION_ERROR', '分页游标无效');
-  }
+if (value === undefined || value === null || value === '') return null;
+try {
+const parsed = JSON.parse(asciiBase64Decode(value));
+assert(parsed && Number.isFinite(Date.parse(parsed.createdAt)) && typeof parsed.id === 'string' && parsed.id, 'VALIDATION_ERROR', '分页游标无效');
+const cursorKeyword = parsed.keyword ? decodeURIComponent(parsed.keyword) : '';
+assert(normalizeCommunityKeyword(cursorKeyword) === normalizeCommunityKeyword(keyword), 'VALIDATION_ERROR', '分页游标与搜索条件不匹配');
+return parsed;
+} catch (error) {
+if (error && error.ok === false) throw error;
+throw fail('VALIDATION_ERROR', '分页游标无效');
 }
-
+}
 function encodeCommunityActivityCursor(item, tab) {
-  return asciiBase64Encode(JSON.stringify({ updatedAt: item.updatedAt, id: item.id, tab }));
+return asciiBase64Encode(JSON.stringify({ updatedAt: item.updatedAt, id: item.id, tab }));
 }
-
 function decodeCommunityActivityCursor(value, tab) {
-  if (value === undefined || value === null || value === '') return null;
-  try {
-    const parsed = JSON.parse(asciiBase64Decode(value));
-    assert(parsed && Number.isFinite(Date.parse(parsed.updatedAt)) && typeof parsed.id === 'string' && parsed.id, 'VALIDATION_ERROR', '动态分页游标无效');
-    assert(parsed.tab === tab, 'VALIDATION_ERROR', '动态分页游标与筛选条件不匹配');
-    return parsed;
-  } catch (error) {
-    if (error && error.ok === false) throw error;
-    throw fail('VALIDATION_ERROR', '动态分页游标无效');
-  }
+if (value === undefined || value === null || value === '') return null;
+try {
+const parsed = JSON.parse(asciiBase64Decode(value));
+assert(parsed && Number.isFinite(Date.parse(parsed.updatedAt)) && typeof parsed.id === 'string' && parsed.id, 'VALIDATION_ERROR', '动态分页游标无效');
+assert(parsed.tab === tab, 'VALIDATION_ERROR', '动态分页游标与筛选条件不匹配');
+return parsed;
+} catch (error) {
+if (error && error.ok === false) throw error;
+throw fail('VALIDATION_ERROR', '动态分页游标无效');
 }
-
+}
 function afterCommunityActivityCursor(item, cursor) {
-  return !cursor || item.updatedAt < cursor.updatedAt || (item.updatedAt === cursor.updatedAt && item.id < cursor.id);
+return !cursor || item.updatedAt < cursor.updatedAt || (item.updatedAt === cursor.updatedAt && item.id < cursor.id);
 }
-
 function afterDescendingCommunityCursor(item, cursor) {
-  return !cursor || item.createdAt < cursor.createdAt || (item.createdAt === cursor.createdAt && item.id < cursor.id);
+return !cursor || item.createdAt < cursor.createdAt || (item.createdAt === cursor.createdAt && item.id < cursor.id);
 }
-
 function afterAscendingCommunityCursor(item, cursor) {
-  return !cursor || item.createdAt > cursor.createdAt || (item.createdAt === cursor.createdAt && item.id > cursor.id);
+return !cursor || item.createdAt > cursor.createdAt || (item.createdAt === cursor.createdAt && item.id > cursor.id);
 }
-
 function persist() {
-  const { memberContacts, directMessages, directConversations, groupMessages, groupReadStates, ...safeState } = state;
-  writeStorage(STATE_KEY, safeState);
-  writeStorage(PERSONA_KEY, currentUserId);
+const { memberContacts, directMessages, directConversations, groupMessages, groupReadStates, ...safeState } = state;
+writeStorage(STATE_KEY, safeState);
+writeStorage(PERSONA_KEY, currentUserId);
 }
-
 function nextId(prefix) {
-  state.sequence += 1;
-  return `${prefix}_${state.sequence}`;
+state.sequence += 1;
+return `${prefix}_${state.sequence}`;
 }
-
 function userById(id) {
-  return state.users.find((item) => item.id === id);
+return state.users.find((item) => item.id === id);
 }
-
 function activityById(id) {
-  return state.activities.find((item) => item.id === id);
+return state.activities.find((item) => item.id === id);
 }
-
 function activeMember(activityId, userId) {
-  return state.members.find((item) => item.activityId === activityId && item.userId === userId && item.status === 'ACTIVE');
+return state.members.find((item) => item.activityId === activityId && item.userId === userId && item.status === 'ACTIVE');
 }
-
 function directConversationDto(conversation) {
-  const peerId = conversation.participantAId === currentUserId ? conversation.participantBId : conversation.participantAId;
-  const peer = userById(peerId);
-  const sourceActivity = conversation.source && activityById(conversation.source.id);
-  const sourceActivityType = sourceActivity
-    ? LEGACY_ACTIVITY_TYPE_MAP[sourceActivity.type] || sourceActivity.type
-    : null;
-  return {
-    id: conversation.id,
-    kind: conversation.kind === 'OWNER_CONSULT' ? 'OWNER_CONSULT' : 'MEMBER_DM',
-    peer: {
-      nickname: peer && peer.profile && peer.profile.nickname || '拼吧用户',
-      avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
-    },
-    source: conversation.source ? {
-      ...clone(conversation.source),
-      activityType: ACTIVITY_TYPES.includes(sourceActivityType) ? sourceActivityType : null
-    } : null,
-    lastMessage: conversation.lastMessageId ? {
-      id: conversation.lastMessageId,
-      preview: conversation.lastMessagePreview || '',
-      isMine: conversation.lastSenderId === currentUserId,
-      createdAt: conversation.lastMessageAt
-    } : null,
-    unreadCount: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0),
-    messagingAvailable: Boolean(sourceActivity
-      && (conversation.kind === 'OWNER_CONSULT'
-        ? ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
-          && sourceActivity.ownerId === conversation.ownerId
-        : ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
-          && [conversation.participantAId, conversation.participantBId].every((id) => activeMember(sourceActivity.id, id)))
-      && [conversation.participantAId, conversation.participantBId].every((id) => userById(id) && userById(id).status === 'ACTIVE')),
-    updatedAt: conversation.updatedAt
-  };
+const peerId = conversation.participantAId === currentUserId ? conversation.participantBId : conversation.participantAId;
+const peer = userById(peerId);
+const sourceActivity = conversation.source && activityById(conversation.source.id);
+const sourceActivityType = sourceActivity
+? LEGACY_ACTIVITY_TYPE_MAP[sourceActivity.type] || sourceActivity.type
+: null;
+return {
+id: conversation.id,
+kind: conversation.kind === 'OWNER_CONSULT' ? 'OWNER_CONSULT' : 'MEMBER_DM',
+peer: {
+nickname: peer && peer.profile && peer.profile.nickname || '拼吧用户',
+avatarKind: avatarKindFromGender(peer && peer.profile && peer.profile.gender)
+},
+source: conversation.source ? {
+...clone(conversation.source),
+activityType: ACTIVITY_TYPES.includes(sourceActivityType) ? sourceActivityType : null
+} : null,
+lastMessage: conversation.lastMessageId ? {
+id: conversation.lastMessageId,
+preview: conversation.lastMessagePreview || '',
+isMine: conversation.lastSenderId === currentUserId,
+createdAt: conversation.lastMessageAt
+} : null,
+unreadCount: Math.max(0, Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0),
+messagingAvailable: Boolean(sourceActivity
+&& (conversation.kind === 'OWNER_CONSULT'
+? ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
+&& sourceActivity.ownerId === conversation.ownerId
+: ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
+&& [conversation.participantAId, conversation.participantBId].every((id) => activeMember(sourceActivity.id, id)))
+&& [conversation.participantAId, conversation.participantBId].every((id) => userById(id) && userById(id).status === 'ACTIVE')),
+updatedAt: conversation.updatedAt
+};
 }
-
 function directMessageDto(message) {
-  return {
-    id: message.id,
-    conversationId: message.conversationId,
-    text: message.text,
-    isMine: message.senderId === currentUserId,
-    status: message.status || 'SENT',
-    createdAt: message.createdAt
-  };
+return {
+id: message.id,
+conversationId: message.conversationId,
+text: message.text,
+isMine: message.senderId === currentUserId,
+status: message.status || 'SENT',
+createdAt: message.createdAt
+};
 }
-
 function groupAccess(activityId, write = false) {
-  const user = requireActiveUser(true);
-  assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-  const activity = activityById(activityId);
-  assert(activity, 'NOT_FOUND', '活动不存在或已失效');
-  assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '活动已下架');
-  assert(['RECRUITING', 'FORMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(activity.status), 'FORBIDDEN', '当前无法访问群聊');
-  const member = activeMember(activity.id, user.id);
-  assert(member && member.groupWindow && Number.isSafeInteger(member.groupWindow.generation)
-    && member.groupWindow.generation > 0 && Number.isSafeInteger(member.groupWindow.after)
-    && Number.isSafeInteger(activity.groupSequence) && member.groupWindow.after <= activity.groupSequence,
-  'FORBIDDEN', '你不是该活动当前的有效成员');
-  const writable = ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status);
-  assert(!write || writable, 'CONFLICT', '活动已结束，群聊仅可查看');
-  return { user, activity, member, generation: member.groupWindow.generation,
-    after: member.groupWindow.after, latestSequence: activity.groupSequence, writable };
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const activity = activityById(activityId);
+assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '活动已下架');
+assert(['RECRUITING', 'FORMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(activity.status), 'FORBIDDEN', '当前无法访问群聊');
+const member = activeMember(activity.id, user.id);
+assert(member && member.groupWindow && Number.isSafeInteger(member.groupWindow.generation)
+&& member.groupWindow.generation > 0 && Number.isSafeInteger(member.groupWindow.after)
+&& Number.isSafeInteger(activity.groupSequence) && member.groupWindow.after <= activity.groupSequence,
+'FORBIDDEN', '你不是该活动当前的有效成员');
+const writable = ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status);
+assert(!write || writable, 'CONFLICT', '活动已结束，群聊仅可查看');
+return { user, activity, member, generation: member.groupWindow.generation,
+after: member.groupWindow.after, latestSequence: activity.groupSequence, writable };
 }
-
 function publicGroupMessage(message) {
-  const sender = userById(message.senderId);
-  return {
-    id: message.id,
-    sequence: message.sequence,
-    text: message.text,
-    isMine: message.senderId === currentUserId,
-    sender: { nickname: sender && sender.profile && sender.profile.nickname || '拼吧用户',
-      avatarKind: avatarKindFromGender(sender && sender.profile && sender.profile.gender),
-      role: message.memberId && state.members.find((item) => item.id === message.memberId)?.role === 'OWNER' ? 'OWNER' : 'MEMBER' },
-    createdAt: message.createdAt
-  };
+const sender = userById(message.senderId);
+return {
+id: message.id,
+sequence: message.sequence,
+text: message.text,
+isMine: message.senderId === currentUserId,
+sender: { nickname: sender && sender.profile && sender.profile.nickname || '拼吧用户',
+avatarKind: avatarKindFromGender(sender && sender.profile && sender.profile.gender),
+role: message.memberId && state.members.find((item) => item.id === message.memberId)?.role === 'OWNER' ? 'OWNER' : 'MEMBER' },
+createdAt: message.createdAt
+};
 }
-
 function isMockRideJoinable(activity, at) {
-  if (!activity || activity.type !== 'ride') return false;
-  if (!['RECRUITING', 'FORMED'].includes(activity.status)) return false;
-  if (activity.memberCount >= 7) return false;
-  if (Date.parse(activity.deadlineAt) <= Date.parse(at)) return false;
-  return true;
+if (!activity || activity.type !== 'ride') return false;
+if (!['RECRUITING', 'FORMED'].includes(activity.status)) return false;
+if (activity.memberCount >= 7) return false;
+if (Date.parse(activity.deadlineAt) <= Date.parse(at)) return false;
+return true;
 }
-
 function mockRideJoinUnavailableReason(activity, at) {
-  if (activity.status === 'CANCELLED') return '行程已取消';
-  if (activity.status === 'EXPIRED') return '行程已过期';
-  if (!['RECRUITING', 'FORMED'].includes(activity.status)) return '当前行程暂不可加入';
-  if (Number(activity.memberCount || 0) >= 7) return '行程已满员';
-  const now = Date.parse(at);
-  const deadline = Date.parse(activity.deadlineAt);
-  if (!Number.isFinite(now) || !Number.isFinite(deadline)) return '加入资格暂不可用，请稍后重试';
-  if (deadline <= now) return '报名已截止';
-  return '';
+if (activity.status === 'CANCELLED') return '行程已取消';
+if (activity.status === 'EXPIRED') return '行程已过期';
+if (!['RECRUITING', 'FORMED'].includes(activity.status)) return '当前行程暂不可加入';
+if (Number(activity.memberCount || 0) >= 7) return '行程已满员';
+const now = Date.parse(at);
+const deadline = Date.parse(activity.deadlineAt);
+if (!Number.isFinite(now) || !Number.isFinite(deadline)) return '加入资格暂不可用，请稍后重试';
+if (deadline <= now) return '报名已截止';
+return '';
 }
-
 function isMockRideAcceptable(activity, at) {
-  if (!activity || activity.type !== 'ride' || !['RECRUITING', 'FORMED'].includes(activity.status)) return false;
-  const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
-  if (!fulfillment || fulfillment.status !== 'UNASSIGNED') return false;
-  return Date.parse(activity.typeData && activity.typeData.pickupWindowEnd) > Date.parse(at);
+if (!activity || activity.type !== 'ride' || !['RECRUITING', 'FORMED'].includes(activity.status)) return false;
+const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
+if (!fulfillment || fulfillment.status !== 'UNASSIGNED') return false;
+return Date.parse(activity.typeData && activity.typeData.pickupWindowEnd) > Date.parse(at);
 }
-
 // Authenticated self-profile DTO. Public activity responses never use this helper.
 function selfUser(user) {
-  return user ? {
-    role: user.role,
-    status: user.status,
-    onboarding: user.onboarding ? clone(user.onboarding) : { roleIntent: null, completedAt: null },
-    profile: user.profile ? {
-      nickname: user.profile.nickname,
-      gender: user.profile.gender || null,
-      city: user.profile.city,
-      interests: clone(user.profile.interests || []),
-      birthDate: user.profile.birthDate || null,
-      mbti: user.profile.mbti || null,
-      adultConfirmed: user.profile.adultConfirmed === true,
-      avatar: user.profile.avatar && user.profile.avatar.status === 'ACTIVE' ? clone(user.profile.avatar) : null
-    } : null,
-    profileComplete: completeRideProfile(user.profile)
-  } : null;
+return user ? {
+role: user.role,
+status: user.status,
+onboarding: user.onboarding ? clone(user.onboarding) : { roleIntent: null, completedAt: null },
+profile: user.profile ? {
+nickname: user.profile.nickname,
+gender: user.profile.gender || null,
+city: user.profile.city,
+interests: clone(user.profile.interests || []),
+birthDate: user.profile.birthDate || null,
+mbti: user.profile.mbti || null,
+adultConfirmed: user.profile.adultConfirmed === true,
+avatar: user.profile.avatar && user.profile.avatar.status === 'ACTIVE' ? clone(user.profile.avatar) : null
+} : null,
+profileComplete: completeRideProfile(user.profile)
+} : null;
 }
-
 function publicDriverApplication(application) {
-  if (!application) return null;
-  return clone({
-    status: application.status,
-    revision: application.revision,
-    summary: application.summary,
-    submittedAt: application.submittedAt,
-    updatedAt: application.updatedAt,
-    review: application.review ? { reasonCode: application.review.reasonCode || '', reviewedAt: application.review.reviewedAt } : null
-  });
+if (!application) return null;
+return clone({
+status: application.status,
+revision: application.revision,
+summary: application.summary,
+submittedAt: application.submittedAt,
+updatedAt: application.updatedAt,
+review: application.review ? { reasonCode: application.review.reasonCode || '', reviewedAt: application.review.reviewedAt } : null
+});
 }
-
 function publicApplication(application) {
-  return {
-    id: application.id,
-    status: application.status,
-    note: application.note || '',
-    autoJoinConsent: application.autoJoinConsent === true,
-    applicant: application.applicant && application.applicant.nickname
-      ? { nickname: application.applicant.nickname }
-      : null,
-    createdAt: application.createdAt,
-    updatedAt: application.updatedAt,
-    approvedAt: application.approvedAt
-  };
+return {
+id: application.id,
+status: application.status,
+note: application.note || '',
+autoJoinConsent: application.autoJoinConsent === true,
+applicant: application.applicant && application.applicant.nickname
+? { nickname: application.applicant.nickname }
+: null,
+createdAt: application.createdAt,
+updatedAt: application.updatedAt,
+approvedAt: application.approvedAt
+};
 }
-
 function publicNotification(notification) {
-  return clone({
-    id: notification.id,
-    type: notification.type,
-    target: resolveNotificationTarget(notification.type),
-    activityId: notification.activityId,
-    title: notification.title,
-    read: notification.read === true,
-    createdAt: notification.createdAt,
-    readAt: notification.readAt
-  });
+return clone({
+id: notification.id,
+type: notification.type,
+target: resolveNotificationTarget(notification.type),
+activityId: notification.activityId,
+title: notification.title,
+read: notification.read === true,
+createdAt: notification.createdAt,
+readAt: notification.readAt
+});
 }
-
 function publicActivityQuestion(question) {
-  return clone({
-    id: question.id,
-    activityId: question.activityId,
-    content: question.content,
-    asker: question.asker && question.asker.nickname ? { nickname: question.asker.nickname } : null,
-    answer: question.answer
-      ? {
-          content: question.answer.content,
-          responder: question.answer.responder && question.answer.responder.nickname
-            ? { nickname: question.answer.responder.nickname }
-            : null,
-          answeredAt: question.answer.answeredAt
-        }
-      : null,
-    createdAt: question.createdAt,
-    updatedAt: question.updatedAt
-  });
+return clone({
+id: question.id,
+activityId: question.activityId,
+content: question.content,
+asker: question.asker && question.asker.nickname ? { nickname: question.asker.nickname } : null,
+answer: question.answer
+? {
+content: question.answer.content,
+responder: question.answer.responder && question.answer.responder.nickname
+? { nickname: question.answer.responder.nickname }
+: null,
+answeredAt: question.answer.answeredAt
 }
-
+: null,
+createdAt: question.createdAt,
+updatedAt: question.updatedAt
+});
+}
 function publicActivity(activity, options = {}) {
-  // Normalize legacy capacity even for callers that bypass the public list/detail readers.
-  activity = normalizeActivityForRead(activity);
-  const anonymous = options && options.anonymous === true;
-  const publicAt = options && options.at || new Date();
-  const viewerApplication = anonymous
-    ? null
-    : state.applications
-      .filter((item) => item.activityId === activity.id && item.applicantId === currentUserId)
-      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
-  const viewerMember = anonymous ? null : activeMember(activity.id, currentUserId);
-  const storedType = activity.type;
-  const viewerRole = anonymous
-    ? 'guest'
-    : activity.ownerId === currentUserId
-      ? 'owner'
-      : viewerMember
-        ? 'member'
-        : viewerApplication ? 'applicant' : 'guest';
-  const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, meetingPoint, meetingGeoPoint, _distanceMeters, ...safe } = activity;
-  if (meetingPoint && typeof meetingPoint.label === 'string') {
-    safe.meetingPoint = { label: meetingPoint.label, address: typeof meetingPoint.address === 'string' ? meetingPoint.address : '' };
-  }
-  if (storedType === 'companion') safe.typeData = normalizeMockCompanionTypeDataForRead(safe.typeData);
-  if (storedType === 'food') safe.typeData = normalizeMockFoodTypeDataForRead(safe.typeData);
-  if (storedType === 'product') {
-    safe.typeData = {
-      venue: safe.placeLabel || '',
-      cuisine: safe.typeData && safe.typeData.productName || '一起吃饭',
-      budgetRange: safe.typeData && safe.typeData.unitPriceRange || '',
-      dietaryNotes: '',
-      paymentMethod: 'FIFTY_FIFTY',
-      genderPreference: '',
-      mbtiPreference: ''
-    };
-  }
-  const capacity = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
-  const activeMembers = state.members
-    .filter((item) => item.activityId === activity.id && item.status === 'ACTIVE')
-    .sort((left, right) => (left.role === 'OWNER' ? -1 : 0) - (right.role === 'OWNER' ? -1 : 0)
-      || String(left.joinedAt || '').localeCompare(String(right.joinedAt || '')));
-  const activeById = new Map(activeMembers.map((item) => [item.id, item]));
-  const resolvedRoster = normalizeAvatarRoster(avatarRoster).filter((item) => activeById.has(item.memberId));
-  const rosterIds = new Set(resolvedRoster.map((item) => item.memberId));
-  for (const member of activeMembers) {
-    if (!rosterIds.has(member.id)) resolvedRoster.push({ memberId: member.id, avatarKind: member.avatarKind || null });
-  }
-  const profilesByMemberId = Object.fromEntries(activeMembers.map((member) => {
-    const user = userById(member.userId);
-    return [member.id, user && user.status === 'ACTIVE' ? user.profile || null : null];
-  }));
-  const result = {
-    ...clone(safe),
-    type: LEGACY_ACTIVITY_TYPE_MAP[storedType] || storedType,
-    minMembers: activity.minMembers || activity.minPassengers || Math.min(2, capacity),
-    maxMembers: capacity,
-    avatarSlots: publicAvatarSlots(resolvedRoster, capacity, profilesByMemberId),
-    remainingCapacity: Math.max(0, Number(capacity) - Number(activity.memberCount || 0)),
-    status: activity.status,
-    formedAt: activity.status === 'FORMED' && Number.isFinite(Date.parse(activity.formedAt))
-      ? activity.formedAt
-      : null,
-    viewerRole
-  };
-  if (result.owner) result.owner = { nickname: String(result.owner.nickname || '') };
-  const ownerMember = activeMembers.find((member) => member.activityId === activity.id && member.role === 'OWNER'
-    && (!activity.ownerId || member.userId === activity.ownerId))
-    || activeMembers.find((member) => member.activityId === activity.id && member.userId === activity.ownerId);
-  const ownerUser = activity.ownerId ? userById(activity.ownerId) : ownerMember ? userById(ownerMember.userId) : null;
-  const ownerAge = calculateAgeOnMacauDate(
-    ownerUser && ownerUser.status === 'ACTIVE' && ownerUser.profile && ownerUser.profile.birthDate,
-    publicAt
-  );
-  result.ownerProfile = {
-    nickname: result.owner && result.owner.nickname || '拼吧用户',
-    avatar: publicAvatarSlot(ownerUser && ownerUser.status === 'ACTIVE' ? ownerUser.profile : null),
-    gender: ownerUser && ownerUser.status === 'ACTIVE' && ['MALE', 'FEMALE'].includes(ownerUser.profile && ownerUser.profile.gender)
-      ? ownerUser.profile.gender
-      : null,
-    age: Number.isInteger(ownerAge) && ownerAge >= 18 && ownerAge <= 150 ? ownerAge : null,
-    mbti: ownerUser && ownerUser.status === 'ACTIVE' && USER_MBTI_TYPES.includes(ownerUser.profile && ownerUser.profile.mbti)
-      ? ownerUser.profile.mbti
-      : null
-  };
-  if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) result.legacy = { sourceType: storedType, readOnly: true };
-  if (viewerApplication) result.viewerApplication = publicApplication(viewerApplication);
-  if (viewerMember) {
-    result.viewerMembership = {
-      role: viewerMember.role,
-      status: viewerMember.status,
-      joinedAt: viewerMember.joinedAt,
-      ...(storedType === 'ride' ? { luggageType: viewerMember.luggageType || null } : {})
-    };
-  }
-  if (Number.isFinite(_distanceMeters)) result.nearby = { distanceMeters: Math.max(0, Math.round(_distanceMeters)) };
-  return result;
+// Normalize legacy capacity even for callers that bypass the public list/detail readers.
+activity = normalizeActivityForRead(activity);
+const anonymous = options && options.anonymous === true;
+const publicAt = options && options.at || new Date();
+const viewerApplication = anonymous
+? null
+: state.applications
+.filter((item) => item.activityId === activity.id && item.applicantId === currentUserId)
+.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+const viewerMember = anonymous ? null : activeMember(activity.id, currentUserId);
+const storedType = activity.type;
+const viewerRole = anonymous
+? 'guest'
+: activity.ownerId === currentUserId
+? 'owner'
+: viewerMember
+? 'member'
+: viewerApplication ? 'applicant' : 'guest';
+const { contactInfo, ownerId, version, suspension, operationKeyHash, avatarRoster, birthDate, profile, meetingPoint, meetingGeoPoint, _distanceMeters, ...safe } = activity;
+if (meetingPoint && typeof meetingPoint.label === 'string') {
+safe.meetingPoint = { label: meetingPoint.label, address: typeof meetingPoint.address === 'string' ? meetingPoint.address : '' };
 }
-
+if (storedType === 'companion') safe.typeData = normalizeMockCompanionTypeDataForRead(safe.typeData);
+if (storedType === 'food') safe.typeData = normalizeMockFoodTypeDataForRead(safe.typeData);
+if (storedType === 'product') {
+safe.typeData = {
+venue: safe.placeLabel || '',
+cuisine: safe.typeData && safe.typeData.productName || '一起吃饭',
+budgetRange: safe.typeData && safe.typeData.unitPriceRange || '',
+dietaryNotes: '',
+paymentMethod: 'FIFTY_FIFTY',
+genderPreference: '',
+mbtiPreference: ''
+};
+}
+const capacity = activity.maxMembers || activity.maxPassengers || activity.targetMembers;
+const activeMembers = state.members
+.filter((item) => item.activityId === activity.id && item.status === 'ACTIVE')
+.sort((left, right) => (left.role === 'OWNER' ? -1 : 0) - (right.role === 'OWNER' ? -1 : 0)
+|| String(left.joinedAt || '').localeCompare(String(right.joinedAt || '')));
+const activeById = new Map(activeMembers.map((item) => [item.id, item]));
+const resolvedRoster = normalizeAvatarRoster(avatarRoster).filter((item) => activeById.has(item.memberId));
+const rosterIds = new Set(resolvedRoster.map((item) => item.memberId));
+for (const member of activeMembers) {
+if (!rosterIds.has(member.id)) resolvedRoster.push({ memberId: member.id, avatarKind: member.avatarKind || null });
+}
+const profilesByMemberId = Object.fromEntries(activeMembers.map((member) => {
+const user = userById(member.userId);
+return [member.id, user && user.status === 'ACTIVE' ? user.profile || null : null];
+}));
+const result = {
+...clone(safe),
+type: LEGACY_ACTIVITY_TYPE_MAP[storedType] || storedType,
+minMembers: activity.minMembers || activity.minPassengers || Math.min(2, capacity),
+maxMembers: capacity,
+avatarSlots: publicAvatarSlots(resolvedRoster, capacity, profilesByMemberId),
+remainingCapacity: Math.max(0, Number(capacity) - Number(activity.memberCount || 0)),
+status: activity.status,
+formedAt: activity.status === 'FORMED' && Number.isFinite(Date.parse(activity.formedAt))
+? activity.formedAt
+: null,
+viewerRole
+};
+if (result.owner) result.owner = { nickname: String(result.owner.nickname || '') };
+const ownerMember = activeMembers.find((member) => member.activityId === activity.id && member.role === 'OWNER'
+&& (!activity.ownerId || member.userId === activity.ownerId))
+|| activeMembers.find((member) => member.activityId === activity.id && member.userId === activity.ownerId);
+const ownerUser = activity.ownerId ? userById(activity.ownerId) : ownerMember ? userById(ownerMember.userId) : null;
+const ownerAge = calculateAgeOnMacauDate(
+ownerUser && ownerUser.status === 'ACTIVE' && ownerUser.profile && ownerUser.profile.birthDate,
+publicAt
+);
+result.ownerProfile = {
+nickname: result.owner && result.owner.nickname || '拼吧用户',
+avatar: publicAvatarSlot(ownerUser && ownerUser.status === 'ACTIVE' ? ownerUser.profile : null),
+gender: ownerUser && ownerUser.status === 'ACTIVE' && ['MALE', 'FEMALE'].includes(ownerUser.profile && ownerUser.profile.gender)
+? ownerUser.profile.gender
+: null,
+age: Number.isInteger(ownerAge) && ownerAge >= 18 && ownerAge <= 150 ? ownerAge : null,
+mbti: ownerUser && ownerUser.status === 'ACTIVE' && USER_MBTI_TYPES.includes(ownerUser.profile && ownerUser.profile.mbti)
+? ownerUser.profile.mbti
+: null
+};
+if (LEGACY_ACTIVITY_TYPE_MAP[storedType]) result.legacy = { sourceType: storedType, readOnly: true };
+if (viewerApplication) result.viewerApplication = publicApplication(viewerApplication);
+if (viewerMember) {
+result.viewerMembership = {
+role: viewerMember.role,
+status: viewerMember.status,
+joinedAt: viewerMember.joinedAt,
+...(storedType === 'ride' ? { luggageType: viewerMember.luggageType || null } : {})
+};
+}
+if (Number.isFinite(_distanceMeters)) result.nearby = { distanceMeters: Math.max(0, Math.round(_distanceMeters)) };
+return result;
+}
 function fail(code, message, details) {
-  return { ok: false, error: { code, message, ...(details ? { details } : {}) } };
+return { ok: false, error: { code, message, ...(details ? { details } : {}) } };
 }
-
 function ok(data) {
-  persist();
-  return { ok: true, data };
+persist();
+return { ok: true, data };
 }
-
 function requireUser() {
-  const user = userById(currentUserId);
-  if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
-  if (user.status !== 'ACTIVE') throw fail('ACCOUNT_DISABLED', '账号已被限制，请联系平台处理');
-  return user;
+const user = userById(currentUserId);
+if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
+if (user.status !== 'ACTIVE') throw fail('ACCOUNT_DISABLED', '账号已被限制，请联系平台处理');
+return user;
 }
-
 function requireKnownUser() {
-  const user = userById(currentUserId);
-  if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
-  return user;
+const user = userById(currentUserId);
+if (!user) throw fail('UNAUTHENTICATED', '请先登录后再操作');
+return user;
 }
-
 function requireActiveUser(requireProfile = false) {
-  const user = requireUser();
-  if (requireProfile) {
-    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
-  }
-  return user;
+const user = requireUser();
+if (requireProfile) {
+assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
 }
-
+return user;
+}
 function requireApprovedDriver(requireProfile = false) {
-  const user = requireUser();
-  if (requireProfile) {
-    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
-  }
-  const profile = driverProfile();
-  assert(profile && profile.canAcceptRide === true, 'DRIVER_NOT_APPROVED', '司机资格尚未通过审核');
-  return user;
+const user = requireUser();
+if (requireProfile) {
+assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
 }
-
+const profile = driverProfile();
+assert(profile && profile.canAcceptRide === true, 'DRIVER_NOT_APPROVED', '司机资格尚未通过审核');
+return user;
+}
 function assert(condition, code, message, details) {
-  if (!condition) throw fail(code, message, details);
+if (!condition) throw fail(code, message, details);
 }
-
 function normalizedContent(value, field, min, max) {
-  const content = typeof value === 'string' ? value.trim() : '';
-  assert(content.length >= min && content.length <= max, 'VALIDATION_ERROR', `${field}长度不符合要求`);
-  return content;
+const content = typeof value === 'string' ? value.trim() : '';
+assert(content.length >= min && content.length <= max, 'VALIDATION_ERROR', `${field}长度不符合要求`);
+return content;
 }
-
 function optionalNormalizedContent(value, field, max) {
-  const content = typeof value === 'string' ? value.trim() : '';
-  assert(content.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`);
-  return content;
+const content = typeof value === 'string' ? value.trim() : '';
+assert(content.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`);
+return content;
 }
-
 function requiredNormalizedContent(value, field, min, max) {
-  const content = typeof value === 'string' ? value.trim() : '';
-  assert(content.length > 0, 'VALIDATION_ERROR', `${field}不能为空`);
-  assert(content.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`);
-  assert(content.length >= min, 'VALIDATION_ERROR', `${field}至少需要${min}个字符`);
-  return content;
+const content = typeof value === 'string' ? value.trim() : '';
+assert(content.length > 0, 'VALIDATION_ERROR', `${field}不能为空`);
+assert(content.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`);
+assert(content.length >= min, 'VALIDATION_ERROR', `${field}至少需要${min}个字符`);
+return content;
 }
-
 function optionalMockEnum(value, field, allowed) {
-  if (value === undefined || value === null || value === '') return '';
-  assert(allowed.includes(value), 'VALIDATION_ERROR', `${field}选项无效`, { field });
-  return value;
+if (value === undefined || value === null || value === '') return '';
+assert(allowed.includes(value), 'VALIDATION_ERROR', `${field}选项无效`, { field });
+return value;
 }
-
 function normalizeMockCompanionPreferences(source, forRead = false) {
-  const preferences = source === undefined || source === null ? {} : source;
-  if (!forRead) {
-    assert(preferences && typeof preferences === 'object' && !Array.isArray(preferences), 'VALIDATION_ERROR', '同行偏好格式无效', { field: 'preferences' });
-    assert(Object.keys(preferences).every((key) => Object.prototype.hasOwnProperty.call(COMPANION_PREFERENCE_VALUES, key)), 'VALIDATION_ERROR', '同行偏好包含未知字段', { field: 'preferences' });
-  }
-  const labels = {
-    friendGender: '拼友性别偏好', mbti: 'MBTI 频道偏好', navigationStyle: '导航属性偏好',
-    travelPace: '出行节奏偏好', photoHabit: '拍照习惯偏好', silenceComfort: '沉默兼容度偏好',
-    garlic: '饭后蒜味偏好', fragrance: '香水气场偏好', slippers: '拖鞋出门偏好'
-  };
-  return Object.fromEntries(Object.entries(COMPANION_PREFERENCE_VALUES).map(([key, allowed]) => {
-    const value = preferences && preferences[key];
-    return [key, forRead ? (allowed.includes(value) ? value : '') : optionalMockEnum(value, labels[key], allowed)];
-  }));
+const preferences = source === undefined || source === null ? {} : source;
+if (!forRead) {
+assert(preferences && typeof preferences === 'object' && !Array.isArray(preferences), 'VALIDATION_ERROR', '同行偏好格式无效', { field: 'preferences' });
+assert(Object.keys(preferences).every((key) => Object.prototype.hasOwnProperty.call(COMPANION_PREFERENCE_VALUES, key)), 'VALIDATION_ERROR', '同行偏好包含未知字段', { field: 'preferences' });
 }
-
+const labels = {
+friendGender: '拼友性别偏好', mbti: 'MBTI 频道偏好', navigationStyle: '导航属性偏好',
+travelPace: '出行节奏偏好', photoHabit: '拍照习惯偏好', silenceComfort: '沉默兼容度偏好',
+garlic: '饭后蒜味偏好', fragrance: '香水气场偏好', slippers: '拖鞋出门偏好'
+};
+return Object.fromEntries(Object.entries(COMPANION_PREFERENCE_VALUES).map(([key, allowed]) => {
+const value = preferences && preferences[key];
+return [key, forRead ? (allowed.includes(value) ? value : '') : optionalMockEnum(value, labels[key], allowed)];
+}));
+}
 function normalizeMockCompanionTypeData(source) {
-  const typeData = source && typeof source === 'object' ? source : {};
-  assert(COMPANION_TIME_FLEXIBILITY.includes(typeData.timeFlexibility), 'VALIDATION_ERROR', '时间弹性选项无效');
-  assert(COMPANION_TRANSPORT_PREFERENCES.includes(typeData.transportPreference), 'VALIDATION_ERROR', '出行方式倾向选项无效');
-  assert(MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType || 'NONE'), 'VALIDATION_ERROR', '我的行李选项无效');
-  return {
-    originLabel: requiredNormalizedContent(typeData.originLabel, '出发地', 1, 40),
-    destinationLabel: requiredNormalizedContent(typeData.destinationLabel, '目的地', 1, 40),
-    timeFlexibility: typeData.timeFlexibility,
-    transportPreference: typeData.transportPreference,
-    luggageType: typeData.luggageType || 'NONE',
-    preferences: normalizeMockCompanionPreferences(typeData.preferences)
-  };
+const typeData = source && typeof source === 'object' ? source : {};
+assert(COMPANION_TIME_FLEXIBILITY.includes(typeData.timeFlexibility), 'VALIDATION_ERROR', '时间弹性选项无效');
+assert(COMPANION_TRANSPORT_PREFERENCES.includes(typeData.transportPreference), 'VALIDATION_ERROR', '出行方式倾向选项无效');
+assert(MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType || 'NONE'), 'VALIDATION_ERROR', '我的行李选项无效');
+return {
+originLabel: requiredNormalizedContent(typeData.originLabel, '出发地', 1, 40),
+destinationLabel: requiredNormalizedContent(typeData.destinationLabel, '目的地', 1, 40),
+timeFlexibility: typeData.timeFlexibility,
+transportPreference: typeData.transportPreference,
+luggageType: typeData.luggageType || 'NONE',
+preferences: normalizeMockCompanionPreferences(typeData.preferences)
+};
 }
-
 function normalizeMockCompanionTypeDataForRead(source) {
-  const typeData = source && typeof source === 'object' ? source : {};
-  return {
-    originLabel: typeof typeData.originLabel === 'string' ? typeData.originLabel : '',
-    destinationLabel: typeof typeData.destinationLabel === 'string' ? typeData.destinationLabel : '',
-    timeFlexibility: COMPANION_TIME_FLEXIBILITY.includes(typeData.timeFlexibility) ? typeData.timeFlexibility : 'ON_TIME',
-    transportPreference: COMPANION_TRANSPORT_PREFERENCES.includes(typeData.transportPreference) ? typeData.transportPreference : 'DISCUSS_AFTER_FORMED',
-    luggageType: MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType) ? typeData.luggageType : 'NONE',
-    preferences: normalizeMockCompanionPreferences(typeData.preferences, true)
-  };
+const typeData = source && typeof source === 'object' ? source : {};
+return {
+originLabel: typeof typeData.originLabel === 'string' ? typeData.originLabel : '',
+destinationLabel: typeof typeData.destinationLabel === 'string' ? typeData.destinationLabel : '',
+timeFlexibility: COMPANION_TIME_FLEXIBILITY.includes(typeData.timeFlexibility) ? typeData.timeFlexibility : 'ON_TIME',
+transportPreference: COMPANION_TRANSPORT_PREFERENCES.includes(typeData.transportPreference) ? typeData.transportPreference : 'DISCUSS_AFTER_FORMED',
+luggageType: MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType) ? typeData.luggageType : 'NONE',
+preferences: normalizeMockCompanionPreferences(typeData.preferences, true)
+};
 }
-
 function normalizeMockFoodTypeData(source) {
-  const typeData = source && typeof source === 'object' ? source : {};
-  const paymentMethod = typeData.paymentMethod === undefined ? 'FIFTY_FIFTY' : typeData.paymentMethod;
-  assert(FOOD_PAYMENT_METHODS.includes(paymentMethod), 'VALIDATION_ERROR', '拼桌形式选项无效', { field: 'paymentMethod' });
-  return {
-    venue: requiredNormalizedContent(typeData.venue, '餐厅或食堂', 1, 50),
-    cuisine: requiredNormalizedContent(typeData.cuisine, '口味或菜系', 1, 30),
-    budgetRange: paymentMethod === 'FIFTY_FIFTY'
-      ? requiredNormalizedContent(typeData.budgetRange, '人均预算', 1, 30)
-      : optionalNormalizedContent(typeData.budgetRange, '人均预算', 30),
-    dietaryNotes: optionalNormalizedContent(typeData.dietaryNotes, '饮食偏好', 100),
-    paymentMethod,
-    genderPreference: optionalMockEnum(typeData.genderPreference, '饭友性别偏好', FOOD_GENDER_PREFERENCES),
-    mbtiPreference: optionalMockEnum(typeData.mbtiPreference, '饭友 MBTI 偏好', USER_MBTI_TYPES)
-  };
+const typeData = source && typeof source === 'object' ? source : {};
+const paymentMethod = typeData.paymentMethod === undefined ? 'FIFTY_FIFTY' : typeData.paymentMethod;
+assert(FOOD_PAYMENT_METHODS.includes(paymentMethod), 'VALIDATION_ERROR', '拼桌形式选项无效', { field: 'paymentMethod' });
+return {
+venue: requiredNormalizedContent(typeData.venue, '餐厅或食堂', 1, 50),
+cuisine: requiredNormalizedContent(typeData.cuisine, '口味或菜系', 1, 30),
+budgetRange: paymentMethod === 'FIFTY_FIFTY'
+? requiredNormalizedContent(typeData.budgetRange, '人均预算', 1, 30)
+: optionalNormalizedContent(typeData.budgetRange, '人均预算', 30),
+dietaryNotes: optionalNormalizedContent(typeData.dietaryNotes, '饮食偏好', 100),
+paymentMethod,
+genderPreference: optionalMockEnum(typeData.genderPreference, '饭友性别偏好', FOOD_GENDER_PREFERENCES),
+mbtiPreference: optionalMockEnum(typeData.mbtiPreference, '饭友 MBTI 偏好', USER_MBTI_TYPES)
+};
 }
-
 function normalizeMockFoodTypeDataForRead(source) {
-  const typeData = source && typeof source === 'object' ? source : {};
-  const paymentMethod = FOOD_PAYMENT_METHODS.includes(typeData.paymentMethod) ? typeData.paymentMethod : 'FIFTY_FIFTY';
-  return {
-    venue: typeof typeData.venue === 'string' ? typeData.venue : '',
-    cuisine: typeof typeData.cuisine === 'string' ? typeData.cuisine : '',
-    budgetRange: typeof typeData.budgetRange === 'string' ? typeData.budgetRange : typeof typeData.budget === 'string' ? typeData.budget : '',
-    dietaryNotes: typeof typeData.dietaryNotes === 'string' ? typeData.dietaryNotes : '',
-    paymentMethod,
-    genderPreference: FOOD_GENDER_PREFERENCES.includes(typeData.genderPreference) ? typeData.genderPreference : '',
-    mbtiPreference: USER_MBTI_TYPES.includes(typeData.mbtiPreference) ? typeData.mbtiPreference : ''
-  };
+const typeData = source && typeof source === 'object' ? source : {};
+const paymentMethod = FOOD_PAYMENT_METHODS.includes(typeData.paymentMethod) ? typeData.paymentMethod : 'FIFTY_FIFTY';
+return {
+venue: typeof typeData.venue === 'string' ? typeData.venue : '',
+cuisine: typeof typeData.cuisine === 'string' ? typeData.cuisine : '',
+budgetRange: typeof typeData.budgetRange === 'string' ? typeData.budgetRange : typeof typeData.budget === 'string' ? typeData.budget : '',
+dietaryNotes: typeof typeData.dietaryNotes === 'string' ? typeData.dietaryNotes : '',
+paymentMethod,
+genderPreference: FOOD_GENDER_PREFERENCES.includes(typeData.genderPreference) ? typeData.genderPreference : '',
+mbtiPreference: USER_MBTI_TYPES.includes(typeData.mbtiPreference) ? typeData.mbtiPreference : ''
+};
 }
-
 function validatedId(value, field) {
-  const id = typeof value === 'string' ? value.trim() : '';
-  assert(id.length >= 1 && id.length <= 80, 'VALIDATION_ERROR', `${field}格式无效`);
-  return id;
+const id = typeof value === 'string' ? value.trim() : '';
+assert(id.length >= 1 && id.length <= 80, 'VALIDATION_ERROR', `${field}格式无效`);
+return id;
 }
-
 function optionalFilterString(value, field, max) {
-  if (value === undefined || value === null || value === '') return '';
-  assert(typeof value === 'string', 'VALIDATION_ERROR', `${field}格式无效`, { field });
-  const normalized = value.trim();
-  assert(normalized.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`, { field });
-  return normalized;
+if (value === undefined || value === null || value === '') return '';
+assert(typeof value === 'string', 'VALIDATION_ERROR', `${field}格式无效`, { field });
+const normalized = value.trim();
+assert(normalized.length <= max, 'VALIDATION_ERROR', `${field}长度不能超过${max}个字符`, { field });
+return normalized;
 }
-
 function validateActivityListFilters(input) {
-  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '筛选条件格式无效');
-  const type = optionalFilterString(input.type, '活动类型', 20);
-  const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
-  const district = optionalFilterString(input.district, '行政区', 30);
-  const keyword = optionalFilterString(input.keyword, '搜索词', 30);
-  assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效', { field: '活动类型' });
-  assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
-  assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效', { field: '行政区' });
-  return {
-    type: type || undefined,
-    city,
-    district: district || undefined,
-    keyword: keyword || undefined
-  };
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '筛选条件格式无效');
+const type = optionalFilterString(input.type, '活动类型', 20);
+const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+const district = optionalFilterString(input.district, '行政区', 30);
+const keyword = optionalFilterString(input.keyword, '搜索词', 30);
+assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效', { field: '活动类型' });
+assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
+assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效', { field: '行政区' });
+return {
+type: type || undefined,
+city,
+district: district || undefined,
+keyword: keyword || undefined
+};
 }
-
 function mockMacauPoint(latitude, longitude) {
-  const point = { latitude: Number(latitude), longitude: Number(longitude) };
-  assert(Number.isFinite(point.latitude) && Number.isFinite(point.longitude), 'VALIDATION_ERROR', '位置坐标格式无效');
-  assert(point.latitude >= 22.05 && point.latitude <= 22.25 && point.longitude >= 113.45 && point.longitude <= 113.65, 'VALIDATION_ERROR', '活动地点须位于当前试点区域');
-  return point;
+const point = { latitude: Number(latitude), longitude: Number(longitude) };
+assert(Number.isFinite(point.latitude) && Number.isFinite(point.longitude), 'VALIDATION_ERROR', '位置坐标格式无效');
+assert(point.latitude >= 22.05 && point.latitude <= 22.25 && point.longitude >= 113.45 && point.longitude <= 113.65, 'VALIDATION_ERROR', '活动地点须位于当前试点区域');
+return point;
 }
-
 function validateMockMeetingPoint(value) {
-  if (value === undefined || value === null) return undefined;
-  assert(value && typeof value === 'object' && !Array.isArray(value), 'VALIDATION_ERROR', '会合地点格式无效');
-  const allowed = ['label', 'address', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
-  assert(Object.keys(value).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '会合地点包含未知字段');
-  assert(value.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '会合地点坐标系必须为 GCJ-02');
-  assert(value.provider === 'AMAP', 'VALIDATION_ERROR', '请选择高德地图地点');
-  const point = mockMacauPoint(value.latitude, value.longitude);
-  return {
-    label: requiredNormalizedContent(value.label, '会合地点', 1, 80),
-    address: optionalNormalizedContent(value.address, '会合地点地址', 120),
-    ...point,
-    coordinateSystem: 'GCJ02', provider: 'AMAP',
-    poiId: optionalNormalizedContent(value.poiId, '高德地点ID', 80)
-  };
+if (value === undefined || value === null) return undefined;
+assert(value && typeof value === 'object' && !Array.isArray(value), 'VALIDATION_ERROR', '会合地点格式无效');
+const allowed = ['label', 'address', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
+assert(Object.keys(value).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '会合地点包含未知字段');
+assert(value.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '会合地点坐标系必须为 GCJ-02');
+assert(value.provider === 'AMAP', 'VALIDATION_ERROR', '请选择高德地图地点');
+const point = mockMacauPoint(value.latitude, value.longitude);
+return {
+label: requiredNormalizedContent(value.label, '会合地点', 1, 80),
+address: optionalNormalizedContent(value.address, '会合地点地址', 120),
+...point,
+coordinateSystem: 'GCJ02', provider: 'AMAP',
+poiId: optionalNormalizedContent(value.poiId, '高德地点ID', 80)
+};
 }
-
 function mockDistanceMeters(left, right) {
-  const rad = (value) => value * Math.PI / 180;
-  const lat1 = rad(left.latitude);
-  const lat2 = rad(right.latitude);
-  const deltaLat = lat2 - lat1;
-  const deltaLon = rad(right.longitude - left.longitude);
-  const value = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
-  return Math.round(6371008.8 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)));
+const rad = (value) => value * Math.PI / 180;
+const lat1 = rad(left.latitude);
+const lat2 = rad(right.latitude);
+const deltaLat = lat2 - lat1;
+const deltaLon = rad(right.longitude - left.longitude);
+const value = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+return Math.round(6371008.8 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)));
 }
-
 function mockNearbyFingerprint(query) {
-  const text = `${query.latitude.toFixed(5)}|${query.longitude.toFixed(5)}|${query.radiusMeters}|${query.type || ''}|${query.city}|${query.district || ''}`;
-  let hash = 2166136261;
-  for (let index = 0; index < text.length; index += 1) hash = Math.imul(hash ^ text.charCodeAt(index), 16777619) >>> 0;
-  return hash.toString(36);
+const text = `${query.latitude.toFixed(5)}|${query.longitude.toFixed(5)}|${query.radiusMeters}|${query.type || ''}|${query.city}|${query.district || ''}`;
+let hash = 2166136261;
+for (let index = 0; index < text.length; index += 1) hash = Math.imul(hash ^ text.charCodeAt(index), 16777619) >>> 0;
+return hash.toString(36);
 }
-
 function mockNearbyTuple(activity) {
-  return { distanceMeters: Math.max(0, Math.round(activity._distanceMeters)), startsAt: String(activity.startsAt || ''), id: String(activity.id || '') };
+return { distanceMeters: Math.max(0, Math.round(activity._distanceMeters)), startsAt: String(activity.startsAt || ''), id: String(activity.id || '') };
 }
-
 function compareMockNearbyTuple(left, right) {
-  return left.distanceMeters - right.distanceMeters || left.startsAt.localeCompare(right.startsAt) || left.id.localeCompare(right.id);
+return left.distanceMeters - right.distanceMeters || left.startsAt.localeCompare(right.startsAt) || left.id.localeCompare(right.id);
 }
-
 function mockNearbyCursor(query, after) {
-  return `nearby:${encodeURIComponent(JSON.stringify({ v: 1, a: after, f: mockNearbyFingerprint(query) }))}`;
+return `nearby:${encodeURIComponent(JSON.stringify({ v: 1, a: after, f: mockNearbyFingerprint(query) }))}`;
 }
-
 function validateMockNearby(input) {
-  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '附近筛选条件无效');
-  const allowed = ['latitude', 'longitude', 'coordinateSystem', 'radiusMeters', 'type', 'city', 'district', 'cursor', 'limit'];
-  assert(Object.keys(input).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '附近筛选条件无效');
-  assert(input.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '定位坐标系必须为 GCJ-02');
-  const point = mockMacauPoint(input.latitude, input.longitude);
-  const radiusMeters = Number(input.radiusMeters === undefined ? 3000 : input.radiusMeters);
-  const limit = Number(input.limit === undefined ? 10 : input.limit);
-  assert(Number.isInteger(radiusMeters) && radiusMeters >= 100 && radiusMeters <= 10000, 'VALIDATION_ERROR', '搜索半径必须在100到10000之间');
-  assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量无效');
-  const type = optionalFilterString(input.type, '活动类型', 20);
-  const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
-  const district = optionalFilterString(input.district, '行政区', 30);
-  assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效');
-  assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域');
-  assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效');
-  const query = { ...point, radiusMeters, type: type || undefined, city, district: district || undefined };
-  let after = null;
-  if (input.cursor) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(String(input.cursor).replace(/^nearby:/, '')));
-      assert(parsed && parsed.v === 1 && parsed.a && parsed.f === mockNearbyFingerprint(query), 'VALIDATION_ERROR', '分页游标与当前筛选条件不匹配');
-      assert(Number.isSafeInteger(parsed.a.distanceMeters) && typeof parsed.a.startsAt === 'string' && typeof parsed.a.id === 'string', 'VALIDATION_ERROR', '分页游标无效');
-      after = parsed.a;
-    } catch (error) {
-      if (error && error.ok === false) throw error;
-      throw fail('VALIDATION_ERROR', '分页游标无效');
-    }
-  }
-  return { ...query, limit, after };
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '附近筛选条件无效');
+const allowed = ['latitude', 'longitude', 'coordinateSystem', 'radiusMeters', 'type', 'city', 'district', 'cursor', 'limit'];
+assert(Object.keys(input).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '附近筛选条件无效');
+assert(input.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '定位坐标系必须为 GCJ-02');
+const point = mockMacauPoint(input.latitude, input.longitude);
+const radiusMeters = Number(input.radiusMeters === undefined ? 3000 : input.radiusMeters);
+const limit = Number(input.limit === undefined ? 10 : input.limit);
+assert(Number.isInteger(radiusMeters) && radiusMeters >= 100 && radiusMeters <= 10000, 'VALIDATION_ERROR', '搜索半径必须在100到10000之间');
+assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量无效');
+const type = optionalFilterString(input.type, '活动类型', 20);
+const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+const district = optionalFilterString(input.district, '行政区', 30);
+assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效');
+assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域');
+assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效');
+const query = { ...point, radiusMeters, type: type || undefined, city, district: district || undefined };
+let after = null;
+if (input.cursor) {
+try {
+const parsed = JSON.parse(decodeURIComponent(String(input.cursor).replace(/^nearby:/, '')));
+assert(parsed && parsed.v === 1 && parsed.a && parsed.f === mockNearbyFingerprint(query), 'VALIDATION_ERROR', '分页游标与当前筛选条件不匹配');
+assert(Number.isSafeInteger(parsed.a.distanceMeters) && typeof parsed.a.startsAt === 'string' && typeof parsed.a.id === 'string', 'VALIDATION_ERROR', '分页游标无效');
+after = parsed.a;
+} catch (error) {
+if (error && error.ok === false) throw error;
+throw fail('VALIDATION_ERROR', '分页游标无效');
 }
-
+}
+return { ...query, limit, after };
+}
 function moderateContent(content) {
-  assert(!/先付定金|司机接单|包赚|稳赚|返利|陪玩交易|援交/i.test(content), 'CONTENT_REJECTED', '内容未通过安全检查，请修改后重试');
+assert(!/先付定金|司机接单|包赚|稳赚|返利|陪玩交易|援交/i.test(content), 'CONTENT_REJECTED', '内容未通过安全检查，请修改后重试');
 }
-
 function questionActivity(activityId) {
-  const activity = normalizeActivityForRead(activityById(activityId), new Date().toISOString());
-  assert(activity, 'NOT_FOUND', '活动不存在或已失效');
-  assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
-  return activity;
+const activity = normalizeActivityForRead(activityById(activityId), new Date().toISOString());
+assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
+return activity;
 }
-
 function listActivityQuestions(input) {
-  const activityId = validatedId(input && input.activityId, '活动ID');
-  const activity = questionActivity(activityId);
-  assert(activity.status !== 'DRAFT', 'NOT_FOUND', '活动不存在或已失效');
-  const cursor = parsePublicCursor(input.cursor);
-  const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 10);
-  const items = state.activityQuestions
-    .filter((item) => item.activityId === activity.id)
-    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
-  const page = items.slice(cursor, cursor + limit + 1);
-  return {
-    items: page.slice(0, limit).map(publicActivityQuestion),
-    nextCursor: page.length > limit ? String(cursor + limit) : null
-  };
+const activityId = validatedId(input && input.activityId, '活动ID');
+const activity = questionActivity(activityId);
+assert(activity.status !== 'DRAFT', 'NOT_FOUND', '活动不存在或已失效');
+const cursor = parsePublicCursor(input.cursor);
+const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 10);
+const items = state.activityQuestions
+.filter((item) => item.activityId === activity.id)
+.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+const page = items.slice(cursor, cursor + limit + 1);
+return {
+items: page.slice(0, limit).map(publicActivityQuestion),
+nextCursor: page.length > limit ? String(cursor + limit) : null
+};
 }
-
 function askActivityQuestion(input) {
-  const user = requireUser();
-  const activityId = validatedId(input && input.activityId, '活动ID');
-  const content = normalizedContent(input && input.content, '问题内容', 2, 200);
-  const activity = questionActivity(activityId);
-  assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '该活动当前不能提问');
-  moderateContent(content);
-  const now = new Date().toISOString();
-  const question = {
-    id: nextId('question'),
-    activityId: activity.id,
-    askerId: user.id,
-    asker: user.profile && user.profile.nickname ? { nickname: user.profile.nickname } : null,
-    content,
-    answer: null,
-    submissionKeyHash: 'mock-operation',
-    createdAt: now,
-    updatedAt: now
-  };
-  state.activityQuestions.push(question);
-  return { question: publicActivityQuestion(question) };
+const user = requireUser();
+const activityId = validatedId(input && input.activityId, '活动ID');
+const content = normalizedContent(input && input.content, '问题内容', 2, 200);
+const activity = questionActivity(activityId);
+assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '该活动当前不能提问');
+moderateContent(content);
+const now = new Date().toISOString();
+const question = {
+id: nextId('question'),
+activityId: activity.id,
+askerId: user.id,
+asker: user.profile && user.profile.nickname ? { nickname: user.profile.nickname } : null,
+content,
+answer: null,
+submissionKeyHash: 'mock-operation',
+createdAt: now,
+updatedAt: now
+};
+state.activityQuestions.push(question);
+return { question: publicActivityQuestion(question) };
 }
-
 function answerActivityQuestion(input) {
-  const user = requireUser();
-  const activityId = validatedId(input && input.activityId, '活动ID');
-  const questionId = validatedId(input && input.questionId, '问题ID');
-  const content = normalizedContent(input && input.content, '回答内容', 1, 300);
-  const activity = questionActivity(activityId);
-  assert(activity.ownerId === user.id, 'FORBIDDEN', '仅活动发起者可以回答');
-  assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '该活动当前不能回答问题');
-  moderateContent(content);
-  const question = state.activityQuestions.find((item) => item.id === questionId && item.activityId === activity.id);
-  assert(question, 'NOT_FOUND', '问题不存在或已失效');
-  assert(!question.answer, 'CONFLICT', '该问题已经回答');
-  const now = new Date().toISOString();
-  question.answer = {
-    responderId: user.id,
-    responder: user.profile && user.profile.nickname ? { nickname: user.profile.nickname } : null,
-    content,
-    answeredAt: now,
-    operationKeyHash: 'mock-operation'
-  };
-  question.updatedAt = now;
-  return { question: publicActivityQuestion(question) };
+const user = requireUser();
+const activityId = validatedId(input && input.activityId, '活动ID');
+const questionId = validatedId(input && input.questionId, '问题ID');
+const content = normalizedContent(input && input.content, '回答内容', 1, 300);
+const activity = questionActivity(activityId);
+assert(activity.ownerId === user.id, 'FORBIDDEN', '仅活动发起者可以回答');
+assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '该活动当前不能回答问题');
+moderateContent(content);
+const question = state.activityQuestions.find((item) => item.id === questionId && item.activityId === activity.id);
+assert(question, 'NOT_FOUND', '问题不存在或已失效');
+assert(!question.answer, 'CONFLICT', '该问题已经回答');
+const now = new Date().toISOString();
+question.answer = {
+responderId: user.id,
+responder: user.profile && user.profile.nickname ? { nickname: user.profile.nickname } : null,
+content,
+answeredAt: now,
+operationKeyHash: 'mock-operation'
+};
+question.updatedAt = now;
+return { question: publicActivityQuestion(question) };
 }
-
 function listActivities(input) {
-  const filters = validateActivityListFilters(input);
-  const now = new Date().toISOString();
-  let candidates = state.activities.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status));
-  if (filters.type) candidates = candidates.filter((item) => (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type);
-  candidates = candidates.filter((item) => item.city === filters.city);
-  if (filters.district) candidates = candidates.filter((item) => item.district === filters.district);
-  candidates.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
-
-  const offset = parsePublicCursor(input.cursor);
-  const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 50);
-  const keyword = filters.keyword ? filters.keyword.toLowerCase() : '';
-  const items = [];
-  let rawOffset = offset;
-  let scanned = 0;
-
-  while (rawOffset < candidates.length && scanned < MAX_PUBLIC_SCAN) {
-    const candidateOffset = rawOffset;
-    const activity = normalizeActivityForRead(candidates[rawOffset], now);
-    rawOffset += 1;
-    scanned += 1;
-    const keywordMatch = !keyword || `${activity.title} ${activity.description}`.toLowerCase().includes(keyword);
-    if (['RECRUITING', 'FORMED'].includes(activity.status) && keywordMatch) {
-      if (items.length === limit) {
-        return {
-          items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
-          nextCursor: String(candidateOffset)
-        };
-      }
-      items.push(activity);
-    }
-  }
-
-  return {
-    items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
-    nextCursor: rawOffset < candidates.length ? String(rawOffset) : null
-  };
+const filters = validateActivityListFilters(input);
+const now = new Date().toISOString();
+let candidates = state.activities.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status));
+if (filters.type) candidates = candidates.filter((item) => (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type);
+candidates = candidates.filter((item) => item.city === filters.city);
+if (filters.district) candidates = candidates.filter((item) => item.district === filters.district);
+candidates.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+const offset = parsePublicCursor(input.cursor);
+const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 50);
+const keyword = filters.keyword ? filters.keyword.toLowerCase() : '';
+const items = [];
+let rawOffset = offset;
+let scanned = 0;
+while (rawOffset < candidates.length && scanned < MAX_PUBLIC_SCAN) {
+const candidateOffset = rawOffset;
+const activity = normalizeActivityForRead(candidates[rawOffset], now);
+rawOffset += 1;
+scanned += 1;
+const keywordMatch = !keyword || `${activity.title} ${activity.description}`.toLowerCase().includes(keyword);
+if (['RECRUITING', 'FORMED'].includes(activity.status) && keywordMatch) {
+if (items.length === limit) {
+return {
+items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
+nextCursor: String(candidateOffset)
+};
 }
-
+items.push(activity);
+}
+}
+return {
+items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
+nextCursor: rawOffset < candidates.length ? String(rawOffset) : null
+};
+}
 function listNearbyActivities(input) {
-  const filters = validateMockNearby(input);
-  const now = new Date().toISOString();
-  const candidates = state.activities
-    .filter((item) => ['RECRUITING', 'FORMED'].includes(item.status) && item.city === PILOT_CITY)
-    .filter((item) => !filters.type || (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type)
-    .filter((item) => !filters.district || item.district === filters.district)
-    .filter((item) => item.meetingPoint && Number.isFinite(item.meetingPoint.latitude) && Number.isFinite(item.meetingPoint.longitude))
-    .filter((item) => item.status !== 'RECRUITING' || Date.parse(item.deadlineAt) > Date.parse(now))
-    .map((item) => ({ ...item, _distanceMeters: mockDistanceMeters(filters, item.meetingPoint) }))
-    .filter((item) => item._distanceMeters <= filters.radiusMeters)
-    .sort((left, right) => compareMockNearbyTuple(mockNearbyTuple(left), mockNearbyTuple(right)));
-  const visible = filters.after ? candidates.filter((item) => compareMockNearbyTuple(mockNearbyTuple(item), filters.after) > 0) : candidates;
-  const page = visible.slice(0, filters.limit + 1);
-  const items = page.slice(0, filters.limit);
-  return {
-    items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
-    nextCursor: page.length > filters.limit ? mockNearbyCursor(filters, mockNearbyTuple(items[items.length - 1])) : null
-  };
+const filters = validateMockNearby(input);
+const now = new Date().toISOString();
+const candidates = state.activities
+.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status) && item.city === PILOT_CITY)
+.filter((item) => !filters.type || (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type)
+.filter((item) => !filters.district || item.district === filters.district)
+.filter((item) => item.meetingPoint && Number.isFinite(item.meetingPoint.latitude) && Number.isFinite(item.meetingPoint.longitude))
+.filter((item) => item.status !== 'RECRUITING' || Date.parse(item.deadlineAt) > Date.parse(now))
+.map((item) => ({ ...item, _distanceMeters: mockDistanceMeters(filters, item.meetingPoint) }))
+.filter((item) => item._distanceMeters <= filters.radiusMeters)
+.sort((left, right) => compareMockNearbyTuple(mockNearbyTuple(left), mockNearbyTuple(right)));
+const visible = filters.after ? candidates.filter((item) => compareMockNearbyTuple(mockNearbyTuple(item), filters.after) > 0) : candidates;
+const page = visible.slice(0, filters.limit + 1);
+const items = page.slice(0, filters.limit);
+return {
+items: items.map((item) => publicActivity(item, { anonymous: true, at: now })),
+nextCursor: page.length > filters.limit ? mockNearbyCursor(filters, mockNearbyTuple(items[items.length - 1])) : null
+};
 }
-
 function listActivityMemories(input = {}) {
-  const keys = Object.keys(input || {});
-  assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
-  assert(keys.every((key) => key === 'limit'), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
-  const limit = input.limit === undefined ? 6 : Number(input.limit);
-  assert(Number.isInteger(limit) && limit >= 1 && limit <= 6, 'VALIDATION_ERROR', '展示数量无效');
-  const items = [...state.activities]
-    .filter((activity) => activity.status === 'FORMED' && Number.isFinite(Date.parse(activity.formedAt)))
-    .sort((left, right) => Date.parse(right.formedAt) - Date.parse(left.formedAt) || String(right.id).localeCompare(String(left.id)))
-    .slice(0, limit)
-    .map((activity) => publicActivity(activity, { anonymous: true, at: new Date().toISOString() }));
-  return { items };
+const keys = Object.keys(input || {});
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
+assert(keys.every((key) => key === 'limit'), 'VALIDATION_ERROR', '成团记忆筛选条件无效');
+const limit = input.limit === undefined ? 6 : Number(input.limit);
+assert(Number.isInteger(limit) && limit >= 1 && limit <= 6, 'VALIDATION_ERROR', '展示数量无效');
+const items = [...state.activities]
+.filter((activity) => activity.status === 'FORMED' && Number.isFinite(Date.parse(activity.formedAt)))
+.sort((left, right) => Date.parse(right.formedAt) - Date.parse(left.formedAt) || String(right.id).localeCompare(String(left.id)))
+.slice(0, limit)
+.map((activity) => publicActivity(activity, { anonymous: true, at: new Date().toISOString() }));
+return { items };
 }
-
 function createActivity(input) {
-  const user = requireUser();
-  assert(user.profile && user.profile.adultConfirmed, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
-  const now = new Date().toISOString();
-  const activityInput = clone(input);
-  assert(ACTIVITY_TYPES.includes(activityInput.type), 'VALIDATION_ERROR', '活动类型选项无效');
-  activityInput.title = requiredNormalizedContent(activityInput.title, '标题', 2, 30);
-  activityInput.description = optionalNormalizedContent(activityInput.description, '补充说明', 300);
-  const startsAt = Date.parse(activityInput.startsAt);
-  const deadlineAt = Date.parse(activityInput.deadlineAt);
-  assert(Number.isFinite(startsAt) && startsAt > Date.parse(now), 'VALIDATION_ERROR', '活动时间必须晚于当前时间');
-  assert(startsAt - Date.parse(now) <= 7 * 24 * 60 * 60 * 1000, 'VALIDATION_ERROR', '活动开始时间不能超过7天');
-  assert(Number.isFinite(deadlineAt) && deadlineAt > Date.parse(now) && deadlineAt < startsAt, 'VALIDATION_ERROR', '报名截止时间无效');
-  const minMembers = Number(activityInput.minMembers);
-  const maxMembers = Number(activityInput.maxMembers);
-  assert(Number.isInteger(minMembers) && Number.isInteger(maxMembers) && minMembers >= 2 && maxMembers <= 20 && minMembers <= maxMembers, 'VALIDATION_ERROR', '人数设置无效');
-  assert(activityInput.typeData && typeof activityInput.typeData === 'object', 'VALIDATION_ERROR', '请补齐活动信息');
-  if (activityInput.type === 'companion') activityInput.typeData = normalizeMockCompanionTypeData(activityInput.typeData);
-  if (activityInput.type === 'food') activityInput.typeData = normalizeMockFoodTypeData(activityInput.typeData);
-  if (activityInput.meetingPoint !== undefined) activityInput.meetingPoint = validateMockMeetingPoint(activityInput.meetingPoint);
-  delete activityInput.driverId;
-  delete activityInput.vehicleId;
-  delete activityInput.contactInfo;
-  const activity = {
-    id: nextId('activity'), ownerId: user.id, owner: { nickname: user.profile.nickname },
-    ...activityInput, memberCount: 1, groupSequence: 0, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
-  };
-  state.activities.unshift(activity);
-  const ownerMember = {
-    id: nextId('member'),
-    activityId: activity.id,
-    userId: user.id,
-    role: 'OWNER',
-    status: 'ACTIVE',
-    groupWindow: { generation: 1, after: 0 },
-    avatarKind: avatarKindFromGender(user.profile.gender),
-    joinedAt: now
-  };
-  activity.avatarRoster = upsertAvatarRoster([], ownerMember.id, ownerMember.avatarKind);
-  state.members.push(ownerMember);
-  return { activity: publicActivity(activity) };
+const user = requireUser();
+assert(user.profile && user.profile.adultConfirmed, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
+const now = new Date().toISOString();
+const activityInput = clone(input);
+assert(ACTIVITY_TYPES.includes(activityInput.type), 'VALIDATION_ERROR', '活动类型选项无效');
+activityInput.title = requiredNormalizedContent(activityInput.title, '标题', 2, 30);
+activityInput.description = optionalNormalizedContent(activityInput.description, '补充说明', 300);
+const startsAt = Date.parse(activityInput.startsAt);
+const deadlineAt = Date.parse(activityInput.deadlineAt);
+assert(Number.isFinite(startsAt) && startsAt > Date.parse(now), 'VALIDATION_ERROR', '活动时间必须晚于当前时间');
+assert(startsAt - Date.parse(now) <= 7 * 24 * 60 * 60 * 1000, 'VALIDATION_ERROR', '活动开始时间不能超过7天');
+assert(Number.isFinite(deadlineAt) && deadlineAt > Date.parse(now) && deadlineAt < startsAt, 'VALIDATION_ERROR', '报名截止时间无效');
+const minMembers = Number(activityInput.minMembers);
+const maxMembers = Number(activityInput.maxMembers);
+assert(Number.isInteger(minMembers) && Number.isInteger(maxMembers) && minMembers >= 2 && maxMembers <= 20 && minMembers <= maxMembers, 'VALIDATION_ERROR', '人数设置无效');
+assert(activityInput.typeData && typeof activityInput.typeData === 'object', 'VALIDATION_ERROR', '请补齐活动信息');
+if (activityInput.type === 'companion') activityInput.typeData = normalizeMockCompanionTypeData(activityInput.typeData);
+if (activityInput.type === 'food') activityInput.typeData = normalizeMockFoodTypeData(activityInput.typeData);
+if (activityInput.meetingPoint !== undefined) activityInput.meetingPoint = validateMockMeetingPoint(activityInput.meetingPoint);
+delete activityInput.driverId;
+delete activityInput.vehicleId;
+delete activityInput.contactInfo;
+const activity = {
+id: nextId('activity'), ownerId: user.id, owner: { nickname: user.profile.nickname },
+...activityInput, memberCount: 1, groupSequence: 0, status: 'RECRUITING', version: 1, createdAt: now, updatedAt: now
+};
+state.activities.unshift(activity);
+const ownerMember = {
+id: nextId('member'),
+activityId: activity.id,
+userId: user.id,
+role: 'OWNER',
+status: 'ACTIVE',
+groupWindow: { generation: 1, after: 0 },
+avatarKind: avatarKindFromGender(user.profile.gender),
+joinedAt: now
+};
+activity.avatarRoster = upsertAvatarRoster([], ownerMember.id, ownerMember.avatarKind);
+state.members.push(ownerMember);
+return { activity: publicActivity(activity) };
 }
-
 function driverProfile() {
-  const user = requireUser();
-  const driver = (state.drivers || []).find((item) => item.userId === user.id);
-  if (!driver) return { canAcceptRide: false, vehicles: [] };
-  return {
-    canAcceptRide: driver.status === 'ACTIVE' && driver.reviewStatus === 'APPROVED',
-    vehicles: (state.vehicles || [])
-      .filter((item) => item.driverId === user.id)
-      .map((item) => ({
-        id: item.id,
-        canUseForRide: item.status === 'ACTIVE' && item.reviewStatus === 'APPROVED',
-        type: item.type,
-        plateMasked: item.plateMasked,
-        passengerCapacity: item.passengerCapacity
-      }))
-  };
+const user = requireUser();
+const driver = (state.drivers || []).find((item) => item.userId === user.id);
+if (!driver) return { canAcceptRide: false, vehicles: [] };
+return {
+canAcceptRide: driver.status === 'ACTIVE' && driver.reviewStatus === 'APPROVED',
+vehicles: (state.vehicles || [])
+.filter((item) => item.driverId === user.id)
+.map((item) => ({
+id: item.id,
+canUseForRide: item.status === 'ACTIVE' && item.reviewStatus === 'APPROVED',
+type: item.type,
+plateMasked: item.plateMasked,
+passengerCapacity: item.passengerCapacity
+}))
+};
 }
-
 function acceptRide(input) {
-  const user = requireUser();
-  const driver = (state.drivers || []).find((item) => item.userId === user.id);
-  assert(driver && driver.status === 'ACTIVE' && driver.reviewStatus === 'APPROVED', 'DRIVER_NOT_APPROVED', '司机资格尚未通过审核');
-  const vehicle = (state.vehicles || []).find((item) => item.id === input.vehicleId && item.driverId === user.id);
-  assert(vehicle && vehicle.status === 'ACTIVE' && vehicle.reviewStatus === 'APPROVED', 'VEHICLE_NOT_APPROVED', '车辆尚未通过审核');
-  assert(Number(vehicle.passengerCapacity) >= 7, 'VEHICLE_NOT_APPROVED', '车辆核定乘客容量不足');
-  const activity = activityById(input.activityId);
-  assert(activity && activity.type === 'ride', 'NOT_FOUND', '行程不存在');
-  assert(!activeMember(activity.id, user.id), 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
-  assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '当前行程暂不可承接');
-  const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
-  assert(fulfillment && fulfillment.status === 'UNASSIGNED', 'RIDE_ALREADY_ASSIGNED', '该行程刚刚已被其他司机承接');
-  const pickupAt = new Date(input.pickupAt);
-  const windowStart = Date.parse(activity.startsAt);
-  const windowEnd = Date.parse(activity.typeData.pickupWindowEnd);
-  assert(windowEnd > Date.now(), 'PICKUP_TIME_EXPIRED', '接车时间已过，无法承接');
-  assert(Number.isFinite(pickupAt.getTime())
-    && windowEnd - windowStart === 60 * 60 * 1000
-    && pickupAt.getTime() > Date.now()
-    && pickupAt.getMinutes() % 15 === 0
-    && pickupAt.getTime() >= windowStart
-    && pickupAt.getTime() < windowEnd, 'INVALID_PICKUP_SLOT', '请在期望时间窗内按 15 分钟选择');
-  const now = new Date().toISOString();
-  fulfillment.status = 'ASSIGNED';
-  fulfillment.driverId = user.id;
-  fulfillment.vehicleId = vehicle.id;
-  fulfillment.pickupAt = pickupAt.toISOString();
-  fulfillment.assignedAt = now;
-  fulfillment.cancelledAt = null;
-  activity.rideFulfillment = { status: 'ASSIGNED', pickupAt: fulfillment.pickupAt };
-  activity.targetMembers = 7;
-  activity.minPassengers = 7;
-  activity.maxPassengers = 7;
-  activity.status = activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING';
-  activity.rideJoinable = isMockRideJoinable(activity, now);
-  activity.updatedAt = now;
-  return { activity: publicActivity(activity), fulfillment: clone(publicActivity(activity).rideFulfillment) };
+const user = requireUser();
+const driver = (state.drivers || []).find((item) => item.userId === user.id);
+assert(driver && driver.status === 'ACTIVE' && driver.reviewStatus === 'APPROVED', 'DRIVER_NOT_APPROVED', '司机资格尚未通过审核');
+const vehicle = (state.vehicles || []).find((item) => item.id === input.vehicleId && item.driverId === user.id);
+assert(vehicle && vehicle.status === 'ACTIVE' && vehicle.reviewStatus === 'APPROVED', 'VEHICLE_NOT_APPROVED', '车辆尚未通过审核');
+assert(Number(vehicle.passengerCapacity) >= 7, 'VEHICLE_NOT_APPROVED', '车辆核定乘客容量不足');
+const activity = activityById(input.activityId);
+assert(activity && activity.type === 'ride', 'NOT_FOUND', '行程不存在');
+assert(!activeMember(activity.id, user.id), 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
+assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '当前行程暂不可承接');
+const fulfillment = (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
+assert(fulfillment && fulfillment.status === 'UNASSIGNED', 'RIDE_ALREADY_ASSIGNED', '该行程刚刚已被其他司机承接');
+const pickupAt = new Date(input.pickupAt);
+const windowStart = Date.parse(activity.startsAt);
+const windowEnd = Date.parse(activity.typeData.pickupWindowEnd);
+assert(windowEnd > Date.now(), 'PICKUP_TIME_EXPIRED', '接车时间已过，无法承接');
+assert(Number.isFinite(pickupAt.getTime())
+&& windowEnd - windowStart === 60 * 60 * 1000
+&& pickupAt.getTime() > Date.now()
+&& pickupAt.getMinutes() % 15 === 0
+&& pickupAt.getTime() >= windowStart
+&& pickupAt.getTime() < windowEnd, 'INVALID_PICKUP_SLOT', '请在期望时间窗内按 15 分钟选择');
+const now = new Date().toISOString();
+fulfillment.status = 'ASSIGNED';
+fulfillment.driverId = user.id;
+fulfillment.vehicleId = vehicle.id;
+fulfillment.pickupAt = pickupAt.toISOString();
+fulfillment.assignedAt = now;
+fulfillment.cancelledAt = null;
+activity.rideFulfillment = { status: 'ASSIGNED', pickupAt: fulfillment.pickupAt };
+activity.targetMembers = 7;
+activity.minPassengers = 7;
+activity.maxPassengers = 7;
+activity.status = activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING';
+activity.rideJoinable = isMockRideJoinable(activity, now);
+activity.updatedAt = now;
+return { activity: publicActivity(activity), fulfillment: clone(publicActivity(activity).rideFulfillment) };
 }
-
 function cancelRideAssignment(input) {
-  const user = requireUser();
-  const activity = activityById(input.activityId);
-  const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
-  assert(activity && fulfillment, 'NOT_FOUND', '行程不存在');
-  assert(fulfillment.status === 'ASSIGNED' && fulfillment.driverId === user.id, 'FORBIDDEN', '你不能取消该行程的司机承接');
-  const now = new Date().toISOString();
-  fulfillment.status = 'UNASSIGNED';
-  fulfillment.cancelledAt = now;
-  fulfillment.cancelReason = input.reason || '';
-  fulfillment.previousDriverId = user.id;
-  fulfillment.driverId = null;
-  fulfillment.vehicleId = null;
-  fulfillment.pickupAt = null;
-  fulfillment.assignedAt = null;
-  activity.rideFulfillment = { status: 'UNASSIGNED', pickupAt: null };
-  activity.rideJoinable = isMockRideJoinable(activity, now);
-  activity.updatedAt = now;
-  return { activity: publicActivity(activity), fulfillment: clone(publicActivity(activity).rideFulfillment) };
+const user = requireUser();
+const activity = activityById(input.activityId);
+const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
+assert(activity && fulfillment, 'NOT_FOUND', '行程不存在');
+assert(fulfillment.status === 'ASSIGNED' && fulfillment.driverId === user.id, 'FORBIDDEN', '你不能取消该行程的司机承接');
+const now = new Date().toISOString();
+fulfillment.status = 'UNASSIGNED';
+fulfillment.cancelledAt = now;
+fulfillment.cancelReason = input.reason || '';
+fulfillment.previousDriverId = user.id;
+fulfillment.driverId = null;
+fulfillment.vehicleId = null;
+fulfillment.pickupAt = null;
+fulfillment.assignedAt = null;
+activity.rideFulfillment = { status: 'UNASSIGNED', pickupAt: null };
+activity.rideJoinable = isMockRideJoinable(activity, now);
+activity.updatedAt = now;
+return { activity: publicActivity(activity), fulfillment: clone(publicActivity(activity).rideFulfillment) };
 }
-
 function submitApplication(input) {
-  const user = requireActiveUser(true);
-  const activity = activityById(input.activityId);
-  assert(activity, 'NOT_FOUND', '活动不存在或已失效');
-  const now = new Date().toISOString();
-  assert(
-    activity.type === 'ride' ? isMockRideJoinable(activity, now) : activity.status === 'RECRUITING',
-    'CONFLICT',
-    '该行程当前不可申请'
-  );
-  assert(activity.ownerId !== user.id, 'CONFLICT', '不能申请自己发布的活动');
-  assert(Date.parse(activity.deadlineAt) > Date.parse(now), 'CONFLICT', '该活动报名已截止');
-  assert(input.autoJoinConsent === true, 'VALIDATION_ERROR', '请确认获批后自动加入并占用名额');
-  const duplicate = state.applications.find((item) => item.activityId === input.activityId && item.applicantId === user.id && ['PENDING', 'APPROVED'].includes(item.status));
-  assert(!duplicate, 'CONFLICT', '你已经申请或加入该活动');
-  const application = {
-    id: nextId('application'), activityId: input.activityId, applicantId: user.id,
-    applicant: { nickname: user.profile.nickname }, status: 'PENDING', note: input.note || '', autoJoinConsent: true,
-    createdAt: now, updatedAt: now
-  };
-  state.applications.push(application);
-  state.notifications.unshift({ id: nextId('notification'), userId: activity.ownerId, type: 'NEW_APPLICATION', activityId: activity.id, title: `“${activity.title}”有新的加入申请`, read: false, createdAt: now });
-  return { application: publicApplication(application) };
+const user = requireActiveUser(true);
+const activity = activityById(input.activityId);
+assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+const now = new Date().toISOString();
+assert(
+activity.type === 'ride' ? isMockRideJoinable(activity, now) : activity.status === 'RECRUITING',
+'CONFLICT',
+'该行程当前不可申请'
+);
+assert(activity.ownerId !== user.id, 'CONFLICT', '不能申请自己发布的活动');
+assert(Date.parse(activity.deadlineAt) > Date.parse(now), 'CONFLICT', '该活动报名已截止');
+assert(input.autoJoinConsent === true, 'VALIDATION_ERROR', '请确认获批后自动加入并占用名额');
+const duplicate = state.applications.find((item) => item.activityId === input.activityId && item.applicantId === user.id && ['PENDING', 'APPROVED'].includes(item.status));
+assert(!duplicate, 'CONFLICT', '你已经申请或加入该活动');
+const application = {
+id: nextId('application'), activityId: input.activityId, applicantId: user.id,
+applicant: { nickname: user.profile.nickname }, status: 'PENDING', note: input.note || '', autoJoinConsent: true,
+createdAt: now, updatedAt: now
+};
+state.applications.push(application);
+state.notifications.unshift({ id: nextId('notification'), userId: activity.ownerId, type: 'NEW_APPLICATION', activityId: activity.id, title: `“${activity.title}”有新的加入申请`, read: false, createdAt: now });
+return { application: publicApplication(application) };
 }
-
 function joinRide(input) {
-  assert(input && typeof input === 'object', 'VALIDATION_ERROR', '请求参数无效');
-  assert(typeof input.activityId === 'string' && input.activityId.trim(), 'VALIDATION_ERROR', '活动ID无效');
-  assert(['NONE', 'SMALL', 'LARGE'].includes(input.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
-  assert(validRidePhone(input.phone), 'VALIDATION_ERROR', '请输入正确的联系电话');
-  const user = requireUser();
-  assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
-  const activity = activityById(input.activityId);
-  const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
-  assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
-  assert(activity.ownerId !== user.id, 'CONFLICT', '发起者已经在行程中');
-  assert(fulfillment.driverId !== user.id, 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
-  const existing = state.members.find((item) => item.activityId === activity.id && item.userId === user.id);
-  if (existing && existing.status === 'ACTIVE') return { activity: publicActivity(activity) };
-  const now = new Date().toISOString();
-  assert(isMockRideJoinable(activity, now), activity.memberCount >= 7 ? 'CAPACITY_FULL' : 'CONFLICT', '该行程当前不可加入');
-  const member = existing || { id: nextId('member'), activityId: activity.id, userId: user.id, role: 'MEMBER' };
-  member.status = 'ACTIVE';
-  member.joinedAt = now;
-  member.luggageType = input.luggageType;
-  member.avatarKind = avatarKindFromGender(user.profile.gender);
-  delete member.leftAt;
-  delete member.leaveReason;
-  if (!existing) state.members.push(member);
-  const existingContact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
-  if (existingContact) Object.assign(existingContact, { phone: input.phone.replace(/[\s()-]+/g, ''), status: 'ACTIVE', updatedAt: now });
-  else state.memberContacts.push({
-    id: nextId('memberContact'), activityId: activity.id, memberId: member.id, userId: user.id,
-    phone: input.phone.replace(/[\s()-]+/g, ''), status: 'ACTIVE', createdAt: now, updatedAt: now
-  });
-  activity.memberCount += 1;
-  activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
-  activity.status = activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING';
-  if (activity.status === 'FORMED') activity.formedAt = activity.formedAt || now;
-  activity.rideJoinable = isMockRideJoinable(activity, now);
-  activity.updatedAt = now;
-  activity.version += 1;
-  const legacy = state.applications.find((item) => item.activityId === activity.id && item.applicantId === user.id);
-  if (legacy) Object.assign(legacy, { status: 'APPROVED', approvedAt: now, updatedAt: now });
-  state.notifications.unshift({ id: nextId('notification'), userId: activity.ownerId, type: 'RIDE_MEMBER_JOINED', activityId: activity.id, title: `有新乘客加入“${activity.title}”`, read: false, createdAt: now });
-  return { activity: publicActivity(activity) };
+assert(input && typeof input === 'object', 'VALIDATION_ERROR', '请求参数无效');
+assert(typeof input.activityId === 'string' && input.activityId.trim(), 'VALIDATION_ERROR', '活动ID无效');
+assert(['NONE', 'SMALL', 'LARGE'].includes(input.luggageType), 'VALIDATION_ERROR', '我的行李选项无效');
+assert(validRidePhone(input.phone), 'VALIDATION_ERROR', '请输入正确的联系电话');
+const user = requireUser();
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先补全性别资料');
+const activity = activityById(input.activityId);
+const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
+assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
+assert(activity.ownerId !== user.id, 'CONFLICT', '发起者已经在行程中');
+assert(fulfillment.driverId !== user.id, 'FORBIDDEN', '同一行程不能同时作为司机和乘客');
+const existing = state.members.find((item) => item.activityId === activity.id && item.userId === user.id);
+if (existing && existing.status === 'ACTIVE') return { activity: publicActivity(activity) };
+const now = new Date().toISOString();
+assert(isMockRideJoinable(activity, now), activity.memberCount >= 7 ? 'CAPACITY_FULL' : 'CONFLICT', '该行程当前不可加入');
+const member = existing || { id: nextId('member'), activityId: activity.id, userId: user.id, role: 'MEMBER' };
+member.status = 'ACTIVE';
+member.joinedAt = now;
+member.luggageType = input.luggageType;
+member.avatarKind = avatarKindFromGender(user.profile.gender);
+delete member.leftAt;
+delete member.leaveReason;
+if (!existing) state.members.push(member);
+const existingContact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
+if (existingContact) Object.assign(existingContact, { phone: input.phone.replace(/[\s()-]+/g, ''), status: 'ACTIVE', updatedAt: now });
+else state.memberContacts.push({
+id: nextId('memberContact'), activityId: activity.id, memberId: member.id, userId: user.id,
+phone: input.phone.replace(/[\s()-]+/g, ''), status: 'ACTIVE', createdAt: now, updatedAt: now
+});
+activity.memberCount += 1;
+activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
+activity.status = activity.memberCount >= 7 ? 'FORMED' : 'RECRUITING';
+if (activity.status === 'FORMED') activity.formedAt = activity.formedAt || now;
+activity.rideJoinable = isMockRideJoinable(activity, now);
+activity.updatedAt = now;
+activity.version += 1;
+const legacy = state.applications.find((item) => item.activityId === activity.id && item.applicantId === user.id);
+if (legacy) Object.assign(legacy, { status: 'APPROVED', approvedAt: now, updatedAt: now });
+state.notifications.unshift({ id: nextId('notification'), userId: activity.ownerId, type: 'RIDE_MEMBER_JOINED', activityId: activity.id, title: `有新乘客加入“${activity.title}”`, read: false, createdAt: now });
+return { activity: publicActivity(activity) };
 }
-
 function approveApplication(input) {
-  const activity = activityById(input.activityId);
-  const application = state.applications.find((item) => item.id === input.applicationId);
-  assert(activity && application, 'NOT_FOUND', '申请不存在');
-  assert(activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限处理该申请');
-  if (application.status === 'APPROVED') {
-    return { activity: publicActivity(activity), application: publicApplication(application) };
-  }
-  const now = new Date().toISOString();
-  assert(Date.parse(activity.deadlineAt) > Date.parse(now), 'CONFLICT', '该活动报名已截止');
-  if (activity.type === 'ride' && activity.status === 'FORMED') {
-    assert(Date.parse(activity.typeData && activity.typeData.pickupWindowEnd) > Date.parse(now), 'CONFLICT', '该行程接车时间窗已结束');
-  }
-  assert(
-    activity.type === 'ride' ? isMockRideJoinable(activity, now) : activity.status === 'RECRUITING',
-    'CONFLICT',
-    '行程当前不可继续批准乘客'
-  );
-  assert(application.status === 'PENDING', 'CONFLICT', '该申请已处理');
-  const capacity = activity.type === 'ride' ? 7 : (activity.maxMembers || activity.targetMembers);
-  assert(activity.memberCount < capacity, 'CAPACITY_FULL', '名额已满');
-  application.status = 'APPROVED';
-  application.approvedAt = now;
-  application.updatedAt = now;
-  const applicant = state.users.find((item) => item.id === application.applicantId);
-  let member = state.members.find((item) => item.activityId === activity.id && item.userId === application.applicantId);
-  const previousGeneration = member && member.groupWindow && Number(member.groupWindow.generation) || 0;
-  if (!member) member = { id: nextId('member'), activityId: activity.id, userId: application.applicantId, role: 'MEMBER' };
-  Object.assign(member, { status: 'ACTIVE', joinedAt: now,
-    groupWindow: { generation: previousGeneration + 1, after: Number(activity.groupSequence || 0) },
-    avatarKind: avatarKindFromGender(applicant && applicant.profile && applicant.profile.gender) });
-  if (!state.members.includes(member)) state.members.push(member);
-  activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
-  activity.memberCount += 1;
-  activity.version += 1;
-  activity.updatedAt = now;
-  const justFormed = activity.status === 'RECRUITING' && activity.memberCount >= (activity.type === 'ride' ? 7 : (activity.minMembers || activity.targetMembers));
-  if (justFormed) {
-    activity.status = 'FORMED';
-    activity.formedAt = now;
-  }
-  if (activity.memberCount >= capacity) {
-    state.applications.forEach((item) => {
-      if (item.activityId === activity.id && item.status === 'PENDING') item.status = 'CANCELLED_BY_ACTIVITY';
-    });
-  }
-  if (activity.type === 'ride') activity.rideJoinable = isMockRideJoinable(activity, now);
-  state.notifications.unshift({
-    id: nextId('notification'), userId: application.applicantId,
-    type: justFormed ? 'GROUP_FORMED' : 'APPLICATION_APPROVED', activityId: activity.id,
-    title: justFormed ? `“${activity.title}”已满员并成团` : `你已加入“${activity.title}”`, read: false, createdAt: now
-  });
-  return { activity: publicActivity(activity), application: publicApplication(application) };
+const activity = activityById(input.activityId);
+const application = state.applications.find((item) => item.id === input.applicationId);
+assert(activity && application, 'NOT_FOUND', '申请不存在');
+assert(activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限处理该申请');
+if (application.status === 'APPROVED') {
+return { activity: publicActivity(activity), application: publicApplication(application) };
 }
-
+const now = new Date().toISOString();
+assert(Date.parse(activity.deadlineAt) > Date.parse(now), 'CONFLICT', '该活动报名已截止');
+if (activity.type === 'ride' && activity.status === 'FORMED') {
+assert(Date.parse(activity.typeData && activity.typeData.pickupWindowEnd) > Date.parse(now), 'CONFLICT', '该行程接车时间窗已结束');
+}
+assert(
+activity.type === 'ride' ? isMockRideJoinable(activity, now) : activity.status === 'RECRUITING',
+'CONFLICT',
+'行程当前不可继续批准乘客'
+);
+assert(application.status === 'PENDING', 'CONFLICT', '该申请已处理');
+const capacity = activity.type === 'ride' ? 7 : (activity.maxMembers || activity.targetMembers);
+assert(activity.memberCount < capacity, 'CAPACITY_FULL', '名额已满');
+application.status = 'APPROVED';
+application.approvedAt = now;
+application.updatedAt = now;
+const applicant = state.users.find((item) => item.id === application.applicantId);
+let member = state.members.find((item) => item.activityId === activity.id && item.userId === application.applicantId);
+const previousGeneration = member && member.groupWindow && Number(member.groupWindow.generation) || 0;
+if (!member) member = { id: nextId('member'), activityId: activity.id, userId: application.applicantId, role: 'MEMBER' };
+Object.assign(member, { status: 'ACTIVE', joinedAt: now,
+groupWindow: { generation: previousGeneration + 1, after: Number(activity.groupSequence || 0) },
+avatarKind: avatarKindFromGender(applicant && applicant.profile && applicant.profile.gender) });
+if (!state.members.includes(member)) state.members.push(member);
+activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, member.avatarKind);
+activity.memberCount += 1;
+activity.version += 1;
+activity.updatedAt = now;
+const justFormed = activity.status === 'RECRUITING' && activity.memberCount >= (activity.type === 'ride' ? 7 : (activity.minMembers || activity.targetMembers));
+if (justFormed) {
+activity.status = 'FORMED';
+activity.formedAt = now;
+}
+if (activity.memberCount >= capacity) {
+state.applications.forEach((item) => {
+if (item.activityId === activity.id && item.status === 'PENDING') item.status = 'CANCELLED_BY_ACTIVITY';
+});
+}
+if (activity.type === 'ride') activity.rideJoinable = isMockRideJoinable(activity, now);
+state.notifications.unshift({
+id: nextId('notification'), userId: application.applicantId,
+type: justFormed ? 'GROUP_FORMED' : 'APPLICATION_APPROVED', activityId: activity.id,
+title: justFormed ? `“${activity.title}”已满员并成团` : `你已加入“${activity.title}”`, read: false, createdAt: now
+});
+return { activity: publicActivity(activity), application: publicApplication(application) };
+}
 function handle(action, input, idempotencyKey = '') {
-  if (REMOVED_ACTIONS.has(action)) throw fail('NOT_FOUND', '接口动作不存在');
-  if (action === 'companion.presence.leave') requireKnownUser();
-  else if (!PUBLIC_ACTIONS.has(action)) requireUser();
-  if (action === 'auth.login') {
-    const user = requireUser();
-    return {
-      user: selfUser(user),
-      onboarding: {
-        profileComplete: completeRideProfile(user.profile)
-      },
-      sessionScope: `mock-session-${currentUserId}`
-    };
-  }
-  if (action === 'profile.get') return { user: selfUser(requireUser()) };
-  if (action === 'profile.public.get') {
-    const token = validateMockPublicProfileInput(input);
-    const now = new Date().toISOString();
-    const bucket = Math.floor(Date.parse(now) / COMPANION_PROFILE_NAV_BUCKET_MS);
-    const profileNavNonce = mockProfileNavNonceFromToken(token);
-    const presence = state.companionPresences.find((item) => item.profileNavNonce === profileNavNonce
-      && item.scene === COMPANION_PRESENCE_SCENE
-      && item.status === 'ACTIVE'
-      && Date.parse(item.expiresAt) > Date.parse(now)
-      && [bucket, bucket - 1].some((candidate) => mockProfileNavToken(item.profileNavNonce, item.sessionNonce, candidate) === token));
-    assert(presence, 'NOT_FOUND', '目标不存在或已失效');
-    const target = state.users.find((item) => item.id === presence.userId && item.status === 'ACTIVE' && item.profile);
-    assert(target, 'NOT_FOUND', '目标不存在或已失效');
-    const profile = target.profile;
-    return {
-      profile: {
-        nickname: Array.from(String(profile.nickname || '').trim() || '匿名搭子').slice(0, 12).join(''),
-        avatarKind: avatarKindFromGender(profile.gender),
-        gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
-        age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)),
-        mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
-        city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
-        interests: Array.isArray(profile.interests) ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
-        online: true,
-        viewerIsSelf: target.id === currentUserId
-      },
-      serverNow: now,
-      expiresAt: new Date(Math.min(Date.parse(presence.expiresAt), (bucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString()
-    };
-  }
-  if (action === 'profile.update') {
-    const user = requireUser();
-    user.profile = validateMockProfile(input, user.profile);
-    const avatarKind = avatarKindFromGender(input.gender);
-    state.members.filter((member) => member.userId === user.id && member.status === 'ACTIVE').forEach((member) => {
-      const activity = activityById(member.activityId);
-      if (activity && ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status)) {
-        member.avatarKind = avatarKind;
-        member.updatedAt = new Date().toISOString();
-        activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
-        activity.updatedAt = member.updatedAt;
-      }
-    });
-    return { user: selfUser(user) };
-  }
-  if (action === 'profile.avatar.prepare') {
-    const user = requireUser();
-    const upload = {
-      id: nextId('profile_avatar_upload'), userId: user.id,
-      cloudPath: `mock-profile-avatar/${user.id}/${Date.now()}.jpg`, status: 'PREPARED',
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
-    };
-    state.profileAvatarUploads.push(upload);
-    return { upload: { id: upload.id, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt, maxBytes: 1024 * 1024, mockOnly: true } };
-  }
-  if (action === 'profile.avatar.confirm') {
-    const user = requireUser();
-    const upload = state.profileAvatarUploads.find((item) => item.id === input.uploadId);
-    assert(upload && upload.userId === user.id && ['PREPARED', 'BOUND'].includes(upload.status), 'PROFILE_AVATAR_INVALID', '头像上传凭据无效');
-    assert(Date.parse(upload.expiresAt) > Date.now(), 'PROFILE_AVATAR_INVALID', '头像上传凭据已失效');
-    assert(isMockLocalAvatarPath(input.fileID), 'PROFILE_AVATAR_INVALID', '演示头像文件无效');
-    if (upload.status !== 'BOUND') {
-      const revision = Math.max(0, Number(user.profile && user.profile.avatar && user.profile.avatar.revision) || 0) + 1;
-      user.profile = { ...(user.profile || {}), avatar: { status: 'ACTIVE', fileID: input.fileID, revision, updatedAt: new Date().toISOString(), mockOnly: true } };
-      upload.status = 'BOUND';
-      upload.fileID = input.fileID;
-    }
-    return { user: selfUser(user) };
-  }
-  if (action === 'profile.avatar.clear') {
-    const user = requireUser();
-    if (user.profile && user.profile.avatar) {
-      const { avatar, ...profile } = user.profile;
-      user.profile = profile;
-    }
-    return { user: selfUser(user) };
-  }
-  if (action === 'onboarding.selectRole') {
-    const user = requireUser();
-    assert(['PASSENGER', 'DRIVER'].includes(input.roleIntent), 'VALIDATION_ERROR', '注册身份无效');
-    user.onboarding = { roleIntent: input.roleIntent, completedAt: new Date().toISOString() };
-    return { user: selfUser(user) };
-  }
-  if (action === 'driver.application.get') {
-    requireUser();
-    const application = state.driverApplications.find((item) => item.userId === currentUserId);
-    return { application: publicDriverApplication(application) };
-  }
-  if (action === 'driver.document.prepare') {
-    const user = requireUser();
-    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
-    assert(['identityFront', 'driverLicense', 'vehicleExterior'].includes(input.kind), 'VALIDATION_ERROR', '文件类型无效');
-    const upload = {
-      id: nextId('driver_upload'), userId: currentUserId, kind: input.kind,
-      cloudPath: `mock-private/${currentUserId}/${Date.now()}-${input.kind}.jpg`,
-      status: 'PREPARED', expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-    };
-    state.driverDocumentUploads.push(upload);
-    return { upload: { id: upload.id, kind: upload.kind, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt } };
-  }
-  if (action === 'driver.document.confirm') {
-    const user = requireUser();
-    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
-    const upload = state.driverDocumentUploads.find((item) => item.id === input.uploadId);
-    assert(upload && upload.userId === currentUserId && upload.kind === input.kind && ['PREPARED', 'INSPECTED'].includes(upload.status), 'DRIVER_DOCUMENT_REQUIRED', '认证图片无效');
-    assert(input.fileID === upload.cloudPath, 'DRIVER_DOCUMENT_REQUIRED', '文件与上传凭据不匹配');
-    if (upload.status === 'INSPECTED') return { document: { uploadId: upload.id, kind: upload.kind, inspectedAt: upload.inspectedAt } };
-    upload.status = 'INSPECTED';
-    upload.sealedFileID = `mock-sealed://${upload.id}`;
-    upload.inspectedAt = new Date().toISOString();
-    return { document: { uploadId: upload.id, kind: upload.kind, inspectedAt: upload.inspectedAt } };
-  }
-  if (action === 'driver.application.submit') {
-    const user = requireUser();
-    assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
-    const current = state.driverApplications.find((item) => item.userId === currentUserId);
-    const payloadHash = opaqueSensitiveHash(stableSerialize(input));
-    if (current && current.operationKeyHash === idempotencyKey) {
-      assert(current.payloadHash === payloadHash, 'CONFLICT', '幂等键已用于其他司机认证资料');
-      return { application: publicDriverApplication(current) };
-    }
-    assert(!current || !['SUBMITTED', 'APPROVED'].includes(current.status), 'DRIVER_APPLICATION_PENDING', '司机认证正在审核中');
-    assert(input.consent && input.consent.driverVerify === true && input.consent.sensitiveDocuments === true, 'DRIVER_CONSENT_REQUIRED', '请同意资料使用说明');
-    const required = ['legalName', 'identityType', 'identityNumber', 'driverLicenseNumber', 'vehicleType', 'plateNumber'];
-    required.forEach((field) => assert(String(input[field] || '').trim(), 'VALIDATION_ERROR', '请补齐司机认证资料'));
-    const documents = input.documents || {};
-    ['identityFront', 'driverLicense', 'vehicleExterior'].forEach((kind) => {
-      const reference = documents[kind];
-      const upload = reference && state.driverDocumentUploads.find((item) => item.id === reference.uploadId);
-      assert(upload && upload.userId === currentUserId && upload.kind === kind && upload.status === 'INSPECTED', 'DRIVER_DOCUMENT_REQUIRED', '请补齐司机认证图片');
-      upload.status = 'BOUND';
-    });
-    const now = new Date().toISOString();
-    const application = {
-      id: currentUserId,
-      userId: currentUserId,
-      status: 'SUBMITTED',
-      revision: Number(current && current.revision || 0) + 1,
-      operationKeyHash: idempotencyKey,
-      payloadHash,
-      summary: {
-        legalNameMasked: `${String(input.legalName).slice(0, 1)}**`,
-        identityType: input.identityType,
-        identityLast4: String(input.identityNumber).slice(-4),
-        identityExpiresAt: input.identityExpiresAt,
-        driverLicenseLast4: String(input.driverLicenseNumber).slice(-4),
-        driverLicenseExpiresAt: input.driverLicenseExpiresAt,
-        vehicleType: input.vehicleType,
-        passengerCapacity: Number(input.passengerCapacity),
-        plateMasked: `***${String(input.plateNumber).slice(-2)}`,
-        documentKinds: Object.keys(documents)
-      },
-      submittedAt: now,
-      updatedAt: now
-    };
-    if (current) Object.assign(current, application);
-    else state.driverApplications.push(application);
-    return { application: publicDriverApplication(application) };
-  }
-  if (action === 'driver.application.withdraw') {
-    requireUser();
-    const application = state.driverApplications.find((item) => item.userId === currentUserId);
-    assert(application && ['SUBMITTED', 'NEEDS_MORE_INFO'].includes(application.status), 'DRIVER_APPLICATION_LOCKED', '当前认证状态不能撤回');
-    application.status = 'WITHDRAWN';
-    application.updatedAt = new Date().toISOString();
-    const retentionUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    state.driverDocumentUploads.forEach((upload) => {
-      if (upload.userId === currentUserId && upload.status === 'BOUND') {
-        upload.status = 'RETENTION_PENDING';
-        upload.retentionUntil = retentionUntil;
-      }
-    });
-    return { application: publicDriverApplication(application) };
-  }
-  if (action === 'activity.list') return listActivities(input);
-  if (action === 'activity.nearby') return listNearbyActivities(input);
-  if (action === 'activity.memories') return listActivityMemories(input);
-  if (action === 'activity.detail') {
-    const now = new Date().toISOString();
-    const activity = normalizeActivityForRead(activityById(input.activityId), now);
-    assert(activity, 'NOT_FOUND', '活动不存在或已失效');
-    assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
-    return { activity: publicActivity(activity, { at: now }) };
-  }
-  if (action === 'activity.question.list') return listActivityQuestions(input);
-  if (action === 'activity.question.ask') return askActivityQuestion(input);
-  if (action === 'activity.question.answer') return answerActivityQuestion(input);
-  if (action === 'companion.presence.snapshot') {
-    validateCompanionScene(input);
-    return publicMockPresenceSnapshot(new Date().toISOString());
-  }
-  if (action === 'companion.presence.enter') {
-    validateCompanionScene(input);
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const now = new Date().toISOString();
-    const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
-    const existing = state.companionPresences.find((item) => item.id === id);
-    const sessionNonce = stableMockEntityId('presenceSession', now, idempotencyKey);
-    const profileNavNonce = mockOpaque56('profileNavNonce', now, idempotencyKey);
-    const next = {
-      id,
-      scene: COMPANION_PRESENCE_SCENE,
-      userId: user.id,
-      nickname: user.profile.nickname,
-      sessionNonce,
-      profileNavNonce,
-      layoutSeed: Number.parseInt(sessionNonce.slice(-8), 16) >>> 0,
-      status: 'ACTIVE',
-      lastSeenAt: now,
-      expiresAt: new Date(Date.parse(now) + COMPANION_PRESENCE_TTL_MS).toISOString(),
-      createdAt: existing && existing.createdAt || now,
-      updatedAt: now
-    };
-    if (existing) Object.assign(existing, next); else state.companionPresences.push(next);
-    return { joined: true, sessionToken: sessionNonce, sessionTtlSec: 90, heartbeatIntervalSec: 30, snapshot: publicMockPresenceSnapshot(now) };
-  }
-  if (action === 'companion.presence.heartbeat') {
-    const { sessionToken } = validateCompanionScene(input, true);
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const now = new Date().toISOString();
-    const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
-    const presence = state.companionPresences.find((item) => item.id === id && item.sessionNonce === sessionToken && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(now));
-    const refreshed = Boolean(presence && Date.parse(now) - Date.parse(presence.updatedAt) >= COMPANION_MIN_WRITE_INTERVAL_MS);
-    if (refreshed) Object.assign(presence, {
-      lastSeenAt: now,
-      expiresAt: new Date(Date.parse(now) + COMPANION_PRESENCE_TTL_MS).toISOString(),
-      updatedAt: now
-    });
-    return { joined: Boolean(presence), refreshed, serverNow: now, sessionTtlSec: 90, heartbeatIntervalSec: 30 };
-  }
-  if (action === 'companion.presence.leave') {
-    const { sessionToken } = validateCompanionScene(input, true);
-    const user = requireKnownUser();
-    const now = new Date().toISOString();
-    const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
-    const presence = state.companionPresences.find((item) => item.id === id);
-    if (presence && presence.sessionNonce === sessionToken) Object.assign(presence, { status: 'INACTIVE', expiresAt: now, updatedAt: now });
-    return { joined: false, serverNow: now };
-  }
-  if (action === 'community.post.list') {
-    assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '讨论筛选条件无效');
-    assert(Object.keys(input).every((key) => ['cursor', 'limit', 'keyword'].includes(key)), 'VALIDATION_ERROR', '讨论筛选条件无效');
-    const keyword = normalizeCommunityKeyword(optionalFilterString(input.keyword, '讨论搜索词', 90));
-    assert(keyword.length <= 30, 'VALIDATION_ERROR', '讨论搜索词长度不能超过30个字符', { field: '讨论搜索词' });
-    const cursor = decodeCommunityCursor(input.cursor, keyword);
-    const limit = Number(input.limit === undefined ? 20 : input.limit);
-    assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量必须在1到30之间');
-    const candidates = state.communityPosts.filter((item) => item.status === 'ACTIVE')
-      .filter((item) => afterDescendingCommunityCursor(item, cursor))
-      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.id).localeCompare(String(a.id)));
-    const scanned = candidates.slice(0, 500);
-    const matched = scanned.filter((item) => matchesCommunityKeyword(item, keyword));
-    const items = matched.slice(0, limit);
-    const lookahead = matched.length > limit;
-    const exhausted = candidates.length <= scanned.length;
-    const continuation = lookahead ? items[items.length - 1] : !exhausted ? scanned[scanned.length - 1] : null;
-    return { items: items.map(publicCommunityPost), nextCursor: continuation ? encodeCommunityCursor(continuation, keyword) : null };
-  }
-  if (action === 'community.activity.list') {
-    requireActiveUser();
-    assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '动态筛选条件无效');
-    assert(Object.keys(input).every((key) => ['tab', 'cursor', 'limit'].includes(key)), 'VALIDATION_ERROR', '动态筛选条件无效');
-    const tab = input.tab === undefined ? 'ALL' : input.tab;
-    assert(['ALL', 'REPLIES', 'LIKES'].includes(tab), 'VALIDATION_ERROR', '动态筛选选项无效');
-    const cursor = decodeCommunityActivityCursor(input.cursor, tab);
-    const limit = Number(input.limit === undefined ? 20 : input.limit);
-    assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量必须在1到30之间');
-    const types = tab === 'REPLIES' ? ['POST_REPLIED'] : tab === 'LIKES' ? ['POST_LIKED', 'REPLY_LIKED'] : [];
-    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const candidates = state.communityActivities
-      .filter((item) => item.recipientId === currentUserId && item.status === 'ACTIVE' && (!types.length || types.includes(item.type)))
-      .filter((item) => Date.parse(item.updatedAt) >= cutoff && afterCommunityActivityCursor(item, cursor))
-      .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
-    const page = candidates.slice(0, limit + 1);
-    const items = page.slice(0, limit);
-    return { items: items.map(publicCommunityActivity), nextCursor: page.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null };
-  }
-  if (action === 'community.activity.read') {
-    requireActiveUser();
-    const activityId = validatedId(input && input.activityId, '动态ID');
-    const item = state.communityActivities.find((entry) => entry.id === activityId && entry.recipientId === currentUserId);
-    assert(item, 'NOT_FOUND', '动态不存在');
-    item.read = true;
-    item.readAt = new Date().toISOString();
-    return { activityId, read: true, readAt: item.readAt };
-  }
-  if (action === 'community.post.detail') {
-    const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');
-    assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
-    const cursor = decodeCommunityCursor(input.cursor);
-    const limit = Math.min(Math.max(Number(input.limit) || 30, 1), 30);
-    const replies = state.communityReplies.filter((item) => item.postId === post.id && item.status === 'ACTIVE' && afterAscendingCommunityCursor(item, cursor))
-      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) || String(a.id).localeCompare(String(b.id)));
-    const page = replies.slice(0, limit + 1);
-    return { post: publicCommunityPost(post), replies: page.slice(0, limit).map(publicCommunityReply), nextCursor: page.length > limit ? encodeCommunityCursor(page[limit - 1]) : null };
-  }
-  if (action === 'community.post.create') {
-    const user = requireUser();
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const content = assertCommunityContent(input.content, 500);
-    const now = new Date().toISOString();
-    const post = {
-      id: nextId('communityPost'), authorId: user.id,
-      author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
-      content, replyCount: 0, status: 'ACTIVE', createdAt: now, updatedAt: now
-    };
-    state.communityPosts.push(post);
-    return { post: publicCommunityPost(post) };
-  }
-  if (action === 'community.reply.create') {
-    const user = requireUser();
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '回复参数无效');
-    assert(Object.keys(input).every((key) => ['postId', 'content', 'replyToId'].includes(key)), 'VALIDATION_ERROR', '回复参数无效');
-    const postId = validatedId(input.postId, '帖子ID');
-    const replyToId = input.replyToId === undefined || input.replyToId === null || input.replyToId === ''
-      ? ''
-      : validatedId(input.replyToId, '目标回复ID');
-    const post = state.communityPosts.find((item) => item.id === postId && item.status === 'ACTIVE');
-    assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
-    const targetReply = replyToId ? state.communityReplies.find((item) => item.id === replyToId && item.status === 'ACTIVE' && item.postId === post.id) : null;
-    if (replyToId) assert(targetReply, 'NOT_FOUND', '目标回复不存在或已被删除');
-    const now = new Date().toISOString();
-    const reply = {
-      id: nextId('communityReply'), postId: post.id, authorId: user.id,
-      author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
-      content: assertCommunityContent(input.content, 300), ...(replyToId ? { replyToId } : {}), status: 'ACTIVE', createdAt: now, updatedAt: now
-    };
-    state.communityReplies.push(reply);
-    post.replyCount = Number(post.replyCount || 0) + 1;
-    const recipientId = targetReply ? targetReply.authorId : post.authorId;
-    if (recipientId !== user.id) state.communityActivities.push({
-      id: stableMockEntityId('communityActivity', 'reply', reply.id),
-      type: 'POST_REPLIED', status: 'ACTIVE', recipientId, postId: post.id, replyId: reply.id,
-      actorId: user.id, actor: clone(reply.author), read: false, readAt: null, createdAt: now, updatedAt: now
-    });
-    return { reply: publicCommunityReply(reply), replyCount: post.replyCount };
-  }
-  if (action === 'community.post.delete') {
-    const post = state.communityPosts.find((item) => item.id === input.postId && item.status !== 'SUSPENDED');
-    assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
-    assert(post.authorId === currentUserId, 'FORBIDDEN', '只能删除自己发布的讨论');
-    post.status = 'DELETED'; post.deletedAt = new Date().toISOString(); post.updatedAt = post.deletedAt;
-    return { deleted: true, postId: post.id };
-  }
-  if (action === 'community.reply.delete') {
-    const reply = state.communityReplies.find((item) => item.id === input.replyId && item.status !== 'SUSPENDED');
-    assert(reply, 'NOT_FOUND', '回复不存在或已被删除');
-    assert(reply.authorId === currentUserId, 'FORBIDDEN', '只能删除自己的回复');
-    reply.status = 'DELETED'; reply.deletedAt = new Date().toISOString(); reply.updatedAt = reply.deletedAt;
-    const post = state.communityPosts.find((item) => item.id === reply.postId);
-    if (post) post.replyCount = Math.max(0, Number(post.replyCount || 0) - 1);
-    return { deleted: true, replyId: reply.id, replyCount: Number(post && post.replyCount || 0) };
-  }
-  if (action === 'community.like.set') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    assert(['post', 'reply'].includes(input.targetType) && typeof input.liked === 'boolean', 'VALIDATION_ERROR', '点赞参数无效');
-    const targetId = validatedId(input.targetId, '点赞目标ID');
-    const target = input.targetType === 'post'
-      ? state.communityPosts.find((item) => item.id === targetId && item.status === 'ACTIVE')
-      : state.communityReplies.find((item) => item.id === targetId && item.status === 'ACTIVE');
-    assert(target, 'NOT_FOUND', '讨论不存在或已被删除');
-    if (input.targetType === 'reply') assert(state.communityPosts.some((item) => item.id === target.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
-    const id = stableMockEntityId('communityLike', input.targetType, targetId, currentUserId);
-    let like = state.communityLikes.find((item) => item.targetType === input.targetType && item.targetId === targetId && item.actorId === currentUserId);
-    const wasLiked = Boolean(like && like.status === 'ACTIVE');
-    if (wasLiked !== input.liked) target.likeCount = Math.max(0, Number(target.likeCount || 0) + (input.liked ? 1 : -1));
-    const now = new Date().toISOString();
-    if (!like) {
-      like = { id, targetType: input.targetType, targetId, postId: input.targetType === 'reply' ? target.postId : target.id, actorId: currentUserId, createdAt: now };
-      state.communityLikes.push(like);
-    }
-    Object.assign(like, { status: input.liked ? 'ACTIVE' : 'DELETED', updatedAt: now });
-    if (target.authorId !== user.id && wasLiked !== input.liked) {
-      const activityId = input.targetType === 'post'
-        ? stableMockEntityId('communityActivity', 'like', target.authorId, target.id)
-        : stableMockEntityId('communityActivity', 'like', target.authorId, 'reply', target.id);
-      let activity = state.communityActivities.find((item) => item.id === activityId);
-      if (!activity) {
-        activity = {
-          id: activityId,
-          type: input.targetType === 'post' ? 'POST_LIKED' : 'REPLY_LIKED',
-          recipientId: target.authorId,
-          postId: input.targetType === 'post' ? target.id : target.postId,
-          ...(input.targetType === 'reply' ? { replyId: target.id } : {}),
-          actorCount: 0, recentActors: [], read: false, readAt: null, createdAt: now
-        };
-        state.communityActivities.push(activity);
-      }
-      activity.actorCount = Math.max(0, Number(activity.actorCount || 0) + (input.liked ? 1 : -1));
-      activity.recentActors = (activity.recentActors || []).filter((item) => item.actorId !== user.id);
-      if (input.liked) activity.recentActors.unshift({ actorId: user.id, author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) } });
-      Object.assign(activity, {
-        recentActors: activity.recentActors.slice(0, 2),
-        status: activity.actorCount > 0 ? 'ACTIVE' : 'INACTIVE',
-        read: input.liked ? false : Boolean(activity.read),
-        readAt: input.liked ? null : activity.readAt || null,
-        updatedAt: now
-      });
-    }
-    return { targetType: input.targetType, targetId, liked: input.liked, likeCount: Number(target.likeCount || 0) };
-  }
-  if (action === 'activity.mine') {
-    const user = requireActiveUser();
-    const joinedIds = state.members.filter((item) => item.userId === user.id && item.role === 'MEMBER' && item.status === 'ACTIVE').map((item) => item.activityId);
-    return {
-      owned: state.activities.filter((item) => item.ownerId === user.id).map(publicActivity),
-      joined: state.activities.filter((item) => joinedIds.includes(item.id)).map(publicActivity)
-    };
-  }
-  if (action === 'activity.create') { requireActiveUser(true); return createActivity(input); }
-  if (action === 'group.space' || action === 'group.contact.share' || action === 'group.contact.revoke') {
-    const user = requireActiveUser();
-    const activity = activityById(input.activityId);
-    assert(activity && ['FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '仅成团中的活动可使用成员空间');
-    const selfMember = state.members.find((item) => item.activityId === activity.id && item.userId === user.id && item.status === 'ACTIVE');
-    assert(selfMember, 'FORBIDDEN', '你不是该活动的有效成员');
-    if (action === 'group.contact.share') {
-      assert(['WECHAT', 'MOBILE'].includes(input.type), 'VALIDATION_ERROR', '联系方式类型无效');
-      const value = String(input.value || '').trim();
-      assert(input.type === 'WECHAT' ? /^[A-Za-z][-_A-Za-z0-9]{5,19}$/.test(value) : /^\+?\d{8,15}$/.test(value), 'VALIDATION_ERROR', '联系方式格式无效');
-      const id = `memberContact:${activity.id}:${selfMember.id}`;
-      const existing = state.memberContacts.find((item) => item.id === id);
-      const contact = { id, activityId: activity.id, memberId: selfMember.id, userId: user.id, type: input.type, value, shared: true, status: 'ACTIVE', updatedAt: new Date().toISOString() };
-      if (existing) Object.assign(existing, contact); else state.memberContacts.push({ ...contact, createdAt: contact.updatedAt });
-    }
-    if (action === 'group.contact.revoke') {
-      const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === selfMember.id);
-      if (contact) Object.assign(contact, { shared: false, status: 'INACTIVE', value: null, updatedAt: new Date().toISOString() });
-    }
-    const members = state.members.filter((item) => item.activityId === activity.id && item.status === 'ACTIVE').map((item) => {
-      const memberUser = userById(item.userId);
-      const contact = state.memberContacts.find((entry) => entry.activityId === activity.id && entry.memberId === item.id && entry.status === 'ACTIVE' && entry.shared === true);
-      return { memberId: item.id, role: item.role, nickname: memberUser && memberUser.profile.nickname || '拼吧用户', isSelf: item.userId === user.id, sharedContact: contact ? { type: contact.type, value: contact.value } : null };
-    });
-    return { activityId: activity.id, meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules || '' }, members };
-  }
-  if (action === 'group.thread') {
-    const access = groupAccess(validatedId(input.activityId, '活动ID'));
-    const read = state.groupReadStates.find((item) => item.activityId === access.activity.id && item.userId === currentUserId
-      && item.generation === access.generation);
-    const latestIncoming = state.groupMessages.filter((item) => item.activityId === access.activity.id
-      && item.senderId !== currentUserId && item.sequence > access.after && item.sequence <= access.latestSequence)
-      .sort((left, right) => right.sequence - left.sequence)[0];
-    return { activity: { id: access.activity.id, title: access.activity.title, status: access.activity.status },
-      generation: access.generation, writable: access.writable,
-      hasUnread: Boolean(latestIncoming && latestIncoming.sequence > Number(read && read.sequence || access.after)) };
-  }
-  if (action === 'group.message.list') {
-    const access = groupAccess(validatedId(input.activityId, '活动ID'));
-    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 100);
-    const before = input.before === undefined || input.before === null || input.before === '' ? null : Number(input.before);
-    assert(before === null || Number.isSafeInteger(before) && before >= 0, 'VALIDATION_ERROR', '分页游标无效');
-    const candidates = state.groupMessages.filter((item) => item.activityId === access.activity.id
-      && item.sequence > access.after && item.sequence <= access.latestSequence
-      && (before === null || item.sequence < before)).sort((left, right) => right.sequence - left.sequence);
-    const items = candidates.slice(0, limit);
-    return { generation: access.generation, writable: access.writable, items: items.map(publicGroupMessage),
-      nextBefore: candidates.length > limit ? items[items.length - 1].sequence : null };
-  }
-  if (action === 'group.message.send') {
-    const access = groupAccess(validatedId(input.activityId, '活动ID'), true);
-    const generation = Number(input.generation);
-    const clientMessageId = String(input.clientMessageId || '').trim();
-    assert(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
-    assert(/^[A-Za-z0-9_-]{1,80}$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID无效');
-    const text = assertDirectMessageContent(input.text);
-    const id = stableMockEntityId('groupMessage', access.activity.id, currentUserId, access.member.id, generation, clientMessageId);
-    const payloadHash = opaqueSensitiveHash(text);
-    const existing = state.groupMessages.find((item) => item.id === id);
-    if (existing) {
-      assert(existing.payloadHash === payloadHash && existing.sequence > access.after, 'CONFLICT', '客户端消息ID已用于其他内容');
-      return { message: publicGroupMessage(existing) };
-    }
-    assert(access.activity.groupSequence < Number.MAX_SAFE_INTEGER, 'CONFLICT', '群聊序号已失效');
-    const now = new Date().toISOString();
-    const message = { id, activityId: access.activity.id, sequence: access.activity.groupSequence + 1,
-      senderId: currentUserId, memberId: access.member.id, generation, clientMessageId,
-      payloadHash, text, status: 'SENT', createdAt: now, updatedAt: now };
-    access.activity.groupSequence = message.sequence;
-    access.activity.groupLastMessageId = message.id;
-    access.activity.updatedAt = now;
-    state.groupMessages.push(message);
-    return { message: publicGroupMessage(message) };
-  }
-  if (action === 'group.message.read') {
-    const access = groupAccess(validatedId(input.activityId, '活动ID'));
-    const generation = Number(input.generation); const sequence = Number(input.sequence);
-    assert(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
-    const message = state.groupMessages.find((item) => item.id === input.messageId);
-    assert(message && message.activityId === access.activity.id && message.sequence === sequence
-      && sequence > access.after && sequence <= access.latestSequence, 'FORBIDDEN', '消息不在当前成员周期内');
-    const now = new Date().toISOString();
-    let read = state.groupReadStates.find((item) => item.activityId === access.activity.id && item.userId === currentUserId);
-    if (!read) { read = { id: stableMockEntityId('groupRead', access.activity.id, currentUserId), activityId: access.activity.id, userId: currentUserId }; state.groupReadStates.push(read); }
-    if (read.generation !== generation || sequence > Number(read.sequence || 0)) Object.assign(read, { generation, sequence, updatedAt: now });
-    return { generation: read.generation, sequence: read.sequence, readAt: read.updatedAt };
-  }
-  if (action === 'dm.unread') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const conversations = state.directConversations.filter((item) => [item.participantAId, item.participantBId].includes(currentUserId))
-      .filter((item) => item.kind !== 'OWNER_CONSULT' || activityById(item.source && item.source.id)?.status !== 'SUSPENDED');
-    return {
-      totalUnread: conversations.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[currentUserId]) || 0), 0),
-      conversationsWithUnread: conversations.filter((item) => Number(item.unreadByUser && item.unreadByUser[currentUserId]) > 0).length
-    };
-  }
-  if (action === 'dm.conversation.list') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
-    const cursor = decodeDirectCursor(input.cursor);
-    const candidates = state.directConversations
-      .filter((item) => [item.participantAId, item.participantBId].includes(currentUserId))
-      .filter((item) => item.kind !== 'OWNER_CONSULT' || activityById(item.source && item.source.id)?.status !== 'SUSPENDED')
-      .filter((item) => afterDirectCursor(item, cursor, 'updatedAt'))
-      .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
-    const page = candidates.slice(0, limit + 1);
-    const items = page.slice(0, limit);
-    return {
-      items: items.map(directConversationDto),
-      nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'updatedAt') : null
-    };
-  }
-  if (action === 'dm.conversation.create') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const activity = activityById(input.activityId);
-    const actorMember = activeMember(input.activityId, currentUserId);
-    const targetMember = state.members.find((item) => item.id === input.memberId);
-    assert(
-      activity
-        && ['FORMED', 'IN_PROGRESS'].includes(activity.status)
-        && actorMember
-        && targetMember
-        && targetMember.activityId === activity.id
-        && targetMember.status === 'ACTIVE'
-        && targetMember.userId !== currentUserId,
-      'NOT_FOUND_OR_NOT_ALLOWED',
-      '目标不存在或当前不可联系'
-    );
-    const peer = userById(targetMember.userId);
-    assert(peer && peer.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    const participants = [currentUserId, peer.id].sort();
-    const conversationId = `conversation_${opaqueSensitiveHash(`${activity.id}:${participants.join(':')}`)}`;
-    let conversation = state.directConversations.find((item) => item.id === conversationId);
-    if (!conversation) {
-      const now = new Date().toISOString();
-      conversation = {
-        id: conversationId,
-        kind: 'MEMBER_DM',
-        participantAId: participants[0],
-        participantBId: participants[1],
-        source: { type: 'activity', id: activity.id, title: activity.title },
-        lastMessageId: null,
-        lastMessagePreview: '',
-        lastMessageAt: null,
-        lastSenderId: null,
-        unreadByUser: { [participants[0]]: 0, [participants[1]]: 0 },
-        createdAt: now,
-        updatedAt: now
-      };
-      state.directConversations.push(conversation);
-    }
-    return { conversation: directConversationDto(conversation) };
-  }
-  if (action === 'dm.consult.create') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const activity = activityById(validatedId(input.activityId, '活动ID'));
-    assert(activity && activity.status !== 'SUSPENDED', activity && activity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND', '活动不存在或已失效');
-    assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status) && activity.ownerId !== currentUserId,
-      'CONFLICT', activity.ownerId === currentUserId ? '不能与自己发起私信' : '当前活动暂不可咨询');
-    const owner = userById(activity.ownerId);
-    assert(owner && owner.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED', '发起人当前不可联系');
-    const participants = [currentUserId, owner.id].sort();
-    const conversationId = stableMockEntityId('consultConversation', activity.id, ...participants);
-    let conversation = state.directConversations.find((item) => item.id === conversationId);
-    if (!conversation) {
-      const now = new Date().toISOString();
-      conversation = { id: conversationId, kind: 'OWNER_CONSULT', ownerId: owner.id, consultantId: currentUserId,
-        participantAId: participants[0], participantBId: participants[1],
-        source: { type: 'activity_consult', id: activity.id, title: activity.title },
-        lastMessageId: null, lastMessagePreview: '', lastMessageAt: null, lastSenderId: null,
-        unreadByUser: { [participants[0]]: 0, [participants[1]]: 0 }, createdAt: now, updatedAt: now };
-      state.directConversations.push(conversation);
-    }
-    return { conversation: directConversationDto(conversation) };
-  }
-  if (action === 'dm.message.list') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const conversation = state.directConversations.find((item) => item.id === input.conversationId);
-    assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    const sourceActivity = conversation.source && activityById(conversation.source.id);
-    assert(conversation.kind !== 'OWNER_CONSULT' || sourceActivity && sourceActivity.status !== 'SUSPENDED',
-      sourceActivity && sourceActivity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
-    const cursor = decodeDirectCursor(input.cursor);
-    const candidates = state.directMessages
-      .filter((item) => item.conversationId === conversation.id)
-      .filter((item) => afterDirectCursor(item, cursor, 'createdAt'))
-      .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)) || String(right.id).localeCompare(String(left.id)));
-    const page = candidates.slice(0, limit + 1);
-    const items = page.slice(0, limit);
-    return {
-      conversation: directConversationDto(conversation),
-      items: items.map(directMessageDto),
-      nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'createdAt') : null
-    };
-  }
-  if (action === 'dm.message.send') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const conversation = state.directConversations.find((item) => item.id === input.conversationId);
-    assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    const clientMessageId = String(input.clientMessageId || '').trim();
-    assert(/^[A-Za-z0-9:_-]{8,80}$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID格式无效');
-    const text = assertDirectMessageContent(input.text);
-    const id = `directMessage_${opaqueSensitiveHash(`${conversation.id}:${currentUserId}:${clientMessageId}`)}`;
-    const existing = state.directMessages.find((item) => item.id === id);
-    const payloadHash = opaqueSensitiveHash(text);
-    const sourceActivity = conversation.source && activityById(conversation.source.id);
-    const participantsActive = [conversation.participantAId, conversation.participantBId]
-      .every((id) => userById(id) && userById(id).status === 'ACTIVE');
-    if (conversation.kind === 'OWNER_CONSULT') {
-      assert(sourceActivity && sourceActivity.status !== 'SUSPENDED', sourceActivity && sourceActivity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'CONFLICT', '活动已结束，这段咨询现为只读');
-      assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
-        && sourceActivity.ownerId === conversation.ownerId && participantsActive, 'CONFLICT', '活动已结束，这段咨询现为只读');
-    } else {
-      const firstMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantAId);
-      const secondMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantBId);
-      assert(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status) && firstMember && secondMember
-        && participantsActive, 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
-    }
-    if (existing) {
-      assert(existing.conversationId === conversation.id && existing.senderId === currentUserId, 'CONFLICT', '客户端消息ID已用于其他会话');
-      assert(existing.payloadHash === payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
-      return { message: directMessageDto(existing) };
-    }
-    const now = new Date().toISOString();
-    const message = { id, conversationId: conversation.id, senderId: currentUserId, text, payloadHash, status: 'SENT', createdAt: now, updatedAt: now };
-    state.directMessages.push(message);
-    const recipientId = conversation.participantAId === currentUserId ? conversation.participantBId : conversation.participantAId;
-    conversation.lastMessageId = message.id;
-    conversation.lastMessagePreview = text.slice(0, 80);
-    conversation.lastMessageAt = now;
-    conversation.lastSenderId = currentUserId;
-    conversation.updatedAt = now;
-    conversation.unreadByUser = {
-      ...(conversation.unreadByUser || {}),
-      [currentUserId]: Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0,
-      [recipientId]: (Number(conversation.unreadByUser && conversation.unreadByUser[recipientId]) || 0) + 1
-    };
-    return { message: directMessageDto(message) };
-  }
-  if (action === 'dm.conversation.read') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    const conversation = state.directConversations.find((item) => item.id === input.conversationId);
-    assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    if (conversation.kind === 'OWNER_CONSULT') {
-      const activity = activityById(conversation.source && conversation.source.id);
-      assert(activity && activity.status !== 'SUSPENDED',
-        activity && activity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    }
-    assert(typeof input.lastMessageId === 'string' && input.lastMessageId.length > 0 && input.lastMessageId.length <= 80, 'VALIDATION_ERROR', '已读消息ID无效');
-    const now = new Date().toISOString();
-    if (!conversation.lastMessageId || conversation.lastMessageId !== input.lastMessageId) {
-      return { conversation: directConversationDto(conversation), unread: Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0, readAt: now };
-    }
-    conversation.unreadByUser = { ...(conversation.unreadByUser || {}), [currentUserId]: 0 };
-    conversation.readAtByUser = { ...(conversation.readAtByUser || {}), [currentUserId]: now };
-    return { conversation: directConversationDto(conversation), unread: 0, readAt: now };
-  }
-  if (action === 'ride.driver.profile') { requireUser(); return { driver: driverProfile() }; }
-  if (action === 'ride.driver.mine') {
-    requireApprovedDriver();
-    return {
-      items: (state.rideFulfillments || [])
-        .filter((item) => item.driverId === currentUserId && item.status === 'ASSIGNED')
-        .map((item) => ({
-          activity: publicActivity(activityById(item.activityId)),
-          rideFulfillment: clone(publicActivity(activityById(item.activityId)).rideFulfillment)
-        }))
-    };
-  }
-  if (action === 'ride.driver.memberContacts') {
-    requireApprovedDriver();
-    const activity = activityById(input.activityId);
-    const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
-    assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
-    assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '该行程当前不可查看成员联系方式');
-    assert(fulfillment.status === 'ASSIGNED' && fulfillment.driverId === currentUserId, 'FORBIDDEN', '你没有权限查看成员联系方式');
-    const items = state.members
-      .filter((member) => member.activityId === activity.id && member.status === 'ACTIVE')
-      .sort((left, right) => Date.parse(left.joinedAt) - Date.parse(right.joinedAt))
-      .map((member) => {
-        const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id && item.status === 'ACTIVE');
-        assert(contact && contact.phone, 'CONTACT_INCOMPLETE', '成员联系方式尚未齐全，请稍后重试');
-        const user = userById(member.userId);
-        return {
-          memberId: member.id,
-          nickname: user && user.profile && user.profile.nickname || (member.role === 'OWNER' ? '发起者' : '乘客'),
-          phone: contact.phone,
-          luggageType: member.luggageType || null,
-          role: member.role
-        };
-      });
-    return { activityId: activity.id, items };
-  }
-  if (action === 'ride.driver.accept') { requireApprovedDriver(true); return acceptRide(input); }
-  if (action === 'ride.driver.cancel') { requireApprovedDriver(true); return cancelRideAssignment(input); }
-  if (action === 'application.submit') return submitApplication(input);
-  if (action === 'ride.join') { requireActiveUser(true); return joinRide(input); }
-  if (action === 'application.listForOwner') {
-    const activity = activityById(input.activityId);
-    assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限查看申请');
-    return {
-      items: state.applications
-        .filter((item) => item.activityId === input.activityId)
-        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-        .map(publicApplication)
-    };
-  }
-  if (action === 'application.approve') return approveApplication(input);
-  if (action === 'application.reject') {
-    const application = state.applications.find((item) => item.id === input.applicationId);
-    const activity = application && activityById(application.activityId);
-    assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限处理该申请');
-    assert(application.status === 'PENDING', 'CONFLICT', '该申请已处理');
-    application.status = 'REJECTED';
-    application.updatedAt = new Date().toISOString();
-    return { activity: publicActivity(activity), application: publicApplication(application) };
-  }
-  if (action === 'application.withdraw') {
-    const application = state.applications.find((item) => item.id === input.applicationId);
-    assert(application && application.applicantId === currentUserId, 'FORBIDDEN', '你没有权限撤回该申请');
-    assert(application.status === 'PENDING', 'CONFLICT', '当前状态不能撤回申请');
-    application.status = 'WITHDRAWN';
-    application.updatedAt = new Date().toISOString();
-    return { application: publicApplication(application) };
-  }
-  if (action === 'member.leave') {
-    const activity = activityById(input.activityId);
-    const member = activeMember(input.activityId, currentUserId);
-    assert(activity && member && member.role !== 'OWNER', 'FORBIDDEN', '当前不能退出该活动');
-    assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '当前状态不能退团');
-    const fulfillment = activity.type === 'ride'
-      ? (state.rideFulfillments || []).find((item) => item.activityId === activity.id)
-      : null;
-    assert(
-      activity.type !== 'ride' || !fulfillment || fulfillment.status === 'UNASSIGNED',
-      'RIDE_MEMBER_LOCKED',
-      '司机已确认承接，当前不可退出拼车'
-    );
-    member.status = 'LEFT';
-    member.leaveReason = input.reason || '';
-    const now = new Date().toISOString();
-    member.leftAt = now;
-    const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
-    if (contact) Object.assign(contact, { status: 'INACTIVE', updatedAt: now });
-    activity.avatarRoster = normalizeAvatarRoster(activity.avatarRoster).filter((item) => item.memberId !== member.id);
-    activity.memberCount = Math.max(1, activity.memberCount - 1);
-    if (activity.status === 'FORMED' && activity.memberCount < (activity.minMembers || activity.minPassengers || activity.targetMembers)) {
-      activity.status = 'RECRUITING';
-      delete activity.formedAt;
-    }
-    activity.updatedAt = now;
-    if (activity.type === 'ride') activity.rideJoinable = isMockRideJoinable(activity, now);
-    return { activity: publicActivity(activity) };
-  }
-  if (action === 'activity.cancel') {
-    const activity = activityById(input.activityId);
-    assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限取消该活动');
-    if (activity.status !== 'CANCELLED') {
-      assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '当前状态不能取消活动');
-      activity.status = 'CANCELLED';
-      if (activity.type === 'ride') activity.rideJoinable = false;
-      activity.cancelReason = input.reason;
-      activity.updatedAt = new Date().toISOString();
-    }
-    state.applications.forEach((item) => {
-      if (item.activityId === activity.id && item.status === 'PENDING') {
-        item.status = 'CANCELLED_BY_ACTIVITY';
-        item.updatedAt = activity.updatedAt;
-      }
-    });
-    return { activity: publicActivity(activity) };
-  }
-  if (action === 'activity.complete') {
-    const activity = activityById(input.activityId);
-    assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限完成该活动');
-    assert(['FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '当前状态不能完成活动');
-    activity.status = 'COMPLETED';
-    activity.completedAt = new Date().toISOString();
-    if (activity.type === 'ride') activity.rideJoinable = false;
-    return { activity: publicActivity(activity) };
-  }
-  if (action === 'group.contact') {
-    const activity = activityById(input.activityId);
-    assert(activity && ['FORMED', 'IN_PROGRESS', 'COMPLETED'].includes(activity.status), 'CONFLICT', '活动成团后才能查看联系信息');
-    assert(activeMember(activity.id, currentUserId), 'FORBIDDEN', '仅活动成员可以查看联系信息');
-    return { activityId: activity.id, contactInfo: activity.contactInfo, meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules } };
-  }
-  if (action === 'notification.list') {
-    requireActiveUser();
-    return {
-      items: state.notifications
-        .filter((item) => item.userId === currentUserId)
-        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-        .map(publicNotification)
-    };
-  }
-  if (action === 'notification.read') {
-    requireActiveUser();
-    const item = state.notifications.find((notification) => notification.id === input.notificationId);
-    assert(item && item.userId === currentUserId, 'FORBIDDEN', '你没有权限处理该通知');
-    item.read = true;
-    return { notification: publicNotification(item) };
-  }
-  if (action === 'report.create') {
-    const user = requireActiveUser(true);
-    assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
-    assert(['activity', 'user', 'communityPost', 'communityReply', 'directConversation'].includes(input.targetType), 'VALIDATION_ERROR', '举报对象类型无效');
-    assert(typeof input.targetId === 'string' && input.targetId.length > 0 && input.targetId.length <= 80, 'VALIDATION_ERROR', '举报对象无效');
-    assert(['FALSE_INFORMATION', 'ILLEGAL_SERVICE_SOLICITATION', 'FRAUD_OR_DIVERSION', 'HARASSMENT', 'OTHER'].includes(input.reason), 'VALIDATION_ERROR', '举报原因无效');
-    assert(String(input.description || '').length <= 300, 'VALIDATION_ERROR', '举报说明过长');
-    if (input.targetType === 'directConversation') {
-      const conversation = state.directConversations.find((item) => item.id === input.targetId);
-      assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
-    }
-    const duplicate = state.reports.find((item) => item.reporterId === currentUserId && item.targetType === input.targetType && item.targetId === input.targetId);
-    assert(!duplicate, 'CONFLICT', '你已经举报过该内容');
-    const report = { id: nextId('report'), reporterId: currentUserId, ...clone(input), status: 'NEW', createdAt: new Date().toISOString() };
-    state.reports.push(report);
-    const { reporterId, ...safeReport } = report;
-    return { report: clone(safeReport), hiddenForReporter: true };
-  }
-  if (action === 'admin.activity.suspend') {
-    const admin = requireUser();
-    assert(admin.role === 'admin', 'FORBIDDEN', '你没有权限执行此操作');
-    const activity = activityById(input.activityId);
-    assert(activity, 'NOT_FOUND', '活动不存在或已失效');
-    if (activity.status !== 'SUSPENDED') {
-      activity.status = 'SUSPENDED';
-      if (activity.type === 'ride') activity.rideJoinable = false;
-      activity.suspension = {
-        adminId: admin.id,
-        reason: input.reason || '',
-        at: new Date().toISOString()
-      };
-      activity.version += 1;
-      activity.updatedAt = activity.suspension.at;
-    }
-    return { activity: publicActivity(activity) };
-  }
-  throw fail('NOT_FOUND', '接口动作不存在');
+if (REMOVED_ACTIONS.has(action)) throw fail('NOT_FOUND', '接口动作不存在');
+if (action === 'companion.presence.leave') requireKnownUser();
+else if (!PUBLIC_ACTIONS.has(action)) requireUser();
+if (action === 'auth.login') {
+const user = requireUser();
+return {
+user: selfUser(user),
+onboarding: {
+profileComplete: completeRideProfile(user.profile)
+},
+sessionScope: `mock-session-${currentUserId}`
+};
 }
-
+if (action === 'profile.get') return { user: selfUser(requireUser()) };
+if (action === 'profile.public.get') {
+const token = validateMockPublicProfileInput(input);
+const now = new Date().toISOString();
+if (token.startsWith('communityProfileNa_')) {
+const viewer = requireActiveUser();
+const tokenHash = opaqueSensitiveHash(token);
+const ticket = (state.publicProfileNavTickets || []).find((item) => item.tokenHash === tokenHash
+&& item.viewerId === viewer.id && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(now));
+assert(ticket, 'NOT_FOUND', '目标不存在或已失效');
+const source = ticket.sourceType === 'post'
+? state.communityPosts.find((item) => item.id === ticket.sourceId && item.status === 'ACTIVE')
+: state.communityReplies.find((item) => item.id === ticket.sourceId && item.status === 'ACTIVE');
+assert(source && source.authorId === ticket.targetUserId, 'NOT_FOUND', '内容不存在或已被删除');
+if (ticket.sourceType === 'reply') assert(state.communityPosts.some((item) => item.id === source.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
+const target = state.users.find((item) => item.id === ticket.targetUserId && item.status === 'ACTIVE' && item.profile);
+assert(target, 'NOT_FOUND', '目标不存在或已失效');
+const profile = target.profile;
+return { profile: {
+nickname: Array.from(String(profile.nickname || '').trim() || '拼吧用户').slice(0, 12).join(''),
+avatarKind: avatarKindFromGender(profile.gender), gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
+age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)), mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
+city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
+interests: Array.isArray(profile.interests) ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
+online: false, viewerIsSelf: target.id === currentUserId
+}, serverNow: now, expiresAt: ticket.expiresAt };
+}
+const bucket = Math.floor(Date.parse(now) / COMPANION_PROFILE_NAV_BUCKET_MS);
+const profileNavNonce = mockProfileNavNonceFromToken(token);
+const presence = state.companionPresences.find((item) => item.profileNavNonce === profileNavNonce
+&& item.scene === COMPANION_PRESENCE_SCENE
+&& item.status === 'ACTIVE'
+&& Date.parse(item.expiresAt) > Date.parse(now)
+&& [bucket, bucket - 1].some((candidate) => mockProfileNavToken(item.profileNavNonce, item.sessionNonce, candidate) === token));
+assert(presence, 'NOT_FOUND', '目标不存在或已失效');
+const target = state.users.find((item) => item.id === presence.userId && item.status === 'ACTIVE' && item.profile);
+assert(target, 'NOT_FOUND', '目标不存在或已失效');
+const profile = target.profile;
+return {
+profile: {
+nickname: Array.from(String(profile.nickname || '').trim() || '匿名搭子').slice(0, 12).join(''),
+avatarKind: avatarKindFromGender(profile.gender),
+gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
+age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)),
+mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
+city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
+interests: Array.isArray(profile.interests) ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
+online: true,
+viewerIsSelf: target.id === currentUserId
+},
+serverNow: now,
+expiresAt: new Date(Math.min(Date.parse(presence.expiresAt), (bucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString()
+};
+}
+if (action === 'profile.update') {
+const user = requireUser();
+user.profile = validateMockProfile(input, user.profile);
+const avatarKind = avatarKindFromGender(input.gender);
+state.members.filter((member) => member.userId === user.id && member.status === 'ACTIVE').forEach((member) => {
+const activity = activityById(member.activityId);
+if (activity && ['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status)) {
+member.avatarKind = avatarKind;
+member.updatedAt = new Date().toISOString();
+activity.avatarRoster = upsertAvatarRoster(activity.avatarRoster, member.id, avatarKind);
+activity.updatedAt = member.updatedAt;
+}
+});
+return { user: selfUser(user) };
+}
+if (action === 'profile.avatar.prepare') {
+const user = requireUser();
+const upload = {
+id: nextId('profile_avatar_upload'), userId: user.id,
+cloudPath: `mock-profile-avatar/${user.id}/${Date.now()}.jpg`, status: 'PREPARED',
+expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+};
+state.profileAvatarUploads.push(upload);
+return { upload: { id: upload.id, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt, maxBytes: 1024 * 1024, mockOnly: true } };
+}
+if (action === 'profile.avatar.confirm') {
+const user = requireUser();
+const upload = state.profileAvatarUploads.find((item) => item.id === input.uploadId);
+assert(upload && upload.userId === user.id && ['PREPARED', 'BOUND'].includes(upload.status), 'PROFILE_AVATAR_INVALID', '头像上传凭据无效');
+assert(Date.parse(upload.expiresAt) > Date.now(), 'PROFILE_AVATAR_INVALID', '头像上传凭据已失效');
+assert(isMockLocalAvatarPath(input.fileID), 'PROFILE_AVATAR_INVALID', '演示头像文件无效');
+if (upload.status !== 'BOUND') {
+const revision = Math.max(0, Number(user.profile && user.profile.avatar && user.profile.avatar.revision) || 0) + 1;
+user.profile = { ...(user.profile || {}), avatar: { status: 'ACTIVE', fileID: input.fileID, revision, updatedAt: new Date().toISOString(), mockOnly: true } };
+upload.status = 'BOUND';
+upload.fileID = input.fileID;
+}
+return { user: selfUser(user) };
+}
+if (action === 'profile.avatar.clear') {
+const user = requireUser();
+if (user.profile && user.profile.avatar) {
+const { avatar, ...profile } = user.profile;
+user.profile = profile;
+}
+return { user: selfUser(user) };
+}
+if (action === 'onboarding.selectRole') {
+const user = requireUser();
+assert(['PASSENGER', 'DRIVER'].includes(input.roleIntent), 'VALIDATION_ERROR', '注册身份无效');
+user.onboarding = { roleIntent: input.roleIntent, completedAt: new Date().toISOString() };
+return { user: selfUser(user) };
+}
+if (action === 'driver.application.get') {
+requireUser();
+const application = state.driverApplications.find((item) => item.userId === currentUserId);
+return { application: publicDriverApplication(application) };
+}
+if (action === 'driver.document.prepare') {
+const user = requireUser();
+assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
+assert(['identityFront', 'driverLicense', 'vehicleExterior'].includes(input.kind), 'VALIDATION_ERROR', '文件类型无效');
+const upload = {
+id: nextId('driver_upload'), userId: currentUserId, kind: input.kind,
+cloudPath: `mock-private/${currentUserId}/${Date.now()}-${input.kind}.jpg`,
+status: 'PREPARED', expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+};
+state.driverDocumentUploads.push(upload);
+return { upload: { id: upload.id, kind: upload.kind, cloudPath: upload.cloudPath, expiresAt: upload.expiresAt } };
+}
+if (action === 'driver.document.confirm') {
+const user = requireUser();
+assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
+const upload = state.driverDocumentUploads.find((item) => item.id === input.uploadId);
+assert(upload && upload.userId === currentUserId && upload.kind === input.kind && ['PREPARED', 'INSPECTED'].includes(upload.status), 'DRIVER_DOCUMENT_REQUIRED', '认证图片无效');
+assert(input.fileID === upload.cloudPath, 'DRIVER_DOCUMENT_REQUIRED', '文件与上传凭据不匹配');
+if (upload.status === 'INSPECTED') return { document: { uploadId: upload.id, kind: upload.kind, inspectedAt: upload.inspectedAt } };
+upload.status = 'INSPECTED';
+upload.sealedFileID = `mock-sealed://${upload.id}`;
+upload.inspectedAt = new Date().toISOString();
+return { document: { uploadId: upload.id, kind: upload.kind, inspectedAt: upload.inspectedAt } };
+}
+if (action === 'driver.application.submit') {
+const user = requireUser();
+assert(user.profile && user.profile.adultConfirmed === true, 'PROFILE_INCOMPLETE', '请先完成成年确认和基本资料');
+const current = state.driverApplications.find((item) => item.userId === currentUserId);
+const payloadHash = opaqueSensitiveHash(stableSerialize(input));
+if (current && current.operationKeyHash === idempotencyKey) {
+assert(current.payloadHash === payloadHash, 'CONFLICT', '幂等键已用于其他司机认证资料');
+return { application: publicDriverApplication(current) };
+}
+assert(!current || !['SUBMITTED', 'APPROVED'].includes(current.status), 'DRIVER_APPLICATION_PENDING', '司机认证正在审核中');
+assert(input.consent && input.consent.driverVerify === true && input.consent.sensitiveDocuments === true, 'DRIVER_CONSENT_REQUIRED', '请同意资料使用说明');
+const required = ['legalName', 'identityType', 'identityNumber', 'driverLicenseNumber', 'vehicleType', 'plateNumber'];
+required.forEach((field) => assert(String(input[field] || '').trim(), 'VALIDATION_ERROR', '请补齐司机认证资料'));
+const documents = input.documents || {};
+['identityFront', 'driverLicense', 'vehicleExterior'].forEach((kind) => {
+const reference = documents[kind];
+const upload = reference && state.driverDocumentUploads.find((item) => item.id === reference.uploadId);
+assert(upload && upload.userId === currentUserId && upload.kind === kind && upload.status === 'INSPECTED', 'DRIVER_DOCUMENT_REQUIRED', '请补齐司机认证图片');
+upload.status = 'BOUND';
+});
+const now = new Date().toISOString();
+const application = {
+id: currentUserId,
+userId: currentUserId,
+status: 'SUBMITTED',
+revision: Number(current && current.revision || 0) + 1,
+operationKeyHash: idempotencyKey,
+payloadHash,
+summary: {
+legalNameMasked: `${String(input.legalName).slice(0, 1)}**`,
+identityType: input.identityType,
+identityLast4: String(input.identityNumber).slice(-4),
+identityExpiresAt: input.identityExpiresAt,
+driverLicenseLast4: String(input.driverLicenseNumber).slice(-4),
+driverLicenseExpiresAt: input.driverLicenseExpiresAt,
+vehicleType: input.vehicleType,
+passengerCapacity: Number(input.passengerCapacity),
+plateMasked: `***${String(input.plateNumber).slice(-2)}`,
+documentKinds: Object.keys(documents)
+},
+submittedAt: now,
+updatedAt: now
+};
+if (current) Object.assign(current, application);
+else state.driverApplications.push(application);
+return { application: publicDriverApplication(application) };
+}
+if (action === 'driver.application.withdraw') {
+requireUser();
+const application = state.driverApplications.find((item) => item.userId === currentUserId);
+assert(application && ['SUBMITTED', 'NEEDS_MORE_INFO'].includes(application.status), 'DRIVER_APPLICATION_LOCKED', '当前认证状态不能撤回');
+application.status = 'WITHDRAWN';
+application.updatedAt = new Date().toISOString();
+const retentionUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+state.driverDocumentUploads.forEach((upload) => {
+if (upload.userId === currentUserId && upload.status === 'BOUND') {
+upload.status = 'RETENTION_PENDING';
+upload.retentionUntil = retentionUntil;
+}
+});
+return { application: publicDriverApplication(application) };
+}
+if (action === 'activity.list') return listActivities(input);
+if (action === 'activity.nearby') return listNearbyActivities(input);
+if (action === 'activity.memories') return listActivityMemories(input);
+if (action === 'activity.detail') {
+const now = new Date().toISOString();
+const activity = normalizeActivityForRead(activityById(input.activityId), now);
+assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+assert(activity.status !== 'SUSPENDED', 'TAKEDOWN', '该活动已被平台处理，暂不可查看');
+return { activity: publicActivity(activity, { at: now }) };
+}
+if (action === 'activity.question.list') return listActivityQuestions(input);
+if (action === 'activity.question.ask') return askActivityQuestion(input);
+if (action === 'activity.question.answer') return answerActivityQuestion(input);
+if (action === 'companion.presence.snapshot') {
+validateCompanionScene(input);
+return publicMockPresenceSnapshot(new Date().toISOString());
+}
+if (action === 'companion.presence.enter') {
+validateCompanionScene(input);
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const now = new Date().toISOString();
+const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
+const existing = state.companionPresences.find((item) => item.id === id);
+const sessionNonce = stableMockEntityId('presenceSession', now, idempotencyKey);
+const profileNavNonce = mockOpaque56('profileNavNonce', now, idempotencyKey);
+const next = {
+id,
+scene: COMPANION_PRESENCE_SCENE,
+userId: user.id,
+nickname: user.profile.nickname,
+sessionNonce,
+profileNavNonce,
+layoutSeed: Number.parseInt(sessionNonce.slice(-8), 16) >>> 0,
+status: 'ACTIVE',
+lastSeenAt: now,
+expiresAt: new Date(Date.parse(now) + COMPANION_PRESENCE_TTL_MS).toISOString(),
+createdAt: existing && existing.createdAt || now,
+updatedAt: now
+};
+if (existing) Object.assign(existing, next); else state.companionPresences.push(next);
+return { joined: true, sessionToken: sessionNonce, sessionTtlSec: 90, heartbeatIntervalSec: 30, snapshot: publicMockPresenceSnapshot(now) };
+}
+if (action === 'companion.presence.heartbeat') {
+const { sessionToken } = validateCompanionScene(input, true);
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const now = new Date().toISOString();
+const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
+const presence = state.companionPresences.find((item) => item.id === id && item.sessionNonce === sessionToken && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(now));
+const refreshed = Boolean(presence && Date.parse(now) - Date.parse(presence.updatedAt) >= COMPANION_MIN_WRITE_INTERVAL_MS);
+if (refreshed) Object.assign(presence, {
+lastSeenAt: now,
+expiresAt: new Date(Date.parse(now) + COMPANION_PRESENCE_TTL_MS).toISOString(),
+updatedAt: now
+});
+return { joined: Boolean(presence), refreshed, serverNow: now, sessionTtlSec: 90, heartbeatIntervalSec: 30 };
+}
+if (action === 'companion.presence.leave') {
+const { sessionToken } = validateCompanionScene(input, true);
+const user = requireKnownUser();
+const now = new Date().toISOString();
+const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
+const presence = state.companionPresences.find((item) => item.id === id);
+if (presence && presence.sessionNonce === sessionToken) Object.assign(presence, { status: 'INACTIVE', expiresAt: now, updatedAt: now });
+return { joined: false, serverNow: now };
+}
+if (action === 'community.post.list') {
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '讨论筛选条件无效');
+assert(Object.keys(input).every((key) => ['cursor', 'limit', 'keyword'].includes(key)), 'VALIDATION_ERROR', '讨论筛选条件无效');
+const keyword = normalizeCommunityKeyword(optionalFilterString(input.keyword, '讨论搜索词', 90));
+assert(keyword.length <= 30, 'VALIDATION_ERROR', '讨论搜索词长度不能超过30个字符', { field: '讨论搜索词' });
+const cursor = decodeCommunityCursor(input.cursor, keyword);
+const limit = Number(input.limit === undefined ? 20 : input.limit);
+assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量必须在1到30之间');
+const candidates = state.communityPosts.filter((item) => item.status === 'ACTIVE')
+.filter((item) => afterDescendingCommunityCursor(item, cursor))
+.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.id).localeCompare(String(a.id)));
+const scanned = candidates.slice(0, 500);
+const matched = scanned.filter((item) => matchesCommunityKeyword(item, keyword));
+const items = matched.slice(0, limit);
+const lookahead = matched.length > limit;
+const exhausted = candidates.length <= scanned.length;
+const continuation = lookahead ? items[items.length - 1] : !exhausted ? scanned[scanned.length - 1] : null;
+return { items: items.map(publicCommunityPost), nextCursor: continuation ? encodeCommunityCursor(continuation, keyword) : null };
+}
+if (action === 'community.activity.list') {
+requireActiveUser();
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '动态筛选条件无效');
+assert(Object.keys(input).every((key) => ['tab', 'cursor', 'limit'].includes(key)), 'VALIDATION_ERROR', '动态筛选条件无效');
+const tab = input.tab === undefined ? 'ALL' : input.tab;
+assert(['ALL', 'REPLIES', 'LIKES'].includes(tab), 'VALIDATION_ERROR', '动态筛选选项无效');
+const cursor = decodeCommunityActivityCursor(input.cursor, tab);
+const limit = Number(input.limit === undefined ? 20 : input.limit);
+assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量必须在1到30之间');
+const types = tab === 'REPLIES' ? ['POST_REPLIED'] : tab === 'LIKES' ? ['POST_LIKED', 'REPLY_LIKED'] : [];
+const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+const candidates = state.communityActivities
+.filter((item) => item.recipientId === currentUserId && item.status === 'ACTIVE' && (!types.length || types.includes(item.type)))
+.filter((item) => Date.parse(item.updatedAt) >= cutoff && afterCommunityActivityCursor(item, cursor))
+.sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
+const page = candidates.slice(0, limit + 1);
+const items = page.slice(0, limit);
+return { items: items.map(publicCommunityActivity), nextCursor: page.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null };
+}
+if (action === 'community.activity.read') {
+requireActiveUser();
+const activityId = validatedId(input && input.activityId, '动态ID');
+const item = state.communityActivities.find((entry) => entry.id === activityId && entry.recipientId === currentUserId);
+assert(item, 'NOT_FOUND', '动态不存在');
+item.read = true;
+item.readAt = new Date().toISOString();
+return { activityId, read: true, readAt: item.readAt };
+}
+if (action === 'community.post.detail') {
+const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');
+assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
+const cursor = decodeCommunityCursor(input.cursor);
+const limit = Math.min(Math.max(Number(input.limit) || 30, 1), 30);
+const replies = state.communityReplies.filter((item) => item.postId === post.id && item.status === 'ACTIVE' && afterAscendingCommunityCursor(item, cursor))
+.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) || String(a.id).localeCompare(String(b.id)));
+const page = replies.slice(0, limit + 1);
+return { post: publicCommunityPost(post), replies: page.slice(0, limit).map(publicCommunityReply), nextCursor: page.length > limit ? encodeCommunityCursor(page[limit - 1]) : null };
+}
+if (action === 'community.profile.nav.create') {
+const viewer = requireActiveUser();
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '作者主页参数无效');
+assert(Object.keys(input).every((key) => ['sourceType', 'sourceId'].includes(key)), 'VALIDATION_ERROR', '作者主页参数无效');
+assert(['post', 'reply'].includes(input.sourceType), 'VALIDATION_ERROR', '作者来源类型无效');
+const sourceId = validatedId(input.sourceId, '作者来源ID');
+const source = input.sourceType === 'post'
+? state.communityPosts.find((item) => item.id === sourceId && item.status === 'ACTIVE')
+: state.communityReplies.find((item) => item.id === sourceId && item.status === 'ACTIVE');
+assert(source, 'NOT_FOUND', '内容不存在或已被删除');
+if (input.sourceType === 'reply') assert(state.communityPosts.some((item) => item.id === source.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
+const target = state.users.find((item) => item.id === source.authorId && item.status === 'ACTIVE' && item.profile);
+assert(target, 'NOT_FOUND', '目标不存在或已失效');
+if (target.id === viewer.id) return { target: 'self' };
+const now = new Date().toISOString();
+const profileNavToken = mockCommunityProfileNavToken(viewer.id, target.id, sourceId, now, Math.random());
+const expiresAt = new Date(Date.parse(now) + 60000).toISOString();
+state.publicProfileNavTickets = state.publicProfileNavTickets || [];
+const tokenHash = opaqueSensitiveHash(profileNavToken);
+state.publicProfileNavTickets.push({ id: stableMockEntityId('cpn', tokenHash), tokenHash, viewerId: viewer.id, targetUserId: target.id, sourceType: input.sourceType, sourceId, status: 'ACTIVE', expiresAt, createdAt: now, updatedAt: now });
+return { target: 'public', profileNavToken, expiresAt };
+}
+if (action === 'community.post.create') {
+const user = requireUser();
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const content = assertCommunityContent(input.content, 500);
+const now = new Date().toISOString();
+const post = {
+id: nextId('communityPost'), authorId: user.id,
+author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
+content, replyCount: 0, status: 'ACTIVE', createdAt: now, updatedAt: now
+};
+state.communityPosts.push(post);
+return { post: publicCommunityPost(post) };
+}
+if (action === 'community.reply.create') {
+const user = requireUser();
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '回复参数无效');
+assert(Object.keys(input).every((key) => ['postId', 'content', 'replyToId'].includes(key)), 'VALIDATION_ERROR', '回复参数无效');
+const postId = validatedId(input.postId, '帖子ID');
+const replyToId = input.replyToId === undefined || input.replyToId === null || input.replyToId === ''
+? ''
+: validatedId(input.replyToId, '目标回复ID');
+const post = state.communityPosts.find((item) => item.id === postId && item.status === 'ACTIVE');
+assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
+const targetReply = replyToId ? state.communityReplies.find((item) => item.id === replyToId && item.status === 'ACTIVE' && item.postId === post.id) : null;
+if (replyToId) assert(targetReply, 'NOT_FOUND', '目标回复不存在或已被删除');
+const now = new Date().toISOString();
+const reply = {
+id: nextId('communityReply'), postId: post.id, authorId: user.id,
+author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) },
+content: assertCommunityContent(input.content, 300), ...(replyToId ? { replyToId } : {}), status: 'ACTIVE', createdAt: now, updatedAt: now
+};
+state.communityReplies.push(reply);
+post.replyCount = Number(post.replyCount || 0) + 1;
+const recipientId = targetReply ? targetReply.authorId : post.authorId;
+if (recipientId !== user.id) state.communityActivities.push({
+id: stableMockEntityId('communityActivity', 'reply', reply.id),
+type: 'POST_REPLIED', status: 'ACTIVE', recipientId, postId: post.id, replyId: reply.id,
+actorId: user.id, actor: clone(reply.author), read: false, readAt: null, createdAt: now, updatedAt: now
+});
+return { reply: publicCommunityReply(reply), replyCount: post.replyCount };
+}
+if (action === 'community.post.delete') {
+const post = state.communityPosts.find((item) => item.id === input.postId && item.status !== 'SUSPENDED');
+assert(post, 'NOT_FOUND', '讨论不存在或已被删除');
+assert(post.authorId === currentUserId, 'FORBIDDEN', '只能删除自己发布的讨论');
+post.status = 'DELETED'; post.deletedAt = new Date().toISOString(); post.updatedAt = post.deletedAt;
+return { deleted: true, postId: post.id };
+}
+if (action === 'community.reply.delete') {
+const reply = state.communityReplies.find((item) => item.id === input.replyId && item.status !== 'SUSPENDED');
+assert(reply, 'NOT_FOUND', '回复不存在或已被删除');
+assert(reply.authorId === currentUserId, 'FORBIDDEN', '只能删除自己的回复');
+reply.status = 'DELETED'; reply.deletedAt = new Date().toISOString(); reply.updatedAt = reply.deletedAt;
+const post = state.communityPosts.find((item) => item.id === reply.postId);
+if (post) post.replyCount = Math.max(0, Number(post.replyCount || 0) - 1);
+return { deleted: true, replyId: reply.id, replyCount: Number(post && post.replyCount || 0) };
+}
+if (action === 'community.like.set') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+assert(['post', 'reply'].includes(input.targetType) && typeof input.liked === 'boolean', 'VALIDATION_ERROR', '点赞参数无效');
+const targetId = validatedId(input.targetId, '点赞目标ID');
+const target = input.targetType === 'post'
+? state.communityPosts.find((item) => item.id === targetId && item.status === 'ACTIVE')
+: state.communityReplies.find((item) => item.id === targetId && item.status === 'ACTIVE');
+assert(target, 'NOT_FOUND', '讨论不存在或已被删除');
+if (input.targetType === 'reply') assert(state.communityPosts.some((item) => item.id === target.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
+const id = stableMockEntityId('communityLike', input.targetType, targetId, currentUserId);
+let like = state.communityLikes.find((item) => item.targetType === input.targetType && item.targetId === targetId && item.actorId === currentUserId);
+const wasLiked = Boolean(like && like.status === 'ACTIVE');
+if (wasLiked !== input.liked) target.likeCount = Math.max(0, Number(target.likeCount || 0) + (input.liked ? 1 : -1));
+const now = new Date().toISOString();
+if (!like) {
+like = { id, targetType: input.targetType, targetId, postId: input.targetType === 'reply' ? target.postId : target.id, actorId: currentUserId, createdAt: now };
+state.communityLikes.push(like);
+}
+Object.assign(like, { status: input.liked ? 'ACTIVE' : 'DELETED', updatedAt: now });
+if (target.authorId !== user.id && wasLiked !== input.liked) {
+const activityId = input.targetType === 'post'
+? stableMockEntityId('communityActivity', 'like', target.authorId, target.id)
+: stableMockEntityId('communityActivity', 'like', target.authorId, 'reply', target.id);
+let activity = state.communityActivities.find((item) => item.id === activityId);
+if (!activity) {
+activity = {
+id: activityId,
+type: input.targetType === 'post' ? 'POST_LIKED' : 'REPLY_LIKED',
+recipientId: target.authorId,
+postId: input.targetType === 'post' ? target.id : target.postId,
+...(input.targetType === 'reply' ? { replyId: target.id } : {}),
+actorCount: 0, recentActors: [], read: false, readAt: null, createdAt: now
+};
+state.communityActivities.push(activity);
+}
+activity.actorCount = Math.max(0, Number(activity.actorCount || 0) + (input.liked ? 1 : -1));
+activity.recentActors = (activity.recentActors || []).filter((item) => item.actorId !== user.id);
+if (input.liked) activity.recentActors.unshift({ actorId: user.id, author: { nickname: user.profile.nickname, avatarKind: avatarKindFromGender(user.profile.gender) } });
+Object.assign(activity, {
+recentActors: activity.recentActors.slice(0, 2),
+status: activity.actorCount > 0 ? 'ACTIVE' : 'INACTIVE',
+read: input.liked ? false : Boolean(activity.read),
+readAt: input.liked ? null : activity.readAt || null,
+updatedAt: now
+});
+}
+return { targetType: input.targetType, targetId, liked: input.liked, likeCount: Number(target.likeCount || 0) };
+}
+if (action === 'activity.mine') {
+const user = requireActiveUser();
+const joinedIds = state.members.filter((item) => item.userId === user.id && item.role === 'MEMBER' && item.status === 'ACTIVE').map((item) => item.activityId);
+return {
+owned: state.activities.filter((item) => item.ownerId === user.id).map(publicActivity),
+joined: state.activities.filter((item) => joinedIds.includes(item.id)).map(publicActivity)
+};
+}
+if (action === 'activity.create') { requireActiveUser(true); return createActivity(input); }
+if (action === 'group.space' || action === 'group.contact.share' || action === 'group.contact.revoke') {
+const user = requireActiveUser();
+const activity = activityById(input.activityId);
+assert(activity && ['FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '仅成团中的活动可使用成员空间');
+const selfMember = state.members.find((item) => item.activityId === activity.id && item.userId === user.id && item.status === 'ACTIVE');
+assert(selfMember, 'FORBIDDEN', '你不是该活动的有效成员');
+if (action === 'group.contact.share') {
+assert(['WECHAT', 'MOBILE'].includes(input.type), 'VALIDATION_ERROR', '联系方式类型无效');
+const value = String(input.value || '').trim();
+assert(input.type === 'WECHAT' ? /^[A-Za-z][-_A-Za-z0-9]{5,19}$/.test(value) : /^\+?\d{8,15}$/.test(value), 'VALIDATION_ERROR', '联系方式格式无效');
+const id = `memberContact:${activity.id}:${selfMember.id}`;
+const existing = state.memberContacts.find((item) => item.id === id);
+const contact = { id, activityId: activity.id, memberId: selfMember.id, userId: user.id, type: input.type, value, shared: true, status: 'ACTIVE', updatedAt: new Date().toISOString() };
+if (existing) Object.assign(existing, contact); else state.memberContacts.push({ ...contact, createdAt: contact.updatedAt });
+}
+if (action === 'group.contact.revoke') {
+const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === selfMember.id);
+if (contact) Object.assign(contact, { shared: false, status: 'INACTIVE', value: null, updatedAt: new Date().toISOString() });
+}
+const members = state.members.filter((item) => item.activityId === activity.id && item.status === 'ACTIVE').map((item) => {
+const memberUser = userById(item.userId);
+const contact = state.memberContacts.find((entry) => entry.activityId === activity.id && entry.memberId === item.id && entry.status === 'ACTIVE' && entry.shared === true);
+return { memberId: item.id, role: item.role, nickname: memberUser && memberUser.profile.nickname || '拼吧用户', isSelf: item.userId === user.id, sharedContact: contact ? { type: contact.type, value: contact.value } : null };
+});
+return { activityId: activity.id, meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules || '' }, members };
+}
+if (action === 'group.thread') {
+const access = groupAccess(validatedId(input.activityId, '活动ID'));
+const read = state.groupReadStates.find((item) => item.activityId === access.activity.id && item.userId === currentUserId
+&& item.generation === access.generation);
+const latestIncoming = state.groupMessages.filter((item) => item.activityId === access.activity.id
+&& item.senderId !== currentUserId && item.sequence > access.after && item.sequence <= access.latestSequence)
+.sort((left, right) => right.sequence - left.sequence)[0];
+return { activity: { id: access.activity.id, title: access.activity.title, status: access.activity.status },
+generation: access.generation, writable: access.writable,
+hasUnread: Boolean(latestIncoming && latestIncoming.sequence > Number(read && read.sequence || access.after)) };
+}
+if (action === 'group.message.list') {
+const access = groupAccess(validatedId(input.activityId, '活动ID'));
+const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 100);
+const before = input.before === undefined || input.before === null || input.before === '' ? null : Number(input.before);
+assert(before === null || Number.isSafeInteger(before) && before >= 0, 'VALIDATION_ERROR', '分页游标无效');
+const candidates = state.groupMessages.filter((item) => item.activityId === access.activity.id
+&& item.sequence > access.after && item.sequence <= access.latestSequence
+&& (before === null || item.sequence < before)).sort((left, right) => right.sequence - left.sequence);
+const items = candidates.slice(0, limit);
+return { generation: access.generation, writable: access.writable, items: items.map(publicGroupMessage),
+nextBefore: candidates.length > limit ? items[items.length - 1].sequence : null };
+}
+if (action === 'group.message.send') {
+const access = groupAccess(validatedId(input.activityId, '活动ID'), true);
+const generation = Number(input.generation);
+const clientMessageId = String(input.clientMessageId || '').trim();
+assert(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+assert(/^[A-Za-z0-9_-]{1,80}$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID无效');
+const text = assertDirectMessageContent(input.text);
+const id = stableMockEntityId('groupMessage', access.activity.id, currentUserId, access.member.id, generation, clientMessageId);
+const payloadHash = opaqueSensitiveHash(text);
+const existing = state.groupMessages.find((item) => item.id === id);
+if (existing) {
+assert(existing.payloadHash === payloadHash && existing.sequence > access.after, 'CONFLICT', '客户端消息ID已用于其他内容');
+return { message: publicGroupMessage(existing) };
+}
+assert(access.activity.groupSequence < Number.MAX_SAFE_INTEGER, 'CONFLICT', '群聊序号已失效');
+const now = new Date().toISOString();
+const message = { id, activityId: access.activity.id, sequence: access.activity.groupSequence + 1,
+senderId: currentUserId, memberId: access.member.id, generation, clientMessageId,
+payloadHash, text, status: 'SENT', createdAt: now, updatedAt: now };
+access.activity.groupSequence = message.sequence;
+access.activity.groupLastMessageId = message.id;
+access.activity.updatedAt = now;
+state.groupMessages.push(message);
+return { message: publicGroupMessage(message) };
+}
+if (action === 'group.message.read') {
+const access = groupAccess(validatedId(input.activityId, '活动ID'));
+const generation = Number(input.generation); const sequence = Number(input.sequence);
+assert(generation === access.generation, 'CONFLICT', '成员状态已变化，请重新进入群聊');
+const message = state.groupMessages.find((item) => item.id === input.messageId);
+assert(message && message.activityId === access.activity.id && message.sequence === sequence
+&& sequence > access.after && sequence <= access.latestSequence, 'FORBIDDEN', '消息不在当前成员周期内');
+const now = new Date().toISOString();
+let read = state.groupReadStates.find((item) => item.activityId === access.activity.id && item.userId === currentUserId);
+if (!read) { read = { id: stableMockEntityId('groupRead', access.activity.id, currentUserId), activityId: access.activity.id, userId: currentUserId }; state.groupReadStates.push(read); }
+if (read.generation !== generation || sequence > Number(read.sequence || 0)) Object.assign(read, { generation, sequence, updatedAt: now });
+return { generation: read.generation, sequence: read.sequence, readAt: read.updatedAt };
+}
+if (action === 'dm.unread') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const conversations = state.directConversations.filter((item) => [item.participantAId, item.participantBId].includes(currentUserId))
+.filter((item) => item.kind !== 'OWNER_CONSULT' || activityById(item.source && item.source.id)?.status !== 'SUSPENDED');
+return {
+totalUnread: conversations.reduce((sum, item) => sum + Math.max(0, Number(item.unreadByUser && item.unreadByUser[currentUserId]) || 0), 0),
+conversationsWithUnread: conversations.filter((item) => Number(item.unreadByUser && item.unreadByUser[currentUserId]) > 0).length
+};
+}
+if (action === 'dm.conversation.list') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
+const cursor = decodeDirectCursor(input.cursor);
+const candidates = state.directConversations
+.filter((item) => [item.participantAId, item.participantBId].includes(currentUserId))
+.filter((item) => item.kind !== 'OWNER_CONSULT' || activityById(item.source && item.source.id)?.status !== 'SUSPENDED')
+.filter((item) => afterDirectCursor(item, cursor, 'updatedAt'))
+.sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)) || String(right.id).localeCompare(String(left.id)));
+const page = candidates.slice(0, limit + 1);
+const items = page.slice(0, limit);
+return {
+items: items.map(directConversationDto),
+nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'updatedAt') : null
+};
+}
+if (action === 'dm.conversation.create') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const activity = activityById(input.activityId);
+const actorMember = activeMember(input.activityId, currentUserId);
+const targetMember = state.members.find((item) => item.id === input.memberId);
+assert(
+activity
+&& ['FORMED', 'IN_PROGRESS'].includes(activity.status)
+&& actorMember
+&& targetMember
+&& targetMember.activityId === activity.id
+&& targetMember.status === 'ACTIVE'
+&& targetMember.userId !== currentUserId,
+'NOT_FOUND_OR_NOT_ALLOWED',
+'目标不存在或当前不可联系'
+);
+const peer = userById(targetMember.userId);
+assert(peer && peer.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+const participants = [currentUserId, peer.id].sort();
+const conversationId = `conversation_${opaqueSensitiveHash(`${activity.id}:${participants.join(':')}`)}`;
+let conversation = state.directConversations.find((item) => item.id === conversationId);
+if (!conversation) {
+const now = new Date().toISOString();
+conversation = {
+id: conversationId,
+kind: 'MEMBER_DM',
+participantAId: participants[0],
+participantBId: participants[1],
+source: { type: 'activity', id: activity.id, title: activity.title },
+lastMessageId: null,
+lastMessagePreview: '',
+lastMessageAt: null,
+lastSenderId: null,
+unreadByUser: { [participants[0]]: 0, [participants[1]]: 0 },
+createdAt: now,
+updatedAt: now
+};
+state.directConversations.push(conversation);
+}
+return { conversation: directConversationDto(conversation) };
+}
+if (action === 'dm.consult.create') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const activity = activityById(validatedId(input.activityId, '活动ID'));
+assert(activity && activity.status !== 'SUSPENDED', activity && activity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND', '活动不存在或已失效');
+assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status) && activity.ownerId !== currentUserId,
+'CONFLICT', activity.ownerId === currentUserId ? '不能与自己发起私信' : '当前活动暂不可咨询');
+const owner = userById(activity.ownerId);
+assert(owner && owner.status === 'ACTIVE', 'NOT_FOUND_OR_NOT_ALLOWED', '发起人当前不可联系');
+const participants = [currentUserId, owner.id].sort();
+const conversationId = stableMockEntityId('consultConversation', activity.id, ...participants);
+let conversation = state.directConversations.find((item) => item.id === conversationId);
+if (!conversation) {
+const now = new Date().toISOString();
+conversation = { id: conversationId, kind: 'OWNER_CONSULT', ownerId: owner.id, consultantId: currentUserId,
+participantAId: participants[0], participantBId: participants[1],
+source: { type: 'activity_consult', id: activity.id, title: activity.title },
+lastMessageId: null, lastMessagePreview: '', lastMessageAt: null, lastSenderId: null,
+unreadByUser: { [participants[0]]: 0, [participants[1]]: 0 }, createdAt: now, updatedAt: now };
+state.directConversations.push(conversation);
+}
+return { conversation: directConversationDto(conversation) };
+}
+if (action === 'dm.message.list') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const conversation = state.directConversations.find((item) => item.id === input.conversationId);
+assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+const sourceActivity = conversation.source && activityById(conversation.source.id);
+assert(conversation.kind !== 'OWNER_CONSULT' || sourceActivity && sourceActivity.status !== 'SUSPENDED',
+sourceActivity && sourceActivity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+const limit = Math.min(Math.max(Number(input.limit) || 20, 1), 30);
+const cursor = decodeDirectCursor(input.cursor);
+const candidates = state.directMessages
+.filter((item) => item.conversationId === conversation.id)
+.filter((item) => afterDirectCursor(item, cursor, 'createdAt'))
+.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)) || String(right.id).localeCompare(String(left.id)));
+const page = candidates.slice(0, limit + 1);
+const items = page.slice(0, limit);
+return {
+conversation: directConversationDto(conversation),
+items: items.map(directMessageDto),
+nextCursor: page.length > limit ? encodeDirectCursor(items[items.length - 1], 'createdAt') : null
+};
+}
+if (action === 'dm.message.send') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const conversation = state.directConversations.find((item) => item.id === input.conversationId);
+assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+const clientMessageId = String(input.clientMessageId || '').trim();
+assert(/^[A-Za-z0-9:_-]{8,80}$/.test(clientMessageId), 'VALIDATION_ERROR', '客户端消息ID格式无效');
+const text = assertDirectMessageContent(input.text);
+const id = `directMessage_${opaqueSensitiveHash(`${conversation.id}:${currentUserId}:${clientMessageId}`)}`;
+const existing = state.directMessages.find((item) => item.id === id);
+const payloadHash = opaqueSensitiveHash(text);
+const sourceActivity = conversation.source && activityById(conversation.source.id);
+const participantsActive = [conversation.participantAId, conversation.participantBId]
+.every((id) => userById(id) && userById(id).status === 'ACTIVE');
+if (conversation.kind === 'OWNER_CONSULT') {
+assert(sourceActivity && sourceActivity.status !== 'SUSPENDED', sourceActivity && sourceActivity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'CONFLICT', '活动已结束，这段咨询现为只读');
+assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(sourceActivity.status)
+&& sourceActivity.ownerId === conversation.ownerId && participantsActive, 'CONFLICT', '活动已结束，这段咨询现为只读');
+} else {
+const firstMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantAId);
+const secondMember = sourceActivity && activeMember(sourceActivity.id, conversation.participantBId);
+assert(sourceActivity && ['FORMED', 'IN_PROGRESS'].includes(sourceActivity.status) && firstMember && secondMember
+&& participantsActive, 'CONFLICT', '共同活动或成员关系已失效，这段私信现为只读');
+}
+if (existing) {
+assert(existing.conversationId === conversation.id && existing.senderId === currentUserId, 'CONFLICT', '客户端消息ID已用于其他会话');
+assert(existing.payloadHash === payloadHash, 'CONFLICT', '客户端消息ID已用于其他内容');
+return { message: directMessageDto(existing) };
+}
+const now = new Date().toISOString();
+const message = { id, conversationId: conversation.id, senderId: currentUserId, text, payloadHash, status: 'SENT', createdAt: now, updatedAt: now };
+state.directMessages.push(message);
+const recipientId = conversation.participantAId === currentUserId ? conversation.participantBId : conversation.participantAId;
+conversation.lastMessageId = message.id;
+conversation.lastMessagePreview = text.slice(0, 80);
+conversation.lastMessageAt = now;
+conversation.lastSenderId = currentUserId;
+conversation.updatedAt = now;
+conversation.unreadByUser = {
+...(conversation.unreadByUser || {}),
+[currentUserId]: Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0,
+[recipientId]: (Number(conversation.unreadByUser && conversation.unreadByUser[recipientId]) || 0) + 1
+};
+return { message: directMessageDto(message) };
+}
+if (action === 'dm.conversation.read') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const conversation = state.directConversations.find((item) => item.id === input.conversationId);
+assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+if (conversation.kind === 'OWNER_CONSULT') {
+const activity = activityById(conversation.source && conversation.source.id);
+assert(activity && activity.status !== 'SUSPENDED',
+activity && activity.status === 'SUSPENDED' ? 'TAKEDOWN' : 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+}
+assert(typeof input.lastMessageId === 'string' && input.lastMessageId.length > 0 && input.lastMessageId.length <= 80, 'VALIDATION_ERROR', '已读消息ID无效');
+const now = new Date().toISOString();
+if (!conversation.lastMessageId || conversation.lastMessageId !== input.lastMessageId) {
+return { conversation: directConversationDto(conversation), unread: Number(conversation.unreadByUser && conversation.unreadByUser[currentUserId]) || 0, readAt: now };
+}
+conversation.unreadByUser = { ...(conversation.unreadByUser || {}), [currentUserId]: 0 };
+conversation.readAtByUser = { ...(conversation.readAtByUser || {}), [currentUserId]: now };
+return { conversation: directConversationDto(conversation), unread: 0, readAt: now };
+}
+if (action === 'ride.driver.profile') { requireUser(); return { driver: driverProfile() }; }
+if (action === 'ride.driver.mine') {
+requireApprovedDriver();
+return {
+items: (state.rideFulfillments || [])
+.filter((item) => item.driverId === currentUserId && item.status === 'ASSIGNED')
+.map((item) => ({
+activity: publicActivity(activityById(item.activityId)),
+rideFulfillment: clone(publicActivity(activityById(item.activityId)).rideFulfillment)
+}))
+};
+}
+if (action === 'ride.driver.memberContacts') {
+requireApprovedDriver();
+const activity = activityById(input.activityId);
+const fulfillment = activity && (state.rideFulfillments || []).find((item) => item.activityId === activity.id);
+assert(activity && activity.type === 'ride' && fulfillment, 'NOT_FOUND', '行程不存在或已失效');
+assert(['RECRUITING', 'FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '该行程当前不可查看成员联系方式');
+assert(fulfillment.status === 'ASSIGNED' && fulfillment.driverId === currentUserId, 'FORBIDDEN', '你没有权限查看成员联系方式');
+const items = state.members
+.filter((member) => member.activityId === activity.id && member.status === 'ACTIVE')
+.sort((left, right) => Date.parse(left.joinedAt) - Date.parse(right.joinedAt))
+.map((member) => {
+const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id && item.status === 'ACTIVE');
+assert(contact && contact.phone, 'CONTACT_INCOMPLETE', '成员联系方式尚未齐全，请稍后重试');
+const user = userById(member.userId);
+return {
+memberId: member.id,
+nickname: user && user.profile && user.profile.nickname || (member.role === 'OWNER' ? '发起者' : '乘客'),
+phone: contact.phone,
+luggageType: member.luggageType || null,
+role: member.role
+};
+});
+return { activityId: activity.id, items };
+}
+if (action === 'ride.driver.accept') { requireApprovedDriver(true); return acceptRide(input); }
+if (action === 'ride.driver.cancel') { requireApprovedDriver(true); return cancelRideAssignment(input); }
+if (action === 'application.submit') return submitApplication(input);
+if (action === 'ride.join') { requireActiveUser(true); return joinRide(input); }
+if (action === 'application.listForOwner') {
+const activity = activityById(input.activityId);
+assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限查看申请');
+return {
+items: state.applications
+.filter((item) => item.activityId === input.activityId)
+.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+.map(publicApplication)
+};
+}
+if (action === 'application.approve') return approveApplication(input);
+if (action === 'application.reject') {
+const application = state.applications.find((item) => item.id === input.applicationId);
+const activity = application && activityById(application.activityId);
+assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限处理该申请');
+assert(application.status === 'PENDING', 'CONFLICT', '该申请已处理');
+application.status = 'REJECTED';
+application.updatedAt = new Date().toISOString();
+return { activity: publicActivity(activity), application: publicApplication(application) };
+}
+if (action === 'application.withdraw') {
+const application = state.applications.find((item) => item.id === input.applicationId);
+assert(application && application.applicantId === currentUserId, 'FORBIDDEN', '你没有权限撤回该申请');
+assert(application.status === 'PENDING', 'CONFLICT', '当前状态不能撤回申请');
+application.status = 'WITHDRAWN';
+application.updatedAt = new Date().toISOString();
+return { application: publicApplication(application) };
+}
+if (action === 'member.leave') {
+const activity = activityById(input.activityId);
+const member = activeMember(input.activityId, currentUserId);
+assert(activity && member && member.role !== 'OWNER', 'FORBIDDEN', '当前不能退出该活动');
+assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '当前状态不能退团');
+const fulfillment = activity.type === 'ride'
+? (state.rideFulfillments || []).find((item) => item.activityId === activity.id)
+: null;
+assert(
+activity.type !== 'ride' || !fulfillment || fulfillment.status === 'UNASSIGNED',
+'RIDE_MEMBER_LOCKED',
+'司机已确认承接，当前不可退出拼车'
+);
+member.status = 'LEFT';
+member.leaveReason = input.reason || '';
+const now = new Date().toISOString();
+member.leftAt = now;
+const contact = state.memberContacts.find((item) => item.activityId === activity.id && item.memberId === member.id);
+if (contact) Object.assign(contact, { status: 'INACTIVE', updatedAt: now });
+activity.avatarRoster = normalizeAvatarRoster(activity.avatarRoster).filter((item) => item.memberId !== member.id);
+activity.memberCount = Math.max(1, activity.memberCount - 1);
+if (activity.status === 'FORMED' && activity.memberCount < (activity.minMembers || activity.minPassengers || activity.targetMembers)) {
+activity.status = 'RECRUITING';
+delete activity.formedAt;
+}
+activity.updatedAt = now;
+if (activity.type === 'ride') activity.rideJoinable = isMockRideJoinable(activity, now);
+return { activity: publicActivity(activity) };
+}
+if (action === 'activity.cancel') {
+const activity = activityById(input.activityId);
+assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限取消该活动');
+if (activity.status !== 'CANCELLED') {
+assert(['RECRUITING', 'FORMED'].includes(activity.status), 'CONFLICT', '当前状态不能取消活动');
+activity.status = 'CANCELLED';
+if (activity.type === 'ride') activity.rideJoinable = false;
+activity.cancelReason = input.reason;
+activity.updatedAt = new Date().toISOString();
+}
+state.applications.forEach((item) => {
+if (item.activityId === activity.id && item.status === 'PENDING') {
+item.status = 'CANCELLED_BY_ACTIVITY';
+item.updatedAt = activity.updatedAt;
+}
+});
+return { activity: publicActivity(activity) };
+}
+if (action === 'activity.complete') {
+const activity = activityById(input.activityId);
+assert(activity && activity.ownerId === currentUserId, 'FORBIDDEN', '你没有权限完成该活动');
+assert(['FORMED', 'IN_PROGRESS'].includes(activity.status), 'CONFLICT', '当前状态不能完成活动');
+activity.status = 'COMPLETED';
+activity.completedAt = new Date().toISOString();
+if (activity.type === 'ride') activity.rideJoinable = false;
+return { activity: publicActivity(activity) };
+}
+if (action === 'group.contact') {
+const activity = activityById(input.activityId);
+assert(activity && ['FORMED', 'IN_PROGRESS', 'COMPLETED'].includes(activity.status), 'CONFLICT', '活动成团后才能查看联系信息');
+assert(activeMember(activity.id, currentUserId), 'FORBIDDEN', '仅活动成员可以查看联系信息');
+return { activityId: activity.id, contactInfo: activity.contactInfo, meeting: { city: activity.city, district: activity.district, placeLabel: activity.placeLabel, note: activity.rules } };
+}
+if (action === 'notification.list') {
+requireActiveUser();
+return {
+items: state.notifications
+.filter((item) => item.userId === currentUserId)
+.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+.map(publicNotification)
+};
+}
+if (action === 'notification.read') {
+requireActiveUser();
+const item = state.notifications.find((notification) => notification.id === input.notificationId);
+assert(item && item.userId === currentUserId, 'FORBIDDEN', '你没有权限处理该通知');
+item.read = true;
+return { notification: publicNotification(item) };
+}
+if (action === 'report.create') {
+const user = requireActiveUser(true);
+assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+assert(['activity', 'user', 'communityPost', 'communityReply', 'directConversation'].includes(input.targetType), 'VALIDATION_ERROR', '举报对象类型无效');
+assert(typeof input.targetId === 'string' && input.targetId.length > 0 && input.targetId.length <= 80, 'VALIDATION_ERROR', '举报对象无效');
+assert(['FALSE_INFORMATION', 'ILLEGAL_SERVICE_SOLICITATION', 'FRAUD_OR_DIVERSION', 'HARASSMENT', 'OTHER'].includes(input.reason), 'VALIDATION_ERROR', '举报原因无效');
+assert(String(input.description || '').length <= 300, 'VALIDATION_ERROR', '举报说明过长');
+if (input.targetType === 'directConversation') {
+const conversation = state.directConversations.find((item) => item.id === input.targetId);
+assert(conversation && [conversation.participantAId, conversation.participantBId].includes(currentUserId), 'NOT_FOUND_OR_NOT_ALLOWED', '目标不存在或当前不可联系');
+}
+const duplicate = state.reports.find((item) => item.reporterId === currentUserId && item.targetType === input.targetType && item.targetId === input.targetId);
+assert(!duplicate, 'CONFLICT', '你已经举报过该内容');
+const report = { id: nextId('report'), reporterId: currentUserId, ...clone(input), status: 'NEW', createdAt: new Date().toISOString() };
+state.reports.push(report);
+const { reporterId, ...safeReport } = report;
+return { report: clone(safeReport), hiddenForReporter: true };
+}
+if (action === 'admin.activity.suspend') {
+const admin = requireUser();
+assert(admin.role === 'admin', 'FORBIDDEN', '你没有权限执行此操作');
+const activity = activityById(input.activityId);
+assert(activity, 'NOT_FOUND', '活动不存在或已失效');
+if (activity.status !== 'SUSPENDED') {
+activity.status = 'SUSPENDED';
+if (activity.type === 'ride') activity.rideJoinable = false;
+activity.suspension = {
+adminId: admin.id,
+reason: input.reason || '',
+at: new Date().toISOString()
+};
+activity.version += 1;
+activity.updatedAt = activity.suspension.at;
+}
+return { activity: publicActivity(activity) };
+}
+throw fail('NOT_FOUND', '接口动作不存在');
+}
 async function call(event) {
-  try {
-    const action = event.action;
-    const isMutation = MUTATING_ACTIONS.has(action);
-    const idempotencyId = isMutation && event.idempotencyKey
-      ? `${currentUserId}:${action}:${event.idempotencyKey}`
-      : '';
-    const communityPayloadHash = action === 'community.post.create' || action === 'community.reply.create'
-      || action === 'dm.message.send' || action === 'group.message.send'
-      ? opaqueSensitiveHash(stableSerialize(event.data || {}))
-      : '';
-    if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');
-    if (isMutation && action === 'companion.presence.leave') requireKnownUser();
-    else if (isMutation) requireUser();
-    if (idempotencyId && communityPayloadHash && state.idempotency[`${idempotencyId}:payload`]) {
-      assert(state.idempotency[`${idempotencyId}:payload`] === communityPayloadHash, 'CONFLICT', '幂等键已用于其他社区内容');
-    }
-    if (idempotencyId && !BUSINESS_IDEMPOTENT_ACTIONS.has(action) && state.idempotency[idempotencyId]) {
-      const replay = ok(clone(state.idempotency[idempotencyId]));
-      replay.idempotentReplay = true;
-      return replay;
-    }
-    const data = handle(action, event.data || {}, event.idempotencyKey || '');
-    if (idempotencyId && !BUSINESS_IDEMPOTENT_ACTIONS.has(action)) {
-      state.idempotency[idempotencyId] = clone(data);
-      if (communityPayloadHash) state.idempotency[`${idempotencyId}:payload`] = communityPayloadHash;
-    }
-    return ok(data);
-  } catch (error) {
-    if (error && error.ok === false) return error;
-    return fail('INTERNAL', '演示服务暂时不可用，请重试');
-  }
+try {
+const action = event.action;
+const isMutation = MUTATING_ACTIONS.has(action);
+const navPayloadHash = action === 'community.profile.nav.create' ? opaqueSensitiveHash(stableSerialize(event.data || {})) : '';
+const idempotencyId = isMutation && event.idempotencyKey
+? `${currentUserId}:${action}:${event.idempotencyKey}${navPayloadHash ? `:${navPayloadHash}` : ''}`
+: '';
+const communityPayloadHash = action === 'community.post.create' || action === 'community.reply.create'
+|| action === 'dm.message.send' || action === 'group.message.send'
+? opaqueSensitiveHash(stableSerialize(event.data || {}))
+: '';
+if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');
+if (isMutation && action === 'companion.presence.leave') requireKnownUser();
+else if (isMutation) requireUser();
+if (idempotencyId && communityPayloadHash && state.idempotency[`${idempotencyId}:payload`]) {
+assert(state.idempotency[`${idempotencyId}:payload`] === communityPayloadHash, 'CONFLICT', '幂等键已用于其他社区内容');
 }
-
+if (idempotencyId && !BUSINESS_IDEMPOTENT_ACTIONS.has(action) && state.idempotency[idempotencyId]) {
+const replay = ok(clone(state.idempotency[idempotencyId]));
+replay.idempotentReplay = true;
+return replay;
+}
+const data = handle(action, event.data || {}, event.idempotencyKey || '');
+if (idempotencyId && !BUSINESS_IDEMPOTENT_ACTIONS.has(action)) {
+state.idempotency[idempotencyId] = clone(data);
+if (communityPayloadHash) state.idempotency[`${idempotencyId}:payload`] = communityPayloadHash;
+}
+return ok(data);
+} catch (error) {
+if (error && error.ok === false) return error;
+return fail('INTERNAL', '演示服务暂时不可用，请重试');
+}
+}
 function setPersona(userId) {
-  if (!userById(userId)) return false;
-  currentUserId = userId;
-  persist();
-  return true;
+if (!userById(userId)) return false;
+currentUserId = userId;
+persist();
+return true;
 }
-
 function getPersona() {
-  return currentUserId;
+return currentUserId;
 }
-
 function reset() {
-  state = initializeActivityCommunication(seedState());
-  currentUserId = 'u_owner';
-  persist();
+state = initializeActivityCommunication(seedState());
+currentUserId = 'u_owner';
+persist();
 }
-
 module.exports = {
-  call,
-  setPersona,
-  getPersona,
-  reset
+call,
+setPersona,
+getPersona,
+reset
 };

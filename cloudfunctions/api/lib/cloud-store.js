@@ -2370,6 +2370,15 @@ class CloudStore {
     return entity(first(result.data || []));
   }
 
+  async createPublicProfileNavTicket(ticket) {
+    await this.db.collection('publicProfileNavTickets').doc(ticket.id).set({ data: document(ticket) });
+    return ticket;
+  }
+
+  async getPublicProfileNavTicket(ticketId) {
+    return this.getDocument('publicProfileNavTickets', ticketId);
+  }
+
   async listNotifications(userId) {
     const result = await this.db.collection('notifications').where({ userId }).orderBy('createdAt', 'desc').limit(100).get();
     return (result.data || []).map(entity);

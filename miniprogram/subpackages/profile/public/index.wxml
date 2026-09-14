@@ -1,8 +1,8 @@
 <view class="public-profile-page">
   <view class="public-profile-nav" style="height: {{contentTopInset}}px;">
     <view class="public-profile-nav-inner">
-      <button class="public-profile-back" bindtap="handleBack" hover-class="public-control--pressed" aria-label="返回搭子星球"><text aria-hidden="true">‹</text></button>
-      <text class="public-profile-title" role="heading" aria-level="1">搭子主页</text>
+      <button class="public-profile-back" bindtap="handleBack" hover-class="public-control--pressed" aria-label="返回上一页"><text aria-hidden="true">‹</text></button>
+      <text class="public-profile-title" role="heading" aria-level="1">{{pageTitle}}</text>
       <view class="public-profile-nav-spacer" aria-hidden="true"></view>
     </view>
   </view>
@@ -10,7 +10,7 @@
   <view wx:if="{{status === 'loading'}}" class="public-state public-state--dark" style="padding-top: {{contentTopInset}}px;" role="status" aria-label="正在读取搭子公开资料">
     <view class="public-avatar-skeleton public-shimmer"></view>
     <view class="public-line-skeleton public-shimmer"></view>
-    <text>正在确认这位搭子的在线状态…</text>
+    <text>{{communitySource ? '正在读取公开资料…' : '正在确认这位搭子的在线状态…'}}</text>
   </view>
 
   <block wx:elif="{{status === 'ready'}}">
@@ -18,7 +18,7 @@
       <view class="public-stage-glow" aria-hidden="true"></view>
       <view class="public-avatar-shell"><image class="public-avatar" src="{{profile.avatarPath}}" mode="aspectFit" aria-hidden="true" /></view>
       <view class="public-name-row"><text class="public-name">{{profile.nickname}}</text><text wx:if="{{profile.viewerIsSelf}}" class="public-self">这是你</text></view>
-      <view class="public-online"><text class="public-online-dot" aria-hidden="true"></text><text>正在找搭子 · 刚刚在线</text></view>
+      <view wx:if="{{profile.online}}" class="public-online"><text class="public-online-dot" aria-hidden="true"></text><text>正在找搭子 · 刚刚在线</text></view>
     </view>
 
     <view class="public-sheet">
@@ -43,9 +43,9 @@
 
   <view wx:elif="{{status === 'not-found'}}" class="public-state public-state--dark" style="padding-top: {{contentTopInset}}px;" role="alert">
     <view class="public-state-orbit" aria-hidden="true"><view class="public-state-dot"></view></view>
-    <text class="public-state-title">这位搭子已经离开星球</text>
-    <text class="public-state-copy">在线状态已失效，去星球看看其他搭子吧</text>
-    <button class="public-state-action" bindtap="handleBack" hover-class="public-control--pressed">返回搭子星球</button>
+    <text class="public-state-title">{{communitySource ? '主页访问已失效' : '这位搭子已经离开星球'}}</text>
+    <text class="public-state-copy">{{communitySource ? '请返回讨论后重新打开这位用户的主页' : '在线状态已失效，去星球看看其他搭子吧'}}</text>
+    <button class="public-state-action" bindtap="handleBack" hover-class="public-control--pressed">{{communitySource ? '返回讨论' : '返回搭子星球'}}</button>
   </view>
 
   <view wx:else class="public-state public-state--dark" style="padding-top: {{contentTopInset}}px;" role="alert">

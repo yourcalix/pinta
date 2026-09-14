@@ -331,9 +331,16 @@ function validateCompanionPresenceInput(input = {}, options = {}) {
 function validatePublicProfileGetInput(input) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   invariant(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
-  const profileNavToken = stringValue(input.profileNavToken, '公开主页凭据', { required: true, min: 120, max: 160 });
-  invariant(/^companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}$/.test(profileNavToken), 'NOT_FOUND');
+  const profileNavToken = stringValue(input.profileNavToken, '公开主页凭据', { required: true, min: 80, max: 160 });
+  invariant(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|communityProfileNa_[a-f0-9]{64})$/.test(profileNavToken), 'NOT_FOUND');
   return { profileNavToken };
+}
+
+function validateCommunityProfileNavCreateInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['sourceType', 'sourceId'].includes(key)), 'VALIDATION_ERROR', '作者主页参数无效');
+  invariant(['post', 'reply'].includes(input.sourceType), 'VALIDATION_ERROR', '作者来源类型无效');
+  return { sourceType: input.sourceType, sourceId: validateId(input.sourceId, '作者来源ID') };
 }
 
 function validateCommunityPostCreateInput(input) {
@@ -464,6 +471,7 @@ module.exports = {
   validateCommunityListInput,
   validateCompanionPresenceInput,
   validatePublicProfileGetInput,
+  validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,

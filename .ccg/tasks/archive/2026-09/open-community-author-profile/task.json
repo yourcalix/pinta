@@ -1,0 +1,12 @@
+{
+  "id": "open-community-author-profile",
+  "title": "讨论列表与详情点击作者进入主页",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付云端集合与 api 部署步骤",
+  "createdAt": "2026-09-14T00:00:00+08:00",
+  "branch": "main"
+}

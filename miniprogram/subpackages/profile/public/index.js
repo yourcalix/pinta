@@ -21,7 +21,7 @@ function publicView(profile) {
     factsLabel: facts.join('，'),
     interests: Array.isArray(profile && profile.interests) ? profile.interests.slice(0, 8) : [],
     interestsLabel: Array.isArray(profile && profile.interests) ? profile.interests.slice(0, 8).join('，') : '',
-    accessibilityLabel: `${profile.nickname}的公开主页，正在找搭子${facts.length ? `，${facts.join('，')}` : ''}`
+    accessibilityLabel: `${profile.nickname}的公开主页${profile.online ? '，正在找搭子' : ''}${facts.length ? `，${facts.join('，')}` : ''}`
   };
 }
 
@@ -30,7 +30,9 @@ Page({
     contentTopInset: 88,
     status: 'loading',
     profile: null,
-    errorCopy: ''
+    errorCopy: '',
+    pageTitle: '搭子主页',
+    communitySource: false
   },
 
   onLoad(options = {}) {
@@ -45,6 +47,8 @@ Page({
       this.setData({ status: 'not-found' });
       return;
     }
+    const communitySource = ticket.source === 'community';
+    this.setData({ communitySource, pageTitle: communitySource ? '个人主页' : '搭子主页' });
     this._profileNavToken = ticket.profileNavToken;
     this.loadProfile();
   },

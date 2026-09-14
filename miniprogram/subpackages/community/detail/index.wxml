@@ -17,12 +17,14 @@
     <block wx:else>
       <view class="post-detail surface" role="article" aria-label="{{post.authorNickname}}发布的讨论，{{post.content}}">
         <view class="author-row">
+          <button class="author-profile" data-source-type="post" data-id="{{post.id}}" catchtap="handleAuthorProfile" hover-class="author-profile--pressed" hover-stop-propagation="true" aria-label="查看{{post.authorNickname}}的个人主页">
           <image wx:if="{{!post.avatarSlot.empty}}" class="avatar avatar-image" src="{{post.avatarSlot.src}}" mode="{{post.avatarSlot.mode}}" binderror="handlePostAvatarError" aria-hidden="true"></image>
           <view wx:else class="avatar avatar--{{post.avatarTone}}" aria-hidden="true">{{post.avatarInitial}}</view>
-          <view class="author-meta">
+          <view class="author-meta" aria-hidden="true">
             <text class="author-name">{{post.authorNickname}}</text>
             <text class="post-time">{{post.displayTime}}</text>
           </view>
+          </button>
           <button class="more-button" catchtap="handlePostMore" hover-class="detail-control--pressed" aria-label="帖子操作菜单，点击可{{post.viewerIsAuthor ? '删除或举报内容' : '举报内容'}}">···</button>
         </view>
 
@@ -48,15 +50,16 @@
       <view class="reply-heading"><text>全部回复</text><text class="reply-count">{{post.replyCount}}</text></view>
       <view wx:if="{{replies.length}}" class="reply-list">
         <view wx:for="{{replies}}" wx:key="id" class="reply-card surface" role="article" aria-label="{{item.authorNickname}}{{item.replyContextLabel}}回复：{{item.content}}，{{item.displayTime}}">
-          <image wx:if="{{!item.avatarSlot.empty}}" class="reply-avatar reply-avatar-image" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" lazy-load="true" data-id="{{item.id}}" binderror="handleReplyAvatarError" aria-hidden="true"></image>
-          <view wx:else class="reply-avatar avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
-          <view class="reply-body">
             <view class="reply-meta">
-              <view class="reply-author-line">
+              <button class="reply-author-profile" data-source-type="reply" data-id="{{item.id}}" catchtap="handleAuthorProfile" hover-class="author-profile--pressed" hover-stop-propagation="true" aria-label="查看{{item.authorNickname}}的个人主页">
+                <image wx:if="{{!item.avatarSlot.empty}}" class="reply-avatar reply-avatar-image" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" lazy-load="true" data-id="{{item.id}}" binderror="handleReplyAvatarError" aria-hidden="true"></image>
+                <view wx:else class="reply-avatar avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
+                <view class="reply-author-line" aria-hidden="true">
                 <text class="reply-author">{{item.authorNickname}}</text>
                 <block wx:if="{{item.replyTo}}"><text class="reply-relation">回复</text><text class="reply-target-name">{{item.replyToDisplayName}}</text></block>
                 <text class="reply-time">{{item.displayTime}}</text>
-              </view>
+                </view>
+              </button>
               <view class="reply-operations">
                 <button
                   class="reply-like {{item.viewerHasLiked ? 'like-button--active' : ''}} {{item.likePending ? 'like-button--pending' : ''}}"
@@ -72,7 +75,6 @@
             <button class="reply-content-target" data-id="{{item.id}}" catchtap="handleSelectReplyTarget" hover-class="reply-content-target--pressed" aria-label="回复{{item.authorNickname}}：{{item.content}}">
               <text class="reply-content" user-select="true">{{item.content}}</text>
             </button>
-          </view>
         </view>
         <button wx:if="{{hasMore}}" class="load-more-button" loading="{{loadingMore}}" disabled="{{loadingMore}}" bindtap="handleLoadMore" aria-label="加载更多回复">加载更多回复</button>
         <view wx:if="{{loadMoreError}}" class="load-more-error">

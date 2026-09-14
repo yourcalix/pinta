@@ -6,6 +6,7 @@ const safetyService = require('../../../services/safety');
 const { COMMUNITY_REPORT_REASONS } = require('../../../utils/community-report-reasons');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../../utils/passenger-avatar');
+const { openCommunityAuthor } = require('../../../utils/open-community-author');
 
 const PAGE_SIZE = 20;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
@@ -85,6 +86,8 @@ Page({
     if (!postId) return;
     return this.loadDetail(false);
   },
+  onShow() { this._disposed = false; this._authorNavPending = false; },
+  onHide() { this._disposed = true; },
   onUnload() {
     this._disposed = true;
     this._replyFocus = false;
@@ -240,6 +243,11 @@ Page({
   },
 
   handlePostMore() { return this.showContentActions('communityPost', this.data.post.id, this.data.post.viewerIsAuthor); },
+  handleAuthorProfile(event) {
+    const sourceType = String(event.currentTarget.dataset.sourceType || 'post');
+    const sourceId = String(event.currentTarget.dataset.id || '').trim();
+    if (sourceId) return openCommunityAuthor(this, sourceType, sourceId);
+  },
   handleReplyMore(event) {
     const item = this.data.replies.find((reply) => reply.id === event.currentTarget.dataset.id);
     if (item) return this.showContentActions('communityReply', item.id, item.viewerIsAuthor);

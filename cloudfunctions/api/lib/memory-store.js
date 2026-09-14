@@ -105,6 +105,7 @@ class MemoryStore {
     this.communityLikes = new Map((seed.communityLikes || []).map((item) => [item.id, clone(item)]));
     this.communityActivities = new Map((seed.communityActivities || []).map((item) => [item.id, clone(item)]));
     this.companionPresences = new Map((seed.companionPresences || []).map((item) => [item.id, clone(item)]));
+    this.publicProfileNavTickets = new Map((seed.publicProfileNavTickets || []).map((item) => [item.id, clone(item)]));
     this.directConversations = new Map((seed.directConversations || []).map((item) => [item.id, clone(item)]));
     this.directMessages = new Map((seed.directMessages || []).map((item) => [item.id, clone(item)]));
     this.groupMessages = new Map((seed.groupMessages || []).map((item) => [item.id, clone(item)]));
@@ -1590,6 +1591,15 @@ class MemoryStore {
   async findCompanionPresenceByProfileNavNonce(profileNavNonce) {
     const item = [...this.companionPresences.values()].find((presence) => presence.profileNavNonce === profileNavNonce);
     return item ? clone(item) : null;
+  }
+
+  async createPublicProfileNavTicket(ticket) {
+    this.publicProfileNavTickets.set(ticket.id, clone(ticket));
+    return clone(ticket);
+  }
+
+  async getPublicProfileNavTicket(ticketId) {
+    return clone(this.publicProfileNavTickets.get(ticketId) || null);
   }
 
   async listNotifications(userId) {

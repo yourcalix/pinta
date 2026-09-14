@@ -5,6 +5,7 @@ const api = require('./api');
 module.exports = {
   listPosts: (filters = {}) => api.invoke('community.post.list', filters),
   getPost: (postId, filters = {}) => api.invoke('community.post.detail', { postId, ...filters }),
+  createProfileNavigation: (sourceType, sourceId) => api.invoke('community.profile.nav.create', { sourceType, sourceId }, { mutating: true }),
   createPost: (content) => api.invoke('community.post.create', { content }, { mutating: true }),
   createReply: (postId, content, replyToId = '') => api.invoke('community.reply.create', { postId, content, ...(replyToId ? { replyToId } : {}) }, { mutating: true }),
   deletePost: (postId) => api.invoke('community.post.delete', { postId }, { mutating: true }),

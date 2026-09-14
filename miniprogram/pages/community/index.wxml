@@ -43,10 +43,12 @@
 </view>
 <view wx:elif="{{posts.length}}" class="post-list">
 <view wx:for="{{posts}}" wx:key="id" class="post-card post-card--{{item.avatarTone}}" hover-class="post-card-hover" hover-start-time="60" hover-stay-time="70" role="button" aria-label="{{item.accessibilityLabel}}" data-id="{{item.id}}" bindtap="handlePost">
-<view class="post-author-row" aria-hidden="true">
+<view class="post-author-row">
+<button class="post-author-profile" data-id="{{item.id}}" catchtap="handleAuthorProfile" hover-class="post-author-profile--pressed" hover-stop-propagation="true" hover-stay-time="70" aria-label="查看{{item.authorNickname}}的个人主页">
 <image wx:if="{{!item.avatarSlot.empty}}" class="post-avatar post-avatar-image" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" lazy-load="true" data-id="{{item.id}}" binderror="handlePostAvatarError" aria-hidden="true"></image>
-<view wx:else class="post-avatar post-avatar--{{item.avatarTone}}">{{item.avatarInitial}}</view>
-<view class="post-author-copy"><text class="post-author">{{item.authorNickname}}</text><text class="post-time">{{item.timeLabel}}</text></view>
+<view wx:else class="post-avatar post-avatar--{{item.avatarTone}}" aria-hidden="true">{{item.avatarInitial}}</view>
+<view class="post-author-copy" aria-hidden="true"><text class="post-author">{{item.authorNickname}}</text><text class="post-time">{{item.timeLabel}}</text></view>
+</button>
 <button class="post-more" data-id="{{item.id}}" catchtap="handlePostAction" hover-class="post-more--pressed" hover-stay-time="70" aria-label="帖子操作菜单，点击可{{item.viewerIsAuthor ? '删除或举报内容' : '举报内容'}}"><text class="post-more-dots" aria-hidden="true">•••</text></button>
 </view>
 <view class="post-content-panel" aria-hidden="true"><text class="post-preview">{{item.content}}</text></view>
