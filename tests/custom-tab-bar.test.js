@@ -67,15 +67,16 @@ test('五个 Tab 页在 onShow 同步选中态且页面为凸起按钮留出底�
   });
 });
 
-test('消息页区分系统通知与私信，聊天页具备键盘避让与举报入口', () => {
+test('消息页区分讨论动态、活动通知、系统通知与私信，聊天页具备键盘避让与举报入口', () => {
   const listTemplate = read('pages/messages/index.wxml');
   const listScript = read('pages/messages/index.js');
   const chatTemplate = read('subpackages/message/chat/index.wxml');
   const chatScript = read('subpackages/message/chat/index.js');
   const chatStyle = read('subpackages/message/chat/index.wxss');
   const chatConfig = JSON.parse(read('subpackages/message/chat/index.json'));
-  assert.match(listTemplate, /系统通知/);
-  assert.match(listTemplate, /全部私信/);
+  assert.match(listScript, /系统通知/);
+  assert.match(listScript, /讨论动态/);
+  assert.match(listScript, /活动通知/);
   assert.match(listScript, /Promise\.allSettled/);
   assert.match(listScript, /网络连接较慢或服务开小差了，请重试/);
   assert.doesNotMatch(listScript, /error\.message\s*\|\|\s*'消息加载/);

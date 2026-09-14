@@ -1,60 +1,22 @@
 <view class="messages-page" style="padding-top: {{contentTopInset}}px;">
-  <view class="messages-header">
-    <view class="header-title-row"><text class="title" role="heading" aria-level="1">消息</text><text class="eyebrow" aria-hidden="true">PINBA MESSAGES</text></view>
-    <text class="subtitle">和搭子保持联系</text>
-  </view>
-
+  <view class="messages-header"><text class="messages-title" role="heading" aria-level="1">消息</text></view>
   <view class="messages-content">
-    <view class="system-card {{!systemNotification ? 'system-card--quiet' : ''}}" bindtap="handleSystemNotification" hover-class="paper-card--pressed" role="button" aria-label="{{systemNotification ? '系统通知：' + systemNotification.title + '，' + systemUnread + '条未读，点击查看该通知' : '系统通知，前往我的页面查看活动进度'}}">
-      <view class="system-icon" aria-hidden="true"><image src="/assets/icons/home/header-bell.png" mode="aspectFit" /></view>
-      <view class="system-copy" aria-hidden="true">
-        <view class="system-title-row"><text class="system-title">系统通知</text><text wx:if="{{systemUnread}}" class="system-count">{{systemUnread > 99 ? '99+' : systemUnread}}</text></view>
-        <text class="system-preview">{{systemNotification ? systemNotification.title : '前往“我的”查看活动进度'}}</text>
-      </view>
-      <text class="chevron" aria-hidden="true">›</text>
+    <view class="message-entry-list">
+      <button wx:for="{{messageEntries}}" wx:key="category" class="message-entry" data-category="{{item.category}}" bindtap="handleMessageEntry" hover-class="message-card--pressed" hover-start-time="60" hover-stay-time="70" aria-label="{{item.accessibilityLabel}}">
+        <view class="message-entry-icon-wrap" aria-hidden="true"><image class="message-entry-icon {{item.category === 'system' ? 'message-entry-icon--bell' : ''}}" src="{{item.icon}}" mode="aspectFit"></image><view wx:if="{{item.hasUnread}}" class="message-entry-dot"></view></view>
+        <view class="message-entry-copy" aria-hidden="true"><text class="message-entry-title">{{item.title}}</text><text class="message-entry-subtitle">{{item.subtitle}}</text></view><text class="message-entry-chevron" aria-hidden="true">›</text>
+      </button>
     </view>
-
-    <view class="section-heading" role="heading" aria-level="2"><text>全部私信</text></view>
-
-    <block wx:if="{{loading}}">
-      <view role="status" aria-label="正在加载私信"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="conversation-card skeleton-card" aria-hidden="true"><view class="skeleton-avatar"></view><view class="skeleton-lines"><view></view><view></view></view></view></view>
-    </block>
-
-    <view wx:elif="{{error}}" class="state-paper" role="alert">
-      <view class="state-bubble" aria-hidden="true">…</view>
-      <text class="state-title">消息暂时走丢了</text>
-      <text class="state-desc">{{error}}</text>
-      <button class="state-action" hover-class="paper-card--pressed" bindtap="handleRetry">重新加载</button>
-    </view>
-
-    <view wx:elif="{{!conversations.length}}" class="state-paper">
-      <view class="state-bubble" aria-hidden="true">♡</view>
-      <text class="state-title">暂无私信</text>
-      <text class="state-desc">加入并成团后，可在成员空间与搭子开始一对一沟通。</text>
-    </view>
-
-    <view wx:else class="conversation-list">
-      <view
-        wx:for="{{conversations}}"
-        wx:key="id"
-        class="conversation-card"
-        data-id="{{item.id}}"
-        bindtap="handleConversation"
-        hover-class="paper-card--pressed"
-        role="button"
-        aria-label="{{item.accessibilityLabel}}，{{item.displayTime}}{{item.source && item.source.title ? '，来自活动：' + item.source.title : ''}}"
-      >
-        <view class="conversation-avatar avatar--{{item.tone}}" aria-hidden="true">{{item.initial}}</view>
-        <view class="conversation-copy" aria-hidden="true">
-          <view class="conversation-top"><text class="conversation-name">{{item.nickname}}</text><text class="conversation-time">{{item.displayTime}}</text></view>
-          <view class="conversation-bottom"><text class="conversation-preview">{{item.preview}}</text><text wx:if="{{item.unreadCount}}" class="conversation-unread">{{item.unreadCount > 99 ? '99+' : item.unreadCount}}</text></view>
-          <text wx:if="{{item.source && item.source.title}}" class="source-label">来自活动：{{item.source.title}}</text>
-        </view>
-      </view>
-      <view class="list-footer" role="status">
-        <text wx:if="{{loadingMore}}">正在加载更多…</text>
-        <button wx:elif="{{loadMoreError}}" class="footer-retry" bindtap="handleRetryLoadMore">{{loadMoreError}}</button>
-        <text wx:elif="{{!hasMore}}">已经到底啦</text>
+    <view class="direct-message-region">
+      <view wx:if="{{loading}}" class="conversation-list" role="status" aria-label="正在加载私信"><view wx:for="{{[1,2,3]}}" wx:key="*this" class="conversation-card skeleton-card" aria-hidden="true"><view class="skeleton-avatar"></view><view class="skeleton-lines"><view></view><view></view><view></view></view></view></view>
+      <view wx:elif="{{error}}" class="state-paper" role="alert"><view class="state-bubble" aria-hidden="true">…</view><text class="state-title">消息暂时走丢了</text><text class="state-desc">{{error}}</text><button class="state-action" hover-class="message-card--pressed" bindtap="handleRetry">重新加载</button></view>
+      <view wx:elif="{{!conversations.length}}" class="state-paper" role="status" aria-label="暂无私信"><view class="state-bubble" aria-hidden="true">···</view><text class="state-title">这里暂时没有私信</text><text class="state-desc">加入并成团后，可在成员空间与搭子开始一对一沟通。</text></view>
+      <view wx:else class="conversation-list">
+        <button wx:for="{{conversations}}" wx:key="id" class="conversation-card" data-id="{{item.id}}" bindtap="handleConversation" hover-class="message-card--pressed" hover-start-time="60" hover-stay-time="70" aria-label="{{item.accessibilityLabel}}，{{item.displayTime}}{{item.source && item.source.title ? '，来自活动：' + item.source.title : ''}}">
+          <view class="conversation-avatar-wrap" aria-hidden="true"><image wx:if="{{item.avatarSrc}}" class="conversation-avatar-image" src="{{item.avatarSrc}}" mode="aspectFit"></image><view wx:else class="conversation-avatar-fallback">{{item.initial}}</view><view class="conversation-type-badge">•••</view></view>
+          <view class="conversation-copy" aria-hidden="true"><view class="conversation-top"><text class="conversation-name">{{item.nickname}}</text><text class="conversation-time">{{item.displayTime}}</text><view wx:if="{{item.unreadCount}}" class="conversation-unread-dot"></view></view><text class="conversation-preview">{{item.preview}}</text><view wx:if="{{item.source && item.source.title}}" class="message-source-panel"><text class="message-source-prefix">来源活动：</text><text class="message-source-title">{{item.source.title}}</text></view></view>
+        </button>
+        <view class="list-footer" role="status"><text wx:if="{{loadingMore}}">正在加载更多…</text><button wx:elif="{{loadMoreError}}" class="footer-retry" bindtap="handleRetryLoadMore">{{loadMoreError}}</button><text wx:elif="{{!hasMore}}">— 已经到底啦 —</text></view>
       </view>
     </view>
   </view>
