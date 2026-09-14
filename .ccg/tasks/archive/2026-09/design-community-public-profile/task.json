@@ -1,0 +1,12 @@
+{
+  "id": "design-community-public-profile",
+  "title": "设计讨论区用户公开主页并生成 image2 提示词",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档设计提示词任务",
+  "createdAt": "2026-09-14T16:20:00+08:00",
+  "branch": "main"
+}
