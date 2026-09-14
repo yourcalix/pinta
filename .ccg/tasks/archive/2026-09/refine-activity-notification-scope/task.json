@@ -1,0 +1,12 @@
+{
+  "id": "refine-activity-notification-scope",
+  "title": "收窄消息页活动通知范围",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-14T00:00:00+08:00",
+  "branch": "main"
+}

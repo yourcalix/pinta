@@ -12,14 +12,11 @@ const { selectTab, refreshUnread } = require('../../utils/tab-bar');
 const PAGE_SIZE = 20;
 const ACTIVITY_NOTIFICATION_TYPES = new Set([
   'NEW_APPLICATION',
-  'APPLICATION_APPROVED',
-  'APPLICATION_CLOSED',
-  'APPLICATION_REJECTED',
   'GROUP_FORMED'
 ]);
 const ENTRY_META = Object.freeze([
   { category: 'discussion', icon: '/assets/images/messages/icon-discussion-bubble-3d.png', title: '讨论动态', subtitle: '有人回复了你的内容' },
-  { category: 'activity', icon: '/assets/images/messages/icon-activity-tent-3d.png', title: '活动通知', subtitle: '发现更多有趣的线下活动' },
+  { category: 'activity', icon: '/assets/images/messages/icon-activity-tent-3d.png', title: '活动通知', subtitle: '拼团申请与成团消息' },
   { category: 'system', icon: '/assets/images/community/community-notification-bell.png', title: '系统通知', subtitle: '账号与社区重要消息' }
 ]);
 
