@@ -84,12 +84,15 @@ test('发现页帖子心形是独立点赞操作并以形状和文案表达状�
   const script = read('pages/community/index.js');
   assert.match(template, /class="like-count[^\"]*\{\{item\.viewerHasLiked \? 'like-count--active' : ''\}\}"/);
   assert.match(template, /catchtap="handlePostLike"/);
+  assert.match(template, /catchtap="handlePostLike"[^>]*hover-class="like-count--pressed"[^>]*hover-stop-propagation="true"/);
   assert.doesNotMatch(template, /\sdisabled="\{\{item\.likePending\}\}"/);
   assert.match(template, /\{\{item\.viewerHasLiked \? '♥' : '♡'\}\}/);
   assert.match(template, /aria-label="\{\{item\.viewerHasLiked[^\"]*当前\{\{item\.likeCount\}\}个赞"/);
   assert.match(script, /communityService\.setLike\('post', postId, liked\)/);
   assert.match(style, /\.like-count\s*\{[^}]*min-width:\s*88rpx[^}]*min-height:\s*88rpx/s);
   assert.match(style, /\.like-count--active\s+\.like-symbol\s*\{[^}]*color:\s*#e2554f/s);
+  assert.match(style, /\.like-count--pressed\s+\.like-symbol\s*\{[^}]*transform:/s);
+  assert.doesNotMatch(style, /\.like-count--pressed\s*\{[^}]*background:/s);
 });
 
 test('发现页帖子更多按钮隔离整卡导航并保持标准触控热区', () => {

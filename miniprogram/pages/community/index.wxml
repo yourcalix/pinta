@@ -52,7 +52,7 @@
 <view class="post-content-panel" aria-hidden="true"><text class="post-preview">{{item.content}}</text></view>
 <view class="post-footer">
 <view class="post-metrics">
-<button class="like-count {{item.viewerHasLiked ? 'like-count--active' : ''}}" data-id="{{item.id}}" catchtap="handlePostLike" hover-class="community-control--pressed" aria-label="{{item.viewerHasLiked ? '已点赞，双击取消点赞' : '未点赞，双击点赞'}}，当前{{item.likeCount}}个赞">
+<button class="like-count {{item.viewerHasLiked ? 'like-count--active' : ''}}" data-id="{{item.id}}" catchtap="handlePostLike" hover-class="like-count--pressed" hover-stop-propagation="true" hover-stay-time="70" aria-label="{{item.viewerHasLiked ? '已点赞，双击取消点赞' : '未点赞，双击点赞'}}，当前{{item.likeCount}}个赞">
 <text class="like-symbol" aria-hidden="true">{{item.viewerHasLiked ? '♥' : '♡'}}</text><text aria-hidden="true">{{item.likeCount}} 赞</text>
 </button>
 <button class="like-count reply-count" data-id="{{item.id}}" data-r="1" catchtap="handlePost" aria-label="评论，{{item.replyCount}}条回复"><view class="reply-bubble" aria-hidden="true"></view><text aria-hidden="true">{{item.replyCount}} 回复</text></button>
