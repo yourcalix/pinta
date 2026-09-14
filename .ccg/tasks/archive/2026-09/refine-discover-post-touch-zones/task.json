@@ -1,0 +1,12 @@
+{
+  "id": "refine-discover-post-touch-zones",
+  "title": "优化发现页帖子按压反馈与作者点击热区",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-14T17:10:00+08:00",
+  "branch": "main"
+}

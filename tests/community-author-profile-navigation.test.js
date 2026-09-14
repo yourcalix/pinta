@@ -117,6 +117,7 @@ test('发现页与详情页作者入口使用独立 catchtap，不干扰整卡�
   const discover = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/community/index.wxml'), 'utf8');
   const detail = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/community/detail/index.wxml'), 'utf8');
   assert.match(discover, /class="post-author-profile"[^>]+catchtap="handleAuthorProfile"[^>]+hover-stop-propagation="true"/);
+  assert.doesNotMatch(discover, /class="post-author-profile"[^>]+hover-class=/);
   assert.match(detail, /class="author-profile"[^>]+data-source-type="post"[^>]+catchtap="handleAuthorProfile"/);
   assert.match(detail, /class="reply-author-profile"[^>]+data-source-type="reply"[^>]+catchtap="handleAuthorProfile"[^>]+hover-stop-propagation="true"/);
   assert.match(detail, /class="reply-author-profile"[\s\S]*class="reply-avatar[\s\S]*class="reply-author"/);

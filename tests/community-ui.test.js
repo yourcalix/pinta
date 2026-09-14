@@ -52,7 +52,9 @@ test('发现页采用真实讨论搜索、通知入口、真实主题动作和�
   assert.match(style, /-webkit-line-clamp:\s*4/);
   assert.match(style, /overflow-wrap:\s*anywhere/);
   assert.match(style, /word-break:\s*break-all/);
-  assert.match(template, /hover-class="post-card-hover"[^>]*hover-start-time="60"[^>]*hover-stay-time="70"/);
+  assert.doesNotMatch(template, /class="post-card[^>]*hover-class=/);
+  assert.doesNotMatch(style, /\.post-card-hover/);
+  assert.doesNotMatch(style, /\.post-card\s*\{[^}]*transition:/s);
   assert.equal(config.navigationBarTextStyle, 'black');
   assert.equal(config.backgroundColor, '#F9F7F2');
 });
@@ -76,6 +78,19 @@ test('发现页空状态与帖子卡使用白卡、当前头像及受控单字�
   assert.match(script, /avatarInitial/);
   assert.match(script, /loadMoreError/);
   assert.match(script, /发现内容加载失败/);
+});
+
+test('发现页作者入口无按压底色且热区按内容收敛', () => {
+  const template = read('pages/community/index.wxml');
+  const style = read('pages/community/index.wxss');
+  assert.match(template, /class="post-author-profile"[^>]*catchtap="handleAuthorProfile"[^>]*hover-stop-propagation="true"/);
+  assert.doesNotMatch(template, /class="post-author-profile"[^>]*hover-class=/);
+  assert.doesNotMatch(style, /\.post-author-profile--pressed/);
+  assert.match(style, /\.post-author-row\s*\{[^}]*justify-content:\s*space-between[^}]*gap:\s*16rpx/s);
+  assert.match(style, /\.post-author-profile\s*\{[^}]*flex:\s*0 1 auto[^}]*min-height:\s*88rpx/s);
+  assert.doesNotMatch(style, /\.post-author-profile\s*\{[^}]*flex:\s*1(?:;|\s)/s);
+  assert.match(style, /\.post-author\s*\{[^}]*max-width:\s*320rpx/s);
+  assert.match(style, /@media\s*\(max-width:\s*340px\)[\s\S]*\.post-author\s*\{[^}]*max-width:\s*180rpx/s);
 });
 
 test('发现页帖子心形是独立点赞操作并以形状和文案表达状态', () => {
