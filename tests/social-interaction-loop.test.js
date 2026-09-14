@@ -29,19 +29,39 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
+function applyDataPath(target, pathExpression, value) {
+  const segments = String(pathExpression).replace(/\[(\d+)\]/g, '.$1').split('.');
+  let cursor = target;
+  segments.forEach((segment, index) => {
+    if (index === segments.length - 1) {
+      cursor[segment] = value;
+      return;
+    }
+    if (!cursor[segment] || typeof cursor[segment] !== 'object') {
+      cursor[segment] = /^\d+$/.test(segments[index + 1]) ? [] : {};
+    }
+    cursor = cursor[segment];
+  });
+}
+
 function loadDetailPage() {
   let definition;
+  let vibrateCalls = 0;
   global.Page = (value) => { definition = value; };
-  global.wx = { hideKeyboard() {}, navigateTo() {}, showToast() {}, switchTab() {}, vibrateShort() {} };
+  global.wx = { hideKeyboard() {}, navigateTo() {}, showToast() {}, switchTab() {}, vibrateShort() { vibrateCalls += 1; } };
   const pagePath = require.resolve('../miniprogram/subpackages/community/detail/index');
   delete require.cache[pagePath];
   require(pagePath);
   const page = {
     ...definition,
     data: { ...definition.data },
-    setData(value) { Object.assign(this.data, value); }
+    _setDataCalls: [],
+    setData(value) {
+      this._setDataCalls.push(value);
+      Object.entries(value).forEach(([key, nextValue]) => applyDataPath(this.data, key, nextValue));
+    }
   };
-  return { page, pagePath };
+  return { page, pagePath, getVibrateCalls: () => vibrateCalls };
 }
 
 function unloadDetailPage(context) {
@@ -134,7 +154,7 @@ test('前端呈现当前用户头像、单字回退、双计数、评论续页�
   assert.match(detail, /handleLike/);
   assert.match(detail, /handleRetryLoadMore/);
   assert.match(detail, /handleRetryDetail/);
-  assert.match(script, /likingMap/);
+  assert.match(script, /_likeLocks/);
   assert.match(script, /nextCursor/);
   assert.match(script, /new Map/);
   assert.doesNotMatch(`${list}${detail}`, /私信TA|发私信/);
@@ -186,7 +206,7 @@ test('详情页作者确认删除回复后移除回复并校准计数', async ()
     context.page.setData({ post: { id: 'post', replyCount: 2 }, replies: [{ id: 'reply', viewerIsAuthor: true }, { id: 'kept' }] });
     await context.page.handleReplyMore({ currentTarget: { dataset: { id: 'reply' } } });
     assert.deepEqual(context.page.data.replies.map((item) => item.id), ['kept']);
-    assert.equal(context.page.data['post.replyCount'], 1);
+    assert.equal(context.page.data.post.replyCount, 1);
   } finally {
     communityService.deleteReply = originalDeleteReply;
     unloadDetailPage(context);
@@ -259,6 +279,104 @@ test('点赞鉴权在途时同一目标只允许一个请求，卸载后不再se
     response.resolve({ liked: true, likeCount: 1 });
     await Promise.all([first, second]);
     assert.equal(destroyedSetDataCalls, 0);
+  } finally {
+    userService.login = originalLogin;
+    communityService.setLike = originalSetLike;
+    unloadDetailPage(context);
+  }
+});
+
+test('详情主帖与回复点赞只更新目标路径且不触发震动', async () => {
+  const originalLogin = userService.login;
+  const originalSetLike = communityService.setLike;
+  userService.login = async () => ({ profileComplete: true });
+  communityService.setLike = async (targetType, targetId, liked) => ({
+    liked,
+    likeCount: targetType === 'post' ? 1 : 3,
+    targetId
+  });
+  const context = loadDetailPage();
+  try {
+    context.page.setData({
+      post: { id: 'post', likeCount: 0, viewerHasLiked: false, likePending: false },
+      replies: [{ id: 'reply', likeCount: 2, viewerHasLiked: false, likePending: false }]
+    });
+    context.page._setDataCalls.length = 0;
+
+    await context.page.handleLike({ currentTarget: { dataset: { targetType: 'post', targetId: 'post' } } });
+    const postCalls = [...context.page._setDataCalls];
+    const postKeys = postCalls.flatMap((payload) => Object.keys(payload));
+    assert.ok(postKeys.includes('post.viewerHasLiked'));
+    assert.ok(postKeys.includes('post.likeCount'));
+    assert.ok(postKeys.includes('post.likePending'));
+    assert.equal(postCalls.some((payload) => Object.prototype.hasOwnProperty.call(payload, 'post')), false);
+    assert.equal(postCalls.some((payload) => Object.prototype.hasOwnProperty.call(payload, 'replies')), false);
+    assert.equal(context.page.data.post.viewerHasLiked, true);
+    assert.equal(context.page.data.post.likeCount, 1);
+
+    context.page._setDataCalls.length = 0;
+    await context.page.handleLike({ currentTarget: { dataset: { targetType: 'reply', targetId: 'reply' } } });
+    const replyCalls = [...context.page._setDataCalls];
+    const replyKeys = replyCalls.flatMap((payload) => Object.keys(payload));
+    assert.ok(replyKeys.includes('replies[0].viewerHasLiked'));
+    assert.ok(replyKeys.includes('replies[0].likeCount'));
+    assert.ok(replyKeys.includes('replies[0].likePending'));
+    assert.equal(replyCalls.some((payload) => Object.prototype.hasOwnProperty.call(payload, 'post')), false);
+    assert.equal(replyCalls.some((payload) => Object.prototype.hasOwnProperty.call(payload, 'replies')), false);
+    assert.equal(context.page.data.replies[0].viewerHasLiked, true);
+    assert.equal(context.page.data.replies[0].likeCount, 3);
+    assert.equal(context.getVibrateCalls(), 0);
+  } finally {
+    userService.login = originalLogin;
+    communityService.setLike = originalSetLike;
+    unloadDetailPage(context);
+  }
+});
+
+test('详情回复点赞失败通过当前稳定ID局部回滚', async () => {
+  const originalLogin = userService.login;
+  const originalSetLike = communityService.setLike;
+  userService.login = async () => ({ profileComplete: true });
+  communityService.setLike = async () => { throw Object.assign(new Error('offline'), { handled: true }); };
+  const context = loadDetailPage();
+  try {
+    context.page.setData({ replies: [{ id: 'reply', likeCount: 4, viewerHasLiked: false, likePending: false }] });
+    context.page._setDataCalls.length = 0;
+    await context.page.handleLike({ currentTarget: { dataset: { targetType: 'reply', targetId: 'reply' } } });
+    assert.equal(context.page.data.replies[0].viewerHasLiked, false);
+    assert.equal(context.page.data.replies[0].likeCount, 4);
+    assert.equal(context.page.data.replies[0].likePending, false);
+    assert.equal(context.page._setDataCalls.some((payload) => Object.prototype.hasOwnProperty.call(payload, 'replies')), false);
+    assert.equal(context.getVibrateCalls(), 0);
+  } finally {
+    userService.login = originalLogin;
+    communityService.setLike = originalSetLike;
+    unloadDetailPage(context);
+  }
+});
+
+test('回复在点赞请求期间被删除时晚到响应不会写入其他回复', async () => {
+  const originalLogin = userService.login;
+  const originalSetLike = communityService.setLike;
+  const response = deferred();
+  userService.login = async () => ({ profileComplete: true });
+  communityService.setLike = () => response.promise;
+  const context = loadDetailPage();
+  try {
+    context.page.setData({ replies: [
+      { id: 'target', likeCount: 0, viewerHasLiked: false, likePending: false },
+      { id: 'kept', likeCount: 8, viewerHasLiked: true, likePending: false }
+    ] });
+    const action = context.page.handleLike({ currentTarget: { dataset: { targetType: 'reply', targetId: 'target' } } });
+    await new Promise((resolve) => setImmediate(resolve));
+    context.page.setData({ replies: [context.page.data.replies[1]] });
+    context.page._setDataCalls.length = 0;
+    response.resolve({ liked: true, likeCount: 1 });
+    await action;
+    assert.deepEqual(context.page.data.replies.map((item) => item.id), ['kept']);
+    assert.equal(context.page.data.replies[0].likeCount, 8);
+    assert.equal(context.page._setDataCalls.length, 0);
+    assert.equal(context.getVibrateCalls(), 0);
   } finally {
     userService.login = originalLogin;
     communityService.setLike = originalSetLike;

@@ -10,6 +10,7 @@ const root = path.join(__dirname, '../miniprogram/subpackages/community/detail')
 test('详情点赞切换不触发原生禁用态或操作区几何变化', () => {
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8');
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
 
   assert.doesNotMatch(template, /disabled="\{\{(?:post|item)\.likePending\}\}"/);
   assert.doesNotMatch(template, /like-button--pending/);
@@ -27,4 +28,7 @@ test('详情点赞切换不触发原生禁用态或操作区几何变化', () =>
   assert.doesNotMatch(style, /\.like-button--pressed\s*\{[^}]*(?:background|opacity):/s);
   assert.doesNotMatch(style, /\.like-button--pressed\s*\{[^}]*transform:/s);
   assert.match(style, /\.detail-page\s*\{[^}]*overflow-x:\s*hidden/s);
+  assert.doesNotMatch(script, /vibrateShort/);
+  assert.match(script, /payload\[\`\$\{prefix\}\.\$\{field\}\`\]/);
+  assert.match(script, /findIndex\(\(item\) => item\.id === targetId\)/);
 });

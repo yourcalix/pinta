@@ -73,7 +73,7 @@ Page({
     postId: '', post: null, replies: [], replyContent: '', replyTarget: null,
     replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120, submitting: false,
     loading: true, error: '', nextCursor: '', hasMore: false,
-    loadingMore: false, loadMoreError: '', likingMap: {}, replyInputFocus: false
+    loadingMore: false, loadMoreError: '', replyInputFocus: false
   },
 
   onLoad(options) {
@@ -204,8 +204,23 @@ Page({
   },
 
   updateLikeTarget(targetType, targetId, patch) {
-    if (targetType === 'post') return this.setData({ post: { ...this.data.post, ...patch } });
-    this.setData({ replies: this.data.replies.map((item) => item.id === targetId ? { ...item, ...patch } : item) });
+    if (this._disposed) return false;
+    let prefix = '';
+    if (targetType === 'post') {
+      if (!this.data.post || this.data.post.id !== targetId) return false;
+      prefix = 'post';
+    } else {
+      const index = this.data.replies.findIndex((item) => item.id === targetId);
+      if (index < 0) return false;
+      prefix = `replies[${index}]`;
+    }
+    const payload = {};
+    ['viewerHasLiked', 'likeCount', 'likePending'].forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(patch, field)) payload[`${prefix}.${field}`] = patch[field];
+    });
+    if (!Object.keys(payload).length) return false;
+    this.setData(payload);
+    return true;
   },
 
   async handleLike(event) {
@@ -222,23 +237,16 @@ Page({
       if (!target) return;
       before = { viewerHasLiked: Boolean(target.viewerHasLiked), likeCount: Math.max(0, Number(target.likeCount) || 0) };
       const liked = !before.viewerHasLiked;
-      this.setData({ likingMap: { ...this.data.likingMap, [key]: true } });
       this.updateLikeTarget(targetType, targetId, { viewerHasLiked: liked, likeCount: Math.max(0, before.likeCount + (liked ? 1 : -1)), likePending: true });
       const result = await communityService.setLike(targetType, targetId, liked);
       if (this._disposed) return;
       this.updateLikeTarget(targetType, targetId, { viewerHasLiked: result.liked, likeCount: result.likeCount, likePending: false });
-      try { if (wx.vibrateShort) wx.vibrateShort({ type: 'light' }); } catch (error) {}
     } catch (error) {
       if (this._disposed) return;
       if (before) this.updateLikeTarget(targetType, targetId, { ...before, likePending: false });
       if (!error.handled) wx.showToast({ title: '点赞失败，请重试', icon: 'none' });
     } finally {
       this._likeLocks.delete(key);
-      if (!this._disposed && this.data.likingMap[key]) {
-        const likingMap = { ...this.data.likingMap };
-        delete likingMap[key];
-        this.setData({ likingMap });
-      }
     }
   },
 

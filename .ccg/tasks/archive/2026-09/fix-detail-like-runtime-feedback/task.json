@@ -1,0 +1,12 @@
+{
+  "id": "fix-detail-like-runtime-feedback",
+  "title": "修复讨论详情点赞仍有旧按压与抖动反馈",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-14T00:00:00+08:00",
+  "branch": "main"
+}
