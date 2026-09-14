@@ -10,7 +10,7 @@ const mockServer = require('../miniprogram/mocks/server');
 const api = require('../miniprogram/services/api');
 
 const ROOT = path.resolve(__dirname, '..');
-const profile = (nickname) => ({ nickname, gender: 'FEMALE', city: '澳门', interests: ['散步'], birthDate: '2000-01-01', mbti: 'INFP', adultConfirmed: true });
+const profile = (nickname, avatar = null) => ({ nickname, gender: 'FEMALE', city: '澳门', interests: ['散步'], birthDate: '2000-01-01', mbti: 'INFP', adultConfirmed: true, ...(avatar ? { avatar } : {}) });
 
 function harness() {
   let now = Date.parse('2026-09-14T08:00:00.000Z');
@@ -40,12 +40,28 @@ test('社区实体只在点击时签发绑定访问者的短期主页凭据且�
   const opened = await call('profile.public.get', { profileNavToken: issued.data.profileNavToken }, 'viewer');
   assert.equal(opened.ok, true);
   assert.equal(opened.data.profile.nickname, '作者');
+  assert.deepEqual(opened.data.profile.avatar, { kind: 'DEFAULT', fallback: 'FEMALE_DEFAULT' });
   assert.equal(opened.data.profile.online, false);
   assert.equal(opened.data.profile.viewerIsSelf, false);
-  assert.doesNotMatch(JSON.stringify(opened.data), /authorId|viewerId|userId|openid|birthDate/);
+  assert.doesNotMatch(JSON.stringify(opened.data), /authorId|viewerId|userId|openid|birthDate|fileID|cloudPath|revision/);
 
   const foreign = await call('profile.public.get', { profileNavToken: issued.data.profileNavToken }, 'other');
   assert.equal(foreign.error.code, 'NOT_FOUND');
+});
+
+test('正式水合形态经服务响应只公开HTTPS头像槽且不带底层身份与文件字段', async () => {
+  const { store, call } = harness();
+  store.users.get('author').profile.avatar = { status: 'ACTIVE', fileID: 'cloud://env/private-author.jpg' };
+  store.hydratePublicProfileAvatar = async () => ({
+    gender: 'FEMALE',
+    avatarSrc: 'https://temp.example/private-author.jpg'
+  });
+  const issued = await call('community.profile.nav.create', { sourceType: 'post', sourceId: 'post-1' }, 'viewer', 'author-nav-cloud-shape');
+  const opened = await call('profile.public.get', { profileNavToken: issued.data.profileNavToken }, 'viewer');
+  assert.deepEqual(opened.data.profile.avatar, {
+    kind: 'CUSTOM', src: 'https://temp.example/private-author.jpg', fallback: 'FEMALE_DEFAULT'
+  });
+  assert.doesNotMatch(JSON.stringify(opened.data), /cloud:\/\/|fileID|authorId|viewerId|userId|openid|birthDate/);
 });
 
 test('客户端把社区主页凭据签发识别为幂等写动作', () => {
@@ -105,6 +121,27 @@ test('发现页与详情页作者入口使用独立 catchtap，不干扰整卡�
   assert.match(detail, /class="reply-author-profile"[^>]+data-source-type="reply"[^>]+catchtap="handleAuthorProfile"[^>]+hover-stop-propagation="true"/);
   assert.match(detail, /class="reply-author-profile"[\s\S]*class="reply-avatar[\s\S]*class="reply-author"/);
   assert.match(detail, /class="reply-content-target"[^>]+catchtap="handleSelectReplyTarget"/);
+});
+
+test('社区公开主页使用暖米白三卡布局并保留真实头像有限降级', () => {
+  const template = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/public/index.wxml'), 'utf8');
+  const style = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/public/index.wxss'), 'utf8');
+  const script = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/public/index.js'), 'utf8');
+  assert.match(template, /public-community-identity/);
+  assert.match(template, /TA 的兴趣拼图/);
+  assert.match(template, /community-public-profile-puzzle\.png/);
+  assert.match(template, /wx:if="\{\{profile\.facts\.length\}\}"[\s\S]*公开资料/);
+  assert.match(template, /仅展示用户主动公开的资料/);
+  assert.match(template, /profile\.avatarSlot\.mode/);
+  assert.match(template, /binderror="handleAvatarError"/);
+  assert.match(style, /\.public-profile-page--community[\s\S]*#f9f7f2/i);
+  assert.match(style, /\.public-community-card[\s\S]*border-radius:\s*36rpx/i);
+  assert.match(style, /\.public-community-fact[^}]*flex:\s*0 0 auto/i);
+  assert.doesNotMatch(style, /\.public-community-identity[^}]*min-height/i);
+  assert.match(script, /normalizeAvatarSlots/);
+  assert.match(script, /fallbackAvatarSlot/);
+  assert.match(script, /setNavigationBarColor/);
+  assert.doesNotMatch(template, /communitySource[^\n]*(?:正在找搭子|刚刚在线)/);
 });
 
 test('Mock 与正式接口保持本人/他人主页分流契约一致', async () => {

@@ -154,7 +154,29 @@ test('Cloud社区头像临时地址签发失败时保留默认头像事实且不
   }
 });
 
-test('Mock社区读取当前自定义头像并保持与正式DTO同构', async () => {
+test('Cloud公开主页头像仅签发HTTPS展示地址且失败时不泄露fileID', async () => {
+  const { store } = cloudHarness(1);
+  const target = communityUser('author-0', 'MALE', 'cloud://env/current.jpg');
+  const hydrated = await store.hydratePublicProfileAvatar(target);
+  assert.deepEqual(hydrated, { gender: 'MALE', avatarSrc: 'https://temp.example/current.jpg' });
+  assert.doesNotMatch(JSON.stringify(hydrated), /cloud:\/\//);
+
+  const historical = await store.hydratePublicProfileAvatar(communityUser('author-0', 'MALE', 'https://raw.example/not-cloud-storage.jpg'));
+  assert.deepEqual(historical, { gender: 'MALE', avatarSrc: '' });
+
+  store.cloud.getTempFileURL = async () => { throw new Error('provider details'); };
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const fallback = await store.hydratePublicProfileAvatar(target);
+    assert.deepEqual(fallback, { gender: 'MALE', avatarSrc: '' });
+    assert.doesNotMatch(JSON.stringify(fallback), /cloud:\/\/|provider details/);
+  } finally {
+    console.error = originalError;
+  }
+});
+
+test('Mock社区允许本地展示路径且最终公开头像槽与正式DTO字段同构', async () => {
   mockServer.reset();
   mockServer.setPersona('u_member');
   const prepared = await mockServer.call({ action: 'profile.avatar.prepare', data: {}, requestId: 'mock-avatar-prepare', idempotencyKey: 'mock-avatar-prepare-key' });

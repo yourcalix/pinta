@@ -71,6 +71,7 @@ test('短期星球凭据只在目标在线会话内解析公开资料', async ()
   assert.deepEqual(publicResult.data.profile, {
     nickname: '阿明',
     avatarKind: 'PASSENGER_B',
+    avatar: { kind: 'DEFAULT', fallback: 'FEMALE_DEFAULT' },
     gender: 'FEMALE',
     age: 25,
     mbti: 'INFP',

@@ -221,6 +221,32 @@ class CloudStore {
     return { profilesByUserId };
   }
 
+  async hydratePublicProfileAvatar(user) {
+    if (!user || user.status !== 'ACTIVE' || !user.profile) return null;
+    const avatar = user.profile.avatar;
+    const fileID = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
+      ? avatar.fileID.trim()
+      : '';
+    let avatarSrc = '';
+    if (/^cloud:\/\//.test(fileID) && typeof this.cloud.getTempFileURL === 'function') {
+      try {
+        const result = await this.cloud.getTempFileURL({ fileList: [fileID] });
+        const item = (result.fileList || []).find((candidate) => candidate && candidate.fileID === fileID);
+        if (item && item.status === 0 && typeof item.tempFileURL === 'string' && /^https:\/\//.test(item.tempFileURL)) {
+          avatarSrc = item.tempFileURL;
+        }
+      } catch (error) {
+        console.error('[pinba-public-profile-avatar-url]', {
+          code: error && (error.errCode || error.code) || 'UNKNOWN'
+        });
+      }
+    }
+    return {
+      gender: USER_GENDERS.includes(user.profile.gender) ? user.profile.gender : null,
+      avatarSrc
+    };
+  }
+
   async hydratePublicActivityAvatars(activities = [], at = new Date()) {
     const activityIds = [...new Set(activities.filter(Boolean).map((activity) => activity.id).filter(Boolean))];
     const activeMembers = [];

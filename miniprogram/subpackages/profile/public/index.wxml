@@ -1,5 +1,5 @@
-<view class="public-profile-page">
-  <view class="public-profile-nav" style="height: {{contentTopInset}}px;">
+<view class="public-profile-page {{communitySource ? 'public-profile-page--community' : 'public-profile-page--companion'}}">
+  <view class="public-profile-nav {{communitySource ? 'public-profile-nav--community' : 'public-profile-nav--companion'}}" style="height: {{contentTopInset}}px;">
     <view class="public-profile-nav-inner">
       <button class="public-profile-back" bindtap="handleBack" hover-class="public-control--pressed" aria-label="返回上一页"><text aria-hidden="true">‹</text></button>
       <text class="public-profile-title" role="heading" aria-level="1">{{pageTitle}}</text>
@@ -7,48 +7,85 @@
     </view>
   </view>
 
-  <view wx:if="{{status === 'loading'}}" class="public-state public-state--dark" style="padding-top: {{contentTopInset}}px;" role="status" aria-label="正在读取搭子公开资料">
+  <view wx:if="{{status === 'loading'}}" class="public-state {{communitySource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="status" aria-label="{{communitySource ? '正在读取公开资料' : '正在读取搭子公开资料'}}">
     <view class="public-avatar-skeleton public-shimmer"></view>
     <view class="public-line-skeleton public-shimmer"></view>
-    <text>{{communitySource ? '正在读取公开资料…' : '正在确认这位搭子的在线状态…'}}</text>
+    <view class="public-pill-skeletons" aria-hidden="true"><view class="public-pill-skeleton public-shimmer"></view><view class="public-pill-skeleton public-shimmer"></view><view class="public-pill-skeleton public-shimmer"></view></view>
+    <text class="public-state-loading-copy">{{communitySource ? '正在读取公开资料…' : '正在确认这位搭子的在线状态…'}}</text>
   </view>
 
   <block wx:elif="{{status === 'ready'}}">
-    <view class="public-stage" style="padding-top: {{contentTopInset}}px;" role="region" aria-label="{{profile.accessibilityLabel}}">
-      <view class="public-stage-glow" aria-hidden="true"></view>
-      <view class="public-avatar-shell"><image class="public-avatar" src="{{profile.avatarPath}}" mode="aspectFit" aria-hidden="true" /></view>
-      <view class="public-name-row"><text class="public-name">{{profile.nickname}}</text><text wx:if="{{profile.viewerIsSelf}}" class="public-self">这是你</text></view>
-      <view wx:if="{{profile.online}}" class="public-online"><text class="public-online-dot" aria-hidden="true"></text><text>正在找搭子 · 刚刚在线</text></view>
-    </view>
-
-    <view class="public-sheet">
-      <view class="public-section">
-        <text class="public-section-title">公开资料</text>
-        <view wx:if="{{profile.facts.length}}" class="public-facts" aria-label="{{profile.factsLabel}}">
-          <text wx:for="{{profile.facts}}" wx:key="*this" class="public-fact">{{item}}</text>
+    <view wx:if="{{communitySource}}" class="public-community-content" style="padding-top: calc({{contentTopInset}}px + 28rpx);" role="region" aria-label="{{profile.accessibilityLabel}}">
+      <view class="public-community-card public-community-identity">
+        <view class="public-community-avatar-glow" aria-hidden="true"></view>
+        <view class="public-community-avatar-shell">
+          <image wx:if="{{!profile.avatarSlot.empty}}" class="public-community-avatar" src="{{profile.avatarSlot.src}}" mode="{{profile.avatarSlot.mode}}" binderror="handleAvatarError" aria-hidden="true"></image>
+          <view wx:else class="public-community-avatar public-community-avatar--initial" aria-hidden="true">{{profile.avatarInitial}}</view>
         </view>
-        <text wx:else class="public-empty-copy">这位搭子暂时没有填写更多公开资料</text>
+        <text class="public-community-name">{{profile.nickname}}</text>
+        <block wx:if="{{profile.facts.length}}">
+          <view class="public-community-section-label" aria-hidden="true"><view class="public-community-section-line"></view><text>公开资料</text><view class="public-community-section-line"></view></view>
+          <view class="public-community-facts" aria-label="公开资料，{{profile.factsLabel}}">
+            <text wx:for="{{profile.facts}}" wx:key="key" class="public-community-fact public-community-fact--{{item.tone}}">{{item.label}}</text>
+          </view>
+        </block>
+        <text wx:else class="public-community-empty-copy">这位用户暂时没有填写更多公开资料</text>
       </view>
 
-      <view wx:if="{{profile.interests.length}}" class="public-section">
-        <text class="public-section-title">兴趣爱好</text>
-        <view class="public-interests" aria-label="兴趣爱好，{{profile.interestsLabel}}">
-          <text wx:for="{{profile.interests}}" wx:key="*this" class="public-interest">{{item}}</text>
+      <view wx:if="{{profile.interests.length}}" class="public-community-card public-community-interests-card">
+        <view class="public-community-interest-heading"><text>TA 的兴趣拼图</text><image class="public-community-puzzle-icon" src="./assets/community-public-profile-puzzle.png" mode="aspectFit" aria-hidden="true"></image></view>
+        <view class="public-puzzle public-puzzle--watermark" aria-hidden="true"></view>
+        <view class="public-community-interests" aria-label="兴趣爱好，{{profile.interestsLabel}}">
+          <text wx:for="{{profile.interests}}" wx:key="label" class="public-community-interest public-community-interest--{{item.tone}}">{{item.label}}</text>
         </view>
       </view>
 
-      <view class="public-privacy"><text class="public-privacy-icon" aria-hidden="true">⌁</text><text>仅展示搭子主动公开的资料，不提供私信、联系方式或实时位置。</text></view>
+      <view class="public-community-privacy">
+        <image class="public-community-privacy-shield" src="./assets/community-public-profile-shield.png" mode="aspectFit" aria-hidden="true"></image>
+        <view class="public-community-privacy-copy"><text>仅展示用户主动公开的资料，</text><text>不提供私信、联系方式或实时位置。</text></view>
+      </view>
     </view>
+
+    <block wx:else>
+      <view class="public-stage" style="padding-top: {{contentTopInset}}px;" role="region" aria-label="{{profile.accessibilityLabel}}">
+        <view class="public-stage-glow" aria-hidden="true"></view>
+        <view class="public-avatar-shell">
+          <image wx:if="{{!profile.avatarSlot.empty}}" class="public-avatar" src="{{profile.avatarSlot.src}}" mode="{{profile.avatarSlot.mode}}" binderror="handleAvatarError" aria-hidden="true"></image>
+          <view wx:else class="public-avatar public-avatar--initial" aria-hidden="true">{{profile.avatarInitial}}</view>
+        </view>
+        <view class="public-name-row"><text class="public-name">{{profile.nickname}}</text><text wx:if="{{profile.viewerIsSelf}}" class="public-self">这是你</text></view>
+        <view wx:if="{{profile.online}}" class="public-online"><text class="public-online-dot" aria-hidden="true"></text><text>正在找搭子 · 刚刚在线</text></view>
+      </view>
+
+      <view class="public-sheet">
+        <view class="public-section">
+          <text class="public-section-title">公开资料</text>
+          <view wx:if="{{profile.facts.length}}" class="public-facts" aria-label="{{profile.factsLabel}}">
+            <text wx:for="{{profile.facts}}" wx:key="key" class="public-fact">{{item.label}}</text>
+          </view>
+          <text wx:else class="public-empty-copy">这位搭子暂时没有填写更多公开资料</text>
+        </view>
+
+        <view wx:if="{{profile.interests.length}}" class="public-section">
+          <text class="public-section-title">兴趣爱好</text>
+          <view class="public-interests" aria-label="兴趣爱好，{{profile.interestsLabel}}">
+            <text wx:for="{{profile.interests}}" wx:key="label" class="public-interest">{{item.label}}</text>
+          </view>
+        </view>
+
+        <view class="public-privacy"><text class="public-privacy-icon" aria-hidden="true">⌁</text><text>仅展示搭子主动公开的资料，不提供私信、联系方式或实时位置。</text></view>
+      </view>
+    </block>
   </block>
 
-  <view wx:elif="{{status === 'not-found'}}" class="public-state public-state--dark" style="padding-top: {{contentTopInset}}px;" role="alert">
+  <view wx:elif="{{status === 'not-found'}}" class="public-state {{communitySource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="alert">
     <view class="public-state-orbit" aria-hidden="true"><view class="public-state-dot"></view></view>
     <text class="public-state-title">{{communitySource ? '主页访问已失效' : '这位搭子已经离开星球'}}</text>
     <text class="public-state-copy">{{communitySource ? '请返回讨论后重新打开这位用户的主页' : '在线状态已失效，去星球看看其他搭子吧'}}</text>
     <button class="public-state-action" bindtap="handleBack" hover-class="public-control--pressed">{{communitySource ? '返回讨论' : '返回搭子星球'}}</button>
   </view>
 
-  <view wx:else class="public-state public-state--dark" style="padding-top: {{contentTopInset}}px;" role="alert">
+  <view wx:else class="public-state {{communitySource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="alert">
     <view class="public-state-symbol" aria-hidden="true">!</view>
     <text class="public-state-title">个人资料加载失败</text>
     <text class="public-state-copy">{{errorCopy}}</text>

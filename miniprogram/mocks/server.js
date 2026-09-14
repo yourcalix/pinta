@@ -195,18 +195,25 @@ while (slots.length < total) slots.push({ kind: 'EMPTY' });
 return slots;
 }
 function publicAvatarSlot(profile) {
-const fallback = profile && profile.gender === 'MALE'
-? 'MALE_DEFAULT'
-: profile && profile.gender === 'FEMALE' ? 'FEMALE_DEFAULT' : '';
-if (!fallback) return { kind: 'EMPTY' };
-const avatar = profile.avatar;
+const avatar = profile && profile.avatar;
 const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
 ? avatar.fileID.trim()
 : '';
-const src = isMockDisplayAvatarPath(candidate)
+return publicAvatarSlotFromFacts({
+gender: profile && profile.gender,
+// Mock-only local paths stand in for a cloud-resolved display URL.
+avatarSrc: isMockDisplayAvatarPath(candidate)
 && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
 ? candidate
-: '';
+: ''
+});
+}
+function publicAvatarSlotFromFacts(facts) {
+const fallback = facts && facts.gender === 'MALE'
+? 'MALE_DEFAULT'
+: facts && facts.gender === 'FEMALE' ? 'FEMALE_DEFAULT' : '';
+if (!fallback) return { kind: 'EMPTY' };
+const src = facts && isMockDisplayAvatarPath(facts.avatarSrc) ? facts.avatarSrc.trim() : '';
 return src ? { kind: 'CUSTOM', src, fallback } : { kind: 'DEFAULT', fallback };
 }
 function resolveNotificationTarget(type) {
@@ -1687,6 +1694,7 @@ const profile = target.profile;
 return { profile: {
 nickname: Array.from(String(profile.nickname || '').trim() || '拼吧用户').slice(0, 12).join(''),
 avatarKind: avatarKindFromGender(profile.gender), gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
+avatar: publicAvatarSlot(profile),
 age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)), mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
 city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
 interests: Array.isArray(profile.interests) ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
@@ -1708,6 +1716,7 @@ return {
 profile: {
 nickname: Array.from(String(profile.nickname || '').trim() || '匿名搭子').slice(0, 12).join(''),
 avatarKind: avatarKindFromGender(profile.gender),
+avatar: publicAvatarSlot(profile),
 gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
 age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)),
 mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,

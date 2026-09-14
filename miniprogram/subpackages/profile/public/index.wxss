@@ -1,19 +1,59 @@
-page { width: 100%; min-height: 100%; background: #0d0c1b; color: #fff; }
+page { width: 100%; min-height: 100%; background: #f9f7f2; color: #111827; }
 button { margin: 0; padding: 0; line-height: 1.2; }
 button::after { display: none; }
 
-.public-profile-page { width: 100vw; min-height: 100vh; overflow-x: hidden; background: #0d0c1b; }
-.public-profile-nav { position: fixed; z-index: 20; top: 0; right: 0; left: 0; background: linear-gradient(180deg, rgba(13,12,27,.96), rgba(13,12,27,.2), transparent); }
+.public-profile-page { width: 100vw; min-height: 100vh; overflow-x: hidden; box-sizing: border-box; }
+.public-profile-page--community { color: #111827; background: #f9f7f2; }
+.public-profile-page--companion { color: #fff; background: #0d0c1b; }
+.public-profile-nav { position: fixed; z-index: 20; top: 0; right: 0; left: 0; }
+.public-profile-nav--community { color: #111827; background: rgba(249,247,242,.96); border-bottom: 1rpx solid rgba(239,236,230,.52); }
+.public-profile-nav--companion { color: #fff; background: linear-gradient(180deg, rgba(13,12,27,.96), rgba(13,12,27,.2), transparent); }
 .public-profile-nav-inner { display: flex; position: absolute; right: 0; bottom: 0; left: 0; height: 88rpx; align-items: center; justify-content: space-between; padding: 0 24rpx; box-sizing: border-box; }
 .public-profile-back, .public-profile-nav-spacer { width: 112rpx; min-width: 112rpx; height: 88rpx; }
-.public-profile-back { display: flex; align-items: center; color: #fff; background: transparent; border: 0; font-size: 64rpx; font-weight: 300; }
-.public-profile-title { position: absolute; left: 50%; color: rgba(255,255,255,.94); font-size: 32rpx; font-weight: 700; transform: translateX(-50%); }
+.public-profile-back { display: flex; align-items: center; color: inherit; background: transparent; border: 0; font-size: 64rpx; font-weight: 300; }
+.public-profile-title { position: absolute; left: 50%; max-width: 360rpx; overflow: hidden; color: inherit; font-size: 34rpx; font-weight: 800; text-overflow: ellipsis; transform: translateX(-50%); white-space: nowrap; }
 .public-control--pressed { opacity: .58; transform: scale(.98); }
+
+.public-community-content { min-height: 100vh; padding-right: 32rpx; padding-bottom: calc(72rpx + env(safe-area-inset-bottom)); padding-left: 32rpx; box-sizing: border-box; }
+.public-community-card { position: relative; overflow: hidden; background: #fff; border: 1.5rpx solid #efece6; border-radius: 36rpx; box-shadow: 0 10rpx 30rpx rgba(97,82,65,.07); box-sizing: border-box; }
+.public-community-identity { display: flex; align-items: center; flex-direction: column; padding: 54rpx 40rpx 48rpx; }
+.public-community-avatar-glow { position: absolute; top: 42rpx; left: 50%; width: 276rpx; height: 276rpx; background: radial-gradient(circle, rgba(255,221,111,.28) 0%, rgba(255,235,162,.12) 48%, transparent 72%); border-radius: 50%; transform: translateX(-50%); pointer-events: none; }
+.public-community-avatar-shell { position: relative; z-index: 1; width: 226rpx; height: 226rpx; padding: 7rpx; overflow: hidden; background: #fff; border: 3rpx solid rgba(255,255,255,.96); border-radius: 50%; box-shadow: 0 12rpx 36rpx rgba(210,174,70,.18); box-sizing: border-box; }
+.public-community-avatar { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; background: #f3f0e6; border-radius: 50%; }
+.public-community-avatar--initial { color: #8a755f; background: linear-gradient(145deg, #fff5dc, #f2e2c6); font-size: 72rpx; font-weight: 800; }
+.public-community-name { display: block; max-width: 540rpx; margin-top: 24rpx; overflow: hidden; color: #111827; font-size: 42rpx; font-weight: 800; line-height: 1.3; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.public-community-section-label { display: flex; min-height: 48rpx; align-items: center; justify-content: center; gap: 22rpx; margin-top: 20rpx; color: #8e8a84; font-size: 26rpx; }
+.public-community-section-line { width: 68rpx; height: 1rpx; background: #c9c5be; }
+.public-community-facts { display: flex; width: 100%; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16rpx; margin-top: 12rpx; }
+.public-community-fact { display: inline-flex; min-width: 126rpx; min-height: 64rpx; align-items: center; justify-content: center; flex: 0 0 auto; padding: 0 28rpx; color: #8a7d6d; background: #f7f4ee; border-radius: 999rpx; font-size: 28rpx; font-weight: 700; box-sizing: border-box; }
+.public-community-fact--amber { color: #b45309; background: #fff4ce; }
+.public-community-fact--mint { color: #07835b; background: #e7f7ef; }
+.public-community-empty-copy { margin-top: 20rpx; color: #8d8881; font-size: 25rpx; line-height: 1.6; text-align: center; }
+
+.public-community-interests-card { min-height: 326rpx; margin-top: 26rpx; padding: 38rpx 34rpx 34rpx; }
+.public-community-interest-heading { display: flex; position: relative; z-index: 2; min-height: 58rpx; align-items: center; gap: 20rpx; color: #111827; font-size: 34rpx; font-weight: 800; }
+.public-community-puzzle-icon { width: 48rpx; height: 48rpx; flex: 0 0 48rpx; }
+.public-community-interests { display: flex; position: relative; z-index: 2; max-width: 520rpx; flex-wrap: wrap; gap: 18rpx 14rpx; margin-top: 28rpx; }
+.public-community-interest { display: inline-flex; min-width: 132rpx; min-height: 62rpx; align-items: center; justify-content: center; padding: 0 28rpx; border-radius: 999rpx; font-size: 27rpx; font-weight: 700; box-sizing: border-box; }
+.public-community-interest--amber { color: #a96800; background: #fff4ce; }
+.public-community-interest--peach { color: #b05027; background: #fcede5; }
+.public-community-interest--mint { color: #07835b; background: #e7f7ef; }
+.public-community-interest--rose { color: #b53c42; background: #fbe9ec; }
+.public-puzzle { position: relative; background: #f6bd42; border-radius: 8rpx; transform: rotate(7deg); pointer-events: none; }
+.public-puzzle::before, .public-puzzle::after { position: absolute; content: ''; background: inherit; border-radius: 50%; }
+.public-puzzle--watermark { position: absolute; z-index: 1; right: -20rpx; bottom: -20rpx; width: 154rpx; height: 154rpx; background: #e8bf73; border-radius: 22rpx; opacity: .08; transform: rotate(28deg); }
+.public-puzzle--watermark::before { top: -30rpx; left: 30rpx; width: 58rpx; height: 58rpx; }
+.public-puzzle--watermark::after { top: 30rpx; right: -30rpx; width: 58rpx; height: 58rpx; }
+
+.public-community-privacy { display: flex; min-height: 176rpx; align-items: center; gap: 28rpx; margin-top: 26rpx; padding: 26rpx 38rpx; color: #7e8087; background: rgba(255,255,255,.56); border: 1rpx solid #ebe5db; border-radius: 30rpx; box-shadow: 0 8rpx 24rpx rgba(97,82,65,.04); font-size: 27rpx; line-height: 1.7; box-sizing: border-box; }
+.public-community-privacy-shield { width: 112rpx; height: 112rpx; flex: 0 0 112rpx; }
+.public-community-privacy-copy { display: flex; min-width: 0; flex-direction: column; }
 
 .public-stage { display: flex; position: relative; min-height: 500rpx; align-items: center; flex-direction: column; justify-content: center; overflow: hidden; box-sizing: border-box; background: radial-gradient(circle at 50% 38%, #2b4665 0%, #182942 46%, #0d0c1b 100%); }
 .public-stage-glow { position: absolute; width: 420rpx; height: 420rpx; background: radial-gradient(circle, rgba(110,231,216,.2), transparent 68%); border-radius: 50%; pointer-events: none; }
 .public-avatar-shell { position: relative; z-index: 1; width: 154rpx; height: 154rpx; padding: 5rpx; overflow: hidden; background: rgba(255,255,255,.94); border: 3rpx solid rgba(255,255,255,.78); border-radius: 50%; box-shadow: 0 18rpx 48rpx rgba(0,0,0,.32); box-sizing: border-box; }
-.public-avatar { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.public-avatar { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; background: #233852; border-radius: 50%; }
+.public-avatar--initial { color: rgba(255,255,255,.86); font-size: 48rpx; font-weight: 800; }
 .public-name-row { display: flex; position: relative; z-index: 1; max-width: 640rpx; min-height: 60rpx; align-items: center; justify-content: center; gap: 14rpx; margin-top: 20rpx; }
 .public-name { max-width: 470rpx; overflow: hidden; font-size: 38rpx; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .public-self { padding: 5rpx 13rpx; color: #0d3833; background: #79eadc; border-radius: 999rpx; font-size: 22rpx; font-weight: 700; }
@@ -31,19 +71,42 @@ button::after { display: none; }
 .public-privacy-icon { flex: 0 0 auto; color: #16a36a; font-size: 30rpx; }
 
 .public-state { display: flex; width: 100vw; min-height: 100vh; align-items: center; flex-direction: column; justify-content: center; padding: 48rpx 42rpx calc(72rpx + env(safe-area-inset-bottom)); box-sizing: border-box; text-align: center; }
-.public-state--dark { background: radial-gradient(circle at 50% 40%, #1b1934, #0d0c1b 68%); }
+.public-state--community { color: #111827; background: #f9f7f2; }
+.public-state--dark { color: #fff; background: radial-gradient(circle at 50% 40%, #1b1934, #0d0c1b 68%); }
 .public-state-title { margin-top: 28rpx; font-size: 34rpx; font-weight: 800; }
 .public-state-copy { margin-top: 14rpx; color: rgba(255,255,255,.58); font-size: 25rpx; line-height: 1.6; }
+.public-state--community .public-state-copy, .public-state--community .public-state-loading-copy { color: #78716c; }
 .public-state-action { display: flex; width: 420rpx; max-width: 100%; min-height: 92rpx; align-items: center; justify-content: center; margin-top: 38rpx; color: #06231f; background: #79eadc; border: 0; border-radius: 46rpx; font-size: 28rpx; font-weight: 800; }
+.public-state--community .public-state-action { color: #7a4800; background: linear-gradient(135deg, #ffe58d, #ffc447); box-shadow: 0 10rpx 22rpx rgba(224,164,47,.18); }
 .public-state-symbol { display: flex; width: 96rpx; height: 96rpx; align-items: center; justify-content: center; color: #0d0c1b; background: #f3d0d1; border-radius: 50%; font-size: 42rpx; font-weight: 800; }
 .public-state-orbit { position: relative; width: 126rpx; height: 126rpx; border: 2rpx solid rgba(185,244,239,.28); border-radius: 50%; }
+.public-state--community .public-state-orbit { border-color: rgba(222,177,65,.3); }
 .public-state-dot { position: absolute; top: 12rpx; right: 6rpx; width: 22rpx; height: 22rpx; background: #b9f4ef; border-radius: 50%; box-shadow: 0 0 18rpx rgba(185,244,239,.6); }
-.public-avatar-skeleton { width: 148rpx; height: 148rpx; border-radius: 50%; }
+.public-state--community .public-state-dot { background: #ffc94e; box-shadow: 0 0 18rpx rgba(255,201,78,.45); }
+.public-avatar-skeleton { width: 180rpx; height: 180rpx; border-radius: 50%; }
 .public-line-skeleton { width: 260rpx; height: 38rpx; margin: 26rpx 0; border-radius: 19rpx; }
+.public-pill-skeletons { display: flex; gap: 12rpx; margin-bottom: 26rpx; }
+.public-pill-skeleton { width: 112rpx; height: 58rpx; border-radius: 29rpx; }
 .public-shimmer { background: linear-gradient(100deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.16) 42%, rgba(255,255,255,.06) 60%); background-size: 240% 100%; animation: public-shimmer 1.4s linear infinite; }
+.public-state--community .public-shimmer { background: linear-gradient(100deg, #ece8df 25%, #faf8f3 42%, #ece8df 60%); background-size: 240% 100%; }
 @keyframes public-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
 @media (max-width: 340px) {
+  .public-profile-nav-inner { padding: 0 18rpx; }
+  .public-profile-back, .public-profile-nav-spacer { width: 96rpx; min-width: 96rpx; }
+  .public-community-content { padding-right: 20rpx; padding-left: 20rpx; }
+  .public-community-identity { padding: 42rpx 24rpx 38rpx; }
+  .public-community-avatar-glow { top: 32rpx; width: 238rpx; height: 238rpx; }
+  .public-community-avatar-shell { width: 194rpx; height: 194rpx; }
+  .public-community-name { max-width: 430rpx; font-size: 37rpx; }
+  .public-community-fact { max-width: 100%; padding: 0 24rpx; font-size: 25rpx; }
+  .public-community-interests-card { padding-right: 24rpx; padding-left: 24rpx; }
+  .public-community-interest-heading { font-size: 30rpx; }
+  .public-community-interests { max-width: 430rpx; gap: 14rpx 10rpx; }
+  .public-community-interest { min-width: 116rpx; min-height: 58rpx; padding: 0 20rpx; font-size: 24rpx; }
+  .public-puzzle--watermark { right: -28rpx; bottom: -24rpx; opacity: .06; }
+  .public-community-privacy { gap: 18rpx; padding: 22rpx 24rpx; font-size: 24rpx; }
+  .public-community-privacy-shield { width: 92rpx; height: 92rpx; flex-basis: 92rpx; }
   .public-stage { min-height: 450rpx; }
   .public-avatar-shell { width: 132rpx; height: 132rpx; }
   .public-name { max-width: 380rpx; font-size: 34rpx; }

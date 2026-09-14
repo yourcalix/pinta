@@ -156,6 +156,19 @@ class MemoryStore {
     return clone({ profilesByUserId });
   }
 
+  async hydratePublicProfileAvatar(user) {
+    if (!user || user.status !== 'ACTIVE' || !user.profile) return null;
+    const avatar = user.profile.avatar;
+    const displaySrc = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID === 'string'
+      ? avatar.fileID.trim()
+      : '';
+    return clone({
+      gender: USER_GENDERS.includes(user.profile.gender) ? user.profile.gender : null,
+      // Memory fixtures store the already-resolved display URL because no cloud SDK exists here.
+      avatarSrc: /^https:\/\//.test(displaySrc) ? displaySrc : ''
+    });
+  }
+
   async hydratePublicActivityAvatars(activities = [], at = new Date()) {
     const activityIds = new Set(activities.filter(Boolean).map((activity) => activity.id));
     const activeMembers = [...this.members.values()]

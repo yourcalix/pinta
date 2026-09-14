@@ -85,7 +85,7 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
       'subpackages/community/companion/index.json': '#0D0C1B',
       'subpackages/community/detail/index.json': '#F9F7F2',
       'subpackages/community/activity/index.json': '#F9F7F2',
-      'subpackages/profile/public/index.json': '#0D0C1B',
+      'subpackages/profile/public/index.json': '#F9F7F2',
       'subpackages/activity/list/index.json': '#F9F7F2',
       'subpackages/activity/nearby/index.json': '#F9F7F2',
       'subpackages/activity/memories/index.json': '#F9F7F2',
@@ -97,7 +97,7 @@ test('全局与二级页面原生窗口使用深蓝占位避免图片解码前�
       assert.equal(config.backgroundColor, lightBackgrounds[relativePath], relativePath);
       assert.equal(
         config.backgroundTextStyle,
-        ['subpackages/community/companion/index.json', 'subpackages/profile/public/index.json'].includes(relativePath) ? 'light' : 'dark',
+        relativePath === 'subpackages/community/companion/index.json' ? 'light' : 'dark',
         relativePath
       );
       return;

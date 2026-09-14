@@ -197,7 +197,7 @@ function selfUser(user) {
   };
 }
 
-function publicCompanionProfile(user, viewerId, at, online = true) {
+function publicCompanionProfile(user, viewerId, at, online = true, avatarFacts = null) {
   const profile = user && user.profile || {};
   const interests = Array.isArray(profile.interests)
     ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8)
@@ -205,6 +205,7 @@ function publicCompanionProfile(user, viewerId, at, online = true) {
   return {
     nickname: safePresenceNickname(profile.nickname),
     avatarKind: avatarKindFromGender(profile.gender),
+    avatar: publicAvatarSlot(avatarFacts || { gender: profile.gender }),
     gender: USER_GENDERS.includes(profile.gender) ? profile.gender : null,
     age: calculateAgeOnMacauDate(profile.birthDate, at),
     mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
@@ -746,8 +747,11 @@ function createPinbaService(options) {
         }
         const target = await store.getUser(ticket.targetUserId);
         invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+        const avatarFacts = typeof store.hydratePublicProfileAvatar === 'function'
+          ? await store.hydratePublicProfileAvatar(target)
+          : null;
         return {
-          profile: publicCompanionProfile(target, viewer.id, at, false),
+          profile: publicCompanionProfile(target, viewer.id, at, false, avatarFacts),
           serverNow: at,
           expiresAt: ticket.expiresAt
         };
@@ -760,8 +764,11 @@ function createPinbaService(options) {
       invariant(presence, 'NOT_FOUND');
       const target = await store.getUser(presence.userId);
       invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+      const avatarFacts = typeof store.hydratePublicProfileAvatar === 'function'
+        ? await store.hydratePublicProfileAvatar(target)
+        : null;
       return {
-        profile: publicCompanionProfile(target, context && context.actorId, at),
+        profile: publicCompanionProfile(target, context && context.actorId, at, true, avatarFacts),
         serverNow: at,
         expiresAt: profileNavExpiresAt(presence, at)
       };

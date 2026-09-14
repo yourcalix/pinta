@@ -1,0 +1,12 @@
+{
+  "id": "implement-community-public-profile-design",
+  "title": "一比一还原讨论区用户公开主页设计",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-14T16:35:00+08:00",
+  "branch": "main"
+}
