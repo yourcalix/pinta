@@ -1,0 +1,12 @@
+{
+  "id": "document-companion-planet-deployment",
+  "title": "补充搭子星球正式环境部署操作说明",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "documentation",
+  "currentPhase": "completed",
+  "nextAction": "归档并交付操作步骤",
+  "createdAt": "2026-09-15T00:00:00+08:00",
+  "branch": "main"
+}
