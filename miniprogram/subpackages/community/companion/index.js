@@ -1,6 +1,7 @@
 'use strict';
 
-const presenceService = require('../../../services/companion-presence');
+const directoryService = require('./directory-service');
+const appPresence = require('../../../services/app-presence');
 const userService = require('../../../services/user');
 const ephemeralProfileNavigation = require('../../../services/ephemeral-profile-navigation');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
@@ -16,8 +17,8 @@ const {
 
 const MAX_RENDERED_USERS = 50;
 const MAX_VISIBLE_LABELS = 18;
-const HEARTBEAT_INTERVAL_MS = 30_000;
 const SNAPSHOT_INTERVAL_MS = 20_000;
+const DIRECTORY_REFRESH_INTERVAL_MS = 4 * 60_000;
 const REVOLUTION_MS = 48_000;
 const AUTO_SPIN_RADIANS_PER_MS = Math.PI * 2 / REVOLUTION_MS;
 const INERTIA_FRICTION_PER_FRAME = .92;
@@ -26,10 +27,9 @@ const AUTO_RESUME_DELAY_MS = 800;
 const FRAME_MS = 1000 / 60;
 const COLORS = ['#b9f4ef', '#f3d0d1', '#91dfdc', '#d9c7d7', '#c8eee9'];
 
-function actionCopy(joined, onlineTotal) {
-  return joined
-    ? '退出搭子星球并隐身'
-    : onlineTotal > 0 ? '加入搭子星球，昵称将短暂公开' : '成为第一个在线搭子，昵称将短暂公开';
+function confirmedOnlineTotal(value, fallback = 0) {
+  const total = Number(value);
+  return Number.isFinite(total) && total >= 0 ? Math.floor(total) : Math.max(0, Number(fallback) || 0);
 }
 
 function seededUnit(seed, salt) {
@@ -62,23 +62,21 @@ Page({
     contentTopInset: 88,
     status: 'loading',
     onlineTotal: 0,
-    joined: false,
-    joining: false,
     users: [],
-    accessibilityLabel: '寻找搭子星球，正在连接真实在线状态',
-    actionAriaLabel: '加入搭子星球'
+    accessibilityLabel: '搭子星球，正在读取真实用户目录'
   },
 
   onLoad() {
     this._disposed = false;
     this._visible = true;
     this._hasShown = false;
-    this._loadSeq = 0;
+    this._directoryLoadSeq = 0;
+    this._onlineLoadSeq = 0;
     this._hitNodes = [];
     this._navigating = false;
     this.resetGestureRuntime(true);
     this.setData({ contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx) });
-    return this.loadSnapshot(true);
+    return appPresence.ready().then(() => this.loadDirectory(true));
   },
 
   onReady() { this.initCanvas(); },
@@ -88,7 +86,13 @@ Page({
     this._navigating = false;
     this.resetGestureRuntime(true);
     this.refreshCanvasRect();
-    if (this._hasShown) this.loadSnapshot(false);
+    if (this._hasShown) {
+      appPresence.ready().then(() => {
+        if (this._disposed || !this._visible) return;
+        this.loadDirectory(false);
+        this.loadOnlineTotal();
+      });
+    }
     this._hasShown = true;
     this.startAnimation();
     this.startSnapshotTimer();
@@ -96,145 +100,77 @@ Page({
 
   onHide() {
     this._visible = false;
-    this.stopRuntime(true);
+    this.stopRuntime();
     this.resetGestureRuntime(true);
   },
 
   onUnload() {
     this._disposed = true;
     this._visible = false;
-    this._loadSeq += 1;
+    this._directoryLoadSeq += 1;
+    this._onlineLoadSeq += 1;
     if (this._navigationTimer) clearTimeout(this._navigationTimer);
-    this.stopRuntime(true);
+    this.stopRuntime();
     this.resetGestureRuntime(true);
   },
 
-  async loadSnapshot(initial = false) {
-    const seq = ++this._loadSeq;
+  async loadDirectory(initial = false) {
+    const seq = ++this._directoryLoadSeq;
     if (initial) this.setData({ status: 'loading' });
     try {
-      const snapshot = await presenceService.snapshot();
-      if (this._disposed || seq !== this._loadSeq) return;
-      this.applySnapshot(snapshot, this.data.joined);
+      const snapshot = await directoryService.snapshot();
+      if (this._disposed || !this._visible || seq !== this._directoryLoadSeq) return;
+      this.applyDirectory(snapshot);
     } catch (error) {
-      if (this._disposed || seq !== this._loadSeq) return;
-      this.setData({ status: 'error', accessibilityLabel: '寻找搭子星球暂时失联，请重新连接' });
+      if (this._disposed || !this._visible || seq !== this._directoryLoadSeq) return;
+      if (initial || this.data.status !== 'ready') {
+        this.setData({ status: 'error', accessibilityLabel: '寻找搭子星球暂时失联，请重新连接' });
+      }
     }
   },
 
-  applySnapshot(snapshot, joined) {
+  applyDirectory(snapshot) {
     const users = Array.isArray(snapshot && snapshot.users) ? snapshot.users.slice(0, MAX_RENDERED_USERS) : [];
-    const onlineTotal = Math.max(0, Number(snapshot && snapshot.onlineTotal) || 0);
-    const isJoined = Boolean(joined && users.some((item) => item.viewerIsSelf));
+    const onlineTotal = confirmedOnlineTotal(snapshot && snapshot.onlineTotal);
     this._nodes = buildSphereNodes(users);
     this._hitNodes = [];
     this.setData({
       status: 'ready',
       onlineTotal,
       users,
-      joined: isJoined,
-      joining: false,
-      actionAriaLabel: actionCopy(isJoined, onlineTotal),
-      accessibilityLabel: `寻找搭子星球，当前共有${onlineTotal}人正在找搭子，${isJoined ? '你已加入星球' : '点击下方按钮可加入星球'}`
+      accessibilityLabel: `搭子星球，当前${onlineTotal}人在线，支持左右滑动旋转与双指缩放浏览`
     });
     this.startAnimation();
   },
 
-  async handleTogglePresence() {
-    if (this.data.joining) return;
-    if (this.data.joined) return this.leavePresence();
-    const agreed = await this.confirmJoinDisclosure();
-    if (!agreed || this._disposed) return;
-    this.setData({ joining: true });
+  async loadOnlineTotal() {
+    const seq = ++this._onlineLoadSeq;
     try {
-      const user = await userService.login();
-      if (!user.profileComplete) {
-        this.setData({ joining: false });
-        wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent('/subpackages/community/companion/index')}` });
-        return;
-      }
-      const result = await presenceService.enter();
-      if (this._disposed || !this._visible) return;
-      this._presenceSessionToken = result.sessionToken;
-      this._selfHighlightUntil = Date.now() + 2600;
-      this.applySnapshot(result.snapshot, true);
-      this.startHeartbeat();
+      const snapshot = await directoryService.onlineSnapshot();
+      if (this._disposed || !this._visible || seq !== this._onlineLoadSeq) return;
+      const onlineTotal = confirmedOnlineTotal(snapshot && snapshot.onlineTotal, this.data.onlineTotal);
+      this.setData({
+        onlineTotal,
+        accessibilityLabel: `搭子星球，当前${onlineTotal}人在线，支持左右滑动旋转与双指缩放浏览`
+      });
     } catch (error) {
-      if (!this._disposed) this.setData({ joining: false });
-      if (!error.handled) wx.showToast({ title: error.message || '暂时无法加入星球', icon: 'none' });
+      // Presence polling is best-effort. Keep the last confirmed count instead
+      // of flashing a false zero during a transient network failure.
     }
-  },
-
-  confirmJoinDisclosure() {
-    return new Promise((resolve) => wx.showModal({
-      title: '加入搭子星球',
-      content: '加入后，你的昵称与已填写的公开资料可从星球短暂查看；离开页面后会自动隐身。不会公开完整生日、联系方式或实时位置。',
-      confirmText: '确认加入',
-      cancelText: '暂不加入',
-      confirmColor: '#16A36A',
-      success: (result) => resolve(Boolean(result.confirm)),
-      fail: () => resolve(false)
-    }));
-  },
-
-  async leavePresence() {
-    if (this._leavePending) return;
-    this._leavePending = true;
-    this.stopHeartbeat();
-    const sessionToken = this._presenceSessionToken;
-    this._presenceSessionToken = '';
-    try { if (sessionToken) await presenceService.leave(sessionToken); } catch (error) { /* TTL remains the correctness fallback. */ }
-    this._leavePending = false;
-    if (this._disposed) return;
-    this.setData({ joined: false, joining: false, actionAriaLabel: actionCopy(false, this.data.onlineTotal) });
-    this.loadSnapshot(false);
-  },
-
-  startHeartbeat() {
-    this.stopHeartbeat();
-    if (!this._visible || !this.data.joined) return;
-    this._heartbeatTimer = setInterval(async () => {
-      if (!this._visible || !this.data.joined || !this._presenceSessionToken) return;
-      try {
-        const result = await presenceService.heartbeat(this._presenceSessionToken);
-        if (!result.joined && !this._disposed) {
-          this._presenceSessionToken = '';
-          this.setData({ joined: false, actionAriaLabel: actionCopy(false, this.data.onlineTotal) });
-        }
-      } catch (error) { /* A later heartbeat or TTL expiry safely converges state. */ }
-    }, HEARTBEAT_INTERVAL_MS);
-  },
-
-  stopHeartbeat() {
-    if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
-    this._heartbeatTimer = null;
   },
 
   startSnapshotTimer() {
     if (this._snapshotTimer || !this._visible) return;
-    this._snapshotTimer = setInterval(() => this.loadSnapshot(false), SNAPSHOT_INTERVAL_MS);
-    if (this.data.joined) this.startHeartbeat();
+    this._snapshotTimer = setInterval(() => this.loadOnlineTotal(), SNAPSHOT_INTERVAL_MS);
+    this._directoryTimer = setInterval(() => this.loadDirectory(false), DIRECTORY_REFRESH_INTERVAL_MS);
   },
 
-  stopRuntime(leave) {
+  stopRuntime() {
     this.stopAnimation();
-    this.stopHeartbeat();
     if (this._snapshotTimer) clearInterval(this._snapshotTimer);
     this._snapshotTimer = null;
-    if (leave && this.data.joined && !this._leavePending) {
-      this._leavePending = true;
-      const sessionToken = this._presenceSessionToken;
-      this._presenceSessionToken = '';
-      if (sessionToken) presenceService.leave(sessionToken).catch(() => {}).finally(() => { this._leavePending = false; });
-      else this._leavePending = false;
-      if (!this._disposed) {
-        this.setData({
-          joined: false,
-          joining: false,
-          actionAriaLabel: actionCopy(false, this.data.onlineTotal)
-        });
-      }
-    }
+    if (this._directoryTimer) clearInterval(this._directoryTimer);
+    this._directoryTimer = null;
   },
 
   initCanvas() {
@@ -340,7 +276,7 @@ Page({
     projected.forEach((node) => this.drawNode(context, node, timestamp));
     const frontNodes = projected.filter((node) => node.depth > .08).sort((left, right) => right.depth - left.depth).slice(0, MAX_VISIBLE_LABELS);
     const labelBounds = this.drawLabels(context, frontNodes, width, height);
-    this._hitNodes = projected.filter((node) => node.depth > .05 && node.profileNavToken).map((node) => ({
+    this._hitNodes = projected.filter((node) => node.depth > .05 && node.displayToken).map((node) => ({
       ...node,
       hitRadius: Math.max(18, 22 * visualScale),
       textBounds: labelBounds.get(node.displayToken) || null
@@ -366,13 +302,6 @@ Page({
     context.shadowBlur = node.depth > 0 ? size * 1.7 : 0;
     context.fillStyle = node.color;
     context.beginPath(); context.arc(node.screenX, node.screenY, size, 0, Math.PI * 2); context.fill();
-    if (node.viewerIsSelf && Date.now() < Number(this._selfHighlightUntil || 0)) {
-      const pulse = 9 + Math.sin(timestamp / 150) * 2;
-      context.globalAlpha = .72;
-      context.strokeStyle = '#6ee7d8';
-      context.lineWidth = 1.5;
-      context.beginPath(); context.arc(node.screenX, node.screenY, size + pulse, 0, Math.PI * 2); context.stroke();
-    }
     if (node.displayToken === this._selectedDisplayToken && Date.now() < Number(this._selectedUntil || 0)) {
       context.globalAlpha = .9;
       context.strokeStyle = '#7ff5e5';
@@ -455,7 +384,7 @@ Page({
     this.scheduleAutoSpinResume();
   },
 
-  performCanvasHitTest(touch) {
+  async performCanvasHitTest(touch) {
     if (this.data.status !== 'ready' || this._navigating) return;
     const point = resolveCanvasTap({ changedTouches: [touch] }, this._canvasRect || {});
     const node = selectHitNode(point, this._hitNodes || []);
@@ -463,20 +392,28 @@ Page({
     this._navigating = true;
     this._selectedDisplayToken = node.displayToken;
     this._selectedUntil = Date.now() + 500;
-    if (node.viewerIsSelf) {
-      this._navigationTimer = setTimeout(() => {
-        wx.switchTab({
-          url: '/pages/user/index',
-          fail: () => { this._navigating = false; }
-        });
-      }, 100);
-      return;
-    }
-    const key = ephemeralProfileNavigation.issue({
-      profileNavToken: node.profileNavToken,
-      profileNavExpiresAt: node.profileNavExpiresAt
-    });
-    this._navigationTimer = setTimeout(() => {
+    try {
+      const delay = new Promise((resolve) => { this._navigationTimer = setTimeout(resolve, 100); });
+      if (node.viewerIsSelf) {
+        await delay;
+        wx.switchTab({ url: '/pages/user/index', fail: () => { this._navigating = false; } });
+        return;
+      }
+      await userService.login();
+      const [result] = await Promise.all([
+        directoryService.createProfileNavigation(node.displayToken),
+        delay
+      ]);
+      if (this._disposed || !this._visible) return;
+      if (result.target === 'self') {
+        wx.switchTab({ url: '/pages/user/index', fail: () => { this._navigating = false; } });
+        return;
+      }
+      const key = ephemeralProfileNavigation.issue({
+        profileNavToken: result.profileNavToken,
+        profileNavExpiresAt: result.expiresAt,
+        source: 'companion-directory'
+      });
       wx.navigateTo({
         url: `/subpackages/profile/public/index?k=${encodeURIComponent(key)}`,
         fail: () => {
@@ -485,9 +422,12 @@ Page({
           wx.showToast({ title: '暂时无法打开主页', icon: 'none' });
         }
       });
-    }, 100);
+    } catch (error) {
+      this._navigating = false;
+      if (!error.handled) wx.showToast({ title: error.message || '主页访问已失效', icon: 'none' });
+    }
   },
 
-  handleRetry() { return this.loadSnapshot(true); },
+  handleRetry() { return this.loadDirectory(true); },
   handleBack() { wx.navigateBack(); }
 });

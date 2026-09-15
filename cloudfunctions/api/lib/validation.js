@@ -328,11 +328,21 @@ function validateCompanionPresenceInput(input = {}, options = {}) {
   return { scene, sessionToken };
 }
 
+function validateCompanionDirectoryNavInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['scene', 'displayToken'].includes(key)), 'VALIDATION_ERROR', '搭子主页参数无效');
+  const scene = stringValue(input.scene, '在线场景', { required: true, max: 40 });
+  invariant(scene === COMPANION_PRESENCE_SCENE, 'VALIDATION_ERROR', '在线场景无效');
+  const displayToken = stringValue(input.displayToken, '搭子节点凭据', { required: true, min: 73, max: 73 });
+  invariant(/^companionDirView_[a-f0-9]{56}$/.test(displayToken), 'NOT_FOUND');
+  return { scene, displayToken };
+}
+
 function validatePublicProfileGetInput(input) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   invariant(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
   const profileNavToken = stringValue(input.profileNavToken, '公开主页凭据', { required: true, min: 80, max: 160 });
-  invariant(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|communityProfileNa_[a-f0-9]{64})$/.test(profileNavToken), 'NOT_FOUND');
+  invariant(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|communityProfileNa_[a-f0-9]{64}|directoryProfileNa_[a-f0-9]{64})$/.test(profileNavToken), 'NOT_FOUND');
   return { profileNavToken };
 }
 
@@ -470,6 +480,7 @@ module.exports = {
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCompanionPresenceInput,
+  validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
   validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,

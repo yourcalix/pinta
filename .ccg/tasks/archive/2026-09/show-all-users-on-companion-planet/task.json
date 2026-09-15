@@ -1,0 +1,12 @@
+{
+  "id": "show-all-users-on-companion-planet",
+  "title": "搭子星球展示全部登录用户并单独统计在线人数",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交本次变更",
+  "createdAt": "2026-09-15T00:00:00+08:00",
+  "branch": "main"
+}

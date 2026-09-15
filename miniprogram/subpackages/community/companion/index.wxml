@@ -15,21 +15,17 @@
       <text class="orbit-overlay-copy">网络连接较慢，请稍后重试</text>
       <button class="orbit-retry" bindtap="handleRetry" hover-class="orbit-control--pressed">重新连接</button>
     </view>
+    <view wx:elif="{{status === 'ready'}}" class="orbit-stage-guidance" role="status">
+      <text wx:if="{{users.length}}">左右滑动旋转，双指捏合缩放 · 点击搭子查看主页</text>
+      <text wx:else>星球上暂时还没有可展示的用户</text>
+    </view>
   </view>
 
   <view class="orbit-bottom">
     <view wx:if="{{status === 'ready'}}" class="orbit-count" role="status">
-      <block wx:if="{{onlineTotal > 0}}"><text>当前 </text><text class="orbit-count-number">{{onlineTotal}}</text><text> 人正在找搭子</text></block>
-      <text wx:else>此刻还没有搭子加入星球</text>
+      <text>当前 </text><text class="orbit-count-number">{{onlineTotal}}</text><text> 人在线</text>
     </view>
-    <view wx:else class="orbit-count orbit-count--muted">{{status === 'loading' ? '正在同步真实在线状态' : '暂时无法读取在线状态'}}</view>
-
-    <text wx:if="{{status === 'ready' && !joined}}" class="orbit-disclosure">加入后，昵称和公开资料可从星球短暂查看；离开页面后会自动隐身。</text>
-    <text wx:elif="{{status === 'ready' && joined}}" class="orbit-disclosure orbit-disclosure--joined">你已在星球中，离开页面后会自动隐身。</text>
-    <text wx:if="{{status === 'ready' && onlineTotal > 0}}" class="orbit-tap-hint">左右滑动旋转，双指捏合缩放 · 点击搭子查看主页</text>
-
-    <button wx:if="{{status === 'ready'}}" class="orbit-action {{joined ? 'orbit-action--joined' : ''}}" loading="{{joining}}" disabled="{{joining}}" bindtap="handleTogglePresence" hover-class="orbit-action--pressed" hover-stay-time="70" aria-label="{{actionAriaLabel}}">
-      {{joining ? '正在加入…' : (joined ? '你已在星球中 · 点击退出隐身' : (onlineTotal > 0 ? '加入搭子星球' : '成为第一个在线搭子'))}}
-    </button>
+    <view wx:else class="orbit-count orbit-count--muted">{{status === 'loading' ? '正在同步搭子星球' : '暂时无法读取在线状态'}}</view>
+    <text wx:if="{{status === 'ready'}}" class="orbit-disclosure">球面展示已加入拼吧的真实用户，在线人数随进入或离开小程序自动更新。</text>
   </view>
 </view>

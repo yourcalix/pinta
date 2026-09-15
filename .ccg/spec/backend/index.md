@@ -55,9 +55,10 @@
 
 ## 数据与隐私
 
-- “在线搭子星球”只统计用户主动点击加入后形成的短期在线事实。公开读取快照不得创建在线记录；登录、浏览、发帖、资料更新时间均不得推断为在线。在线记录固定按用户与场景派生确定性文档 ID，使用服务端时间、90 秒 TTL、30 秒心跳和至少 20 秒服务端写入间隔；离开时 best-effort 标记退出，过期时间作为最终正确性兜底。
+- “搭子星球”在线人数只统计已登录、账号为 `ACTIVE` 且小程序当前处于前台的短期 Presence。App 进入前台后自动登录并建立 Presence，进入后台时 best-effort 退出；游客、登录失败和停用账号不得计入。在线记录固定按用户与场景派生确定性文档 ID，使用服务端时间、90 秒 TTL、30 秒心跳和至少 20 秒服务端写入间隔，过期时间作为进程被系统终止时的最终正确性兜底。会话令牌只允许留在 App 级 JS 闭包内，不得进入 Storage、页面 Data、URL 或日志。
+- 搭子星球球面目录与在线 Presence 必须分离：`companion.directory.snapshot` 从 `ACTIVE` 用户事实中按 `status + createdAt + _id` 索引最多返回 50 个脱敏节点，不查询或公开目录总数；首次登录创建账号后即进入目录。资料未完成时只输出通用昵称和空白公开资料，不补造字段。目录 DTO 只允许短时 `displayToken`、昵称、布局种子和本人标识，不得包含 userId、openid、头像、位置、联系方式或稳定主页凭据。目录节点令牌按五分钟窗口轮换，点击时才由受保护的 `companion.directory.profile.nav.create` 重新解析目标并签发绑定访问者的 60 秒随机票据；公开主页再次复核票据、目标账号状态，且目录来源固定 `online: false`，不得借目录存在推断在线。
 - 社区内容作者主页不得在帖子或回复 DTO 中暴露用户 ID、openid 或稳定主页凭据。点击时客户端只提交 `sourceType + sourceId`，服务端按 ACTIVE 内容反查作者：本人返回 self 分流，他人签发绑定当前访问者的短期随机票据；公开主页读取必须再次复核票据哈希、访问者、有效期、来源状态、作者关系、回复父帖和目标账号状态。社区来源不得借用 Presence 语义声明在线，过期票据需按 `expiresAt` 定期清理。
-- `companion.presence.snapshot` 允许游客读取真实在线总数和最多 50 个真实在线样本，不分页、不补造节点。公开样本只允许短期展示令牌、短期公开主页凭据、昵称、球面布局种子和当前查看者是否为本人；不得返回用户 ID、openid、联系方式、生日、头像、位置或稳定跟踪标识。公开主页凭据是经用户主动加入星球后签发的短时可重放 bearer，仅授权读取同一在线会话的白名单公开资料；它必须由随机会话定位片段与服务端时间窗签名组成，不得复用心跳/退出令牌，并在读取时按定位片段直接复核在线事实、账号状态和签名时窗，不得依赖当前 50 人展示样本。加入与续期必须重新校验 ACTIVE 账号、完整资料和成年确认。
+- `companion.presence.snapshot` 允许游客读取真实在线总数和最多 50 个真实在线样本，不分页、不补造节点。公开样本只允许短期展示令牌、短期公开主页凭据、昵称、球面布局种子和当前查看者是否为本人；不得返回用户 ID、openid、联系方式、生日、头像、位置或稳定跟踪标识。公开主页凭据仅授权读取同一在线会话的白名单公开资料；它必须由随机会话定位片段与服务端时间窗签名组成，不得复用心跳/退出令牌，并在读取时按定位片段直接复核在线事实、账号状态和签名时窗，不得依赖当前 50 人展示样本。自动进入与续期必须重新校验 `ACTIVE` 账号，但不得因资料未完成而拒绝计入在线人数。
 
 - 拼饭桌创建契约的 `typeData` 在既有 `venue / cuisine / budgetRange / dietaryNotes` 外，可选保存受控的 `paymentMethod: FIFTY_FIFTY | GO_DUTCH | TABLE_ONLY`、`genderPreference: MALE | FEMALE | ALL | ''` 与标准 MBTI 偏好；旧客户端省略 `paymentMethod` 时按已有“人均预算”语义兼容为 `FIFTY_FIFTY`。新客户端必须另提交由高德 POI 选点形成的 `meetingPoint`；自定义忌口在提交适配层合并进长度受控的 `dietaryNotes`。Mock 与 Cloud 必须共享枚举、长度、预算条件必填和缺省语义。
 - 拼同行创建契约的 `typeData.preferences` 只允许 `friendGender / mbti / navigationStyle / travelPace / photoHabit / silenceComfort / garlic / fragrance / slippers` 九个选填字段，各字段必须按服务端白名单接受严格英文枚举，缺省统一为空字符串；未知键、未知枚举及非对象输入一律拒绝。Cloud、Mock 与公开 DTO 必须保持同构，公开读取还须对白名单内历史脏值降级为空字符串，并对 `timeFlexibility / transportPreference / luggageType` 使用既有安全缺省。人数继续只保存含发起人在内的 `minMembers / maxMembers` 2—20 契约，不保存客户端“拼友数”展示语义。

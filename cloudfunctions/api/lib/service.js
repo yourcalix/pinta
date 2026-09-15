@@ -30,6 +30,7 @@ const {
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCompanionPresenceInput,
+  validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
   validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,
@@ -85,9 +86,17 @@ const {
   publicCompanionSnapshot
 } = require('./companion-presence');
 const {
+  COMPANION_DIRECTORY_SAMPLE_LIMIT,
+  publicCompanionDirectorySnapshot,
+  resolveCompanionDirectoryUser
+} = require('./companion-directory');
+const {
   createCommunityProfileNavTicket,
   communityProfileNavTicketId,
-  resolveCommunityProfileNavTicket
+  resolveCommunityProfileNavTicket,
+  createDirectoryProfileNavTicket,
+  directoryProfileNavTicketId,
+  resolveDirectoryProfileNavTicket
 } = require('./community-profile-navigation');
 
 const MUTATING_ACTIONS = new Set([
@@ -107,6 +116,7 @@ const MUTATING_ACTIONS = new Set([
   'community.like.set',
   'community.activity.read',
   'community.profile.nav.create',
+  'companion.directory.profile.nav.create',
   'companion.presence.enter',
   'companion.presence.heartbeat',
   'companion.presence.leave',
@@ -162,6 +172,7 @@ const PAYLOAD_BOUND_IDEMPOTENT_ACTIONS = new Set([
   'community.post.create',
   'community.reply.create',
   'community.profile.nav.create',
+  'companion.directory.profile.nav.create',
   'dm.message.send',
   'group.message.send'
 ]);
@@ -534,6 +545,14 @@ function createPinbaService(options) {
     return publicCompanionSnapshot(page, actorId, at);
   }
 
+  async function companionDirectorySnapshot(actorId, at) {
+    const [page, presence] = await Promise.all([
+      store.snapshotCompanionDirectory(COMPANION_DIRECTORY_SAMPLE_LIMIT),
+      store.snapshotCompanionPresence('companion_globe', at, 1)
+    ]);
+    return publicCompanionDirectorySnapshot(page, presence.total, actorId, at);
+  }
+
   async function communityAuthorProfiles(items) {
     if (typeof store.hydratePublicCommunityAuthors !== 'function') return {};
     try {
@@ -729,6 +748,25 @@ function createPinbaService(options) {
 
     if (action === 'profile.public.get') {
       const { profileNavToken } = validatePublicProfileGetInput(input);
+      if (profileNavToken.startsWith('directoryProfileNa_')) {
+        const viewer = await requireActiveUser(context, false);
+        const ticketId = directoryProfileNavTicketId(profileNavToken);
+        const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
+          ? await store.getPublicProfileNavTicket(ticketId)
+          : null;
+        const ticket = resolveDirectoryProfileNavTicket(candidate, profileNavToken, viewer.id, at);
+        invariant(ticket, 'NOT_FOUND');
+        const target = await store.getUser(ticket.targetUserId);
+        invariant(target && target.status === 'ACTIVE', 'NOT_FOUND');
+        const avatarFacts = typeof store.hydratePublicProfileAvatar === 'function'
+          ? await store.hydratePublicProfileAvatar(target)
+          : null;
+        return {
+          profile: publicCompanionProfile(target, viewer.id, at, false, avatarFacts),
+          serverNow: at,
+          expiresAt: ticket.expiresAt
+        };
+      }
       if (profileNavToken.startsWith('communityProfileNa_')) {
         const viewer = await requireActiveUser(context, false);
         const ticketId = communityProfileNavTicketId(profileNavToken);
@@ -870,10 +908,31 @@ function createPinbaService(options) {
       return companionSnapshot(context && context.actorId, at);
     }
 
+    if (action === 'companion.directory.snapshot') {
+      const { scene } = validateCompanionPresenceInput(input);
+      invariant(scene === 'companion_globe', 'VALIDATION_ERROR');
+      return companionDirectorySnapshot(context && context.actorId, at);
+    }
+
+    if (action === 'companion.directory.profile.nav.create') {
+      const viewer = await requireActiveUser(context, false);
+      const { displayToken } = validateCompanionDirectoryNavInput(input);
+      const page = await store.snapshotCompanionDirectory(COMPANION_DIRECTORY_SAMPLE_LIMIT);
+      const target = resolveCompanionDirectoryUser(page.items, displayToken, at);
+      invariant(target, 'NOT_FOUND');
+      if (target.id === viewer.id) return { target: 'self' };
+      const issued = createDirectoryProfileNavTicket({
+        viewerId: viewer.id,
+        targetUserId: target.id,
+        at
+      });
+      await store.createPublicProfileNavTicket(issued.ticket);
+      return { target: 'public', profileNavToken: issued.profileNavToken, expiresAt: issued.expiresAt };
+    }
+
     if (action === 'companion.presence.enter') {
       validateCompanionPresenceInput(input);
-      const user = await requireActiveUser(context);
-      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const user = await requireActiveUser(context, false);
       const id = companionPresenceId(user.id);
       const sessionNonce = stableEntityId('presenceSession', idGenerator(), at);
       const profileNavNonce = createProfileNavNonce(idGenerator(), at);
@@ -882,7 +941,7 @@ function createPinbaService(options) {
         id,
         scene: 'companion_globe',
         userId: user.id,
-        nickname: safePresenceNickname(user.profile.nickname),
+        nickname: safePresenceNickname(user.profile && user.profile.nickname),
         sessionNonce,
         profileNavNonce,
         layoutSeed: layoutSeedForPresence(sessionNonce),
@@ -902,8 +961,11 @@ function createPinbaService(options) {
 
     if (action === 'companion.presence.heartbeat') {
       const { sessionToken } = validateCompanionPresenceInput(input, { requireSessionToken: true });
-      const user = await requireActiveUser(context);
-      invariant(isCompleteRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+      const user = await requireKnownUser(context);
+      if (user.status !== 'ACTIVE') {
+        await store.leaveCompanionPresence(companionPresenceId(user.id), sessionToken, at);
+        invariant(false, 'ACCOUNT_DISABLED');
+      }
       const expiresAt = new Date(Date.parse(at) + COMPANION_PRESENCE_TTL_MS).toISOString();
       const result = await store.heartbeatCompanionPresence(
         companionPresenceId(user.id), sessionToken, at, expiresAt, COMPANION_MIN_WRITE_INTERVAL_MS
@@ -1708,7 +1770,7 @@ function createPinbaService(options) {
       if (MUTATING_ACTIONS.has(action)) {
         // Account status is checked before idempotency replay so a user disabled
         // after an earlier success cannot keep replaying privileged results.
-        if (action === 'companion.presence.leave') await requireKnownUser(context);
+        if (['companion.presence.heartbeat', 'companion.presence.leave'].includes(action)) await requireKnownUser(context);
         else await requireActiveUser(context, false);
         const actorId = requireActor(context);
         const key = requireIdempotencyKey(event.idempotencyKey);

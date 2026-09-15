@@ -11,7 +11,7 @@
     <view class="public-avatar-skeleton public-shimmer"></view>
     <view class="public-line-skeleton public-shimmer"></view>
     <view class="public-pill-skeletons" aria-hidden="true"><view class="public-pill-skeleton public-shimmer"></view><view class="public-pill-skeleton public-shimmer"></view><view class="public-pill-skeleton public-shimmer"></view></view>
-    <text class="public-state-loading-copy">{{communitySource ? '正在读取公开资料…' : '正在确认这位搭子的在线状态…'}}</text>
+    <text class="public-state-loading-copy">{{communitySource ? '正在读取公开资料…' : (directorySource ? '正在读取搭子公开资料…' : '正在确认这位搭子的在线状态…')}}</text>
   </view>
 
   <block wx:elif="{{status === 'ready'}}">
@@ -80,8 +80,8 @@
 
   <view wx:elif="{{status === 'not-found'}}" class="public-state {{communitySource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="alert">
     <view class="public-state-orbit" aria-hidden="true"><view class="public-state-dot"></view></view>
-    <text class="public-state-title">{{communitySource ? '主页访问已失效' : '这位搭子已经离开星球'}}</text>
-    <text class="public-state-copy">{{communitySource ? '请返回讨论后重新打开这位用户的主页' : '在线状态已失效，去星球看看其他搭子吧'}}</text>
+    <text class="public-state-title">{{communitySource || directorySource ? '主页访问已失效' : '这位搭子已经离开星球'}}</text>
+    <text class="public-state-copy">{{communitySource ? '请返回讨论后重新打开这位用户的主页' : (directorySource ? '请返回搭子星球后重新打开这位用户的主页' : '在线状态已失效，去星球看看其他搭子吧')}}</text>
     <button class="public-state-action" bindtap="handleBack" hover-class="public-control--pressed">{{communitySource ? '返回讨论' : '返回搭子星球'}}</button>
   </view>
 

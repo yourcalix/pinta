@@ -19,7 +19,7 @@ test('寻找搭子主题卡进入独立在线星球而非活动列表', () => {
   assert.match(template, /在线搭子星球/);
 });
 
-test('在线星球使用原生Canvas低速自转并完整清理动画与心跳', () => {
+test('在线星球使用原生Canvas低速自转并完整清理动画与只读轮询', () => {
   const script = read('subpackages/community/companion/index.js');
   const template = read('subpackages/community/companion/index.wxml');
   const style = read('subpackages/community/companion/index.wxss');
@@ -37,12 +37,14 @@ test('在线星球使用原生Canvas低速自转并完整清理动画与心跳',
   assert.match(script, /Math\.min\([^\n]*pixelRatio[^\n]*2\.5/);
   assert.match(script, /requestAnimationFrame/);
   assert.match(script, /cancelAnimationFrame/);
-  assert.match(script, /HEARTBEAT_INTERVAL_MS\s*=\s*30_000/);
-  assert.match(script, /this\._presenceSessionToken\s*=\s*result\.sessionToken/);
-  assert.match(script, /presenceService\.leave\(sessionToken\)/);
+  assert.match(script, /directoryService\.snapshot\(\)/);
+  assert.match(script, /appPresence\.ready\(\)/);
+  assert.match(read('subpackages/community/companion/directory-service.js'), /companion\.directory\.snapshot/);
+  assert.match(script, /loadOnlineTotal/);
+  assert.match(script, /directoryService\.onlineSnapshot\(\)/);
   assert.match(script, /onHide\(\)[\s\S]*stopRuntime/);
   assert.match(script, /onUnload\(\)[\s\S]*stopRuntime/);
-  assert.match(script, /onShow\(\)[\s\S]*this\.loadSnapshot\(false\)/);
+  assert.match(script, /onShow\(\)[\s\S]*this\.loadDirectory\(false\)/);
   assert.doesNotMatch(script, /this\.data\.joined\s*=/);
   assert.doesNotMatch(script, /setData\([^)]*rotation/);
   assert.match(script, /INERTIA_FRICTION_PER_FRAME\s*=\s*\.92/);
@@ -50,17 +52,18 @@ test('在线星球使用原生Canvas低速自转并完整清理动画与心跳',
   assert.match(script, /visualScaleForZoom/);
 });
 
-test('在线星球具备真实状态、主动加入披露与昵称景深剔除', () => {
+test('搭子星球静默展示最多50位目录用户并只读呈现App在线人数', () => {
   const script = read('subpackages/community/companion/index.js');
   const template = read('subpackages/community/companion/index.wxml');
-  assert.match(template, /当前.*人正在找搭子/);
-  assert.match(template, /加入后，昵称和公开资料可从星球短暂查看/);
-  assert.match(template, /此刻还没有搭子加入星球/);
+  assert.match(template, /当前.*人在线/);
+  assert.match(template, /在线人数随进入或离开小程序自动更新/);
   assert.match(template, /搭子星球暂时失联了/);
-  assert.match(template, /加入搭子星球|成为第一个在线搭子/);
+  assert.doesNotMatch(template, /开始寻找搭子|点击停止|当前展示其中|星球已有/);
+  assert.doesNotMatch(template, /orbit-action/);
   assert.match(script, /MAX_RENDERED_USERS\s*=\s*50/);
   assert.match(script, /MAX_VISIBLE_LABELS\s*=\s*18/);
-  assert.match(script, /viewerIsSelf/);
+  assert.doesNotMatch(script, /handleTogglePresence|startHeartbeat|leavePresence|_presenceSessionToken|joined|joining|directoryTotal/);
   assert.match(script, /frontNodes/);
+  assert.doesNotMatch(script, /selfHighlightUntil|public-online-dot|在线光环/);
   assert.doesNotMatch(template, /navigator[^>]+profile|私信|位置/);
 });

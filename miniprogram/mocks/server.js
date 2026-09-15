@@ -58,6 +58,7 @@ const MUTATING_ACTIONS = new Set([
 'community.like.set',
 'community.activity.read',
 'community.profile.nav.create',
+'companion.directory.profile.nav.create',
 'companion.presence.enter',
 'companion.presence.heartbeat',
 'companion.presence.leave',
@@ -94,6 +95,7 @@ const PUBLIC_ACTIONS = new Set([
 'activity.question.list',
 'community.post.list',
 'community.post.detail',
+'companion.directory.snapshot',
 'companion.presence.snapshot',
 'profile.public.get'
 ]);
@@ -105,6 +107,8 @@ const COMPANION_PRESENCE_TTL_MS = 90 * 1000;
 const COMPANION_MIN_WRITE_INTERVAL_MS = 20 * 1000;
 const COMPANION_SAMPLE_LIMIT = 50;
 const COMPANION_PROFILE_NAV_BUCKET_MS = 30 * 1000;
+const DIR_BUCKET_MS=3e5;
+const PROFILE_TARGET_GONE = '目标不存在或已失效';
 function isMockLocalAvatarPath(value) {
 return typeof value === 'string'
 && /^(?:wxfile:\/\/|http:\/\/(?:tmp|usr)\/|\/tmp\/|\/var\/)/.test(value.trim());
@@ -277,11 +281,48 @@ return match ? match[1] : '';
 function validateMockPublicProfileInput(input) {
 assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '公开主页参数无效');
 assert(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
-assert(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|communityProfileNa_[a-f0-9]{64})$/.test(input.profileNavToken || ''), 'NOT_FOUND');
+assert(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|(?:community|directory)ProfileNa_[a-f0-9]{64})$/.test(input.profileNavToken || ''), 'NOT_FOUND');
 return input.profileNavToken;
 }
-function mockCommunityProfileNavToken(...parts) {
-return `communityProfileNa_${(mockOpaque56(...parts) + stableMockEntityId('h', ...parts).split('_').pop()).slice(0, 64)}`;
+function mockTicketToken(p, ...parts) {
+return `${p}_${mockOpaque56(...parts)}${stableMockEntityId('h', ...parts).slice(-8)}`;
+}
+function mockDirectoryToken(id, bucket) {
+return `companionDirView_${mockOpaque56(id, bucket)}`;
+}
+function mockDirectorySnapshot(at) {
+const u = state.users
+.filter((item) => item.status === 'ACTIVE')
+.sort((left, right) => String(left.createdAt || '').localeCompare(String(right.createdAt || '')) || String(left.id).localeCompare(String(right.id)));
+const b = Math.floor(Date.parse(at) / DIR_BUCKET_MS);
+const onlineTotal = state.companionPresences.filter((item) => item.scene === COMPANION_PRESENCE_SCENE
+&& item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(at)).length;
+return {
+onlineTotal,
+users: u.slice(0, COMPANION_SAMPLE_LIMIT).map((item) => {
+const displayToken = mockDirectoryToken(item.id, b);
+return {
+displayToken,
+nickname: Array.from(String((item.profile || {}).nickname || '').trim() || '匿名搭子').slice(0, 12).join(''),
+layoutSeed: Number.parseInt(mockOpaque56('companionDirLayout', item.id).slice(-8), 16) >>> 0,
+viewerIsSelf: item.id === currentUserId
+};
+})
+};
+}
+function resolveMockDirectoryUser(token, at) {
+const b = Math.floor(Date.parse(at) / DIR_BUCKET_MS);
+return state.users.find((item) => item.status === 'ACTIVE'
+&& [b, b - 1].some((candidate) => mockDirectoryToken(item.id, candidate) === token));
+}
+function issueMockProfile(viewer, target, type, sourceId, prefix) {
+if(target.id===viewer.id)return { target: 'self' };
+const now=new Date().toISOString();
+const token=mockTicketToken(prefix, viewer.id, target.id, sourceId, now, Math.random());
+const expiresAt=new Date(Date.parse(now)+6e4).toISOString();
+const hash=opaqueSensitiveHash(token);
+state.publicProfileNavTickets.push({ tokenHash: hash, viewerId: viewer.id, targetUserId: target.id, sourceType: type, sourceId, expiresAt });
+return { target: 'public', profileNavToken: token, expiresAt };
 }
 function publicMockPresenceSnapshot(at) {
 const active = state.companionPresences
@@ -561,6 +602,7 @@ if (!state.communityReplies) state.communityReplies = [];
 if (!state.communityLikes) state.communityLikes = [];
 if (!state.communityActivities) state.communityActivities = [];
 if (!state.companionPresences) state.companionPresences = [];
+if (!state.publicProfileNavTickets) state.publicProfileNavTickets = [];
 if (!state.groupMessages) state.groupMessages = [];
 if (!state.groupReadStates) state.groupReadStates = [];
 if (!Array.isArray(state.directConversations)
@@ -591,6 +633,20 @@ return {
 nickname: item.author.nickname,
 avatarKind: item.author.avatarKind,
 avatar: publicAvatarSlot(current && current.status === 'ACTIVE' && current.profile ? current.profile : legacyProfile)
+};
+}
+function publicMockProfile(target, now, online, fallback='拼吧用户') {
+const p = target.profile || {};
+const g = p.gender;
+return {
+nickname: Array.from(String(p.nickname || '').trim() || fallback).slice(0, 12).join(''),
+avatarKind: avatarKindFromGender(g), avatar: publicAvatarSlot(p),
+gender: ['MALE', 'FEMALE'].includes(g) ? g : null,
+age: calculateAgeOnMacauDate(p.birthDate, new Date(now)), mbti: USER_MBTI_TYPES.includes(p.mbti) ? p.mbti : null,
+city: typeof p.city === 'string' ? p.city.trim().slice(0, 20) : '',
+interests: Array.isArray(p.interests) ? p.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
+online,
+viewerIsSelf: target.id === currentUserId
 };
 }
 function publicCommunityPost(item) {
@@ -1677,29 +1733,23 @@ if (action === 'profile.get') return { user: selfUser(requireUser()) };
 if (action === 'profile.public.get') {
 const token = validateMockPublicProfileInput(input);
 const now = new Date().toISOString();
-if (token.startsWith('communityProfileNa_')) {
-const viewer = requireActiveUser();
-const tokenHash = opaqueSensitiveHash(token);
-const ticket = (state.publicProfileNavTickets || []).find((item) => item.tokenHash === tokenHash
-&& item.viewerId === viewer.id && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(now));
-assert(ticket, 'NOT_FOUND', '目标不存在或已失效');
-const source = ticket.sourceType === 'post'
-? state.communityPosts.find((item) => item.id === ticket.sourceId && item.status === 'ACTIVE')
-: state.communityReplies.find((item) => item.id === ticket.sourceId && item.status === 'ACTIVE');
-assert(source && source.authorId === ticket.targetUserId, 'NOT_FOUND', '内容不存在或已被删除');
-if (ticket.sourceType === 'reply') assert(state.communityPosts.some((item) => item.id === source.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
-const target = state.users.find((item) => item.id === ticket.targetUserId && item.status === 'ACTIVE' && item.profile);
-assert(target, 'NOT_FOUND', '目标不存在或已失效');
-const profile = target.profile;
-return { profile: {
-nickname: Array.from(String(profile.nickname || '').trim() || '拼吧用户').slice(0, 12).join(''),
-avatarKind: avatarKindFromGender(profile.gender), gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
-avatar: publicAvatarSlot(profile),
-age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)), mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
-city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
-interests: Array.isArray(profile.interests) ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
-online: false, viewerIsSelf: target.id === currentUserId
-}, serverNow: now, expiresAt: ticket.expiresAt };
+if (token.startsWith('directoryProfileNa_') || token.startsWith('communityProfileNa_')) {
+const v = requireActiveUser();
+const hash = opaqueSensitiveHash(token);
+const t = state.publicProfileNavTickets.find((item) => item.tokenHash === hash
+&& item.viewerId === v.id && Date.parse(item.expiresAt) > Date.parse(now));
+assert(t, 'NOT_FOUND', PROFILE_TARGET_GONE);
+const dir = t.sourceType === 'companionDirectory';
+const s = dir ? null : t.sourceType === 'post'
+? state.communityPosts.find((item) => item.id === t.sourceId && item.status === 'ACTIVE')
+: state.communityReplies.find((item) => item.id === t.sourceId && item.status === 'ACTIVE');
+if (!dir) {
+assert(s && s.authorId === t.targetUserId, 'NOT_FOUND', '内容不存在或已被删除');
+if (t.sourceType === 'reply') assert(state.communityPosts.some((item) => item.id === s.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
+}
+const u = state.users.find((item) => item.id === t.targetUserId && item.status === 'ACTIVE' && (dir || item.profile));
+assert(u, 'NOT_FOUND', PROFILE_TARGET_GONE);
+return { profile: publicMockProfile(u, now, false), serverNow: now, expiresAt: t.expiresAt };
 }
 const bucket = Math.floor(Date.parse(now) / COMPANION_PROFILE_NAV_BUCKET_MS);
 const profileNavNonce = mockProfileNavNonceFromToken(token);
@@ -1708,23 +1758,11 @@ const presence = state.companionPresences.find((item) => item.profileNavNonce ==
 && item.status === 'ACTIVE'
 && Date.parse(item.expiresAt) > Date.parse(now)
 && [bucket, bucket - 1].some((candidate) => mockProfileNavToken(item.profileNavNonce, item.sessionNonce, candidate) === token));
-assert(presence, 'NOT_FOUND', '目标不存在或已失效');
+assert(presence, 'NOT_FOUND', PROFILE_TARGET_GONE);
 const target = state.users.find((item) => item.id === presence.userId && item.status === 'ACTIVE' && item.profile);
-assert(target, 'NOT_FOUND', '目标不存在或已失效');
-const profile = target.profile;
+assert(target, 'NOT_FOUND', PROFILE_TARGET_GONE);
 return {
-profile: {
-nickname: Array.from(String(profile.nickname || '').trim() || '匿名搭子').slice(0, 12).join(''),
-avatarKind: avatarKindFromGender(profile.gender),
-avatar: publicAvatarSlot(profile),
-gender: ['MALE', 'FEMALE'].includes(profile.gender) ? profile.gender : null,
-age: calculateAgeOnMacauDate(profile.birthDate, new Date(now)),
-mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
-city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
-interests: Array.isArray(profile.interests) ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
-online: true,
-viewerIsSelf: target.id === currentUserId
-},
+profile: publicMockProfile(target, now, true, '匿名搭子'),
 serverNow: now,
 expiresAt: new Date(Math.min(Date.parse(presence.expiresAt), (bucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString()
 };
@@ -1890,10 +1928,24 @@ if (action === 'companion.presence.snapshot') {
 validateCompanionScene(input);
 return publicMockPresenceSnapshot(new Date().toISOString());
 }
+if (action === 'companion.directory.snapshot') {
+validateCompanionScene(input);
+return mockDirectorySnapshot(new Date().toISOString());
+}
+if (action === 'companion.directory.profile.nav.create') {
+const viewer = requireActiveUser();
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '搭子主页参数无效');
+assert(Object.keys(input).every((key) => ['scene', 'displayToken'].includes(key)), 'VALIDATION_ERROR', '搭子主页参数无效');
+validateCompanionScene({ scene: input.scene });
+assert(/^companionDirView_[a-f0-9]{56}$/.test(input.displayToken || ''), 'NOT_FOUND', PROFILE_TARGET_GONE);
+const now = new Date().toISOString();
+const target = resolveMockDirectoryUser(input.displayToken, now);
+assert(target, 'NOT_FOUND', PROFILE_TARGET_GONE);
+return issueMockProfile(viewer, target, 'companionDirectory', '', 'directoryProfileNa');
+}
 if (action === 'companion.presence.enter') {
 validateCompanionScene(input);
-const user = requireActiveUser(true);
-assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const user = requireActiveUser(false);
 const now = new Date().toISOString();
 const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
 const existing = state.companionPresences.find((item) => item.id === id);
@@ -1903,7 +1955,7 @@ const next = {
 id,
 scene: COMPANION_PRESENCE_SCENE,
 userId: user.id,
-nickname: user.profile.nickname,
+nickname: (user.profile || {}).nickname,
 sessionNonce,
 profileNavNonce,
 layoutSeed: Number.parseInt(sessionNonce.slice(-8), 16) >>> 0,
@@ -1918,11 +1970,14 @@ return { joined: true, sessionToken: sessionNonce, sessionTtlSec: 90, heartbeatI
 }
 if (action === 'companion.presence.heartbeat') {
 const { sessionToken } = validateCompanionScene(input, true);
-const user = requireActiveUser(true);
-assert(completeRideProfile(user.profile), 'PROFILE_INCOMPLETE', '请先完善个人资料');
+const user = requireKnownUser();
 const now = new Date().toISOString();
 const id = stableMockEntityId('companionPresence', COMPANION_PRESENCE_SCENE, user.id);
 const presence = state.companionPresences.find((item) => item.id === id && item.sessionNonce === sessionToken && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(now));
+if (user.status !== 'ACTIVE') {
+if (presence) Object.assign(presence, { status: 'INACTIVE', expiresAt: now, updatedAt: now });
+throw fail('ACCOUNT_DISABLED', '账号已被限制，请联系平台处理');
+}
 const refreshed = Boolean(presence && Date.parse(now) - Date.parse(presence.updatedAt) >= COMPANION_MIN_WRITE_INTERVAL_MS);
 if (refreshed) Object.assign(presence, {
 lastSeenAt: now,
@@ -2009,15 +2064,8 @@ const source = input.sourceType === 'post'
 assert(source, 'NOT_FOUND', '内容不存在或已被删除');
 if (input.sourceType === 'reply') assert(state.communityPosts.some((item) => item.id === source.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
 const target = state.users.find((item) => item.id === source.authorId && item.status === 'ACTIVE' && item.profile);
-assert(target, 'NOT_FOUND', '目标不存在或已失效');
-if (target.id === viewer.id) return { target: 'self' };
-const now = new Date().toISOString();
-const profileNavToken = mockCommunityProfileNavToken(viewer.id, target.id, sourceId, now, Math.random());
-const expiresAt = new Date(Date.parse(now) + 60000).toISOString();
-state.publicProfileNavTickets = state.publicProfileNavTickets || [];
-const tokenHash = opaqueSensitiveHash(profileNavToken);
-state.publicProfileNavTickets.push({ id: stableMockEntityId('cpn', tokenHash), tokenHash, viewerId: viewer.id, targetUserId: target.id, sourceType: input.sourceType, sourceId, status: 'ACTIVE', expiresAt, createdAt: now, updatedAt: now });
-return { target: 'public', profileNavToken, expiresAt };
+assert(target, 'NOT_FOUND', PROFILE_TARGET_GONE);
+return issueMockProfile(viewer, target, input.sourceType, sourceId, 'communityProfileNa');
 }
 if (action === 'community.post.create') {
 const user = requireUser();
@@ -2588,7 +2636,8 @@ async function call(event) {
 try {
 const action = event.action;
 const isMutation = MUTATING_ACTIONS.has(action);
-const navPayloadHash = action === 'community.profile.nav.create' ? opaqueSensitiveHash(stableSerialize(event.data || {})) : '';
+const navPayloadHash = action === 'community.profile.nav.create' || action === 'companion.directory.profile.nav.create'
+? opaqueSensitiveHash(stableSerialize(event.data || {})) : '';
 const idempotencyId = isMutation && event.idempotencyKey
 ? `${currentUserId}:${action}:${event.idempotencyKey}${navPayloadHash ? `:${navPayloadHash}` : ''}`
 : '';
@@ -2597,7 +2646,7 @@ const communityPayloadHash = action === 'community.post.create' || action === 'c
 ? opaqueSensitiveHash(stableSerialize(event.data || {}))
 : '';
 if (isMutation) assert(idempotencyId, 'VALIDATION_ERROR', '写操作缺少幂等键');
-if (isMutation && action === 'companion.presence.leave') requireKnownUser();
+if (isMutation && ['companion.presence.heartbeat', 'companion.presence.leave'].includes(action)) requireKnownUser();
 else if (isMutation) requireUser();
 if (idempotencyId && communityPayloadHash && state.idempotency[`${idempotencyId}:payload`]) {
 assert(state.idempotency[`${idempotencyId}:payload`] === communityPayloadHash, 'CONFLICT', '幂等键已用于其他社区内容');

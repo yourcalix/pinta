@@ -72,6 +72,8 @@ npm run verify
    npm install
    ```
 
+   “搭子星球用户目录”依赖本轮新增的 `companion.directory.*` 动作；更新代码后必须重新上传并部署现有 `api` 云函数，并选择“云端安装依赖”，否则客户端会收到“接口动作不存在”。
+
 7. 云函数环境变量至少配置：
 
    - `PINBA_ENV=production`
@@ -97,7 +99,8 @@ npm run verify
 ## 建议数据库索引
 
 - `activities`：`status + startsAt`、`type + status + startsAt`、`city + district + status + startsAt`、`type + status + typeData.routeId + startsAt`、`ownerId + updatedAt`；附近查询另为顶层 `meetingGeoPoint` 建立地理位置索引，并按真实 CloudBase 控制台查询计划补齐 `status / city / type / district` 组合。
-- `companionPresences`：`scene(升序) + status(升序) + expiresAt(降序)`，用于“在线搭子星球”读取未过期在线事实；集合禁止客户端直接读写，只经云函数鉴权与脱敏快照访问。
+- `users`：为搭子星球目录建立 `status(升序) + createdAt(升序) + _id(升序)`，目录只读取 `ACTIVE` 账号并静默返回最多 50 个脱敏节点，不查询或公开目录总数；资料未完善账号仅显示安全通用昵称，不补造公开资料。
+- `companionPresences`：`scene(升序) + status(升序) + expiresAt(降序)`，用于统计当前处于小程序前台的登录用户；集合禁止客户端直接读写，只经云函数鉴权与脱敏快照访问。
 - `applications`：`activityId + createdAt`、`activityId + applicantId + status`。
 - `members`：`activityId + userId + status`、`userId + role + status`。
 - `memberContacts`：成员电话敏感集合，仅云函数读写；以活动和成员确定性 ID 保存，禁止开放客户端直读权限。
@@ -106,7 +109,7 @@ npm run verify
 - `communityPosts`：`status + createdAt(降序) + _id(降序)`。
 - `communityReplies`：`postId + status + createdAt(升序) + _id(升序)`。
 - `communityLikes`：使用目标类型、目标 ID 与调用者派生的确定性文档 ID；点赞状态按 `_id in (...) + status` 分片读取，集合禁止客户端直接读写。
-- `publicProfileNavTickets`：社区作者主页短期访问票据，按随机票据哈希 `_id` 精确读取，无需额外索引；集合禁止客户端直接读写，只经云函数绑定当前访问者校验。
+- `publicProfileNavTickets`：社区作者主页与搭子目录主页的短期访问票据，按随机票据哈希 `_id` 精确读取，无需额外索引；集合禁止客户端直接读写，只经云函数绑定当前访问者校验。
   - 票据业务有效期仅 60 秒；生产环境需按 `expiresAt` 配置定期清理，避免过期访问关联长期留存。
 - `communityActivities`：`recipientId(升序) + status(升序) + updatedAt(降序) + _id(降序)`；“回复我的”和“收到的赞”筛选另建 `recipientId(升序) + status(升序) + type(升序) + updatedAt(降序) + _id(降序)`。列表只展示收件人近 30 天的讨论动态，集合禁止客户端直接读写；历史清理由独立的数据保留策略负责。
 - `communityRateLimits`：使用调用者、动作与固定时间窗派生的确定性文档 ID，无需额外索引。

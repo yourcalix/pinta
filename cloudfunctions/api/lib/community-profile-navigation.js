@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const COMMUNITY_PROFILE_NAV_TTL_MS = 60 * 1000;
 const COMMUNITY_PROFILE_NAV_PATTERN = /^communityProfileNa_[a-f0-9]{64}$/;
+const DIRECTORY_PROFILE_NAV_PATTERN = /^directoryProfileNa_[a-f0-9]{64}$/;
 
 function tokenHash(token) {
   return crypto.createHash('sha256').update(String(token || '')).digest('hex');
@@ -44,10 +45,48 @@ function resolveCommunityProfileNavTicket(ticket, profileNavToken, viewerId, at)
   return ticket;
 }
 
+function createDirectoryProfileNavTicket({ viewerId, targetUserId, at, randomBytes = crypto.randomBytes }) {
+  const profileNavToken = `directoryProfileNa_${randomBytes(32).toString('hex')}`;
+  const hash = tokenHash(profileNavToken);
+  const expiresAt = new Date(Date.parse(at) + COMMUNITY_PROFILE_NAV_TTL_MS).toISOString();
+  return {
+    profileNavToken,
+    expiresAt,
+    ticket: {
+      id: `dpn_${hash}`,
+      tokenHash: hash,
+      viewerId,
+      targetUserId,
+      sourceType: 'companionDirectory',
+      status: 'ACTIVE',
+      expiresAt,
+      createdAt: at,
+      updatedAt: at
+    }
+  };
+}
+
+function directoryProfileNavTicketId(profileNavToken) {
+  return DIRECTORY_PROFILE_NAV_PATTERN.test(String(profileNavToken || ''))
+    ? `dpn_${tokenHash(profileNavToken)}`
+    : '';
+}
+
+function resolveDirectoryProfileNavTicket(ticket, profileNavToken, viewerId, at) {
+  const id = directoryProfileNavTicketId(profileNavToken);
+  if (!id || !ticket || ticket.id !== id || ticket.tokenHash !== tokenHash(profileNavToken)) return null;
+  if (ticket.sourceType !== 'companionDirectory' || ticket.status !== 'ACTIVE' || ticket.viewerId !== viewerId || Date.parse(ticket.expiresAt) <= Date.parse(at)) return null;
+  return ticket;
+}
+
 module.exports = {
   COMMUNITY_PROFILE_NAV_TTL_MS,
   COMMUNITY_PROFILE_NAV_PATTERN,
+  DIRECTORY_PROFILE_NAV_PATTERN,
   createCommunityProfileNavTicket,
   communityProfileNavTicketId,
-  resolveCommunityProfileNavTicket
+  resolveCommunityProfileNavTicket,
+  createDirectoryProfileNavTicket,
+  directoryProfileNavTicketId,
+  resolveDirectoryProfileNavTicket
 };

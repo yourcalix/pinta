@@ -2355,6 +2355,16 @@ class CloudStore {
     return notification;
   }
 
+  async snapshotCompanionDirectory(limit) {
+    const where = {
+      status: 'ACTIVE'
+    };
+    const sampleResult = await this.db.collection('users').where(where)
+      .orderBy('createdAt', 'asc').orderBy('_id', 'asc').limit(limit).get();
+    const items = (sampleResult.data || []).map(entity);
+    return { items };
+  }
+
   async enterCompanionPresence(presence) {
     const current = await this.getDocument('companionPresences', presence.id);
     const next = { ...presence, createdAt: current && current.createdAt || presence.updatedAt };

@@ -36,7 +36,7 @@ function pointInBounds(point, bounds) {
 function selectHitNode(point, nodes = []) {
   if (!point) return null;
   const candidates = (Array.isArray(nodes) ? nodes : []).filter((node) => {
-    if (!node || !node.profileNavToken || Number(node.depth) <= .05) return false;
+    if (!node || !node.displayToken || Number(node.depth) <= .05) return false;
     const dx = point.x - Number(node.screenX);
     const dy = point.y - Number(node.screenY);
     const radius = Math.max(18, Number(node.hitRadius) || 22);

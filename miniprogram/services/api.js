@@ -21,6 +21,7 @@ const MUTATING_ACTIONS = new Set([
   'community.like.set',
   'community.activity.read',
   'community.profile.nav.create',
+  'companion.directory.profile.nav.create',
   'companion.presence.enter',
   'companion.presence.heartbeat',
   'companion.presence.leave',
@@ -48,6 +49,7 @@ const SENSITIVE_MUTATING_ACTIONS = new Set([
   'community.reply.create',
   'dm.message.send',
   'group.message.send',
+  'companion.directory.profile.nav.create',
   'companion.presence.heartbeat',
   'companion.presence.leave'
 ]);

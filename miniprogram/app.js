@@ -1,6 +1,7 @@
 'use strict';
 
 const config = require('./config/runtime');
+const appPresence = require('./services/app-presence');
 
 App({
   globalData: {
@@ -16,5 +17,13 @@ App({
         traceUser: true
       });
     }
+  },
+
+  onShow() {
+    appPresence.show();
+  },
+
+  onHide() {
+    appPresence.hide();
   }
 });

@@ -42,7 +42,8 @@ Page({
     profile: null,
     errorCopy: '',
     pageTitle: '搭子主页',
-    communitySource: false
+    communitySource: false,
+    directorySource: false
   },
 
   onLoad(options = {}) {
@@ -59,8 +60,9 @@ Page({
       return;
     }
     const communitySource = ticket.source === 'community';
+    const directorySource = ticket.source === 'companion-directory';
     this.applyVisualTheme(communitySource);
-    this.setData({ communitySource, pageTitle: communitySource ? '个人主页' : '搭子主页' });
+    this.setData({ communitySource, directorySource, pageTitle: communitySource ? '个人主页' : '搭子主页' });
     this._profileNavToken = ticket.profileNavToken;
     this.loadProfile();
   },

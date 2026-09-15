@@ -18,7 +18,7 @@ function setup() {
   const store = new MemoryStore({ users: [
     { id: 'user-a', role: 'user', status: 'ACTIVE', profile: profile('小琴') },
     { id: 'user-b', role: 'user', status: 'ACTIVE', profile: profile('阿明') },
-    { id: 'incomplete', role: 'user', status: 'ACTIVE', profile: { nickname: '未完成', adultConfirmed: true } },
+    { id: 'incomplete', role: 'user', status: 'ACTIVE', profile: null },
     { id: 'disabled', role: 'user', status: 'DISABLED', profile: profile('停用') }
   ] });
   const service = createPinbaService({ store, clock: () => new Date(now), idGenerator: () => `presence-${++request}` });
@@ -31,7 +31,7 @@ function setup() {
   return { store, call, advance: (milliseconds) => { now += milliseconds; } };
 }
 
-test('游客快照不创建在线事实，只有合格账号主动加入才计数', async () => {
+test('游客不创建在线事实，ACTIVE登录账号无论资料是否完善均可自动计数', async () => {
   const { store, call } = setup();
   const guest = await call('companion.presence.snapshot');
   assert.equal(guest.ok, true);
@@ -39,7 +39,11 @@ test('游客快照不创建在线事实，只有合格账号主动加入才计�
   assert.equal(store.companionPresences.size, 0);
 
   assert.equal((await call('companion.presence.enter', null, 'presence-enter-guest')).error.code, 'UNAUTHENTICATED');
-  assert.equal((await call('companion.presence.enter', 'incomplete', 'presence-enter-incomplete')).error.code, 'PROFILE_INCOMPLETE');
+  const incomplete = await call('companion.presence.enter', 'incomplete', 'presence-enter-incomplete');
+  assert.equal(incomplete.ok, true);
+  assert.equal(incomplete.data.snapshot.onlineTotal, 1);
+  assert.equal(incomplete.data.snapshot.users[0].nickname, '匿名搭子');
+  await call('companion.presence.leave', 'incomplete', 'presence-leave-incomplete', { sessionToken: incomplete.data.sessionToken });
   assert.equal((await call('companion.presence.enter', 'disabled', 'presence-enter-disabled')).error.code, 'ACCOUNT_DISABLED');
 
   const joined = await call('companion.presence.enter', 'user-a', 'presence-enter-user-a');
@@ -172,6 +176,18 @@ test('同一账号重新加入会轮换公开会话标识，停用后仍可立�
   const leftWhileDisabled = await call('companion.presence.leave', 'user-a', 'presence-leave-disabled', { sessionToken: second.data.sessionToken });
   assert.equal(leftWhileDisabled.ok, true);
   assert.equal((await call('companion.presence.snapshot')).data.onlineTotal, 0);
+});
+
+test('账号在前台会话中被停用时，下一次心跳立即移出在线人数', async () => {
+  const { store, call } = setup();
+  const joined = await call('companion.presence.enter', 'user-a', 'presence-disable-enter');
+  store.users.get('user-a').status = 'DISABLED';
+  const heartbeat = await call('companion.presence.heartbeat', 'user-a', 'presence-disable-heartbeat', {
+    sessionToken: joined.data.sessionToken
+  });
+  assert.equal(heartbeat.error.code, 'ACCOUNT_DISABLED');
+  const snapshot = await call('companion.presence.snapshot');
+  assert.equal(snapshot.data.onlineTotal, 0);
 });
 
 test('公开球面样本不可分页且最多返回50个真实在线节点', async () => {

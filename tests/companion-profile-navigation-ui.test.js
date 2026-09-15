@@ -19,8 +19,8 @@ test('Canvas点击坐标使用CSS像素并保留左侧返回安全区', () => {
 
 test('命中测试支持昵称包围盒并以前景深度优先', () => {
   const nodes = [
-    { displayToken: 'back', depth: .2, screenX: 100, screenY: 100, hitRadius: 22, profileNavToken: 'back-token' },
-    { displayToken: 'front', depth: .8, screenX: 112, screenY: 100, hitRadius: 22, profileNavToken: 'front-token', textBounds: { left: 130, right: 210, top: 82, bottom: 112 } }
+    { displayToken: 'back', depth: .2, screenX: 100, screenY: 100, hitRadius: 22 },
+    { displayToken: 'front', depth: .8, screenX: 112, screenY: 100, hitRadius: 22, textBounds: { left: 130, right: 210, top: 82, bottom: 112 } }
   ];
   assert.equal(selectHitNode({ x: 106, y: 100 }, nodes).displayToken, 'front');
   assert.equal(selectHitNode({ x: 170, y: 96 }, nodes).displayToken, 'front');
@@ -56,7 +56,9 @@ test('星球节点可点击且公开主页保持短期只读与完整失效态',
   assert.match(orbitScript, /refreshCanvasRect/);
   assert.match(orbitScript, /performCanvasHitTest/);
   assert.match(orbitScript, /ephemeralProfileNavigation\.issue/);
-  assert.match(orbitScript, /profileNavToken/);
+  assert.match(orbitScript, /directoryService\.createProfileNavigation/);
+  assert.match(read('subpackages/community/companion/directory-service.js'), /companion\.directory\.profile\.nav\.create/);
+  assert.match(orbitScript, /source:\s*'companion-directory'/);
   assert.doesNotMatch(orbitScript, /setStorage|profileNavToken[^\n]*url/);
 
   const pageScript = read('subpackages/profile/public/index.js');
@@ -64,7 +66,7 @@ test('星球节点可点击且公开主页保持短期只读与完整失效态',
   const pageConfig = JSON.parse(read('subpackages/profile/public/index.json'));
   assert.equal(pageConfig.enablePullDownRefresh, false);
   assert.match(pageScript, /ephemeralProfileNavigation\.consume/);
-  assert.match(pageTemplate, /这位搭子已经离开星球/);
+  assert.match(pageTemplate, /主页访问已失效/);
   assert.match(pageTemplate, /仅展示搭子主动公开的资料/);
   assert.doesNotMatch(pageTemplate, />关注<|>粉丝<|bindtap="[^"]*(?:Message|Contact|Follow)/);
 });

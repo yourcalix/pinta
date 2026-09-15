@@ -1573,6 +1573,13 @@ class MemoryStore {
     return clone(notification);
   }
 
+  async snapshotCompanionDirectory(limit) {
+    const items = [...this.users.values()]
+      .filter((user) => user.status === 'ACTIVE')
+      .sort((left, right) => String(left.createdAt || '').localeCompare(String(right.createdAt || '')) || String(left.id).localeCompare(String(right.id)));
+    return { items: clone(items.slice(0, limit)) };
+  }
+
   async enterCompanionPresence(presence) {
     const current = this.companionPresences.get(presence.id);
     const next = { ...clone(presence), createdAt: current && current.createdAt || presence.updatedAt };
