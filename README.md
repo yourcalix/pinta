@@ -111,7 +111,8 @@ npm run verify
 - `communityLikes`：使用目标类型、目标 ID 与调用者派生的确定性文档 ID；点赞状态按 `_id in (...) + status` 分片读取，集合禁止客户端直接读写。
 - `publicProfileNavTickets`：社区作者主页与搭子目录主页的短期访问票据，按随机票据哈希 `_id` 精确读取，无需额外索引；集合禁止客户端直接读写，只经云函数绑定当前访问者校验。
   - 票据业务有效期仅 60 秒；生产环境需按 `expiresAt` 配置定期清理，避免过期访问关联长期留存。
-- `communityActivities`：`recipientId(升序) + status(升序) + updatedAt(降序) + _id(降序)`；“回复我的”和“收到的赞”筛选另建 `recipientId(升序) + status(升序) + type(升序) + updatedAt(降序) + _id(降序)`。列表只展示收件人近 30 天的讨论动态，集合禁止客户端直接读写；历史清理由独立的数据保留策略负责。
+- `communityActivities`：列表建立 `recipientId(升序) + status(升序) + updatedAt(降序) + _id(降序)`；“回复我的”和“收到的赞”筛选另建 `recipientId(升序) + status(升序) + type(升序) + updatedAt(降序) + _id(降序)`。未读汇总另建 `recipientId(升序) + status(升序) + read(升序) + updatedAt(降序)` 与 `recipientId(升序) + status(升序) + read(升序) + type(升序) + updatedAt(降序)`，确保近 30 天全部未读通过服务端 `count()` 权威统计而非按首屏分页推算。列表只展示收件人近 30 天的讨论动态，集合禁止客户端直接读写；历史清理由独立的数据保留策略负责。
+  - 部署未读汇总前，需在测试环境检查历史 `ACTIVE` 文档是否缺少 `read`；若存在，先受控回填 `read: false` 与 `readAt: null`，再创建含 `read` 的复合索引并上传 `api` 云函数，避免历史未读漏计。
 - `communityRateLimits`：使用调用者、动作与固定时间窗派生的确定性文档 ID，无需额外索引。
 - `directConversations`：会话列表分别建立 `participantAId(升序) + updatedAt(降序) + _id(降序)` 和 `participantBId(升序) + updatedAt(降序) + _id(降序)`；未读扫描另建 `participantAId(升序) + _id(升序)`、`participantBId(升序) + _id(升序)`。未读按不可变 ID 分页遍历，不以单页 100 条作为总量上限。
 - `directMessages`：`conversationId(升序) + createdAt(降序) + _id(降序)`。消息和会话集合均禁止客户端直接读写，只经云函数鉴权访问。

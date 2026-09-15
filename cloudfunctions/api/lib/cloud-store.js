@@ -1229,11 +1229,31 @@ class CloudStore {
     return { items, nextCursor: candidates.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null };
   }
 
-  async markCommunityActivityRead(activityId, recipientId, at) {
-    const activity = await this.getDocument('communityActivities', activityId);
-    invariant(activity && activity.recipientId === recipientId, 'NOT_FOUND');
-    if (!activity.read) await this.db.collection('communityActivities').doc(activityId).update({ data: { read: true, readAt: at } });
-    return { ...activity, read: true, readAt: activity.readAt || at };
+  async countUnreadCommunityActivities(recipientId, { cutoff }) {
+    const base = { recipientId, status: COMMUNITY_ACTIVITY_STATUS.ACTIVE, read: false, updatedAt: this.command.gte(cutoff) };
+    const count = async (where) => {
+      const result = await this.db.collection('communityActivities').where(where).count();
+      return Math.max(0, Number(result && result.total) || 0);
+    };
+    const [total, replies, postLikes, replyLikes] = await Promise.all([
+      count(base),
+      count({ ...base, type: COMMUNITY_ACTIVITY_TYPES.POST_REPLIED }),
+      count({ ...base, type: COMMUNITY_ACTIVITY_TYPES.POST_LIKED }),
+      count({ ...base, type: COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED })
+    ]);
+    return { total, tabs: { ALL: total, REPLIES: replies, LIKES: postLikes + replyLikes } };
+  }
+
+  async markCommunityActivityRead(activityId, recipientId, at, options = {}) {
+    return this.db.runTransaction(async (transaction) => {
+      const reference = transaction.collection('communityActivities').doc(activityId);
+      const activity = await getTransactionDocument(reference);
+      invariant(activity && activity.recipientId === recipientId && activity.status === COMMUNITY_ACTIVITY_STATUS.ACTIVE, 'NOT_FOUND');
+      if (options.postId) invariant(activity.postId === options.postId, 'NOT_FOUND');
+      if (options.expectedUpdatedAt && activity.updatedAt !== options.expectedUpdatedAt) return { ...activity, stale: true };
+      if (!activity.read) await reference.update({ data: { read: true, readAt: at } });
+      return { ...activity, read: true, readAt: activity.readAt || at, stale: false };
+    });
   }
 
   async deleteCommunityPost(postId, authorId, at, audit) {

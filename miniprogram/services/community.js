@@ -12,5 +12,6 @@ module.exports = {
   deleteReply: (replyId) => api.invoke('community.reply.delete', { replyId }, { mutating: true }),
   setLike: (targetType, targetId, liked) => api.invoke('community.like.set', { targetType, targetId, liked }, { mutating: true }),
   listActivities: (filters = {}) => api.invoke('community.activity.list', filters),
-  readActivity: (activityId) => api.invoke('community.activity.read', { activityId }, { mutating: true })
+  getActivityUnread: () => api.invoke('community.activity.unread'),
+  readActivity:(activityId,expectedUpdatedAt='',postId='')=>api.invoke('community.activity.read',{activityId,...(expectedUpdatedAt?{expectedUpdatedAt}:{}),...(postId?{postId}:{})},{mutating:true})
 };

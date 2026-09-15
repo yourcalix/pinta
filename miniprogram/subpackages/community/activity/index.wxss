@@ -11,6 +11,8 @@ button::after{display:none}
 .activity-tabs{display:flex;align-items:center;gap:18rpx;margin-bottom:34rpx}
 .activity-tab{display:flex;flex:1;min-width:0;min-height:76rpx;align-items:center;justify-content:center;color:#787773;background:rgba(255,255,255,.78);border:1rpx solid rgba(235,229,218,.9);border-radius:38rpx;box-shadow:0 6rpx 18rpx rgba(83,69,50,.045);font-size:28rpx;font-weight:700;white-space:nowrap}
 .activity-tab--active{color:#162321;background:linear-gradient(135deg,#ffe88b 0%,#ffd76b 100%);border-color:#f8d76c;box-shadow:0 8rpx 22rpx rgba(220,164,36,.17);font-weight:850}
+.activity-tab-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-tab-badge{display:inline-flex;flex:0 0 auto;min-width:28rpx;height:28rpx;margin-left:8rpx;padding:0 6rpx;align-items:center;justify-content:center;box-sizing:border-box;color:#fff;background:#ff5e50;border-radius:15rpx;font-size:18rpx;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
 .activity-control--pressed{opacity:.74;transform:scale(.98)}
 .activity-list,.activity-skeleton-list{display:flex;flex-direction:column;gap:24rpx}
 .activity-card{display:flex;width:100%;min-height:240rpx;padding:30rpx 26rpx;box-sizing:border-box;align-items:flex-start;color:#171918;background:#fff;border:1rpx solid rgba(235,229,218,.88);border-radius:28rpx;box-shadow:0 10rpx 30rpx rgba(83,69,50,.065);text-align:left;transition:background-color 120ms ease,transform 120ms ease}

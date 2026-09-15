@@ -83,7 +83,7 @@ const MUTATING_ACTIONS = new Set([
 'ride.driver.cancel'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
-'driver.application.submit', 'admin.driverApplication.review', 'community.like.set',
+'driver.application.submit', 'admin.driverApplication.review', 'community.like.set', 'community.activity.read',
 'companion.presence.heartbeat', 'companion.presence.leave',
 'group.message.send', 'group.message.read', 'dm.consult.create', 'dm.message.send'
 ]);
@@ -2033,14 +2033,28 @@ const page = candidates.slice(0, limit + 1);
 const items = page.slice(0, limit);
 return { items: items.map(publicCommunityActivity), nextCursor: page.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null };
 }
+if (action === 'community.activity.unread') {
+requireActiveUser();
+assert(input && typeof input === 'object' && !Array.isArray(input) && Object.keys(input).length === 0, 'VALIDATION_ERROR', '动态未读参数无效');
+const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+const unread = state.communityActivities.filter((item) => item.recipientId === currentUserId && item.status === 'ACTIVE' && item.read !== true && Date.parse(item.updatedAt) >= cutoff);
+const replies = unread.filter((item) => item.type === 'POST_REPLIED').length;
+const likes = unread.filter((item) => ['POST_LIKED', 'REPLY_LIKED'].includes(item.type)).length;
+return { total: unread.length, tabs: { ALL: unread.length, REPLIES: replies, LIKES: likes } };
+}
 if (action === 'community.activity.read') {
 requireActiveUser();
 const activityId = validatedId(input && input.activityId, '动态ID');
-const item = state.communityActivities.find((entry) => entry.id === activityId && entry.recipientId === currentUserId);
+const item = state.communityActivities.find((entry) => entry.id === activityId && entry.recipientId === currentUserId && entry.status === 'ACTIVE');
 assert(item, 'NOT_FOUND', '动态不存在');
+if (input && input.postId) assert(item.postId === validatedId(input.postId, '帖子ID'), 'NOT_FOUND', '动态不存在');
+if (input && input.expectedUpdatedAt) {
+assert(Number.isFinite(Date.parse(input.expectedUpdatedAt)), 'VALIDATION_ERROR', '动态版本无效');
+if (item.updatedAt !== input.expectedUpdatedAt) return { activityId, read: item.read === true, readAt: item.readAt || null, updatedAt: item.updatedAt, stale: true };
+}
 item.read = true;
-item.readAt = new Date().toISOString();
-return { activityId, read: true, readAt: item.readAt };
+item.readAt = item.readAt || new Date().toISOString();
+return { activityId, read: true, readAt: item.readAt, updatedAt: item.updatedAt, stale: false };
 }
 if (action === 'community.post.detail') {
 const post = state.communityPosts.find((item) => item.id === input.postId && item.status === 'ACTIVE');

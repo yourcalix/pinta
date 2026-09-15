@@ -389,10 +389,24 @@ function validateCommunityActivityListInput(input = {}) {
   };
 }
 
+function validateCommunityActivityUnreadInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).length === 0, 'VALIDATION_ERROR', '动态未读参数无效');
+  return {};
+}
+
 function validateCommunityActivityReadInput(input) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
-  invariant(Object.keys(input).every((key) => key === 'activityId'), 'VALIDATION_ERROR', '动态已读参数无效');
-  return { activityId: validateId(input.activityId, '动态ID') };
+  invariant(Object.keys(input).every((key) => ['activityId', 'postId', 'expectedUpdatedAt'].includes(key)), 'VALIDATION_ERROR', '动态已读参数无效');
+  const expectedUpdatedAt = input.expectedUpdatedAt === undefined || input.expectedUpdatedAt === null || input.expectedUpdatedAt === ''
+    ? ''
+    : stringValue(input.expectedUpdatedAt, '动态版本', { required: true, max: 40 });
+  if (expectedUpdatedAt) invariant(Number.isFinite(Date.parse(expectedUpdatedAt)), 'VALIDATION_ERROR', '动态版本无效');
+  return {
+    activityId: validateId(input.activityId, '动态ID'),
+    ...(input.postId ? { postId: validateId(input.postId, '帖子ID') } : {}),
+    ...(expectedUpdatedAt ? { expectedUpdatedAt } : {})
+  };
 }
 
 function validateDirectMessageListInput(input = {}) {
@@ -487,6 +501,7 @@ module.exports = {
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,
   validateCommunityActivityListInput,
+  validateCommunityActivityUnreadInput,
   validateCommunityActivityReadInput,
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,

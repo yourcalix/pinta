@@ -85,10 +85,78 @@ test('动态分页游标与筛选绑定且游客不能读取', async () => {
   assert.equal(guest.error.code, 'UNAUTHENTICATED');
 });
 
+test('近30天未读汇总按全部、回复与点赞返回权威计数', async () => {
+  const { call, store } = setup();
+  await call('community.reply.create', { postId: 'post-1', content: '一起跑步吧' }, 'replyer', 'unread-reply-key');
+  await call('community.like.set', { targetType: 'post', targetId: 'post-1', liked: true }, 'liker', 'unread-like-key');
+  store.communityActivities.set('old-activity', {
+    id: 'old-activity', type: 'POST_REPLIED', recipientId: 'author', postId: 'post-1', status: 'ACTIVE', read: false,
+    createdAt: '2026-07-01T00:00:00.000Z', updatedAt: '2026-07-01T00:00:00.000Z'
+  });
+
+  const unread = await call('community.activity.unread', {}, 'author');
+  assert.equal(unread.ok, true);
+  assert.deepEqual(unread.data, { total: 2, tabs: { ALL: 2, REPLIES: 1, LIKES: 1 } });
+});
+
+test('详情阅读按帖子与活动版本消费，旧版本不能清除随后到达的新赞', async () => {
+  const { call, store } = setup();
+  await call('community.like.set', { targetType: 'post', targetId: 'post-1', liked: true }, 'liker', 'version-like-key');
+  const feed = await call('community.activity.list', { tab: 'LIKES' }, 'author');
+  const item = feed.data.items[0];
+
+  const wrongPost = await call('community.activity.read', {
+    activityId: item.id, postId: 'another-post', expectedUpdatedAt: item.updatedAt
+  }, 'author', 'wrong-post-read-key');
+  assert.equal(wrongPost.error.code, 'NOT_FOUND');
+
+  store.communityActivities.get(item.id).updatedAt = '2026-09-13T09:00:01.000Z';
+  const stale = await call('community.activity.read', {
+    activityId: item.id, postId: 'post-1', expectedUpdatedAt: item.updatedAt
+  }, 'author', 'stale-read-key');
+  assert.equal(stale.data.stale, true);
+  assert.equal(stale.data.read, false);
+  assert.equal((await call('community.activity.unread', {}, 'author')).data.total, 1);
+
+  const consumed = await call('community.activity.read', {
+    activityId: item.id, postId: 'post-1', expectedUpdatedAt: '2026-09-13T09:00:01.000Z'
+  }, 'author', 'current-read-key');
+  assert.equal(consumed.data.stale, false);
+  assert.equal(consumed.data.read, true);
+  assert.equal((await call('community.activity.unread', {}, 'author')).data.total, 0);
+});
+
+test('已读动作每次检查当前业务状态且不能消费失活动态', async () => {
+  const { call, store } = setup();
+  await call('community.like.set', { targetType: 'post', targetId: 'post-1', liked: true }, 'liker', 'inactive-like-key');
+  const item = (await call('community.activity.list', { tab: 'LIKES' }, 'author')).data.items[0];
+  store.communityActivities.get(item.id).status = 'INACTIVE';
+  const result = await call('community.activity.read', {
+    activityId: item.id, postId: 'post-1', expectedUpdatedAt: item.updatedAt
+  }, 'author', 'inactive-read-key');
+  assert.equal(result.error.code, 'NOT_FOUND');
+
+  const serviceSource = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/service.js'), 'utf8');
+  const businessActions = serviceSource.slice(serviceSource.indexOf('const BUSINESS_IDEMPOTENT_ACTIONS'), serviceSource.indexOf('const REMOVED_ACTIONS'));
+  assert.match(businessActions, /community\.activity\.read/);
+});
+
 test('Cloud 动态游标不用 or 查询并保持两条复合索引路径', () => {
   const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/cloud-store.js'), 'utf8');
   const method = source.slice(source.indexOf('async listCommunityActivities'), source.indexOf('async markCommunityActivityRead'));
   assert.doesNotMatch(method, /this\.command\.or/);
   assert.match(method, /updatedAt:\s*this\.command\.lt\(cursor\.updatedAt\)/);
   assert.match(method, /updatedAt:\s*cursor\.updatedAt,\s*_id:\s*this\.command\.lt\(cursor\.id\)/);
+});
+
+test('Cloud 未读汇总使用完整 count 且已读事务比较活动版本', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/cloud-store.js'), 'utf8');
+  const countMethod = source.slice(source.indexOf('async countUnreadCommunityActivities'), source.indexOf('async markCommunityActivityRead'));
+  const readMethod = source.slice(source.indexOf('async markCommunityActivityRead'), source.indexOf('async deleteCommunityPost'));
+  assert.match(countMethod, /\.where\(where\)\.count\(\)/);
+  assert.match(countMethod, /read:\s*false/);
+  assert.match(countMethod, /updatedAt:\s*this\.command\.gte\(cutoff\)/);
+  assert.match(readMethod, /runTransaction/);
+  assert.match(readMethod, /activity\.updatedAt !== options\.expectedUpdatedAt/);
+  assert.match(readMethod, /activity\.postId === options\.postId/);
 });

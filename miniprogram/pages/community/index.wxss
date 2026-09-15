@@ -11,8 +11,9 @@ button::after{display:none}
 .discussion-search-placeholder{color:#9ca3af}
 .discussion-search-clear{flex:0 0 56rpx;min-width:56rpx;min-height:88rpx;color:#8b8d90;background:transparent;border:0;font-size:32rpx}
 .discussion-search-action{display:flex;flex:0 0 88rpx;min-width:88rpx;min-height:88rpx;align-items:center;justify-content:center;color:#8a6500;background:transparent;border:0;font-size:24rpx;font-weight:750;line-height:1}
-.community-notification{display:flex;flex:0 0 88rpx;min-width:88rpx;min-height:88rpx;align-items:center;justify-content:center;background:transparent;border:0;transition:opacity 120ms ease,transform 120ms ease}
+.community-notification{display:flex;position:relative;flex:0 0 88rpx;width:88rpx;height:88rpx;min-width:88rpx;min-height:88rpx;align-items:center;justify-content:center;background:transparent;border:0;transition:opacity 120ms ease,transform 120ms ease}
 .community-notification-image{width:78rpx;height:78rpx}
+.community-notification-badge{display:inline-flex;position:absolute;z-index:2;top:4rpx;right:2rpx;min-width:32rpx;height:32rpx;padding:0 8rpx;align-items:center;justify-content:center;box-sizing:border-box;color:#fff;background:#ff5e50;border:3rpx solid #f9f7f2;border-radius:18rpx;font-size:20rpx;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none}
 .community-control--pressed{opacity:.76;transform:scale(.97)}
 .search-result-bar{display:flex;min-height:64rpx;align-items:center;justify-content:space-between;margin:2rpx 28rpx 0;color:#78716c;font-size:24rpx}
 .search-result-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

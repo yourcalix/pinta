@@ -762,12 +762,25 @@ class MemoryStore {
     return clone({ items, nextCursor: page.length > limit ? encodeCommunityActivityCursor(items[items.length - 1], tab) : null });
   }
 
-  async markCommunityActivityRead(activityId, recipientId, at) {
+  async countUnreadCommunityActivities(recipientId, { cutoff }) {
+    const items = [...this.communityActivities.values()]
+      .filter((item) => item.recipientId === recipientId && item.status === COMMUNITY_ACTIVITY_STATUS.ACTIVE && item.read !== true)
+      .filter((item) => !cutoff || Date.parse(item.updatedAt) >= Date.parse(cutoff));
+    const replies = items.filter((item) => item.type === COMMUNITY_ACTIVITY_TYPES.POST_REPLIED).length;
+    const likes = items.filter((item) => [COMMUNITY_ACTIVITY_TYPES.POST_LIKED, COMMUNITY_ACTIVITY_TYPES.REPLY_LIKED].includes(item.type)).length;
+    return clone({ total: items.length, tabs: { ALL: items.length, REPLIES: replies, LIKES: likes } });
+  }
+
+  async markCommunityActivityRead(activityId, recipientId, at, options = {}) {
     const activity = this.communityActivities.get(activityId);
-    invariant(activity && activity.recipientId === recipientId, 'NOT_FOUND');
+    invariant(activity && activity.recipientId === recipientId && activity.status === COMMUNITY_ACTIVITY_STATUS.ACTIVE, 'NOT_FOUND');
+    if (options.postId) invariant(activity.postId === options.postId, 'NOT_FOUND');
+    if (options.expectedUpdatedAt && activity.updatedAt !== options.expectedUpdatedAt) {
+      return clone({ ...activity, stale: true });
+    }
     activity.read = true;
-    activity.readAt = at;
-    return clone(activity);
+    activity.readAt = activity.readAt || at;
+    return clone({ ...activity, stale: false });
   }
 
   async deleteCommunityPost(postId, authorId, at, audit) {

@@ -37,6 +37,7 @@ const {
   validateCommunityReplyCreateInput,
   validateCommunityLikeInput,
   validateCommunityActivityListInput,
+  validateCommunityActivityUnreadInput,
   validateCommunityActivityReadInput,
   validateDirectMessageListInput,
   validateDirectConversationCreateInput,
@@ -139,6 +140,7 @@ const MUTATING_ACTIONS = new Set([
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
   'community.like.set',
+  'community.activity.read',
   'companion.presence.heartbeat',
   'companion.presence.leave',
   // Membership generation and current activity state must be checked on every
@@ -1207,11 +1209,24 @@ function createPinbaService(options) {
       };
     }
 
+    if (action === 'community.activity.unread') {
+      const user = await requireActiveUser(context, false);
+      validateCommunityActivityUnreadInput(input);
+      const cutoff = new Date(Date.parse(at) - 30 * 24 * 60 * 60 * 1000).toISOString();
+      return store.countUnreadCommunityActivities(user.id, { cutoff });
+    }
+
     if (action === 'community.activity.read') {
       const user = await requireActiveUser(context, false);
-      const { activityId } = validateCommunityActivityReadInput(input);
-      await store.markCommunityActivityRead(activityId, user.id, at);
-      return { activityId, read: true, readAt: at };
+      const payload = validateCommunityActivityReadInput(input);
+      const activity = await store.markCommunityActivityRead(payload.activityId, user.id, at, payload);
+      return {
+        activityId: payload.activityId,
+        read: activity.read === true,
+        readAt: activity.readAt || null,
+        updatedAt: activity.updatedAt,
+        stale: activity.stale === true
+      };
     }
 
     if (action === 'activity.question.list') {

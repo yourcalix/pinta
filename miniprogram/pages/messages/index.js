@@ -68,7 +68,7 @@ async loadPage(append = false, keepContent = false) {
     if (seq !== this._loadSeq) return;
     const [conversationResult, notificationResult, discussionResult] = await Promise.allSettled([
       directMessageService.listConversations(append ? this.data.nextCursor : undefined, PAGE_SIZE), append ? Promise.resolve(null) : userService.notifications(),
-      append ? Promise.resolve(null) : communityService.listActivities({ tab: 'ALL', limit: PAGE_SIZE })]);
+      append ? Promise.resolve(null) : communityService.getActivityUnread()]);
     if (conversationResult.status === 'rejected') throw conversationResult.reason;
     if (seq !== this._loadSeq) return;
 
@@ -87,8 +87,7 @@ async loadPage(append = false, keepContent = false) {
         systemNotification: firstUnreadOrLatest(systemNotifications), systemUnread: systemNotifications.filter((item) => item.read !== true).length });
     }
     if (!append && discussionResult.status === 'fulfilled' && discussionResult.value) {
-      const activities=Array.isArray(discussionResult.value.items) ? discussionResult.value.items : [];
-      nextData.discussionHasUnread = activities.some((item) => item.read !== true); }
+      nextData.discussionHasUnread = Number(discussionResult.value.total) > 0; }
     if (!append) nextData.messageEntries = buildMessageEntries({ ...this.data, ...nextData });
 
     this.setData(nextData);

@@ -9,7 +9,7 @@
 
   <view class="activity-content">
     <view class="activity-tabs" role="tablist" aria-label="讨论动态筛选">
-      <button wx:for="{{tabs}}" wx:key="value" class="activity-tab {{currentTab === item.value ? 'activity-tab--active' : ''}}" data-tab="{{item.value}}" bindtap="handleTab" hover-class="activity-control--pressed" role="tab" aria-selected="{{currentTab === item.value}}">{{item.label}}</button>
+      <button wx:for="{{tabs}}" wx:key="value" class="activity-tab {{currentTab === item.value ? 'activity-tab--active' : ''}}" data-tab="{{item.value}}" bindtap="handleTab" hover-class="activity-control--pressed" role="tab" aria-selected="{{currentTab === item.value}}" aria-label="{{item.accessibilityLabel}}"><text class="activity-tab-label" aria-hidden="true">{{item.label}}</text><text wx:if="{{item.unread > 0}}" class="activity-tab-badge" aria-hidden="true">{{item.unreadLabel}}</text></button>
     </view>
 
     <view wx:if="{{loading}}" class="activity-list activity-skeleton-list" role="status" aria-label="正在加载讨论动态">

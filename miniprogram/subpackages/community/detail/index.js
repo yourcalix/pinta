@@ -80,13 +80,22 @@ Page({
     options = options || {};
     this._disposed = false;
     const postId = String(options.id || '').trim();
+    const activityId = String(options.activityId || '').trim();
+    const activityUpdatedAt = String(options.activityUpdatedAt || '').trim();
+    this._sourceActivity = activityId && Number.isFinite(Date.parse(activityUpdatedAt))
+      ? { id: activityId, updatedAt: activityUpdatedAt, postId, pending: false, done: false }
+      : null;
     this._replyFocus = options.reply === '1' && Boolean(postId);
     const contentTopInset = calculateContentTopInset(typeof wx === 'undefined' ? null : wx);
     this.setData(postId ? { postId, contentTopInset } : { postId: '', contentTopInset, loading: false, error: '讨论参数无效' });
     if (!postId) return;
     return this.loadDetail(false);
   },
-  onShow() { this._disposed = false; this._authorNavPending = false; },
+  onShow() {
+    this._disposed = false;
+    this._authorNavPending = false;
+    if (this.data.post) this.consumeSourceActivity();
+  },
   onHide() { this._disposed = true; },
   onUnload() {
     this._disposed = true;
@@ -115,6 +124,7 @@ Page({
         this._replyFocus = false;
       }
       this.setData(nextData);
+      if (!append) this.consumeSourceActivity();
       if (focus && await this.ensureInteractionAccess() && !this._disposed && seq === this._loadSeq) {
         this._replyAuthorized = true;
         this.setData({ replyInputFocus: true });
@@ -124,6 +134,20 @@ Page({
       if (append) return void this.setData({ loadingMore: false, loadMoreError: '更多回复加载失败，请重试' });
       this._replyFocus = false;
       this.setData({ loading: false, loadingMore: false, post: null, replies: [], replyInputFocus: false, error: error.code === 'NOT_FOUND' ? '该讨论已被作者删除或不存在' : '讨论暂时无法查看，请稍后重试' });
+    }
+  },
+
+  async consumeSourceActivity() {
+    const source = this._sourceActivity;
+    if (!source || source.done || source.pending || this._disposed || !this.data.post || this.data.post.id !== source.postId) return;
+    source.pending = true;
+    try {
+      const result = await communityService.readActivity(source.id, source.updatedAt, source.postId);
+      if (!this._disposed && result && (result.read === true || result.stale === true)) source.done = true;
+    } catch (error) {
+      // Keep the source activity unread; reopening or showing the detail can retry safely.
+    } finally {
+      source.pending = false;
     }
   },
 

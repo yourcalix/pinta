@@ -13,6 +13,24 @@ const TABS = Object.freeze([
 ]);
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
 
+function normalizeUnreadSummary(value) {
+  const tabs = value && value.tabs || {};
+  const readCount = (key) => {
+    const count = Number(key === 'ALL' ? value && value.total : tabs[key]);
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error('Invalid community unread summary');
+    return count;
+  };
+  const all = readCount('ALL');
+  return { ALL: all, REPLIES: readCount('REPLIES'), LIKES: readCount('LIKES') };
+}
+
+function buildTabs(summary = { ALL: 0, REPLIES: 0, LIKES: 0 }) {
+  return TABS.map((tab) => {
+    const unread = Math.max(0, Number(summary[tab.value]) || 0);
+    return { ...tab, unread, unreadLabel: unread > 99 ? '99+' : String(unread || ''), accessibilityLabel: `${tab.label}，${unread ? `${unread}条未读` : '无未读'}` };
+  });
+}
+
 function formatActivityTime(value, now = Date.now()) {
   const timestamp = Date.parse(value);
   if (!Number.isFinite(timestamp)) return '';
@@ -82,7 +100,7 @@ function mergeActivities(current, incoming) {
 Page({
   data: {
     contentTopInset: 88,
-    tabs: TABS,
+    tabs: buildTabs(),
     currentTab: 'ALL',
     items: [],
     nextCursor: '',
@@ -101,15 +119,29 @@ Page({
   },
   onShow() {
     this._navigationPending = false;
+    this.refreshUnreadSummary();
     if (this._skipNextShow) return void (this._skipNextShow = false);
     if (!this._disposed) this.loadActivities(false);
   },
   onUnload() {
     this._disposed = true;
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this._unreadSeq = (this._unreadSeq || 0) + 1;
     if (this._readLocks) this._readLocks.clear();
   },
   onReachBottom() { this.loadActivities(true); },
+
+  async refreshUnreadSummary() {
+    const seq = this._unreadSeq = (this._unreadSeq || 0) + 1;
+    try {
+      await userService.login();
+      const result = await communityService.getActivityUnread();
+      if (this._disposed || seq !== this._unreadSeq) return;
+      this.setData({ tabs: buildTabs(normalizeUnreadSummary(result)) });
+    } catch (error) {
+      // A failed refresh is not evidence that unread activities disappeared.
+    }
+  },
 
   async loadActivities(append = false) {
     if (this._disposed || (append && (!this.data.hasMore || this.data.loadingMore))) return;
@@ -165,27 +197,31 @@ Page({
     const id = String(event.currentTarget.dataset.id || '');
     const item = this.data.items.find((candidate) => candidate.id === id);
     if (!item || this._disposed) return;
-    this._readLocks = this._readLocks || new Set();
-    if (this._readLocks.has(id)) return;
-    this._readLocks.add(id);
-    const wasRead = item.read === true;
-    if (!wasRead) this.setData({ items: this.data.items.map((candidate) => candidate.id === id ? { ...candidate, read: true } : candidate) });
-    try {
-      if (!wasRead) await communityService.readActivity(id);
-      if (this._disposed) return;
-      if (item.removed) return void wx.showToast({ title: '该内容已被删除或下架', icon: 'none' });
-      if (item.postId && !this._navigationPending) {
-        this._navigationPending = true;
-        return void wx.navigateTo({
-          url: `/subpackages/community/detail/index?id=${encodeURIComponent(item.postId)}`,
-          fail: () => { this._navigationPending = false; }
-        });
+    if (item.removed) {
+      wx.showToast({ title: '该内容已被删除或下架', icon: 'none' });
+      if (item.read) return;
+      this._readLocks = this._readLocks || new Set();
+      if (this._readLocks.has(id)) return;
+      this._readLocks.add(id);
+      try {
+        const result = await communityService.readActivity(id, item.updatedAt, item.postId);
+        if (this._disposed || result.stale) return;
+        this.setData({ items: this.data.items.map((candidate) => candidate.id === id ? { ...candidate, read: true } : candidate) });
+        this.refreshUnreadSummary();
+      } catch (error) {
+        // The removed activity remains unread when the acknowledgement fails.
+      } finally {
+        this._readLocks.delete(id);
       }
-    } catch (error) {
-      if (!this._disposed && !wasRead) this.setData({ items: this.data.items.map((candidate) => candidate.id === id ? { ...candidate, read: false } : candidate) });
-      if (!this._disposed && !error.handled) wx.showToast({ title: error.message || '操作失败，请重试', icon: 'none' });
-    } finally {
-      this._readLocks.delete(id);
+      return;
+    }
+    if (item.postId && !this._navigationPending) {
+      this._navigationPending = true;
+      const query = `id=${encodeURIComponent(item.postId)}&activityId=${encodeURIComponent(item.id)}&activityUpdatedAt=${encodeURIComponent(item.updatedAt)}`;
+      wx.navigateTo({
+        url: `/subpackages/community/detail/index?${query}`,
+        fail: () => { this._navigationPending = false; }
+      });
     }
   },
 
@@ -200,4 +236,4 @@ Page({
   }
 });
 
-module.exports = { decorateActivity, formatActivityTime, mergeActivities };
+module.exports = { buildTabs, decorateActivity, formatActivityTime, mergeActivities, normalizeUnreadSummary };

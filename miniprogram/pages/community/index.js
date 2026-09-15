@@ -12,6 +12,8 @@ const { openCommunityAuthor } = require('../../utils/open-community-author');
 const PAGE_SIZE = 12;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
 
+function formatUnreadCount(value){const count=Number(value);if(!Number.isSafeInteger(count)||count<0)throw new Error('Invalid community unread count');return count>99?'99+':String(count||'')}
+
 function decorate(item) {
   const timestamp = Date.parse(item.createdAt);
   const minutes = Number.isFinite(timestamp) ? Math.max(0, Math.floor((Date.now() - timestamp) / 60000)) : 0;
@@ -39,7 +41,10 @@ Page({
     loading: true,
     loadingMore: false,
     loadMoreError: '',
-    error: ''
+    error: '',
+    activityUnreadTotal: 0,
+    activityUnreadLabel: '',
+    activityUnreadAriaLabel: '打开讨论动态'
   },
 
   onLoad() {
@@ -55,6 +60,7 @@ Page({
     this.releaseCompanionNavigation();
     this._activityNavigationPending = false;
     this._authorNavPending = false;
+    this.refreshActivityUnread();
     if (this._skipFirstShow) return void (this._skipFirstShow = false);
     return this.loadPosts(false, true);
   },
@@ -62,16 +68,33 @@ Page({
   onHide() {
     this._disposed = true;
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this._unreadSeq = (this._unreadSeq || 0) + 1;
     this.releaseCompanionNavigation();
   },
 
   onUnload() {
     this._disposed = true;
     this._loadSeq = (this._loadSeq || 0) + 1;
+    this._unreadSeq = (this._unreadSeq || 0) + 1;
     if (this._likeLocks) this._likeLocks.clear();
     if (this._postActionLocks) this._postActionLocks.clear();
     if (this._deletedPostIds) this._deletedPostIds.clear();
     this.releaseCompanionNavigation();
+  },
+
+  async refreshActivityUnread() {
+    const seq=this._unreadSeq=(this._unreadSeq||0)+1;
+    try {
+      await userService.login();
+      const result=await communityService.getActivityUnread();
+      if(this._disposed||seq!==this._unreadSeq)return;
+      const total=Number(result&&result.total),label=formatUnreadCount(total);
+      this.setData({
+        activityUnreadTotal: total,
+        activityUnreadLabel: label,
+        activityUnreadAriaLabel: total > 0 ? `讨论动态，${total}条未读` : '打开讨论动态'
+      });
+    } catch(error){}
   },
 
   async onPullDownRefresh() {
