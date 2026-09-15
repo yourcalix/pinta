@@ -17,10 +17,12 @@ test('详情点赞切换不触发原生禁用态或操作区几何变化', () =>
   assert.match(template, /class="heart-icon"/);
   assert.match(template, /class="reply-heart"/);
   assert.match(template, /class="like-count-value"/);
-  assert.match(style, /\.post-like\s*\{[^}]*flex:\s*0 0 126rpx[^}]*width:\s*126rpx/s);
-  assert.match(style, /\.reply-like\s*\{[^}]*flex:\s*0 0 108rpx[^}]*width:\s*108rpx/s);
-  assert.match(style, /\.heart-icon[^}]*width:\s*44rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
-  assert.match(style, /\.reply-heart[^}]*width:\s*38rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
+  assert.match(style, /\.post-like\s*\{[^}]*flex:\s*0 0 110rpx[^}]*width:\s*110rpx[^}]*gap:\s*6rpx/s);
+  assert.match(style, /\.reply-like\s*\{[^}]*flex:\s*0 0 96rpx[^}]*width:\s*96rpx[^}]*gap:\s*6rpx/s);
+  assert.match(style, /\.heart-icon[^}]*flex:\s*0 0 36rpx[^}]*width:\s*36rpx[^}]*height:\s*36rpx[^}]*font-size:\s*31rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
+  assert.match(style, /\.reply-heart[^}]*flex:\s*0 0 36rpx[^}]*width:\s*36rpx[^}]*height:\s*36rpx[^}]*font-size:\s*31rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
+  assert.doesNotMatch(style.match(/\.heart-icon\s*\{[^}]*\}/s)[0], /font-family/);
+  assert.doesNotMatch(style.match(/\.reply-heart\s*\{[^}]*\}/s)[0], /font-family/);
   assert.match(style, /\.like-count-value[^}]*flex:\s*0 0 44rpx[^}]*width:\s*44rpx[^}]*color:\s*#797774/s);
   assert.match(style, /\.like-button--active \.heart-icon,\s*\.like-button--active \.reply-heart\s*\{[^}]*color:\s*#e2554f[^}]*transform:\s*scale\(1\.1\)/s);
   assert.match(style, /\.like-button--pressed \.heart-icon,\s*\.like-button--pressed \.reply-heart\s*\{[^}]*transform:\s*scale\(\.9\)/s);
