@@ -23,7 +23,15 @@ function layoutSeedForDirectory(userId) {
   return Number.parseInt(tail || '1', 16) >>> 0;
 }
 
-function publicCompanionDirectorySnapshot(page, onlineTotal, actorId, at) {
+function renderKeyForDirectory(userId) {
+  return stableEntityId('companionDirRender', userId);
+}
+
+function companionDirectoryEtag(users, actorId) {
+  return stableEntityId('companionDirEtag', actorId || 'guest', JSON.stringify(users));
+}
+
+function publicCompanionDirectorySnapshot(page, onlineTotal, actorId, at, knownEtag = '') {
   const bucket = directoryTokenBucket(at);
   const users = (page.items || [])
     .filter(isCompanionDirectoryUser)
@@ -32,15 +40,23 @@ function publicCompanionDirectorySnapshot(page, onlineTotal, actorId, at) {
       const displayToken = companionDirectoryDisplayToken(user.id, bucket);
       return {
         displayToken,
+        renderKey: renderKeyForDirectory(user.id),
         nickname: safePresenceNickname(user.profile && user.profile.nickname),
         layoutSeed: layoutSeedForDirectory(user.id),
         viewerIsSelf: Boolean(actorId && user.id === actorId)
       };
     });
-  return {
+  const etag = companionDirectoryEtag(users, actorId);
+  const base = {
+    unchanged: Boolean(knownEtag && knownEtag === etag),
+    etag,
     onlineTotal: Math.max(0, Number(onlineTotal) || 0),
-    users,
     serverNow: at
+  };
+  if (base.unchanged) return base;
+  return {
+    ...base,
+    users
   };
 }
 
@@ -57,6 +73,8 @@ module.exports = {
   directoryTokenBucket,
   companionDirectoryDisplayToken,
   layoutSeedForDirectory,
+  renderKeyForDirectory,
+  companionDirectoryEtag,
   publicCompanionDirectorySnapshot,
   resolveCompanionDirectoryUser
 };

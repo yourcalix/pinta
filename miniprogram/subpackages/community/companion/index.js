@@ -7,6 +7,13 @@ const ephemeralProfileNavigation = require('../../../services/ephemeral-profile-
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { resolveCanvasTap, selectHitNode } = require('./hit-test');
 const {
+  MAX_RENDERED_USERS,
+  DIRECTORY_POLL_BACKOFF_MS,
+  nodeIdentity,
+  mergeSphereNodes,
+  nextDirectoryPollDelay
+} = require('./directory-runtime');
+const {
   GESTURE_MODE,
   beginGesture,
   updateGesture,
@@ -15,46 +22,17 @@ const {
   visualScaleForZoom
 } = require('./gesture');
 
-const MAX_RENDERED_USERS = 50;
 const MAX_VISIBLE_LABELS = 18;
-const SNAPSHOT_INTERVAL_MS = 20_000;
-const DIRECTORY_REFRESH_INTERVAL_MS = 4 * 60_000;
 const REVOLUTION_MS = 48_000;
 const AUTO_SPIN_RADIANS_PER_MS = Math.PI * 2 / REVOLUTION_MS;
 const INERTIA_FRICTION_PER_FRAME = .92;
 const INERTIA_STOP_RADIANS_PER_FRAME = .001;
 const AUTO_RESUME_DELAY_MS = 800;
 const FRAME_MS = 1000 / 60;
-const COLORS = ['#b9f4ef', '#f3d0d1', '#91dfdc', '#d9c7d7', '#c8eee9'];
 
 function confirmedOnlineTotal(value, fallback = 0) {
   const total = Number(value);
   return Number.isFinite(total) && total >= 0 ? Math.floor(total) : Math.max(0, Number(fallback) || 0);
-}
-
-function seededUnit(seed, salt) {
-  let value = (Number(seed) ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0;
-  value ^= value << 13; value ^= value >>> 17; value ^= value << 5;
-  return (value >>> 0) / 4294967296;
-}
-
-function buildSphereNodes(users) {
-  const safeUsers = (users || []).slice(0, MAX_RENDERED_USERS);
-  const total = Math.max(1, safeUsers.length);
-  const golden = Math.PI * (3 - Math.sqrt(5));
-  return safeUsers.map((user, index) => {
-    const y = 1 - 2 * ((index + .5) / total);
-    const radial = Math.sqrt(Math.max(0, 1 - y * y));
-    const theta = index * golden + seededUnit(user.layoutSeed, 1) * Math.PI * 2;
-    return {
-      ...user,
-      x: Math.cos(theta) * radial,
-      y,
-      z: Math.sin(theta) * radial,
-      color: COLORS[(Number(user.layoutSeed) >>> 0) % COLORS.length],
-      labelSide: seededUnit(user.layoutSeed, 2) > .5 ? 1 : -1
-    };
-  });
 }
 
 Page({
@@ -71,7 +49,10 @@ Page({
     this._visible = true;
     this._hasShown = false;
     this._directoryLoadSeq = 0;
-    this._onlineLoadSeq = 0;
+    this._directoryRequestPending = false;
+    this._directoryEtag = '';
+    this._directoryPollStartedAt = Date.now();
+    this._directoryPollFailureCount = 0;
     this._hitNodes = [];
     this._navigating = false;
     this.resetGestureRuntime(true);
@@ -89,8 +70,8 @@ Page({
     if (this._hasShown) {
       appPresence.ready().then(() => {
         if (this._disposed || !this._visible) return;
+        this.resetDirectoryPollStage();
         this.loadDirectory(false);
-        this.loadOnlineTotal();
       });
     }
     this._hasShown = true;
@@ -100,6 +81,9 @@ Page({
 
   onHide() {
     this._visible = false;
+    this._directoryLoadSeq += 1;
+    this._directoryRequestPending = false;
+    this._directoryRefreshQueued = false;
     this.stopRuntime();
     this.resetGestureRuntime(true);
   },
@@ -108,68 +92,99 @@ Page({
     this._disposed = true;
     this._visible = false;
     this._directoryLoadSeq += 1;
-    this._onlineLoadSeq += 1;
+    this._directoryRequestPending = false;
     if (this._navigationTimer) clearTimeout(this._navigationTimer);
     this.stopRuntime();
     this.resetGestureRuntime(true);
   },
 
   async loadDirectory(initial = false) {
+    if (this._disposed || !this._visible) return false;
+    if (this._directoryRequestPending) {
+      this._directoryRefreshQueued = true;
+      return false;
+    }
     const seq = ++this._directoryLoadSeq;
+    this._directoryRequestPending = seq;
+    this._directoryRefreshQueued = false;
     if (initial) this.setData({ status: 'loading' });
+    let succeeded = false;
     try {
-      const snapshot = await directoryService.snapshot();
+      const snapshot = await directoryService.snapshot(this._directoryEtag);
       if (this._disposed || !this._visible || seq !== this._directoryLoadSeq) return;
       this.applyDirectory(snapshot);
+      this._directoryPollFailureCount = 0;
+      succeeded = true;
     } catch (error) {
       if (this._disposed || !this._visible || seq !== this._directoryLoadSeq) return;
+      this._directoryPollFailureCount = Math.min(this._directoryPollFailureCount + 1, DIRECTORY_POLL_BACKOFF_MS.length);
       if (initial || this.data.status !== 'ready') {
         this.setData({ status: 'error', accessibilityLabel: '寻找搭子星球暂时失联，请重新连接' });
       }
+    } finally {
+      if (this._directoryRequestPending === seq) {
+        this._directoryRequestPending = false;
+        if (!this._disposed && this._visible && this._directoryRefreshQueued) {
+          this._directoryRefreshQueued = false;
+          this.loadDirectory(false);
+        } else if (!this._disposed && this._visible) {
+          this.scheduleDirectoryPoll(succeeded);
+        }
+      }
     }
+    return succeeded;
   },
 
   applyDirectory(snapshot) {
+    const onlineTotal = confirmedOnlineTotal(snapshot && snapshot.onlineTotal, this.data.onlineTotal);
+    if (snapshot && typeof snapshot.etag === 'string' && snapshot.etag) this._directoryEtag = snapshot.etag;
+    if (snapshot && snapshot.unchanged === true) {
+      if (onlineTotal === this.data.onlineTotal) return;
+      this.setData({
+        onlineTotal,
+        accessibilityLabel: `搭子星球，当前${onlineTotal}人在线，支持左右滑动旋转与双指缩放浏览`
+      });
+      return;
+    }
     const users = Array.isArray(snapshot && snapshot.users) ? snapshot.users.slice(0, MAX_RENDERED_USERS) : [];
-    const onlineTotal = confirmedOnlineTotal(snapshot && snapshot.onlineTotal);
-    this._nodes = buildSphereNodes(users);
-    this._hitNodes = [];
+    this._nodes = mergeSphereNodes(this._nodes, users, Date.now());
     this.setData({
       status: 'ready',
       onlineTotal,
       users,
       accessibilityLabel: `搭子星球，当前${onlineTotal}人在线，支持左右滑动旋转与双指缩放浏览`
     });
+    if (this._context) this.drawScene(Date.now());
     this.startAnimation();
   },
 
-  async loadOnlineTotal() {
-    const seq = ++this._onlineLoadSeq;
-    try {
-      const snapshot = await directoryService.onlineSnapshot();
-      if (this._disposed || !this._visible || seq !== this._onlineLoadSeq) return;
-      const onlineTotal = confirmedOnlineTotal(snapshot && snapshot.onlineTotal, this.data.onlineTotal);
-      this.setData({
-        onlineTotal,
-        accessibilityLabel: `搭子星球，当前${onlineTotal}人在线，支持左右滑动旋转与双指缩放浏览`
-      });
-    } catch (error) {
-      // Presence polling is best-effort. Keep the last confirmed count instead
-      // of flashing a false zero during a transient network failure.
-    }
+  resetDirectoryPollStage() {
+    this._directoryPollStartedAt = Date.now();
+    this._directoryPollFailureCount = 0;
+  },
+
+  scheduleDirectoryPoll() {
+    if (this._directoryTimer) clearTimeout(this._directoryTimer);
+    this._directoryTimer = null;
+    if (!this._visible || this._disposed) return;
+    const delay = nextDirectoryPollDelay({
+      elapsedMs: Date.now() - Number(this._directoryPollStartedAt || Date.now()),
+      failureCount: this._directoryPollFailureCount
+    });
+    this._directoryTimer = setTimeout(() => {
+      this._directoryTimer = null;
+      this.loadDirectory(false);
+    }, delay);
   },
 
   startSnapshotTimer() {
-    if (this._snapshotTimer || !this._visible) return;
-    this._snapshotTimer = setInterval(() => this.loadOnlineTotal(), SNAPSHOT_INTERVAL_MS);
-    this._directoryTimer = setInterval(() => this.loadDirectory(false), DIRECTORY_REFRESH_INTERVAL_MS);
+    if (!this._visible || this._directoryTimer || this._directoryRequestPending) return;
+    this.scheduleDirectoryPoll();
   },
 
   stopRuntime() {
     this.stopAnimation();
-    if (this._snapshotTimer) clearInterval(this._snapshotTimer);
-    this._snapshotTimer = null;
-    if (this._directoryTimer) clearInterval(this._directoryTimer);
+    if (this._directoryTimer) clearTimeout(this._directoryTimer);
     this._directoryTimer = null;
   },
 
@@ -295,14 +310,15 @@ Page({
 
   drawNode(context, node, timestamp) {
     const size = (2.4 + node.scale * 4.6) * node.visualScale;
-    const alpha = .2 + (node.depth + 1) * .34;
+    const entryProgress = Math.max(0, Math.min(1, (Date.now() - Number(node.enteredAt || 0)) / 300));
+    const alpha = (.2 + (node.depth + 1) * .34) * entryProgress;
     context.save();
     context.globalAlpha = Math.max(.16, Math.min(1, alpha));
     context.shadowColor = node.color;
     context.shadowBlur = node.depth > 0 ? size * 1.7 : 0;
     context.fillStyle = node.color;
     context.beginPath(); context.arc(node.screenX, node.screenY, size, 0, Math.PI * 2); context.fill();
-    if (node.displayToken === this._selectedDisplayToken && Date.now() < Number(this._selectedUntil || 0)) {
+    if (nodeIdentity(node) === this._selectedNodeKey && Date.now() < Number(this._selectedUntil || 0)) {
       context.globalAlpha = .9;
       context.strokeStyle = '#7ff5e5';
       context.lineWidth = 2;
@@ -390,7 +406,7 @@ Page({
     const node = selectHitNode(point, this._hitNodes || []);
     if (!node) return;
     this._navigating = true;
-    this._selectedDisplayToken = node.displayToken;
+    this._selectedNodeKey = nodeIdentity(node);
     this._selectedUntil = Date.now() + 500;
     try {
       const delay = new Promise((resolve) => { this._navigationTimer = setTimeout(resolve, 100); });

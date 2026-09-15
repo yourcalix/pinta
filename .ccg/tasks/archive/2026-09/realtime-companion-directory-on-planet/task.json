@@ -1,0 +1,12 @@
+{
+  "id": "realtime-companion-directory-on-planet",
+  "title": "搭子星球在页面可见时实时加入新登录用户",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交代码",
+  "createdAt": "2026-09-15T00:00:00Z",
+  "branch": "main"
+}

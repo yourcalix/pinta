@@ -40,7 +40,9 @@ test('搭子目录展示所有可公开账号，在线人数只来自Presence', 
   assert.equal(Object.prototype.hasOwnProperty.call(before.data, 'sampleLimit'), false);
   assert.deepEqual(before.data.users.map((item) => item.nickname).sort(), ['小琴', '阿明', '未完成'].sort());
   assert.equal(before.data.users.every((item) => /^companionDirView_[a-f0-9]{56}$/.test(item.displayToken)), true);
-  assert.equal(before.data.users.every((item) => !item.profileNavToken && Number.isInteger(item.layoutSeed)), true);
+  assert.equal(before.data.users.every((item) => !item.profileNavToken
+    && /^companionDirRender_[a-f0-9]{56}$/.test(item.renderKey)
+    && Number.isInteger(item.layoutSeed)), true);
   const serialized = JSON.stringify(before.data);
   for (const forbidden of ['user-a', 'user-b', 'disabled', 'openid', 'birthDate', 'contactInfo', 'avatar']) {
     assert.equal(serialized.includes(forbidden), false);
@@ -130,7 +132,63 @@ test('Cloud目录查询在用户集合按公开资格筛选并静默限制50条'
   assert.match(section, /collection\('users'\)/);
   assert.match(section, /status:\s*'ACTIVE'/);
   assert.doesNotMatch(section, /\.count\(\)/);
+  assert.match(section, /orderBy\('createdAt',\s*'desc'\).*orderBy\('_id',\s*'desc'\)/s);
   assert.match(section, /\.limit\(limit\)/);
+});
+
+test('目录超过50人时优先展示最近加入用户并支持ETag无变化响应', async () => {
+  const users = Array.from({ length: 80 }, (_, index) => ({
+    id: `directory-user-${String(index).padStart(2, '0')}`,
+    role: 'user',
+    status: 'ACTIVE',
+    profile: profile(`搭子${index}`),
+    createdAt: new Date(Date.parse('2026-01-01T00:00:00.000Z') + index * 60_000).toISOString()
+  }));
+  const store = new MemoryStore({ users });
+  let sequence = 0;
+  const service = createPinbaService({
+    store,
+    clock: () => new Date('2026-09-15T08:00:00.000Z'),
+    idGenerator: () => `realtime-directory-${++sequence}`
+  });
+  const call = (action, data = {}, actorId, idempotencyKey) => service.execute({
+    action,
+    data,
+    requestId: `realtime-directory-request-${++sequence}`,
+    ...(idempotencyKey ? { idempotencyKey } : {})
+  }, actorId ? { actorId } : {});
+
+  const first = await call('companion.directory.snapshot', { scene: 'companion_globe' }, 'directory-user-79');
+  assert.equal(first.ok, true);
+  assert.equal(first.data.unchanged, false);
+  assert.match(first.data.etag, /^companionDirEtag_[a-f0-9]{56}$/);
+  assert.equal(first.data.users.length, 50);
+  assert.equal(first.data.users.some((item) => item.nickname === '搭子79'), true);
+  assert.equal(first.data.users.some((item) => item.nickname === '搭子0'), false);
+
+  await call('companion.presence.enter', { scene: 'companion_globe' }, 'directory-user-79', 'directory-realtime-enter');
+  const unchanged = await call('companion.directory.snapshot', {
+    scene: 'companion_globe',
+    etag: first.data.etag
+  }, 'directory-user-79');
+  assert.equal(unchanged.ok, true);
+  assert.equal(unchanged.data.unchanged, true);
+  assert.equal(unchanged.data.etag, first.data.etag);
+  assert.equal(unchanged.data.onlineTotal, 1);
+  assert.equal(Object.prototype.hasOwnProperty.call(unchanged.data, 'users'), false);
+
+  const guest = await call('companion.directory.snapshot', {
+    scene: 'companion_globe',
+    etag: first.data.etag
+  });
+  assert.equal(guest.data.unchanged, false);
+  assert.notEqual(guest.data.etag, first.data.etag);
+  assert.equal(Array.isArray(guest.data.users), true);
+
+  const invalid = await call('companion.directory.snapshot', {
+    scene: 'companion_globe', etag: 'invalid-version'
+  }, 'directory-user-79');
+  assert.equal(invalid.error.code, 'VALIDATION_ERROR');
 });
 
 test('Mock目录与真实服务保持目录、在线人数和离线主页语义一致', async (t) => {
@@ -142,6 +200,15 @@ test('Mock目录与真实服务保持目录、在线人数和离线主页语义�
   });
   assert.equal(snapshot.ok, true);
   assert.equal(snapshot.data.onlineTotal, 0);
+  assert.equal(snapshot.data.unchanged, false);
+  assert.match(snapshot.data.serverNow, /^\d{4}-\d{2}-\d{2}T/);
+  assert.match(snapshot.data.etag, /^companionDirEtag_[a-f0-9]{56}$/);
+  const unchanged = await mockServer.call({
+    action: 'companion.directory.snapshot', requestId: 'mock-directory-unchanged',
+    data: { scene: 'companion_globe', etag: snapshot.data.etag }
+  });
+  assert.equal(unchanged.data.unchanged, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(unchanged.data, 'users'), false);
   const target = snapshot.data.users.find((item) => !item.viewerIsSelf);
   const issued = await mockServer.call({
     action: 'companion.directory.profile.nav.create', requestId: 'mock-directory-nav', idempotencyKey: 'mock-directory-nav-key',

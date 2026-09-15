@@ -1589,7 +1589,7 @@ class MemoryStore {
   async snapshotCompanionDirectory(limit) {
     const items = [...this.users.values()]
       .filter((user) => user.status === 'ACTIVE')
-      .sort((left, right) => String(left.createdAt || '').localeCompare(String(right.createdAt || '')) || String(left.id).localeCompare(String(right.id)));
+      .sort((left, right) => String(right.createdAt || '').localeCompare(String(left.createdAt || '')) || String(right.id).localeCompare(String(left.id)));
     return { items: clone(items.slice(0, limit)) };
   }
 

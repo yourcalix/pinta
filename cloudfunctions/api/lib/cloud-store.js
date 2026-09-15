@@ -2380,7 +2380,7 @@ class CloudStore {
       status: 'ACTIVE'
     };
     const sampleResult = await this.db.collection('users').where(where)
-      .orderBy('createdAt', 'asc').orderBy('_id', 'asc').limit(limit).get();
+      .orderBy('createdAt', 'desc').orderBy('_id', 'desc').limit(limit).get();
     const items = (sampleResult.data || []).map(entity);
     return { items };
   }

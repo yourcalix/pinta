@@ -205,7 +205,6 @@ const candidate = avatar && avatar.status === 'ACTIVE' && typeof avatar.fileID =
 : '';
 return publicAvatarSlotFromFacts({
 gender: profile && profile.gender,
-// Mock-only local paths stand in for a cloud-resolved display URL.
 avatarSrc: isMockDisplayAvatarPath(candidate)
 && !/avatar-passenger-(?:a|b)|passenger_(?:a|b)/i.test(candidate)
 ? candidate
@@ -293,22 +292,22 @@ return `companionDirView_${mockOpaque56(id, bucket)}`;
 function mockDirectorySnapshot(at) {
 const u = state.users
 .filter((item) => item.status === 'ACTIVE')
-.sort((left, right) => String(left.createdAt || '').localeCompare(String(right.createdAt || '')) || String(left.id).localeCompare(String(right.id)));
+.sort((left, right) => String(right.createdAt || '').localeCompare(String(left.createdAt || '')) || String(right.id).localeCompare(String(left.id)));
 const b = Math.floor(Date.parse(at) / DIR_BUCKET_MS);
 const onlineTotal = state.companionPresences.filter((item) => item.scene === COMPANION_PRESENCE_SCENE
 && item.status === 'ACTIVE' && Date.parse(item.expiresAt) > Date.parse(at)).length;
-return {
-onlineTotal,
-users: u.slice(0, COMPANION_SAMPLE_LIMIT).map((item) => {
+const users = u.slice(0, COMPANION_SAMPLE_LIMIT).map((item) => {
 const displayToken = mockDirectoryToken(item.id, b);
 return {
 displayToken,
+renderKey:`companionDirRender_${mockOpaque56('dirRender',item.id)}`,
 nickname: Array.from(String((item.profile || {}).nickname || '').trim() || '匿名搭子').slice(0, 12).join(''),
 layoutSeed: Number.parseInt(mockOpaque56('companionDirLayout', item.id).slice(-8), 16) >>> 0,
 viewerIsSelf: item.id === currentUserId
 };
-})
-};
+});
+const etag=`companionDirEtag_${mockOpaque56(currentUserId||'guest',JSON.stringify(users))}`;
+return {unchanged:false,etag,onlineTotal,serverNow:at,users};
 }
 function resolveMockDirectoryUser(token, at) {
 const b = Math.floor(Date.parse(at) / DIR_BUCKET_MS);
@@ -581,9 +580,7 @@ return null;
 function writeStorage(key, value) {
 try {
 if (typeof wx !== 'undefined') wx.setStorageSync(key, value);
-} catch (error) {
-// Demo storage failure should not break the in-memory session.
-}
+} catch (error) {}
 }
 let state = readStorage(STATE_KEY) || seedState();
 if (!state || state.schemaVersion !== 11) state = seedState();
@@ -934,7 +931,6 @@ const fulfillment = (state.rideFulfillments || []).find((item) => item.activityI
 if (!fulfillment || fulfillment.status !== 'UNASSIGNED') return false;
 return Date.parse(activity.typeData && activity.typeData.pickupWindowEnd) > Date.parse(at);
 }
-// Authenticated self-profile DTO. Public activity responses never use this helper.
 function selfUser(user) {
 return user ? {
 role: user.role,
@@ -1010,7 +1006,6 @@ updatedAt: question.updatedAt
 });
 }
 function publicActivity(activity, options = {}) {
-// Normalize legacy capacity even for callers that bypass the public list/detail readers.
 activity = normalizeActivityForRead(activity);
 const anonymous = options && options.anonymous === true;
 const publicAt = options && options.at || new Date();
@@ -1929,8 +1924,12 @@ validateCompanionScene(input);
 return publicMockPresenceSnapshot(new Date().toISOString());
 }
 if (action === 'companion.directory.snapshot') {
-validateCompanionScene(input);
-return mockDirectorySnapshot(new Date().toISOString());
+assert(input&&Object.keys(input).every(key=>key==='scene'||key==='etag')
+&& input.scene === COMPANION_PRESENCE_SCENE
+&& (!input.etag || /^companionDirEtag_[a-f0-9]{56}$/.test(input.etag)), 'VALIDATION_ERROR');
+const snapshot=mockDirectorySnapshot(new Date().toISOString());
+if(input.etag===snapshot.etag){snapshot.unchanged=true;delete snapshot.users;}
+return snapshot;
 }
 if (action === 'companion.directory.profile.nav.create') {
 const viewer = requireActiveUser();

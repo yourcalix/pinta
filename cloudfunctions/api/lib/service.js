@@ -30,6 +30,7 @@ const {
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCompanionPresenceInput,
+  validateCompanionDirectorySnapshotInput,
   validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
   validateCommunityProfileNavCreateInput,
@@ -547,12 +548,12 @@ function createPinbaService(options) {
     return publicCompanionSnapshot(page, actorId, at);
   }
 
-  async function companionDirectorySnapshot(actorId, at) {
+  async function companionDirectorySnapshot(actorId, at, knownEtag = '') {
     const [page, presence] = await Promise.all([
       store.snapshotCompanionDirectory(COMPANION_DIRECTORY_SAMPLE_LIMIT),
       store.snapshotCompanionPresence('companion_globe', at, 1)
     ]);
-    return publicCompanionDirectorySnapshot(page, presence.total, actorId, at);
+    return publicCompanionDirectorySnapshot(page, presence.total, actorId, at, knownEtag);
   }
 
   async function communityAuthorProfiles(items) {
@@ -911,9 +912,9 @@ function createPinbaService(options) {
     }
 
     if (action === 'companion.directory.snapshot') {
-      const { scene } = validateCompanionPresenceInput(input);
+      const { scene, etag } = validateCompanionDirectorySnapshotInput(input);
       invariant(scene === 'companion_globe', 'VALIDATION_ERROR');
-      return companionDirectorySnapshot(context && context.actorId, at);
+      return companionDirectorySnapshot(context && context.actorId, at, etag);
     }
 
     if (action === 'companion.directory.profile.nav.create') {

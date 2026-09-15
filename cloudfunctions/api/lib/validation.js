@@ -328,6 +328,18 @@ function validateCompanionPresenceInput(input = {}, options = {}) {
   return { scene, sessionToken };
 }
 
+function validateCompanionDirectorySnapshotInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['scene', 'etag'].includes(key)), 'VALIDATION_ERROR', '搭子目录参数无效');
+  const scene = stringValue(input.scene, '在线场景', { required: true, max: 40 });
+  invariant(scene === COMPANION_PRESENCE_SCENE, 'VALIDATION_ERROR', '在线场景无效');
+  const etag = input.etag === undefined || input.etag === null || input.etag === ''
+    ? ''
+    : stringValue(input.etag, '搭子目录版本', { required: true, min: 73, max: 73 });
+  if (etag) invariant(/^companionDirEtag_[a-f0-9]{56}$/.test(etag), 'VALIDATION_ERROR', '搭子目录版本无效');
+  return { scene, etag };
+}
+
 function validateCompanionDirectoryNavInput(input = {}) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   invariant(Object.keys(input).every((key) => ['scene', 'displayToken'].includes(key)), 'VALIDATION_ERROR', '搭子主页参数无效');
@@ -494,6 +506,7 @@ module.exports = {
   validateActivityQuestionAnswerInput,
   validateCommunityListInput,
   validateCompanionPresenceInput,
+  validateCompanionDirectorySnapshotInput,
   validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
   validateCommunityProfileNavCreateInput,
