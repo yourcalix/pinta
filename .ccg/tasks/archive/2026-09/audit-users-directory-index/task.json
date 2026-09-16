@@ -1,0 +1,12 @@
+{
+  "id": "audit-users-directory-index",
+  "title": "核对搭子星球 users 目录索引",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档并交付索引操作建议",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}
