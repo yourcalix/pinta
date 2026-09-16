@@ -1,0 +1,12 @@
+{
+  "id": "explain-realtime-planet-deployment",
+  "title": "整理搭子星球实时目录部署与验收步骤",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档说明任务",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}
