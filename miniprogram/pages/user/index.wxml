@@ -43,6 +43,12 @@
           <text class="profile-intro-mark" aria-hidden="true">“</text><text class="profile-intro-text">{{profileIntro}}</text><text class="profile-intro-pencil" aria-hidden="true">✎</text>
         </button>
 
+        <view class="profile-social-overview" role="group" aria-label="我的关注与粉丝，{{user.followingCount || 0}}个关注，{{user.followerCount || 0}}个粉丝">
+          <view class="profile-social-overview-item" aria-hidden="true"><text class="profile-social-overview-value">{{user.followingCount > 999 ? '999+' : (user.followingCount || 0)}}</text><text class="profile-social-overview-label">关注</text></view>
+          <view class="profile-social-overview-divider" aria-hidden="true"></view>
+          <view class="profile-social-overview-item" aria-hidden="true"><text class="profile-social-overview-value">{{user.followerCount > 999 ? '999+' : (user.followerCount || 0)}}</text><text class="profile-social-overview-label">粉丝</text></view>
+        </view>
+
         <view class="profile-metrics" role="group" aria-label="我的活动概览">
           <button class="metric-item" data-value="owned" bindtap="handleMetricTap" hover-class="metric-item--pressed" hover-stay-time="80" aria-label="我发起的活动，{{owned.length}}场，点击切换列表"><text class="metric-value">{{owned.length}}</text><text class="metric-label">我发起的</text></button>
           <view class="metric-divider" aria-hidden="true"></view>

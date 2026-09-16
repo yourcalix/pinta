@@ -9,6 +9,7 @@ const MUTATING_ACTIONS = new Set([
   'profile.avatar.prepare',
   'profile.avatar.confirm',
   'profile.avatar.clear',
+  'profile.follow.set',
   'activity.create',
   'activity.cancel',
   'activity.complete',

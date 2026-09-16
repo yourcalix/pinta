@@ -1,0 +1,12 @@
+{
+  "id": "add-profile-followers",
+  "title": "新增关注与粉丝功能并接入个人主页",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}

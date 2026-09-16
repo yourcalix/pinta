@@ -23,6 +23,12 @@
           <view wx:else class="public-community-avatar public-community-avatar--initial" aria-hidden="true">{{profile.avatarInitial}}</view>
         </view>
         <text class="public-community-name">{{profile.nickname}}</text>
+        <view class="public-community-social-stats" role="group" aria-label="{{profile.followingCount}}个关注，{{profile.followerCount}}个粉丝">
+          <view class="public-community-social-item" aria-hidden="true"><text class="public-community-social-value">{{profile.followingCountLabel}}</text><text class="public-community-social-label">关注</text></view>
+          <view class="public-community-social-divider" aria-hidden="true"></view>
+          <view class="public-community-social-item" aria-hidden="true"><text class="public-community-social-value">{{profile.followerCountLabel}}</text><text class="public-community-social-label">粉丝</text></view>
+        </view>
+        <button wx:if="{{!profile.viewerIsSelf}}" class="public-follow-button public-follow-button--community {{profile.viewerFollowing ? 'public-follow-button--following' : ''}}" bindtap="handleToggleFollow" hover-class="public-follow-button--pressed" hover-stay-time="70" aria-label="{{profile.viewerFollowing ? '已关注，双击取消关注' : '未关注，双击关注'}}"><text class="public-follow-button-surface">{{profile.viewerFollowing ? '已关注' : '关注'}}</text></button>
         <block wx:if="{{profile.facts.length}}">
           <view class="public-community-section-label" aria-hidden="true"><view class="public-community-section-line"></view><text>公开资料</text><view class="public-community-section-line"></view></view>
           <view class="public-community-facts" aria-label="公开资料，{{profile.factsLabel}}">
@@ -55,6 +61,12 @@
         </view>
         <view class="public-name-row"><text class="public-name">{{profile.nickname}}</text><text wx:if="{{profile.viewerIsSelf}}" class="public-self">这是你</text></view>
         <view wx:if="{{profile.online}}" class="public-online"><text class="public-online-dot" aria-hidden="true"></text><text>正在找搭子 · 刚刚在线</text></view>
+        <view class="public-social-stats" role="group" aria-label="{{profile.followingCount}}个关注，{{profile.followerCount}}个粉丝">
+          <view class="public-social-item" aria-hidden="true"><text class="public-social-value">{{profile.followingCountLabel}}</text><text class="public-social-label">关注</text></view>
+          <view class="public-social-divider" aria-hidden="true"></view>
+          <view class="public-social-item" aria-hidden="true"><text class="public-social-value">{{profile.followerCountLabel}}</text><text class="public-social-label">粉丝</text></view>
+        </view>
+        <button wx:if="{{!profile.viewerIsSelf}}" class="public-follow-button public-follow-button--dark {{profile.viewerFollowing ? 'public-follow-button--following' : ''}}" bindtap="handleToggleFollow" hover-class="public-follow-button--pressed" hover-stay-time="70" aria-label="{{profile.viewerFollowing ? '已关注，双击取消关注' : '未关注，双击关注'}}"><text class="public-follow-button-surface">{{profile.viewerFollowing ? '已关注' : '关注'}}</text></button>
       </view>
 
       <view class="public-sheet">

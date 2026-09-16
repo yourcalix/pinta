@@ -2435,6 +2435,47 @@ class CloudStore {
     return this.getDocument('publicProfileNavTickets', ticketId);
   }
 
+  async getProfileFollowState(followerId, targetUserId) {
+    const item = await this.getDocument('profileFollows', stableEntityId('profileFollow', followerId, targetUserId));
+    return Boolean(item && item.status === 'ACTIVE');
+  }
+
+  async setProfileFollowAtomic({ followerId, targetUserId, following, at, audit }) {
+    invariant(followerId !== targetUserId, 'FORBIDDEN', '不能关注自己');
+    return this.db.runTransaction(async (transaction) => {
+      const followerReference = transaction.collection('users').doc(followerId);
+      const targetReference = transaction.collection('users').doc(targetUserId);
+      const [follower, target] = await Promise.all([
+        getTransactionDocument(followerReference),
+        getTransactionDocument(targetReference)
+      ]);
+      invariant(follower && follower.status === 'ACTIVE', 'ACCOUNT_DISABLED');
+      invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+      const id = stableEntityId('profileFollow', followerId, targetUserId);
+      const followReference = transaction.collection('profileFollows').doc(id);
+      const existing = await getTransactionDocument(followReference);
+      const wasFollowing = Boolean(existing && existing.status === 'ACTIVE');
+      const changed = wasFollowing !== following;
+      const followingCount = Math.max(0, Number(follower.followingCount || 0) + (changed ? following ? 1 : -1 : 0));
+      const followerCount = Math.max(0, Number(target.followerCount || 0) + (changed ? following ? 1 : -1 : 0));
+      await followReference.set({ data: document({
+        id,
+        followerId,
+        targetUserId,
+        status: following ? 'ACTIVE' : 'DELETED',
+        createdAt: existing && existing.createdAt || at,
+        updatedAt: at,
+        deletedAt: following ? null : at
+      }) });
+      if (changed) {
+        await followerReference.update({ data: { followingCount, updatedAt: at } });
+        await targetReference.update({ data: { followerCount, updatedAt: at } });
+      }
+      if (audit) await transaction.collection('auditLogs').doc(audit.id).set({ data: document(audit) });
+      return { following, followerCount, followingCount };
+    });
+  }
+
   async listNotifications(userId) {
     const result = await this.db.collection('notifications').where({ userId }).orderBy('createdAt', 'desc').limit(100).get();
     return (result.data || []).map(entity);

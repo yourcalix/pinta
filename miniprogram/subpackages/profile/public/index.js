@@ -7,6 +7,11 @@ const { avatarKindFromGender, normalizeAvatarSlots, fallbackAvatarSlot } = requi
 
 const INTEREST_TONES = Object.freeze(['amber', 'peach', 'mint', 'rose', 'amber', 'mint', 'peach', 'rose']);
 
+function compactCount(value) {
+  const count = Math.max(0, Math.floor(Number(value) || 0));
+  return count > 999 ? '999+' : String(count);
+}
+
 function publicView(profile, communitySource) {
   const gender = profile && profile.gender;
   const age = Number(profile && profile.age);
@@ -22,6 +27,8 @@ function publicView(profile, communitySource) {
     ? profile.interests.slice(0, 8).map((label, index) => ({ label, tone: INTEREST_TONES[index] }))
     : [];
   const nickname = String(profile && profile.nickname || '拼吧用户').trim() || '拼吧用户';
+  const followingCount = Math.max(0, Number(profile && profile.followingCount) || 0);
+  const followerCount = Math.max(0, Number(profile && profile.followerCount) || 0);
   return {
     ...profile,
     nickname,
@@ -31,7 +38,12 @@ function publicView(profile, communitySource) {
     factsLabel: facts.map((item) => item.label).join('，'),
     interests,
     interestsLabel: interests.map((item) => item.label).join('，'),
-    accessibilityLabel: `${nickname}的公开主页${!communitySource && profile.online ? '，正在找搭子' : ''}${facts.length ? `，${facts.map((item) => item.label).join('，')}` : ''}`
+    followingCount,
+    followerCount,
+    followingCountLabel: compactCount(followingCount),
+    followerCountLabel: compactCount(followerCount),
+    viewerFollowing: profile && profile.viewerFollowing === true,
+    accessibilityLabel: `${nickname}的公开主页，${followingCount}个关注，${followerCount}个粉丝${!communitySource && profile.online ? '，正在找搭子' : ''}${facts.length ? `，${facts.map((item) => item.label).join('，')}` : ''}`
   };
 }
 
@@ -49,6 +61,7 @@ Page({
   onLoad(options = {}) {
     this._disposed = false;
     this._loadSeq = 0;
+    this._followPending = false;
     this.setData({ contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx) });
     if (typeof wx !== 'undefined' && typeof wx.hideShareMenu === 'function') wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] });
     let navigationKey = '';
@@ -70,6 +83,7 @@ Page({
   onUnload() {
     this._disposed = true;
     this._loadSeq += 1;
+    this._followPending = false;
     this._profileNavToken = '';
   },
 
@@ -114,6 +128,44 @@ Page({
       ? fallback
       : { ...current, kind: 'EMPTY', src: '', custom: false, failed: true, empty: true };
     this.setData({ 'profile.avatarSlot': next });
+  },
+
+  async handleToggleFollow() {
+    const profile = this.data.profile;
+    if (this._followPending || !this._profileNavToken || !profile || profile.viewerIsSelf) return;
+    const previousFollowing = profile.viewerFollowing === true;
+    const previousFollowerCount = Math.max(0, Number(profile.followerCount) || 0);
+    const following = !previousFollowing;
+    const optimisticFollowerCount = Math.max(0, previousFollowerCount + (following ? 1 : -1));
+    this._followPending = true;
+    this.setData({
+      'profile.viewerFollowing': following,
+      'profile.followerCount': optimisticFollowerCount,
+      'profile.followerCountLabel': compactCount(optimisticFollowerCount)
+    });
+    try {
+      const result = await publicProfileService.setFollow(this._profileNavToken, following);
+      if (this._disposed) return;
+      const followerCount = Math.max(0, Number(result.followerCount) || 0);
+      this.setData({
+        'profile.viewerFollowing': result.following === true,
+        'profile.followerCount': followerCount,
+        'profile.followerCountLabel': compactCount(followerCount)
+      });
+    } catch (error) {
+      if (this._disposed) return;
+      this.setData({
+        'profile.viewerFollowing': previousFollowing,
+        'profile.followerCount': previousFollowerCount,
+        'profile.followerCountLabel': compactCount(previousFollowerCount)
+      });
+      if (!error || !error.handled) wx.showToast({
+        title: error && error.code === 'NOT_FOUND' ? '主页访问已失效，请重新打开' : '操作失败，请稍后重试',
+        icon: 'none'
+      });
+    } finally {
+      this._followPending = false;
+    }
   },
 
   handleBack() {

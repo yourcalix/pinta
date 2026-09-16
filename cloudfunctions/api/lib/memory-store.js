@@ -106,6 +106,7 @@ class MemoryStore {
     this.communityActivities = new Map((seed.communityActivities || []).map((item) => [item.id, clone(item)]));
     this.companionPresences = new Map((seed.companionPresences || []).map((item) => [item.id, clone(item)]));
     this.publicProfileNavTickets = new Map((seed.publicProfileNavTickets || []).map((item) => [item.id, clone(item)]));
+    this.profileFollows = new Map((seed.profileFollows || []).map((item) => [item.id, clone(item)]));
     this.directConversations = new Map((seed.directConversations || []).map((item) => [item.id, clone(item)]));
     this.directMessages = new Map((seed.directMessages || []).map((item) => [item.id, clone(item)]));
     this.groupMessages = new Map((seed.groupMessages || []).map((item) => [item.id, clone(item)]));
@@ -1633,6 +1634,42 @@ class MemoryStore {
 
   async getPublicProfileNavTicket(ticketId) {
     return clone(this.publicProfileNavTickets.get(ticketId) || null);
+  }
+
+  async getProfileFollowState(followerId, targetUserId) {
+    const item = this.profileFollows.get(stableEntityId('profileFollow', followerId, targetUserId));
+    return Boolean(item && item.status === 'ACTIVE');
+  }
+
+  async setProfileFollowAtomic({ followerId, targetUserId, following, at, audit }) {
+    invariant(followerId !== targetUserId, 'FORBIDDEN', '不能关注自己');
+    const follower = this.users.get(followerId);
+    const target = this.users.get(targetUserId);
+    invariant(follower && follower.status === 'ACTIVE', 'ACCOUNT_DISABLED');
+    invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+    const id = stableEntityId('profileFollow', followerId, targetUserId);
+    const existing = this.profileFollows.get(id);
+    const wasFollowing = Boolean(existing && existing.status === 'ACTIVE');
+    const changed = wasFollowing !== following;
+    const followingCount = Math.max(0, Number(follower.followingCount || 0) + (changed ? following ? 1 : -1 : 0));
+    const followerCount = Math.max(0, Number(target.followerCount || 0) + (changed ? following ? 1 : -1 : 0));
+    this.profileFollows.set(id, {
+      id,
+      followerId,
+      targetUserId,
+      status: following ? 'ACTIVE' : 'DELETED',
+      createdAt: existing && existing.createdAt || at,
+      updatedAt: at,
+      deletedAt: following ? null : at
+    });
+    if (changed) {
+      follower.followingCount = followingCount;
+      follower.updatedAt = at;
+      target.followerCount = followerCount;
+      target.updatedAt = at;
+    }
+    if (audit) this.auditLogs.set(audit.id, clone(audit));
+    return { following, followerCount, followingCount };
   }
 
   async listNotifications(userId) {

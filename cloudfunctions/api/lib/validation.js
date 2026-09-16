@@ -358,6 +358,13 @@ function validatePublicProfileGetInput(input) {
   return { profileNavToken };
 }
 
+function validateProfileFollowSetInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['profileNavToken', 'following'].includes(key)), 'VALIDATION_ERROR', '关注参数无效');
+  invariant(typeof input.following === 'boolean', 'VALIDATION_ERROR', '关注状态无效');
+  return { ...validatePublicProfileGetInput({ profileNavToken: input.profileNavToken }), following: input.following };
+}
+
 function validateCommunityProfileNavCreateInput(input) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   invariant(Object.keys(input).every((key) => ['sourceType', 'sourceId'].includes(key)), 'VALIDATION_ERROR', '作者主页参数无效');
@@ -509,6 +516,7 @@ module.exports = {
   validateCompanionDirectorySnapshotInput,
   validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
+  validateProfileFollowSetInput,
   validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,

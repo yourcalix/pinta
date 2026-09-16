@@ -68,5 +68,7 @@ test('星球节点可点击且公开主页保持短期只读与完整失效态',
   assert.match(pageScript, /ephemeralProfileNavigation\.consume/);
   assert.match(pageTemplate, /主页访问已失效/);
   assert.match(pageTemplate, /仅展示搭子主动公开的资料/);
-  assert.doesNotMatch(pageTemplate, />关注<|>粉丝<|bindtap="[^"]*(?:Message|Contact|Follow)/);
+  assert.match(pageTemplate, />关注<|>粉丝</);
+  assert.match(pageTemplate, /bindtap="handleToggleFollow"/);
+  assert.doesNotMatch(pageTemplate, /bindtap="[^"]*(?:Message|Contact)/);
 });

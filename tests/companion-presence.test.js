@@ -82,7 +82,10 @@ test('短期星球凭据只在目标在线会话内解析公开资料', async ()
     city: '澳门',
     interests: ['运动'],
     online: true,
-    viewerIsSelf: false
+    viewerIsSelf: false,
+    followingCount: 0,
+    followerCount: 0,
+    viewerFollowing: false
   });
   const serialized = JSON.stringify(publicResult.data);
   for (const forbidden of ['user-b', 'openid', 'birthDate', 'contactInfo', 'sessionNonce', 'sessionToken', 'fileID']) {
@@ -215,7 +218,7 @@ test('公开球面样本不可分页且最多返回50个真实在线节点', asy
 
 test('Cloud presence 查询使用 scene 与 expiresAt 且不读取用户全表', () => {
   const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/cloud-store.js'), 'utf8');
-  const section = source.slice(source.indexOf('async enterCompanionPresence'), source.indexOf('async listNotifications'));
+  const section = source.slice(source.indexOf('async enterCompanionPresence'), source.indexOf('async getProfileFollowState'));
   assert.match(section, /collection\('companionPresences'\)/);
   assert.match(section, /scene/);
   assert.match(section, /expiresAt:\s*this\.command\.gt\(at\)/);

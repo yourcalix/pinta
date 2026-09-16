@@ -111,6 +111,7 @@ button::after { display: none; }
 .profile-action-row,
 .profile-avatar-shell,
 .profile-intro,
+.profile-social-overview,
 .profile-metrics,
 .quick-task-strip {
   pointer-events: auto;
@@ -284,6 +285,33 @@ button::after { display: none; }
 }
 
 .profile-intro-pencil { flex: 0 0 auto; font-size: 28rpx; }
+
+.profile-social-overview {
+  display: flex; width: 100%; min-height: 86rpx; align-items: center;
+  justify-content: center; margin-top: 12rpx;
+  background: rgba(255, 255, 255, 0.11);
+  border: 1rpx solid rgba(255, 255, 255, 0.18);
+  border-radius: 22rpx; box-sizing: border-box;
+}
+
+.profile-social-overview-item {
+  display: flex; min-width: 0; flex: 1; align-items: center;
+  justify-content: center; gap: 9rpx; white-space: nowrap;
+}
+
+.profile-social-overview-value {
+  min-width: 62rpx; color: #fff; font-size: 30rpx; font-weight: 820;
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+
+.profile-social-overview-label {
+  color: rgba(255, 255, 255, 0.72); font-size: 22rpx;
+}
+
+.profile-social-overview-divider {
+  width: 1rpx; height: 34rpx; flex: 0 0 1rpx;
+  background: rgba(255, 255, 255, 0.2);
+}
 
 .profile-metrics {
   display: flex;
@@ -806,6 +834,9 @@ button::after { display: none; }
   .profile-name { max-width: 250rpx; font-size: 32rpx; }
   .profile-verification { font-size: 18rpx; }
   .profile-intro { min-height: 66rpx; margin-top: 15rpx; font-size: 22rpx; }
+  .profile-social-overview { min-height: 78rpx; }
+  .profile-social-overview-value { min-width: 54rpx; font-size: 27rpx; }
+  .profile-social-overview-label { font-size: 20rpx; }
   .profile-metrics { min-height: 98rpx; }
   .metric-value { font-size: 32rpx; }
   .metric-label { font-size: 20rpx; }

@@ -62,7 +62,7 @@ npm run verify
 
 1. 使用被 Git 忽略的 `project.private.config.json` 配置真实小程序 AppID，公共 `project.config.json` 继续保留 `touristappid`。
 2. 在微信开发者工具中开通云开发环境。G1 联调时再通过不进入版本控制的本地配置或已选默认环境指定环境 ID；当前仓库中的 `cloudEnv` 保持空值。
-3. 创建集合：`users`、`activities`、`applications`、`members`、`memberContacts`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`、`profileAvatarUploads`、`communityPosts`、`communityReplies`、`communityLikes`、`communityActivities`、`communityRateLimits`、`companionPresences`、`publicProfileNavTickets`、`directConversations`、`directMessages`。
+3. 创建集合：`users`、`activities`、`applications`、`members`、`memberContacts`、`notifications`、`reports`、`auditLogs`、`idempotency`、`activityQuestions`、`rideFulfillments`、`drivers`、`vehicles`、`driverApplications`、`driverSecrets`、`driverDocumentUploads`、`profileAvatarUploads`、`communityPosts`、`communityReplies`、`communityLikes`、`communityActivities`、`communityRateLimits`、`companionPresences`、`publicProfileNavTickets`、`profileFollows`、`directConversations`、`directMessages`。
    当前 MVP 使用确定性文档 ID 保障并发和幂等，正式环境应使用新建空库初始化，不要与采用随机成员/申请 ID 的旧版数据混用。
 4. 将数据库集合权限设为“所有用户不可直接读写”，业务数据只允许通过 `cloudfunctions/api` 云函数访问。`driverSecrets`、`driverApplications`、`driverDocumentUploads`、`drivers` 和 `vehicles` 不得开放客户端直读。
 5. 将 `private-driver/**`、`private-driver-sealed/**`、`private-profile-avatar-temp/**` 与 `private-profile-avatar/**` 配置为私有云存储路径：客户端仅可向后端签发的临时 staging 路径上传；司机资料单文件上限 5MB，头像单文件上限 1MB。禁止列目录、覆盖最终私有路径或直接下载。服务端确认 JPEG/PNG 内容与安全审核结果后迁移到随机最终路径并删除 staging 文件。
@@ -110,6 +110,7 @@ npm run verify
 - `communityReplies`：`postId + status + createdAt(升序) + _id(升序)`。
 - `communityLikes`：使用目标类型、目标 ID 与调用者派生的确定性文档 ID；点赞状态按 `_id in (...) + status` 分片读取，集合禁止客户端直接读写。
 - `publicProfileNavTickets`：社区作者主页与搭子目录主页的短期访问票据，按随机票据哈希 `_id` 精确读取，无需额外索引；集合禁止客户端直接读写，只经云函数绑定当前访问者校验。
+- `profileFollows`：使用关注者与目标用户派生的确定性 `_id`，一期关注/取消关注按 `_id` 精确读写，无需额外索引；关系状态与 `users.followingCount / followerCount` 必须在同一云事务内更新。集合禁止客户端直接读写。未来开放关注/粉丝列表前，再分别创建 `followerId(升序) + status(升序) + updatedAt(降序) + _id(降序)` 与 `targetUserId(升序) + status(升序) + updatedAt(降序) + _id(降序)` 索引。
   - 票据业务有效期仅 60 秒；生产环境需按 `expiresAt` 配置定期清理，避免过期访问关联长期留存。
 - `communityActivities`：列表建立 `recipientId(升序) + status(升序) + updatedAt(降序) + _id(降序)`；“回复我的”和“收到的赞”筛选另建 `recipientId(升序) + status(升序) + type(升序) + updatedAt(降序) + _id(降序)`。未读汇总另建 `recipientId(升序) + status(升序) + read(升序) + updatedAt(降序)` 与 `recipientId(升序) + status(升序) + read(升序) + type(升序) + updatedAt(降序)`，确保近 30 天全部未读通过服务端 `count()` 权威统计而非按首屏分页推算。列表只展示收件人近 30 天的讨论动态，集合禁止客户端直接读写；历史清理由独立的数据保留策略负责。
   - 部署未读汇总前，需在测试环境检查历史 `ACTIVE` 文档是否缺少 `read`；若存在，先受控回填 `read: false` 与 `readAt: null`，再创建含 `read` 的复合索引并上传 `api` 云函数，避免历史未读漏计。

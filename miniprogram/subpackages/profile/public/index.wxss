@@ -22,6 +22,17 @@ button::after { display: none; }
 .public-community-avatar { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; background: #f3f0e6; border-radius: 50%; }
 .public-community-avatar--initial { color: #8a755f; background: linear-gradient(145deg, #fff5dc, #f2e2c6); font-size: 72rpx; font-weight: 800; }
 .public-community-name { display: block; max-width: 540rpx; margin-top: 24rpx; overflow: hidden; color: #111827; font-size: 42rpx; font-weight: 800; line-height: 1.3; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.public-community-social-stats { display: flex; width: 310rpx; min-height: 72rpx; align-items: center; justify-content: center; margin-top: 12rpx; }
+.public-community-social-item { display: flex; min-width: 0; flex: 1; align-items: center; justify-content: center; gap: 8rpx; white-space: nowrap; }
+.public-community-social-value { min-width: 54rpx; color: #111827; font-size: 28rpx; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+.public-community-social-label { color: #78716c; font-size: 22rpx; }
+.public-community-social-divider { width: 1rpx; height: 30rpx; flex: 0 0 1rpx; background: #ddd8ce; }
+.public-follow-button { display: flex; width: 176rpx; min-width: 176rpx; min-height: 88rpx; align-items: center; justify-content: center; color: inherit; background: transparent; border: 0; box-sizing: border-box; }
+.public-follow-button-surface { display: inline-flex; width: 152rpx; height: 60rpx; align-items: center; justify-content: center; border-radius: 999rpx; box-sizing: border-box; font-size: 24rpx; font-weight: 700; transition: transform 100ms ease, background-color 100ms ease; }
+.public-follow-button--community { margin-top: 2rpx; }
+.public-follow-button--community .public-follow-button-surface { color: #9a5d00; background: #fff6dc; border: 1rpx solid #efce7d; }
+.public-follow-button--community.public-follow-button--following .public-follow-button-surface { color: #78716c; background: #f4f1ea; border-color: transparent; font-weight: 600; }
+.public-follow-button--pressed .public-follow-button-surface { transform: scale(.96); }
 .public-community-section-label { display: flex; min-height: 48rpx; align-items: center; justify-content: center; gap: 22rpx; margin-top: 20rpx; color: #8e8a84; font-size: 26rpx; }
 .public-community-section-line { width: 68rpx; height: 1rpx; background: #c9c5be; }
 .public-community-facts { display: flex; width: 100%; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16rpx; margin-top: 12rpx; }
@@ -49,7 +60,7 @@ button::after { display: none; }
 .public-community-privacy-shield { width: 112rpx; height: 112rpx; flex: 0 0 112rpx; }
 .public-community-privacy-copy { display: flex; min-width: 0; flex-direction: column; }
 
-.public-stage { display: flex; position: relative; min-height: 500rpx; align-items: center; flex-direction: column; justify-content: center; overflow: hidden; box-sizing: border-box; background: radial-gradient(circle at 50% 38%, #2b4665 0%, #182942 46%, #0d0c1b 100%); }
+.public-stage { display: flex; position: relative; min-height: 620rpx; align-items: center; flex-direction: column; justify-content: center; overflow: hidden; box-sizing: border-box; background: radial-gradient(circle at 50% 38%, #2b4665 0%, #182942 46%, #0d0c1b 100%); }
 .public-stage-glow { position: absolute; width: 420rpx; height: 420rpx; background: radial-gradient(circle, rgba(110,231,216,.2), transparent 68%); border-radius: 50%; pointer-events: none; }
 .public-avatar-shell { position: relative; z-index: 1; width: 154rpx; height: 154rpx; padding: 5rpx; overflow: hidden; background: rgba(255,255,255,.94); border: 3rpx solid rgba(255,255,255,.78); border-radius: 50%; box-shadow: 0 18rpx 48rpx rgba(0,0,0,.32); box-sizing: border-box; }
 .public-avatar { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; background: #233852; border-radius: 50%; }
@@ -59,8 +70,16 @@ button::after { display: none; }
 .public-self { padding: 5rpx 13rpx; color: #0d3833; background: #79eadc; border-radius: 999rpx; font-size: 22rpx; font-weight: 700; }
 .public-online { display: flex; position: relative; z-index: 1; min-height: 48rpx; align-items: center; gap: 10rpx; color: rgba(255,255,255,.7); font-size: 24rpx; }
 .public-online-dot { width: 14rpx; height: 14rpx; background: #6ee7d8; border-radius: 50%; box-shadow: 0 0 16rpx rgba(110,231,216,.75); }
+.public-social-stats { display: flex; position: relative; z-index: 1; width: 310rpx; min-height: 68rpx; align-items: center; justify-content: center; margin-top: 4rpx; }
+.public-social-item { display: flex; min-width: 0; flex: 1; align-items: center; justify-content: center; gap: 8rpx; white-space: nowrap; }
+.public-social-value { min-width: 54rpx; color: #fff; font-size: 28rpx; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+.public-social-label { color: rgba(255,255,255,.56); font-size: 22rpx; }
+.public-social-divider { width: 1rpx; height: 30rpx; flex: 0 0 1rpx; background: rgba(255,255,255,.18); }
+.public-follow-button--dark { position: relative; z-index: 1; }
+.public-follow-button--dark .public-follow-button-surface { color: #fff; background: rgba(255,255,255,.12); border: 1rpx solid rgba(255,255,255,.24); }
+.public-follow-button--dark.public-follow-button--following .public-follow-button-surface { color: rgba(255,255,255,.66); background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); font-weight: 600; }
 
-.public-sheet { position: relative; z-index: 2; min-height: calc(100vh - 470rpx); margin-top: -30rpx; padding: 48rpx 28rpx calc(48rpx + env(safe-area-inset-bottom)); color: #111827; background: #f9f7f2; border-radius: 38rpx 38rpx 0 0; box-sizing: border-box; }
+.public-sheet { position: relative; z-index: 2; min-height: calc(100vh - 590rpx); margin-top: -30rpx; padding: 48rpx 28rpx calc(48rpx + env(safe-area-inset-bottom)); color: #111827; background: #f9f7f2; border-radius: 38rpx 38rpx 0 0; box-sizing: border-box; }
 .public-section { margin-bottom: 34rpx; }
 .public-section-title { display: block; margin-bottom: 18rpx; font-size: 30rpx; font-weight: 800; }
 .public-facts, .public-interests { display: flex; flex-wrap: wrap; gap: 14rpx; }
@@ -107,9 +126,11 @@ button::after { display: none; }
   .public-puzzle--watermark { right: -28rpx; bottom: -24rpx; opacity: .06; }
   .public-community-privacy { gap: 18rpx; padding: 22rpx 24rpx; font-size: 24rpx; }
   .public-community-privacy-shield { width: 92rpx; height: 92rpx; flex-basis: 92rpx; }
-  .public-stage { min-height: 450rpx; }
+  .public-stage { min-height: 570rpx; }
   .public-avatar-shell { width: 132rpx; height: 132rpx; }
   .public-name { max-width: 380rpx; font-size: 34rpx; }
-  .public-sheet { min-height: calc(100vh - 422rpx); padding-right: 22rpx; padding-left: 22rpx; }
+  .public-community-social-stats, .public-social-stats { width: 280rpx; }
+  .public-follow-button { min-height: 88rpx; }
+  .public-sheet { min-height: calc(100vh - 542rpx); padding-right: 22rpx; padding-left: 22rpx; }
   .public-fact, .public-interest { min-height: 60rpx; padding: 0 18rpx; font-size: 24rpx; }
 }

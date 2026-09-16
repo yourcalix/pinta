@@ -33,6 +33,7 @@ const {
   validateCompanionDirectorySnapshotInput,
   validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
+  validateProfileFollowSetInput,
   validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,
   validateCommunityReplyCreateInput,
@@ -106,6 +107,7 @@ const MUTATING_ACTIONS = new Set([
   'profile.avatar.prepare',
   'profile.avatar.confirm',
   'profile.avatar.clear',
+  'profile.follow.set',
   'activity.create',
   'activity.cancel',
   'activity.complete',
@@ -140,6 +142,7 @@ const MUTATING_ACTIONS = new Set([
   'admin.activity.suspend'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
+  'profile.follow.set',
   'community.like.set',
   'community.activity.read',
   'companion.presence.heartbeat',
@@ -207,11 +210,13 @@ function selfUser(user) {
           avatar: safeSelfAvatar(user.profile.avatar)
         }
       : null,
-    profileComplete: isCompleteRideProfile(user.profile)
+    profileComplete: isCompleteRideProfile(user.profile),
+    followingCount: Math.max(0, Number(user.followingCount) || 0),
+    followerCount: Math.max(0, Number(user.followerCount) || 0)
   };
 }
 
-function publicCompanionProfile(user, viewerId, at, online = true, avatarFacts = null) {
+function publicCompanionProfile(user, viewerId, at, online = true, avatarFacts = null, social = {}) {
   const profile = user && user.profile || {};
   const interests = Array.isArray(profile.interests)
     ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8)
@@ -226,7 +231,10 @@ function publicCompanionProfile(user, viewerId, at, online = true, avatarFacts =
     city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
     interests,
     online,
-    viewerIsSelf: Boolean(viewerId && user && user.id === viewerId)
+    viewerIsSelf: Boolean(viewerId && user && user.id === viewerId),
+    followingCount: Math.max(0, Number(user && user.followingCount) || 0),
+    followerCount: Math.max(0, Number(user && user.followerCount) || 0),
+    viewerFollowing: social.viewerFollowing === true
   };
 }
 
@@ -729,6 +737,61 @@ function createPinbaService(options) {
     return user;
   }
 
+  async function resolvePublicProfileTarget(profileNavToken, context, at, options = {}) {
+    const requireViewer = options.requireViewer === true;
+    let viewer = null;
+    if (requireViewer) viewer = await requireActiveUser(context, false);
+    if (profileNavToken.startsWith('directoryProfileNa_')) {
+      viewer = viewer || await requireActiveUser(context, false);
+      const ticketId = directoryProfileNavTicketId(profileNavToken);
+      const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
+        ? await store.getPublicProfileNavTicket(ticketId)
+        : null;
+      const ticket = resolveDirectoryProfileNavTicket(candidate, profileNavToken, viewer.id, at);
+      invariant(ticket, 'NOT_FOUND');
+      const target = await store.getUser(ticket.targetUserId);
+      invariant(target && target.status === 'ACTIVE', 'NOT_FOUND');
+      return { target, viewerId: viewer.id, online: false, expiresAt: ticket.expiresAt };
+    }
+    if (profileNavToken.startsWith('communityProfileNa_')) {
+      viewer = viewer || await requireActiveUser(context, false);
+      const ticketId = communityProfileNavTicketId(profileNavToken);
+      const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
+        ? await store.getPublicProfileNavTicket(ticketId)
+        : null;
+      const ticket = resolveCommunityProfileNavTicket(candidate, profileNavToken, viewer.id, at);
+      invariant(ticket, 'NOT_FOUND');
+      const source = ticket.sourceType === 'post'
+        ? await store.getCommunityPost(ticket.sourceId)
+        : await store.getCommunityReply(ticket.sourceId);
+      invariant(source && source.authorId === ticket.targetUserId && source.status === (ticket.sourceType === 'post' ? COMMUNITY_POST_STATUS.ACTIVE : COMMUNITY_REPLY_STATUS.ACTIVE), 'NOT_FOUND');
+      if (ticket.sourceType === 'reply') {
+        const parent = await store.getCommunityPost(source.postId);
+        invariant(parent && parent.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
+      }
+      const target = await store.getUser(ticket.targetUserId);
+      invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+      return { target, viewerId: viewer.id, online: false, expiresAt: ticket.expiresAt };
+    }
+    invariant(!requireViewer, 'NOT_FOUND');
+    const profileNavNonce = profileNavNonceFromToken(profileNavToken);
+    const candidate = profileNavNonce && typeof store.findCompanionPresenceByProfileNavNonce === 'function'
+      ? await store.findCompanionPresenceByProfileNavNonce(profileNavNonce)
+      : null;
+    const presence = resolveProfileNavPresence(candidate, profileNavToken, at);
+    invariant(presence, 'NOT_FOUND');
+    const target = await store.getUser(presence.userId);
+    invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+    const actorId = context && context.actorId;
+    const actor = actorId ? await store.getUser(actorId) : null;
+    return {
+      target,
+      viewerId: actor && actor.status === 'ACTIVE' ? actor.id : null,
+      online: true,
+      expiresAt: profileNavExpiresAt(presence, at)
+    };
+  }
+
   async function runAction(action, input, context) {
     const at = nowIso();
     if (REMOVED_ACTIONS.has(action)) throw new AppError('NOT_FOUND', '接口动作不存在');
@@ -751,68 +814,41 @@ function createPinbaService(options) {
 
     if (action === 'profile.public.get') {
       const { profileNavToken } = validatePublicProfileGetInput(input);
-      if (profileNavToken.startsWith('directoryProfileNa_')) {
-        const viewer = await requireActiveUser(context, false);
-        const ticketId = directoryProfileNavTicketId(profileNavToken);
-        const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
-          ? await store.getPublicProfileNavTicket(ticketId)
-          : null;
-        const ticket = resolveDirectoryProfileNavTicket(candidate, profileNavToken, viewer.id, at);
-        invariant(ticket, 'NOT_FOUND');
-        const target = await store.getUser(ticket.targetUserId);
-        invariant(target && target.status === 'ACTIVE', 'NOT_FOUND');
-        const avatarFacts = typeof store.hydratePublicProfileAvatar === 'function'
-          ? await store.hydratePublicProfileAvatar(target)
-          : null;
-        return {
-          profile: publicCompanionProfile(target, viewer.id, at, false, avatarFacts),
-          serverNow: at,
-          expiresAt: ticket.expiresAt
-        };
-      }
-      if (profileNavToken.startsWith('communityProfileNa_')) {
-        const viewer = await requireActiveUser(context, false);
-        const ticketId = communityProfileNavTicketId(profileNavToken);
-        const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
-          ? await store.getPublicProfileNavTicket(ticketId)
-          : null;
-        const ticket = resolveCommunityProfileNavTicket(candidate, profileNavToken, viewer.id, at);
-        invariant(ticket, 'NOT_FOUND');
-        const source = ticket.sourceType === 'post'
-          ? await store.getCommunityPost(ticket.sourceId)
-          : await store.getCommunityReply(ticket.sourceId);
-        invariant(source && source.authorId === ticket.targetUserId && source.status === (ticket.sourceType === 'post' ? COMMUNITY_POST_STATUS.ACTIVE : COMMUNITY_REPLY_STATUS.ACTIVE), 'NOT_FOUND');
-        if (ticket.sourceType === 'reply') {
-          const parent = await store.getCommunityPost(source.postId);
-          invariant(parent && parent.status === COMMUNITY_POST_STATUS.ACTIVE, 'NOT_FOUND');
-        }
-        const target = await store.getUser(ticket.targetUserId);
-        invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
-        const avatarFacts = typeof store.hydratePublicProfileAvatar === 'function'
-          ? await store.hydratePublicProfileAvatar(target)
-          : null;
-        return {
-          profile: publicCompanionProfile(target, viewer.id, at, false, avatarFacts),
-          serverNow: at,
-          expiresAt: ticket.expiresAt
-        };
-      }
-      const profileNavNonce = profileNavNonceFromToken(profileNavToken);
-      const candidate = profileNavNonce && typeof store.findCompanionPresenceByProfileNavNonce === 'function'
-        ? await store.findCompanionPresenceByProfileNavNonce(profileNavNonce)
-        : null;
-      const presence = resolveProfileNavPresence(candidate, profileNavToken, at);
-      invariant(presence, 'NOT_FOUND');
-      const target = await store.getUser(presence.userId);
-      invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+      const resolved = await resolvePublicProfileTarget(profileNavToken, context, at);
+      const { target, viewerId, online, expiresAt } = resolved;
       const avatarFacts = typeof store.hydratePublicProfileAvatar === 'function'
         ? await store.hydratePublicProfileAvatar(target)
         : null;
+      const viewerFollowing = Boolean(viewerId && target.id !== viewerId && typeof store.getProfileFollowState === 'function'
+        && await store.getProfileFollowState(viewerId, target.id));
       return {
-        profile: publicCompanionProfile(target, context && context.actorId, at, true, avatarFacts),
+        profile: publicCompanionProfile(target, viewerId, at, online, avatarFacts, { viewerFollowing }),
         serverNow: at,
-        expiresAt: profileNavExpiresAt(presence, at)
+        expiresAt
       };
+    }
+
+    if (action === 'profile.follow.set') {
+      const viewer = await requireActiveUser(context, false);
+      const payload = validateProfileFollowSetInput(input);
+      const resolved = await resolvePublicProfileTarget(payload.profileNavToken, context, at, { requireViewer: true });
+      invariant(resolved.target.id !== viewer.id, 'FORBIDDEN', '不能关注自己');
+      const audit = {
+        id: operationId(context, 'audit'),
+        actorId: viewer.id,
+        action,
+        targetType: 'profileFollow',
+        targetId: stableEntityId('profileFollow', viewer.id, resolved.target.id),
+        at
+      };
+      const result = await store.setProfileFollowAtomic({
+        followerId: viewer.id,
+        targetUserId: resolved.target.id,
+        following: payload.following,
+        at,
+        audit
+      });
+      return { ...result, serverNow: at };
     }
 
     if (action === 'profile.update') {

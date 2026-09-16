@@ -40,6 +40,7 @@ const MUTATING_ACTIONS = new Set([
 'profile.avatar.prepare',
 'profile.avatar.confirm',
 'profile.avatar.clear',
+'profile.follow.set',
 'onboarding.selectRole',
 'driver.application.submit',
 'driver.document.prepare',
@@ -83,7 +84,7 @@ const MUTATING_ACTIONS = new Set([
 'ride.driver.cancel'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
-'driver.application.submit', 'admin.driverApplication.review', 'community.like.set', 'community.activity.read',
+'driver.application.submit', 'admin.driverApplication.review', 'profile.follow.set', 'community.like.set', 'community.activity.read',
 'companion.presence.heartbeat', 'companion.presence.leave',
 'group.message.send', 'group.message.read', 'dm.consult.create', 'dm.message.send'
 ]);
@@ -320,7 +321,7 @@ const now=new Date().toISOString();
 const token=mockTicketToken(prefix, viewer.id, target.id, sourceId, now, Math.random());
 const expiresAt=new Date(Date.parse(now)+6e4).toISOString();
 const hash=opaqueSensitiveHash(token);
-state.publicProfileNavTickets.push({ tokenHash: hash, viewerId: viewer.id, targetUserId: target.id, sourceType: type, sourceId, expiresAt });
+state.publicProfileNavTickets.push({ tokenHash: hash, viewerId: viewer.id, targetUserId: target.id, sourceType: type, sourceId, status: 'ACTIVE', expiresAt });
 return { target: 'public', profileNavToken: token, expiresAt };
 }
 function publicMockPresenceSnapshot(at) {
@@ -562,6 +563,7 @@ communityLikes: [],
 communityActivities: [],
 companionPresences: [],
 publicProfileNavTickets: [],
+profileFollows: [],
 directConversations: directPreview.conversations,
 directMessages: directPreview.messages,
 groupMessages: [],
@@ -600,6 +602,7 @@ if (!state.communityLikes) state.communityLikes = [];
 if (!state.communityActivities) state.communityActivities = [];
 if (!state.companionPresences) state.companionPresences = [];
 if (!state.publicProfileNavTickets) state.publicProfileNavTickets = [];
+if (!state.profileFollows) state.profileFollows = [];
 if (!state.groupMessages) state.groupMessages = [];
 if (!state.groupReadStates) state.groupReadStates = [];
 if (!Array.isArray(state.directConversations)
@@ -632,9 +635,10 @@ avatarKind: item.author.avatarKind,
 avatar: publicAvatarSlot(current && current.status === 'ACTIVE' && current.profile ? current.profile : legacyProfile)
 };
 }
-function publicMockProfile(target, now, online, fallback='拼吧用户') {
+function publicMockProfile(target, now, online, fallback='拼吧用户', viewerId='') {
 const p = target.profile || {};
 const g = p.gender;
+const follow = state.profileFollows.find((item) => item.followerId === viewerId && item.targetUserId === target.id && item.status === 'ACTIVE');
 return {
 nickname: Array.from(String(p.nickname || '').trim() || fallback).slice(0, 12).join(''),
 avatarKind: avatarKindFromGender(g), avatar: publicAvatarSlot(p),
@@ -643,8 +647,36 @@ age: calculateAgeOnMacauDate(p.birthDate, new Date(now)), mbti: USER_MBTI_TYPES.
 city: typeof p.city === 'string' ? p.city.trim().slice(0, 20) : '',
 interests: Array.isArray(p.interests) ? p.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8) : [],
 online,
-viewerIsSelf: target.id === currentUserId
+viewerIsSelf: target.id === viewerId,
+followingCount: Math.max(0, Number(target.followingCount) || 0),
+followerCount: Math.max(0, Number(target.followerCount) || 0),
+viewerFollowing: Boolean(follow)
 };
+}
+function resolveMockPublicProfileTarget(token, now, requireViewer = false) {
+if (requireViewer) requireActiveUser();
+if (token.startsWith('directoryProfileNa_') || token.startsWith('communityProfileNa_')) {
+const v=requireActiveUser(), h=opaqueSensitiveHash(token);
+const t=state.publicProfileNavTickets.find((x)=>x.tokenHash===h&&x.viewerId===v.id&&x.status==='ACTIVE'&&Date.parse(x.expiresAt)>Date.parse(now));
+assert(t,'NOT_FOUND',PROFILE_TARGET_GONE);
+const dir=t.sourceType==='companionDirectory';
+const s=dir?null:t.sourceType==='post'?state.communityPosts.find((x)=>x.id===t.sourceId&&x.status==='ACTIVE'):state.communityReplies.find((x)=>x.id===t.sourceId&&x.status==='ACTIVE');
+if(!dir){
+assert(s&&s.authorId===t.targetUserId,'NOT_FOUND','内容不存在或已被删除');
+if(t.sourceType==='reply')assert(state.communityPosts.some((x)=>x.id===s.postId&&x.status==='ACTIVE'),'NOT_FOUND','讨论不存在或已被删除');
+}
+const target=state.users.find((x)=>x.id===t.targetUserId&&x.status==='ACTIVE'&&(dir||x.profile));
+assert(target,'NOT_FOUND',PROFILE_TARGET_GONE);
+return {target,viewerId:v.id,online:false,expiresAt:t.expiresAt};
+}
+assert(!requireViewer,'NOT_FOUND',PROFILE_TARGET_GONE);
+const b=Math.floor(Date.parse(now)/COMPANION_PROFILE_NAV_BUCKET_MS), n=mockProfileNavNonceFromToken(token);
+const p=state.companionPresences.find((x)=>x.profileNavNonce===n&&x.scene===COMPANION_PRESENCE_SCENE&&x.status==='ACTIVE'&&Date.parse(x.expiresAt)>Date.parse(now)&&[b,b-1].some((v)=>mockProfileNavToken(x.profileNavNonce,x.sessionNonce,v)===token));
+assert(p,'NOT_FOUND',PROFILE_TARGET_GONE);
+const target=state.users.find((x)=>x.id===p.userId&&x.status==='ACTIVE'&&x.profile);
+assert(target,'NOT_FOUND',PROFILE_TARGET_GONE);
+const viewer=state.users.find((x)=>x.id===currentUserId&&x.status==='ACTIVE');
+return {target,viewerId:viewer&&viewer.id||'',online:true,expiresAt:new Date(Math.min(Date.parse(p.expiresAt),(b+2)*COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString()};
 }
 function publicCommunityPost(item) {
 const like = state.communityLikes.find((entry) => entry.targetType === 'post' && entry.targetId === item.id && entry.actorId === currentUserId && entry.status === 'ACTIVE');
@@ -946,7 +978,9 @@ mbti: user.profile.mbti || null,
 adultConfirmed: user.profile.adultConfirmed === true,
 avatar: user.profile.avatar && user.profile.avatar.status === 'ACTIVE' ? clone(user.profile.avatar) : null
 } : null,
-profileComplete: completeRideProfile(user.profile)
+profileComplete: completeRideProfile(user.profile),
+followingCount: Math.max(0, Number(user.followingCount) || 0),
+followerCount: Math.max(0, Number(user.followerCount) || 0)
 } : null;
 }
 function publicDriverApplication(application) {
@@ -1728,39 +1762,29 @@ if (action === 'profile.get') return { user: selfUser(requireUser()) };
 if (action === 'profile.public.get') {
 const token = validateMockPublicProfileInput(input);
 const now = new Date().toISOString();
-if (token.startsWith('directoryProfileNa_') || token.startsWith('communityProfileNa_')) {
-const v = requireActiveUser();
-const hash = opaqueSensitiveHash(token);
-const t = state.publicProfileNavTickets.find((item) => item.tokenHash === hash
-&& item.viewerId === v.id && Date.parse(item.expiresAt) > Date.parse(now));
-assert(t, 'NOT_FOUND', PROFILE_TARGET_GONE);
-const dir = t.sourceType === 'companionDirectory';
-const s = dir ? null : t.sourceType === 'post'
-? state.communityPosts.find((item) => item.id === t.sourceId && item.status === 'ACTIVE')
-: state.communityReplies.find((item) => item.id === t.sourceId && item.status === 'ACTIVE');
-if (!dir) {
-assert(s && s.authorId === t.targetUserId, 'NOT_FOUND', '内容不存在或已被删除');
-if (t.sourceType === 'reply') assert(state.communityPosts.some((item) => item.id === s.postId && item.status === 'ACTIVE'), 'NOT_FOUND', '讨论不存在或已被删除');
-}
-const u = state.users.find((item) => item.id === t.targetUserId && item.status === 'ACTIVE' && (dir || item.profile));
-assert(u, 'NOT_FOUND', PROFILE_TARGET_GONE);
-return { profile: publicMockProfile(u, now, false), serverNow: now, expiresAt: t.expiresAt };
-}
-const bucket = Math.floor(Date.parse(now) / COMPANION_PROFILE_NAV_BUCKET_MS);
-const profileNavNonce = mockProfileNavNonceFromToken(token);
-const presence = state.companionPresences.find((item) => item.profileNavNonce === profileNavNonce
-&& item.scene === COMPANION_PRESENCE_SCENE
-&& item.status === 'ACTIVE'
-&& Date.parse(item.expiresAt) > Date.parse(now)
-&& [bucket, bucket - 1].some((candidate) => mockProfileNavToken(item.profileNavNonce, item.sessionNonce, candidate) === token));
-assert(presence, 'NOT_FOUND', PROFILE_TARGET_GONE);
-const target = state.users.find((item) => item.id === presence.userId && item.status === 'ACTIVE' && item.profile);
-assert(target, 'NOT_FOUND', PROFILE_TARGET_GONE);
+const resolved = resolveMockPublicProfileTarget(token, now);
 return {
-profile: publicMockProfile(target, now, true, '匿名搭子'),
+profile: publicMockProfile(resolved.target, now, resolved.online, resolved.online ? '匿名搭子' : '拼吧用户', resolved.viewerId),
 serverNow: now,
-expiresAt: new Date(Math.min(Date.parse(presence.expiresAt), (bucket + 2) * COMPANION_PROFILE_NAV_BUCKET_MS)).toISOString()
+expiresAt: resolved.expiresAt
 };
+}
+if (action === 'profile.follow.set') {
+const viewer = requireActiveUser();
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '关注参数无效');
+assert(Object.keys(input).every((key) => ['profileNavToken', 'following'].includes(key)), 'VALIDATION_ERROR', '关注参数无效');
+const token = validateMockPublicProfileInput({ profileNavToken: input.profileNavToken });
+assert(typeof input.following === 'boolean', 'VALIDATION_ERROR', '关注状态无效');
+const now=new Date().toISOString(), resolved=resolveMockPublicProfileTarget(token,now,true);
+assert(resolved.target.id !== viewer.id, 'FORBIDDEN', '不能关注自己');
+const target=resolved.target, id=`profileFollow_${opaqueSensitiveHash(`${viewer.id}:${target.id}`)}`;
+const old=state.profileFollows.find((x)=>x.id===id), changed=Boolean(old&&old.status==='ACTIVE')!==input.following;
+const followingCount=Math.max(0,Number(viewer.followingCount||0)+(changed?(input.following?1:-1):0));
+const followerCount=Math.max(0,Number(target.followerCount||0)+(changed?(input.following?1:-1):0));
+const next={id,followerId:viewer.id,targetUserId:target.id,status:input.following?'ACTIVE':'DELETED',createdAt:old&&old.createdAt||now,updatedAt:now,deletedAt:input.following?null:now};
+if(old)Object.assign(old,next);else state.profileFollows.push(next);
+if(changed){viewer.followingCount=followingCount;viewer.updatedAt=now;target.followerCount=followerCount;target.updatedAt=now;}
+return { following: input.following, followerCount, followingCount, serverNow: now };
 }
 if (action === 'profile.update') {
 const user = requireUser();
