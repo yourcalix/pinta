@@ -1,0 +1,12 @@
+{
+  "id": "audit-community-activity-indexes",
+  "title": "核对讨论动态未读复合索引",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档并交付未读索引配置步骤",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}
