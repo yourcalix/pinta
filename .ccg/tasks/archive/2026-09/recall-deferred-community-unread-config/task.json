@@ -1,0 +1,12 @@
+{
+  "id": "recall-deferred-community-unread-config",
+  "title": "确认尚未配置的讨论动态未读索引",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "归档并向用户说明 communityActivities 配置",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}
