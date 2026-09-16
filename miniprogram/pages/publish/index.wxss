@@ -90,8 +90,6 @@
   line-height: normal;
   transform: translateZ(0);
 }
-.type-card::after { display: none; }
-.type-card[disabled] { opacity: .68; }
 .type-card--companion { background: #0d8f93 !important; }
 .type-card--sport { background: #4c3b9b !important; }
 .type-card--food { background: #e65d16 !important; }

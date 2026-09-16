@@ -1,0 +1,12 @@
+{
+  "id": "remove-publish-module-blue-focus",
+  "title": "移除发布模块点击后的原生蓝色焦点框",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成，归档并提交推送",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}
