@@ -89,7 +89,6 @@
   box-shadow: inset 0 0 0 3rpx rgba(20, 32, 43, .08), 0 12rpx 24rpx rgba(1, 34, 78, .2);
   line-height: normal;
   transform: translateZ(0);
-  transition: transform 120ms ease, filter 120ms ease;
 }
 .type-card::after { display: none; }
 .type-card[disabled] { opacity: .68; }
@@ -99,7 +98,6 @@
 .type-card--benefit {
   background: radial-gradient(circle at 72% 72%, rgba(255, 235, 151, .36), transparent 38%), #b7791f !important;
 }
-.type-card--pressed { transform: scale(.975); filter: brightness(.96); }
 .type-card-kicker {
   position: relative;
   z-index: 3;
@@ -189,10 +187,8 @@
   text-align: left;
   border-radius: 24rpx;
   line-height: normal;
-  transition: transform 120ms ease;
 }
 .draft-strip[disabled] { opacity: .68; }
-.draft-strip--pressed { transform: scale(.985); }
 .draft-art {
   position: absolute;
   left: 4rpx;
@@ -243,7 +239,6 @@
   line-height: normal;
   opacity: .94;
 }
-.safety-note--pressed { opacity: .78; }
 .safety-shield {
   display: flex;
   align-items: center;

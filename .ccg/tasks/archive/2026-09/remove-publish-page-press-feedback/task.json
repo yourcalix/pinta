@@ -1,0 +1,12 @@
+{
+  "id": "remove-publish-page-press-feedback",
+  "title": "移除发布入口页的按压视觉效果",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成，归档并提交推送",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}

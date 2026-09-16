@@ -11,7 +11,7 @@
     </view>
 
     <view class="type-grid" role="list" aria-label="选择要发布的拼单类型">
-      <button wx:for="{{types}}" wx:key="value" class="type-card type-card--{{item.tone}}" hover-class="{{item.available ? 'type-card--pressed' : 'none'}}" hover-stay-time="120" data-type="{{item.value}}" bindtap="handleSelect" disabled="{{pending}}" role="button" aria-disabled="{{!item.available || pending}}" aria-label="{{item.ariaLabel}}">
+      <button wx:for="{{types}}" wx:key="value" class="type-card type-card--{{item.tone}}" hover-class="none" data-type="{{item.value}}" bindtap="handleSelect" disabled="{{pending}}" role="button" aria-disabled="{{!item.available || pending}}" aria-label="{{item.ariaLabel}}">
         <view class="type-card-kicker">发起拼单</view>
         <view class="type-card-title">{{item.title}}</view>
         <view class="type-card-description">{{item.description}}</view>
@@ -20,7 +20,7 @@
       </button>
     </view>
 
-    <button wx:if="{{draft}}" class="draft-strip" hover-class="draft-strip--pressed" bindtap="handleContinueDraft" disabled="{{pending}}" role="button" aria-label="继续填写{{draft.typeTitle}}草稿，{{draft.title}}">
+    <button wx:if="{{draft}}" class="draft-strip" hover-class="none" bindtap="handleContinueDraft" disabled="{{pending}}" role="button" aria-label="继续填写{{draft.typeTitle}}草稿，{{draft.title}}">
       <image class="draft-art" src="../../assets/images/publish/publish-draft-avatar.png" mode="aspectFit" aria-hidden="true" />
       <view class="draft-copy">
         <view class="draft-heading"><text class="draft-badge">草稿</text><text class="draft-type">{{draft.typeTitle}}</text></view>
@@ -29,7 +29,7 @@
       <view class="draft-action"><text class="draft-action-label">继续填写</text><text aria-hidden="true">›</text></view>
     </button>
 
-    <button class="safety-note" role="button" bindtap="handleSafetyNotice" hover-class="safety-note--pressed" aria-label="安全边界，点击查看拼单安全说明">
+    <button class="safety-note" role="button" bindtap="handleSafetyNotice" hover-class="none" aria-label="安全边界，点击查看拼单安全说明">
       <view class="safety-shield" aria-hidden="true"><view class="safety-check">✓</view></view>
       <text class="safety-copy">平台仅提供信息发布，不提供运输、配送、资金担保或场地预订服务</text>
       <text class="safety-more" aria-hidden="true">›</text>

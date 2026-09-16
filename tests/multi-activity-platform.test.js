@@ -402,6 +402,9 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.match(style, /\.type-card-art\s*{[\s\S]*width:\s*100%[\s\S]*height:\s*100%/);
   assert.match(style, /\.type-card-action\s*{[\s\S]*pointer-events:\s*none/);
   assert.match(style, /@media\s*\(max-width:\s*340px\)/);
+  assert.equal((template.match(/hover-class="none"/g) || []).length, 3);
+  assert.doesNotMatch(template, /hover-stay-time|type-card--pressed|draft-strip--pressed|safety-note--pressed/);
+  assert.doesNotMatch(style, /type-card--pressed|draft-strip--pressed|safety-note--pressed/);
   assert.doesNotMatch(template, /搜索|推荐|type-panel|module-row/);
 });
 
