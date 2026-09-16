@@ -25,6 +25,8 @@ const {
   SPORT_INTENSITIES,
   FOOD_PAYMENT_METHODS,
   FOOD_GENDER_PREFERENCES,
+  BENEFIT_DEAL_TYPES,
+  BENEFIT_FULFILLMENT_TYPES,
   REPORT_REASONS,
   USER_GENDERS,
   USER_MBTI_TYPES
@@ -174,6 +176,22 @@ function validateActivityInput(input, now = new Date()) {
       genderPreference: optionalEnumValue(typeData.genderPreference, '饭友性别偏好', FOOD_GENDER_PREFERENCES),
       mbtiPreference: optionalEnumValue(typeData.mbtiPreference, '饭友 MBTI 偏好', USER_MBTI_TYPES)
     };
+  }
+
+  if (type === 'benefit') {
+    const fulfillmentType = enumValue(typeData.fulfillmentType, '优惠形式', BENEFIT_FULFILLMENT_TYPES);
+    invariant(fulfillmentType !== 'OFFLINE' || Boolean(meetingPoint), 'VALIDATION_ERROR', '线下到店优惠请选择公开会合地点', { field: 'meetingPoint' });
+    result.typeData = {
+      merchantOrPlatform: stringValue(typeData.merchantOrPlatform, '商家或平台', { required: true, max: 50 }),
+      dealType: enumValue(typeData.dealType, '优惠类型', BENEFIT_DEAL_TYPES),
+      offerThreshold: stringValue(typeData.offerThreshold, '优惠门槛', { required: true, max: 80 }),
+      targetPrice: stringValue(typeData.targetPrice, '目标价格', { max: 40 }),
+      estimatedSaving: stringValue(typeData.estimatedSaving, '预计节省', { max: 40 }),
+      fulfillmentType,
+      details: stringValue(typeData.details, '优惠详情', { max: 300 })
+    };
+    if (fulfillmentType === 'ONLINE') delete result.meetingPoint;
+    result.placeLabel = fulfillmentType === 'OFFLINE' ? meetingPoint.label : result.typeData.merchantOrPlatform;
   }
 
   return result;

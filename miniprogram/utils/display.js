@@ -7,6 +7,7 @@ const TYPE_META = Object.freeze({
   companion: { label: '拼同行', icon: '↗', color: '#3D7FD6', tone: 'companion' },
   sport: { label: '拼运动', icon: '●', color: '#705CC8', tone: 'sport' },
   food: { label: '拼饭桌', icon: '⌂', color: '#E8873A', tone: 'food' },
+  benefit: { label: '拼享惠', icon: '券', color: '#E97A22', tone: 'benefit' },
   ride: { label: '拼同行', icon: '↗', color: '#3D7FD6', tone: 'companion' },
   buddy: { label: '拼运动', icon: '●', color: '#705CC8', tone: 'sport' },
   product: { label: '拼饭桌', icon: '⌂', color: '#E8873A', tone: 'food' }
@@ -51,6 +52,7 @@ function typeSummary(activity) {
   if (['companion', 'ride'].includes(activity.type)) return legacyLocation(data) || activity.placeLabel;
   if (['sport', 'buddy'].includes(activity.type)) return `${data.sportType || data.category || '运动活动'} · ${data.venue || activity.placeLabel}`;
   if (['food', 'product'].includes(activity.type)) return `${data.venue || activity.placeLabel} · ${data.cuisine || data.productName || '一起吃饭'}`;
+  if (activity.type === 'benefit') return [data.merchantOrPlatform || activity.placeLabel, data.offerThreshold].filter(Boolean).join(' · ');
   return activity.placeLabel;
 }
 

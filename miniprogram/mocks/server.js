@@ -6,9 +6,13 @@ RIDE_ROUTES,
 getRideRoute
 } = require('../config/locations');
 const { parseBirthDate, adultBirthLimit, calculateAgeOnMacauDate } = require('../utils/profile-birth-date');
-const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
+const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food', 'benefit']);
 const FOOD_PAYMENT_METHODS = Object.freeze(['FIFTY_FIFTY', 'GO_DUTCH', 'TABLE_ONLY']);
 const FOOD_GENDER_PREFERENCES = Object.freeze(['MALE', 'FEMALE', 'ALL']);
+const BENEFIT_DEAL_TYPES = Object.freeze(['FULL_REDUCTION', 'GROUP_BUY', 'COUPON_SHARE', 'MEMBERSHIP_SHARE', 'BUNDLE_DISCOUNT', 'OTHER']);
+const BENEFIT_FULFILLMENT_TYPES = Object.freeze(['ONLINE', 'OFFLINE']);
+const SPORT_LEVELS = Object.freeze(['ANY', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED']);
+const SPORT_INTENSITIES = Object.freeze(['LIGHT', 'MEDIUM', 'HIGH']);
 const COMPANION_TIME_FLEXIBILITY = Object.freeze(['ON_TIME', 'WITHIN_30_MIN', 'WITHIN_60_MIN']);
 const COMPANION_TRANSPORT_PREFERENCES = Object.freeze(['PUBLIC_TRANSIT', 'LICENSED_TAXI', 'DISCUSS_AFTER_FORMED']);
 const MEMBER_LUGGAGE_TYPES = Object.freeze(['NONE', 'SMALL', 'LARGE']);
@@ -1062,7 +1066,9 @@ if (meetingPoint && typeof meetingPoint.label === 'string') {
 safe.meetingPoint = { label: meetingPoint.label, address: typeof meetingPoint.address === 'string' ? meetingPoint.address : '' };
 }
 if (storedType === 'companion') safe.typeData = normalizeMockCompanionTypeDataForRead(safe.typeData);
+if (storedType === 'sport') safe.typeData = normalizeMockSportTypeDataForRead(safe.typeData);
 if (storedType === 'food') safe.typeData = normalizeMockFoodTypeDataForRead(safe.typeData);
+if (storedType === 'benefit') safe.typeData = normalizeMockBenefitTypeDataForRead(safe.typeData);
 if (storedType === 'product') {
 safe.typeData = {
 venue: safe.placeLabel || '',
@@ -1235,6 +1241,28 @@ luggageType: MEMBER_LUGGAGE_TYPES.includes(typeData.luggageType) ? typeData.lugg
 preferences: normalizeMockCompanionPreferences(typeData.preferences, true)
 };
 }
+function normalizeMockSportTypeData(source) {
+const typeData = source && typeof source === 'object' ? source : {};
+assert(SPORT_LEVELS.includes(typeData.level), 'VALIDATION_ERROR', '参与水平选项无效', { field: 'level' });
+assert(SPORT_INTENSITIES.includes(typeData.intensity), 'VALIDATION_ERROR', '活动强度选项无效', { field: 'intensity' });
+return {
+sportType: requiredNormalizedContent(typeData.sportType, '运动项目', 1, 30),
+venue: requiredNormalizedContent(typeData.venue, '活动场地', 1, 50),
+level: typeData.level,
+intensity: typeData.intensity,
+equipment: optionalNormalizedContent(typeData.equipment, '装备要求', 100)
+};
+}
+function normalizeMockSportTypeDataForRead(source) {
+const typeData = source && typeof source === 'object' ? source : {};
+return {
+sportType: typeof typeData.sportType === 'string' ? typeData.sportType : '',
+venue: typeof typeData.venue === 'string' ? typeData.venue : '',
+level: SPORT_LEVELS.includes(typeData.level) ? typeData.level : 'ANY',
+intensity: SPORT_INTENSITIES.includes(typeData.intensity) ? typeData.intensity : 'MEDIUM',
+equipment: typeof typeData.equipment === 'string' ? typeData.equipment : ''
+};
+}
 function normalizeMockFoodTypeData(source) {
 const typeData = source && typeof source === 'object' ? source : {};
 const paymentMethod = typeData.paymentMethod === undefined ? 'FIFTY_FIFTY' : typeData.paymentMethod;
@@ -1262,6 +1290,32 @@ dietaryNotes: typeof typeData.dietaryNotes === 'string' ? typeData.dietaryNotes 
 paymentMethod,
 genderPreference: FOOD_GENDER_PREFERENCES.includes(typeData.genderPreference) ? typeData.genderPreference : '',
 mbtiPreference: USER_MBTI_TYPES.includes(typeData.mbtiPreference) ? typeData.mbtiPreference : ''
+};
+}
+function normalizeMockBenefitTypeData(source) {
+const typeData = source && typeof source === 'object' ? source : {};
+assert(BENEFIT_DEAL_TYPES.includes(typeData.dealType), 'VALIDATION_ERROR', '优惠类型选项无效', { field: 'dealType' });
+assert(BENEFIT_FULFILLMENT_TYPES.includes(typeData.fulfillmentType), 'VALIDATION_ERROR', '优惠形式选项无效', { field: 'fulfillmentType' });
+return {
+merchantOrPlatform: requiredNormalizedContent(typeData.merchantOrPlatform, '商家或平台', 1, 50),
+dealType: typeData.dealType,
+offerThreshold: requiredNormalizedContent(typeData.offerThreshold, '优惠门槛', 1, 80),
+targetPrice: optionalNormalizedContent(typeData.targetPrice, '目标价格', 40),
+estimatedSaving: optionalNormalizedContent(typeData.estimatedSaving, '预计节省', 40),
+fulfillmentType: typeData.fulfillmentType,
+details: optionalNormalizedContent(typeData.details, '优惠详情', 300)
+};
+}
+function normalizeMockBenefitTypeDataForRead(source) {
+const typeData = source && typeof source === 'object' ? source : {};
+return {
+merchantOrPlatform: typeof typeData.merchantOrPlatform === 'string' ? typeData.merchantOrPlatform : '',
+dealType: BENEFIT_DEAL_TYPES.includes(typeData.dealType) ? typeData.dealType : 'OTHER',
+offerThreshold: typeof typeData.offerThreshold === 'string' ? typeData.offerThreshold : '',
+targetPrice: typeof typeData.targetPrice === 'string' ? typeData.targetPrice : '',
+estimatedSaving: typeof typeData.estimatedSaving === 'string' ? typeData.estimatedSaving : '',
+fulfillmentType: BENEFIT_FULFILLMENT_TYPES.includes(typeData.fulfillmentType) ? typeData.fulfillmentType : 'ONLINE',
+details: typeof typeData.details === 'string' ? typeData.details : ''
 };
 }
 function validatedId(value, field) {
@@ -1514,6 +1568,10 @@ const activityInput = clone(input);
 assert(ACTIVITY_TYPES.includes(activityInput.type), 'VALIDATION_ERROR', '活动类型选项无效');
 activityInput.title = requiredNormalizedContent(activityInput.title, '标题', 2, 30);
 activityInput.description = optionalNormalizedContent(activityInput.description, '补充说明', 300);
+activityInput.city = requiredNormalizedContent(activityInput.city, '城市', 1, 20);
+activityInput.district = requiredNormalizedContent(activityInput.district, '行政区', 1, 30);
+activityInput.placeLabel = requiredNormalizedContent(activityInput.placeLabel, '商圈或地标', 1, 40);
+activityInput.rules = optionalNormalizedContent(activityInput.rules, '参与规则', 200);
 const startsAt = Date.parse(activityInput.startsAt);
 const deadlineAt = Date.parse(activityInput.deadlineAt);
 assert(Number.isFinite(startsAt) && startsAt > Date.parse(now), 'VALIDATION_ERROR', '活动时间必须晚于当前时间');
@@ -1522,10 +1580,21 @@ assert(Number.isFinite(deadlineAt) && deadlineAt > Date.parse(now) && deadlineAt
 const minMembers = Number(activityInput.minMembers);
 const maxMembers = Number(activityInput.maxMembers);
 assert(Number.isInteger(minMembers) && Number.isInteger(maxMembers) && minMembers >= 2 && maxMembers <= 20 && minMembers <= maxMembers, 'VALIDATION_ERROR', '人数设置无效');
+activityInput.minMembers = minMembers;
+activityInput.maxMembers = maxMembers;
+activityInput.targetMembers = maxMembers;
 assert(activityInput.typeData && typeof activityInput.typeData === 'object', 'VALIDATION_ERROR', '请补齐活动信息');
 if (activityInput.type === 'companion') activityInput.typeData = normalizeMockCompanionTypeData(activityInput.typeData);
+if (activityInput.type === 'sport') activityInput.typeData = normalizeMockSportTypeData(activityInput.typeData);
 if (activityInput.type === 'food') activityInput.typeData = normalizeMockFoodTypeData(activityInput.typeData);
+if (activityInput.type === 'benefit') activityInput.typeData = normalizeMockBenefitTypeData(activityInput.typeData);
 if (activityInput.meetingPoint !== undefined) activityInput.meetingPoint = validateMockMeetingPoint(activityInput.meetingPoint);
+assert(activityInput.type !== 'benefit' || activityInput.typeData.fulfillmentType !== 'OFFLINE' || Boolean(activityInput.meetingPoint), 'VALIDATION_ERROR', '线下到店优惠请选择公开会合地点', { field: 'meetingPoint' });
+if (activityInput.type === 'benefit' && activityInput.typeData.fulfillmentType === 'ONLINE') delete activityInput.meetingPoint;
+if (activityInput.type === 'companion') activityInput.placeLabel = `${activityInput.typeData.originLabel} → ${activityInput.typeData.destinationLabel}`;
+if (activityInput.type === 'benefit') activityInput.placeLabel = activityInput.typeData.fulfillmentType === 'OFFLINE'
+  ? activityInput.meetingPoint.label
+  : activityInput.typeData.merchantOrPlatform;
 delete activityInput.driverId;
 delete activityInput.vehicleId;
 delete activityInput.contactInfo;

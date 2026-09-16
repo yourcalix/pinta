@@ -1,6 +1,6 @@
 'use strict';
 
-const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food']);
+const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food', 'benefit']);
 const LEGACY_ACTIVITY_TYPE_MAP = Object.freeze({
   ride: 'companion',
   buddy: 'sport',
@@ -79,6 +79,15 @@ const SPORT_LEVELS = Object.freeze(['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ANY
 const SPORT_INTENSITIES = Object.freeze(['LIGHT', 'MEDIUM', 'HIGH']);
 const FOOD_PAYMENT_METHODS = Object.freeze(['FIFTY_FIFTY', 'GO_DUTCH', 'TABLE_ONLY']);
 const FOOD_GENDER_PREFERENCES = Object.freeze(['MALE', 'FEMALE', 'ALL']);
+const BENEFIT_DEAL_TYPES = Object.freeze([
+  'FULL_REDUCTION',
+  'GROUP_BUY',
+  'COUPON_SHARE',
+  'MEMBERSHIP_SHARE',
+  'BUNDLE_DISCOUNT',
+  'OTHER'
+]);
+const BENEFIT_FULFILLMENT_TYPES = Object.freeze(['ONLINE', 'OFFLINE']);
 const REPORT_REASONS = Object.freeze([
   'FALSE_INFORMATION',
   'ILLEGAL_SERVICE_SOLICITATION',
@@ -111,5 +120,7 @@ module.exports = {
   SPORT_INTENSITIES,
   FOOD_PAYMENT_METHODS,
   FOOD_GENDER_PREFERENCES,
+  BENEFIT_DEAL_TYPES,
+  BENEFIT_FULFILLMENT_TYPES,
   REPORT_REASONS
 };

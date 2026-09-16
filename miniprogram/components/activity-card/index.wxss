@@ -30,6 +30,7 @@
 .activity-card--companion::before { background: #167fb1; }
 .activity-card--sport::before { background: #6655b4; }
 .activity-card--food::before { background: #d8662e; }
+.activity-card--benefit::before { background: #e97a22; }
 
 .card-head,
 .card-tags,
@@ -57,6 +58,7 @@
 .type-tag--companion { color: #176c97; background: #dff3ef; }
 .type-tag--sport { color: #55439f; background: #ece7f7; }
 .type-tag--food { color: #b45123; background: #ffead8; }
+.type-tag--benefit { color: #9a4714; background: #fff0d8; }
 .type-symbol { font-size: 23rpx; }
 
 .legacy-tag {
@@ -178,6 +180,7 @@
 .activity-card--discover .card-cover--companion { background: linear-gradient(150deg, #edf6ef 0%, #d8eadc 52%, #86b293 100%); }
 .activity-card--discover .card-cover--sport { background: linear-gradient(150deg, #f4f0ff 0%, #e2d9f3 52%, #a192c7 100%); }
 .activity-card--discover .card-cover--food { background: linear-gradient(150deg, #fff7e9 0%, #f8dfc1 52%, #dca678 100%); }
+.activity-card--discover .card-cover--benefit { background: linear-gradient(150deg, #fff8df 0%, #ffe4ad 52%, #eea052 100%); }
 .activity-card--discover .card-cover-image {
   position: absolute;
   z-index: 0;
@@ -510,6 +513,7 @@
 .home-preview-cover--companion { background: linear-gradient(145deg, #eef9f3 0%, #d9f0e4 100%); }
 .home-preview-cover--sport { background: linear-gradient(145deg, #f4f1ff 0%, #e8e1fa 100%); }
 .home-preview-cover--food { background: linear-gradient(145deg, #fff8ec 0%, #ffead3 100%); }
+.home-preview-cover--benefit { background: linear-gradient(145deg, #fff9e8 0%, #ffe4b7 100%); }
 
 .home-preview-cover-image {
   display: block;

@@ -1,0 +1,12 @@
+{
+  "id": "adapt-pinxianghui-interface",
+  "title": "将用户提供的拼享惠发布界面与素材适配进现有小程序",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已完成，归档任务并提交推送",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}

@@ -30,7 +30,7 @@
 
       <view class="info-card">
         <view class="info-row"><text class="info-symbol" aria-hidden="true">●</text><text class="info-label">活动时间</text><text class="info-value">{{activity.displayTime}}</text></view>
-        <view class="info-row"><text class="info-symbol" aria-hidden="true">◆</text><text class="info-label">集合地点</text><text class="info-value">{{activity.sceneLine || activity.placeLabel || '暂未填写'}}</text><text class="info-arrow" aria-hidden="true">›</text></view>
+        <view class="info-row"><text class="info-symbol" aria-hidden="true">◆</text><text class="info-label">{{placeInfoLabel}}</text><text class="info-value">{{activity.sceneLine || activity.placeLabel || '暂未填写'}}</text><text class="info-arrow" aria-hidden="true">›</text></view>
         <view class="info-row"><text class="info-symbol" aria-hidden="true">◒</text><text class="info-label">报名截止</text><text class="info-value">{{deadlineLabel}}</text></view>
         <view class="member-row">
           <view class="member-heading"><text class="info-symbol" aria-hidden="true">♟</text><text class="info-label">目前已加入</text><text class="member-count">· {{activity.memberCount}} / {{activity.maxMembers}} 人</text></view>
@@ -81,7 +81,7 @@
           <view class="owner-duty"><text class="owner-duty-mark" aria-hidden="true">◆</text><text>{{ownerDutyText}}</text></view>
         </view>
       </view>
-      <view class="safety-card"><view class="safety-title">参与更安心</view><view>成团后请在成员空间核验身份并自行确认安排；平台不提供运输、配送、担保或预订服务。</view></view>
+      <view class="safety-card"><view class="safety-title">参与更安心</view><view>{{safetyText}}</view></view>
       <button class="report-link" bindtap="handleReport" hover-class="utility-button--pressed">举报活动</button>
     </view>
 

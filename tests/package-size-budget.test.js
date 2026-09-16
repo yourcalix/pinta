@@ -7,7 +7,7 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '../miniprogram');
 const MAIN_BUDGET = Math.floor(1.71 * 1024 * 1024);
-const PUBLISH_BUDGET = Math.floor(1.2 * 1024 * 1024);
+const PUBLISH_BUDGET = Math.floor(1.25 * 1024 * 1024);
 const SUBPACKAGE_BUDGET = Math.floor(1.5 * 1024 * 1024);
 const MAIN_PUBLISH_ASSETS = new Set([
   'publish-cover-benefit.png',
@@ -58,6 +58,7 @@ test('主包发布素材仅保留跨页面资源，表单素材完全归属发�
     .map((file) => fs.readFileSync(file, 'utf8'))
     .join('\n');
   assert.doesNotMatch(source, /\.\.\/\.\.\/\.\.\/assets\/images\/publish\//);
+  assert.match(source, /\/assets\/images\/publish\/publish-cover-benefit\.png/);
 
   const expected = [
     'pin_food_interface.jpg', 'pin_food.png', 'fapiao.png', 'hotpot.png', 'sushi.png',

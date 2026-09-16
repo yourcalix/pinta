@@ -3,6 +3,10 @@
     <image class="form-paper-background" src="./assets/food/pin_food_interface.jpg" mode="aspectFill" aria-hidden="true" />
     <view class="form-paper-tint" aria-hidden="true"></view>
   </block>
+  <block wx:elif="{{type === 'benefit'}}">
+    <view class="benefit-paper-background" aria-hidden="true"></view>
+    <view class="benefit-paper-glow" aria-hidden="true"></view>
+  </block>
   <block wx:else>
     <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
     <view class="global-page-background-tint" aria-hidden="true"></view>
@@ -153,6 +157,87 @@
           <checkbox value="agreed" checked="{{safetyAgreed}}" color="#16A36A" aria-label="同意拼单安全规则" />
           <text>我确认信息真实，并同意遵守拼单安全规则。平台不提供运输、配送、担保或预订服务。</text>
         </label>
+      </checkbox-group>
+    </view>
+  </view>
+
+  <view wx:elif="{{type === 'benefit'}}" class="benefit-form-content">
+    <view class="benefit-hero">
+      <view class="benefit-hero-copy">
+        <text class="benefit-eyebrow">PINBA SAVING CLUB</text>
+        <text class="benefit-hero-title">一起凑单，一起省</text>
+        <text class="benefit-hero-subtitle">分享真实优惠，找到同频拼友</text>
+      </view>
+      <image class="benefit-hero-art" src="/assets/images/publish/publish-cover-benefit.png" mode="aspectFit" aria-hidden="true" />
+    </view>
+
+    <view wx:if="{{errorMessage}}" class="error-banner benefit-error-banner" role="alert">{{errorMessage}}</view>
+
+    <view class="benefit-card">
+      <image class="benefit-card-icon" src="./assets/benefit/icon-bag.png" mode="aspectFit" aria-hidden="true" />
+      <image class="benefit-card-decor benefit-card-decor--pig" src="./assets/benefit/decor-pig.png" mode="aspectFit" aria-hidden="true" />
+      <view class="benefit-section-title">优惠信息</view>
+      <view class="benefit-field-label required">商家、门店或平台</view>
+      <input class="benefit-input" maxlength="50" value="{{form.merchantOrPlatform}}" data-field="merchantOrPlatform" bindinput="handleInput" placeholder="如：山姆会员店、美团外卖、Steam" placeholder-class="benefit-placeholder" adjust-position="true" cursor-spacing="140" aria-label="必填项，商家、门店或平台" />
+      <view class="benefit-field-label required">活动标题</view>
+      <input class="benefit-input" maxlength="30" value="{{form.title}}" data-field="title" bindinput="handleInput" placeholder="如：万象城凑单满 300 减 100，缺 2 人" placeholder-class="benefit-placeholder" adjust-position="true" cursor-spacing="140" aria-label="必填项，活动标题" />
+      <view class="benefit-field-label required">优惠类型</view>
+      <view class="benefit-choice-grid" role="radiogroup" aria-label="优惠类型">
+        <button wx:for="{{benefitDealOptions}}" wx:key="value" class="benefit-choice {{form.dealType === item.value ? 'benefit-choice--active' : ''}}" data-field="dealType" data-value="{{item.value}}" bindtap="handleChoice" role="radio" aria-checked="{{form.dealType === item.value}}"><text>{{item.label}}</text></button>
+      </view>
+      <image class="benefit-card-decor benefit-card-decor--discount" src="./assets/benefit/decor-discount.png" mode="aspectFit" aria-hidden="true" />
+      <view class="benefit-field-label required">优惠门槛</view>
+      <input class="benefit-input" maxlength="80" value="{{form.offerThreshold}}" data-field="offerThreshold" bindinput="handleInput" placeholder="如：满 200 减 50、三人同行七折" placeholder-class="benefit-placeholder" adjust-position="true" cursor-spacing="140" aria-label="必填项，优惠门槛" />
+      <view class="benefit-price-grid">
+        <view class="benefit-price-field">
+          <view class="benefit-field-label">目标价格（选填）</view>
+          <input class="benefit-input" maxlength="40" value="{{form.targetPrice}}" data-field="targetPrice" bindinput="handleInput" placeholder="如：约 MOP 60/人" placeholder-class="benefit-placeholder" adjust-position="true" cursor-spacing="140" aria-label="目标价格，选填" />
+        </view>
+        <view class="benefit-price-field">
+          <view class="benefit-field-label">预计节省（选填）</view>
+          <input class="benefit-input" maxlength="40" value="{{form.estimatedSaving}}" data-field="estimatedSaving" bindinput="handleInput" placeholder="如：约省 MOP 25/人" placeholder-class="benefit-placeholder" adjust-position="true" cursor-spacing="140" aria-label="预计节省，选填" />
+        </view>
+      </view>
+    </view>
+
+    <view class="benefit-card">
+      <view class="benefit-section-title">履约方式与地点</view>
+      <view class="benefit-field-label required">优惠形式</view>
+      <view class="benefit-fulfillment-switch" role="radiogroup" aria-label="优惠形式">
+        <button wx:for="{{benefitFulfillmentOptions}}" wx:key="value" class="benefit-fulfillment-option {{form.fulfillmentType === item.value ? 'benefit-fulfillment-option--active' : ''}}" data-value="{{item.value}}" bindtap="handleBenefitFulfillment" role="radio" aria-checked="{{form.fulfillmentType === item.value}}">{{item.label}}</button>
+      </view>
+      <view wx:if="{{form.fulfillmentType === 'OFFLINE'}}" class="benefit-meeting-point">
+        <view class="benefit-field-label required">线下门店会合点</view>
+        <button class="meeting-point-button benefit-meeting-button" bindtap="handleOpenMeetingPointPicker" hover-class="meeting-point-button--pressed" aria-label="{{form.meetingPoint ? '重新选择线下门店会合点' : '从高德地图选择线下门店会合点'}}">
+          <text class="meeting-point-icon" aria-hidden="true">⌖</text>
+          <view class="meeting-point-copy"><text class="meeting-point-name">{{form.meetingPoint ? form.meetingPoint.label : '选择商圈或线下门店地址'}}</text><text wx:if="{{form.meetingPoint}}" class="meeting-point-address">{{form.meetingPoint.address}}</text></view>
+          <text class="meeting-point-arrow" aria-hidden="true">›</text>
+        </button>
+        <text class="meeting-point-privacy">仅用于公开会合地点与附近发现，不会保存您的实时位置</text>
+      </view>
+    </view>
+
+    <view class="benefit-card">
+      <view class="benefit-section-title">计划与人数</view>
+      <view class="benefit-picker-grid">
+        <picker mode="date" start="{{minStartDate}}" end="{{maxStartDate}}" value="{{form.startDate}}" bindchange="handleDate"><view class="benefit-picker" role="button" aria-label="选择计划日期，当前{{form.startDate || '未选择'}}"><text>{{form.startDate || '选择日期'}}</text><text aria-hidden="true">⌄</text></view></picker>
+        <picker mode="selector" range="{{timeOptions}}" value="{{timeIndex}}" bindchange="handleTime"><view class="benefit-picker" role="button" aria-label="选择计划时间，当前{{form.startTime || '未选择'}}"><text>{{form.startTime || '选择时间'}}</text><text aria-hidden="true">⌄</text></view></picker>
+      </view>
+      <view class="benefit-number-grid">
+        <view><view class="benefit-field-label required">最低成团人数</view><input class="benefit-input benefit-number-input" type="number" value="{{form.minMembers}}" data-field="minMembers" bindinput="handleNumber" adjust-position="true" cursor-spacing="140" aria-label="最低成团人数，2至20人" /></view>
+        <view><view class="benefit-field-label required">最多参与人数</view><input class="benefit-input benefit-number-input" type="number" value="{{form.maxMembers}}" data-field="maxMembers" bindinput="handleNumber" adjust-position="true" cursor-spacing="140" aria-label="最多参与人数，2至20人" /></view>
+      </view>
+    </view>
+
+    <view class="benefit-card benefit-card--safety">
+      <view class="benefit-section-title">规则与安全</view>
+      <view class="benefit-field-label">优惠详情（选填）</view>
+      <textarea class="benefit-textarea" maxlength="300" value="{{form.details}}" data-field="details" bindinput="handleInput" placeholder="说明优惠规则、使用限制或分摊方式…" placeholder-class="benefit-placeholder" disable-default-padding="true" fixed="false" adjust-position="true" cursor-spacing="140" aria-label="优惠详情，选填" />
+      <view class="benefit-field-label">参与规则（选填）</view>
+      <textarea class="benefit-textarea benefit-textarea--short" maxlength="200" value="{{form.rules}}" data-field="rules" bindinput="handleInput" placeholder="如：仅走官方渠道、成团后再确认结算" placeholder-class="benefit-placeholder" disable-default-padding="true" fixed="false" adjust-position="true" cursor-spacing="140" aria-label="参与规则，选填" />
+      <view class="benefit-safety-note" role="note">平台仅提供信息撮合与搭子交流，不代收任何款项、不承诺优惠有效性。请在成团后于平台成员空间内核验规则，通过官方渠道或当面结算，谨防诈骗。</view>
+      <checkbox-group bindchange="handleSafety">
+        <label class="agreement benefit-agreement"><checkbox value="agreed" checked="{{safetyAgreed}}" color="#059669" aria-label="同意拼单安全规则" /><text>我确认信息真实，并同意遵守拼单安全规则。</text></label>
       </checkbox-group>
     </view>
   </view>
@@ -339,6 +424,9 @@
 
   <view wx:if="{{type === 'companion'}}" class="fixed-submit-bar fixed-submit-bar--companion">
     <button class="submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼同行' : '立即发布拼同行'}}">{{submitting ? '正在发布…' : '立即发布拼同行'}}</button>
+  </view>
+  <view wx:elif="{{type === 'benefit'}}" class="fixed-submit-bar benefit-submit-bar">
+    <button class="submit-button benefit-submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼享惠' : '立即发布拼享惠'}}">{{submitting ? '正在发布…' : '立即发布拼享惠'}}</button>
   </view>
   <view wx:else class="fixed-submit-bar {{type === 'food' ? 'fixed-submit-bar--food' : ''}}">
     <button class="submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼单' : '立即发布拼单'}}">{{submitting ? '正在发布…' : '立即发布拼单'}}</button>

@@ -19,6 +19,10 @@ function activityInput(type, overrides = {}) {
     },
     food: {
       venue: '附近餐厅', cuisine: '粤菜', budgetRange: '50以内', dietaryNotes: ''
+    },
+    benefit: {
+      merchantOrPlatform: '山姆会员店', dealType: 'FULL_REDUCTION', offerThreshold: '满 200 减 50',
+      targetPrice: '约 MOP 60/人', estimatedSaving: '约省 MOP 25/人', fulfillmentType: 'ONLINE', details: ''
     }
   };
   return {
@@ -27,7 +31,7 @@ function activityInput(type, overrides = {}) {
     description: '',
     city: '澳门',
     district: '澳门城区',
-    placeLabel: type === 'companion' ? '关闸 → 氹仔' : typeData[type].venue,
+    placeLabel: type === 'companion' ? '关闸 → 氹仔' : type === 'benefit' ? '山姆会员店' : typeData[type].venue,
     startsAt,
     deadlineAt,
     minMembers: 2,
@@ -48,11 +52,11 @@ async function mockCreate(input, key) {
   });
 }
 
-test('三类活动均允许不填写补充说明，并与正式校验契约一致', async (t) => {
+test('四类活动均允许不填写补充说明，并与正式校验契约一致', async (t) => {
   mockServer.reset();
   t.after(() => mockServer.reset());
 
-  for (const type of ['companion', 'sport', 'food']) {
+  for (const type of ['companion', 'sport', 'food', 'benefit']) {
     const input = activityInput(type);
     assert.equal(validateActivityInput(input).description, '');
     const result = await mockCreate(input, `empty-${type}`);
@@ -61,11 +65,11 @@ test('三类活动均允许不填写补充说明，并与正式校验契约一�
   }
 });
 
-test('三类活动在 Cloud 与 Mock 中统一拒绝超过未来七天的开始时间', async (t) => {
+test('四类活动在 Cloud 与 Mock 中统一拒绝超过未来七天的开始时间', async (t) => {
   mockServer.reset();
   t.after(() => mockServer.reset());
 
-  for (const type of ['companion', 'sport', 'food']) {
+  for (const type of ['companion', 'sport', 'food', 'benefit']) {
     const input = activityInput(type, {
       startsAt: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString()
     });

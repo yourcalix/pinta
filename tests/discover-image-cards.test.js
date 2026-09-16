@@ -30,10 +30,10 @@ function component(fontSizeSetting = 16, fail = false) {
   } };
 }
 
-test('首页三列预览变体默认关闭，三类封面白名单且不接受任意URL', () => {
+test('首页三列预览变体默认关闭，四类封面白名单且不接受任意URL', () => {
   const h = component();
   assert.equal(h.definition.properties.variant.value, 'compact');
-  for (const type of ['companion', 'sport', 'food']) {
+  for (const type of ['companion', 'sport', 'food', 'benefit']) {
     h.update({ id: type, typeTone: type, cover: 'https://untrusted.invalid/picture' });
     assert.equal(h.instance.data.coverSrc, `/assets/images/publish/publish-cover-${type}.png`);
     assert.ok(fs.existsSync(path.join(root, h.instance.data.coverSrc)));

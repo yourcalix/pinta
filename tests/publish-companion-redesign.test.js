@@ -248,18 +248,18 @@ test('拼同行 payload 保存真实时间弹性与九项严格偏好，不伪�
   });
 });
 
-test('三类前端拒绝超过七天的时间且同行切换范围模式时生成有效区间', () => {
+test('四类前端拒绝超过七天的时间且同行切换范围模式时生成有效区间', () => {
   const definition = loadFormDefinition();
   const page = companionPage(definition, { startDate: localDateAfter(8) });
   assert.equal(definition.validateForm.call(page), '活动时间不能超过未来 7 天');
 
-  for (const type of ['sport', 'food']) {
+  for (const type of ['sport', 'food', 'benefit']) {
     page.data.type = type;
     assert.equal(definition.validateForm.call(page), '活动时间不能超过未来 7 天');
   }
   const template = read('subpackages/publish/form/index.wxml');
   const datePickers = template.match(/<picker mode="date"[^>]*>/g) || [];
-  assert.equal(datePickers.length, 2);
+  assert.equal(datePickers.length, 3);
   datePickers.forEach((picker) => {
     assert.match(picker, /start="\{\{minStartDate\}\}"/);
     assert.match(picker, /end="\{\{maxStartDate\}\}"/);

@@ -27,7 +27,7 @@ function common(type, typeData) {
   };
 }
 
-test('新活动模型只接受拼同行、拼运动和拼饭桌', () => {
+test('新活动模型接受拼同行、拼运动、拼饭桌和拼享惠', () => {
   assert.equal(validateActivityInput(common('companion', {
     originLabel: '校门口', destinationLabel: '横琴口岸', timeFlexibility: 'WITHIN_30_MIN',
     transportPreference: 'DISCUSS_AFTER_FORMED', luggageType: 'SMALL'
@@ -38,6 +38,10 @@ test('新活动模型只接受拼同行、拼运动和拼饭桌', () => {
   assert.equal(validateActivityInput(common('food', {
     venue: '学生餐厅', cuisine: '粤菜', budgetRange: '50以内', dietaryNotes: '不吃辣'
   }), NOW).type, 'food');
+  assert.equal(validateActivityInput(common('benefit', {
+    merchantOrPlatform: '山姆会员店', dealType: 'FULL_REDUCTION', offerThreshold: '满200减50',
+    targetPrice: '约 MOP 60/人', estimatedSaving: '约省 MOP 25/人', fulfillmentType: 'ONLINE', details: '官方渠道结算'
+  }), NOW).type, 'benefit');
   assert.throws(() => validateActivityInput(common('ride', {}), NOW), (error) => error.code === 'VALIDATION_ERROR');
   assert.throws(() => validateActivityListInput({ type: 'driver' }), (error) => error.code === 'VALIDATION_ERROR');
 });
@@ -401,7 +405,7 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.doesNotMatch(template, /搜索|推荐|type-panel|module-row/);
 });
 
-test('发布入口展示拼享惠筹备模块且不把未上线类型送入活动表单', () => {
+test('发布入口将拼享惠接入真实活动表单与草稿恢复', () => {
   const root = path.join(__dirname, '../miniprogram/pages/publish');
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8');
@@ -410,14 +414,13 @@ test('发布入口展示拼享惠筹备模块且不把未上线类型送入活�
   assert.match(script, /title:\s*'拼享惠'/);
   assert.match(script, /description:\s*'拼优惠券，省钱一起享'/);
   assert.match(script, /publish-cover-benefit\.png/);
-  assert.match(script, /if \(!item\.available\)/);
-  assert.match(script, /功能筹备中/);
+  assert.doesNotMatch(script, /功能筹备中/);
   assert.match(template, /item\.available \? '发起' : '筹备中'/);
   assert.match(template, /wx:if="\{\{item\.image\}\}"/);
   assert.match(template, /aria-disabled="\{\{!item\.available \|\| pending\}\}"/);
   assert.match(style, /\.type-card--benefit\s*\{/);
   assert.doesNotMatch(style, /\.type-card-art--benefit\s*\{/);
-  assert.doesNotMatch(script, /pinba_publish_draft_benefit/);
+  assert.match(script, /benefit:\s*\['title'/);
 });
 
 test('发布入口忽略空白草稿并只展示最近一次有效草稿', () => {

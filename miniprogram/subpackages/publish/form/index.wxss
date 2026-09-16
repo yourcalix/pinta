@@ -786,6 +786,161 @@
 .companion-agreement { margin-top: 22rpx; }
 .fixed-submit-bar--companion { z-index: 20; }
 
+.form-page--benefit {
+  padding-bottom: calc(154rpx + env(safe-area-inset-bottom));
+  background: #d97706;
+  color: #78350f;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.benefit-paper-background,
+.benefit-paper-glow {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.benefit-paper-background {
+  z-index: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(254, 243, 199, .36) 0, transparent 32%),
+    radial-gradient(circle at 82% 42%, rgba(255, 251, 235, .16) 0, transparent 36%),
+    linear-gradient(155deg, #f2a516 0%, #e38b08 48%, #c96a05 100%);
+}
+
+.benefit-paper-background::after {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(120, 53, 15, .13) .8rpx, transparent .8rpx);
+  background-size: 8rpx 8rpx;
+  content: '';
+  opacity: .38;
+}
+
+.benefit-paper-glow {
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(255, 251, 235, .08), rgba(120, 53, 15, .06));
+}
+
+.benefit-form-content {
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  padding: 8rpx 28rpx 30rpx;
+}
+
+.benefit-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 220rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 24rpx 24rpx 22rpx 32rpx;
+  background: rgba(255, 251, 235, .9);
+  border: 2rpx solid rgba(254, 215, 122, .9);
+  border-radius: 34rpx;
+  box-shadow: 0 12rpx 28rpx rgba(120, 53, 15, .13);
+}
+
+.benefit-hero-copy { position: relative; z-index: 2; flex: 1; min-width: 0; }
+.benefit-eyebrow { display: block; color: #b45309; font-size: 20rpx; font-weight: 800; letter-spacing: 2rpx; line-height: 1.4; }
+.benefit-hero-title { display: block; margin-top: 10rpx; color: #78350f; font-family: "STKaiti", "KaiTi", "PingFang SC", sans-serif; font-size: 38rpx; font-weight: 800; line-height: 1.24; }
+.benefit-hero-subtitle { display: block; max-width: 320rpx; margin-top: 10rpx; color: rgba(146, 64, 14, .86); font-size: 23rpx; line-height: 1.5; }
+.benefit-hero-art { flex: 0 0 218rpx; width: 218rpx; height: 174rpx; margin-left: 8rpx; pointer-events: none; user-select: none; }
+.benefit-error-banner { margin: 20rpx 0 0; }
+
+.form-page--benefit .benefit-card {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-top: 20rpx;
+  padding: 36rpx 32rpx;
+  background: #fffdf9;
+  border: 2rpx solid #fde68a;
+  border-radius: 32rpx;
+  box-shadow: 0 10rpx 24rpx rgba(120, 53, 15, .1);
+}
+
+.benefit-card-icon {
+  position: absolute;
+  top: 25rpx;
+  right: 28rpx;
+  z-index: 2;
+  width: 56rpx;
+  height: 56rpx;
+  pointer-events: none;
+  user-select: none;
+}
+
+.benefit-card-decor { position: absolute; z-index: 0; width: 76rpx; height: 76rpx; opacity: .14; pointer-events: none; user-select: none; }
+.benefit-card-decor--pig { top: 108rpx; right: 18rpx; transform: rotate(8deg); }
+.benefit-card-decor--discount { right: 22rpx; bottom: 120rpx; transform: rotate(-8deg); }
+.benefit-section-title { position: relative; z-index: 1; margin: 0 74rpx 22rpx 0; color: #78350f; font-family: "STKaiti", "KaiTi", "PingFang SC", sans-serif; font-size: 31rpx; font-weight: 800; line-height: 1.35; }
+.benefit-field-label { position: relative; z-index: 1; margin: 24rpx 0 10rpx; color: #92400e; font-size: 25rpx; font-weight: 650; line-height: 1.45; }
+
+.benefit-input,
+.benefit-textarea,
+.benefit-picker {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  color: #1f2937;
+  background: #fffaf0;
+  border: 2rpx solid #f4d58b;
+  border-radius: 20rpx;
+  font-size: 27rpx;
+}
+
+.benefit-input { min-height: 88rpx; height: auto; padding: 16rpx 22rpx; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.benefit-placeholder { color: rgba(180, 83, 9, .44); }
+.benefit-textarea { min-height: 168rpx; max-height: 260rpx; padding: 20rpx 22rpx; line-height: 1.58; }
+.benefit-textarea--short { min-height: 132rpx; }
+.benefit-picker { display: flex; align-items: center; justify-content: space-between; min-height: 88rpx; padding: 16rpx 22rpx; }
+
+.benefit-choice-grid { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10rpx; }
+.benefit-choice,
+.benefit-fulfillment-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 88rpx;
+  margin: 0;
+  padding: 12rpx 18rpx;
+  color: #92400e;
+  background: #fff7df;
+  border: 2rpx solid #f6d58b;
+  border-radius: 44rpx;
+  font-size: 23rpx;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.benefit-choice { flex: 1 1 calc(33.333% - 10rpx); min-width: 170rpx; }
+.benefit-choice::after,
+.benefit-fulfillment-option::after { display: none; }
+.benefit-choice--active { color: #fffdf9; background: #d97706; border-color: #d97706; box-shadow: 0 5rpx 12rpx rgba(180, 83, 9, .2); }
+
+.benefit-price-grid,
+.benefit-picker-grid,
+.benefit-number-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16rpx; }
+.benefit-price-field { min-width: 0; }
+.benefit-number-input { text-align: center; }
+
+.benefit-fulfillment-switch { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8rpx; padding: 8rpx; background: #f8ead0; border-radius: 48rpx; }
+.benefit-fulfillment-option { width: 100%; background: transparent; border-color: transparent; }
+.benefit-fulfillment-option--active { color: #78350f; background: #fffdf9; border-color: #f1cd78; box-shadow: 0 4rpx 10rpx rgba(120, 53, 15, .12); }
+.benefit-meeting-point { margin-top: 20rpx; }
+.benefit-meeting-button { background: #fffaf0; border-color: #f4d58b; }
+
+.benefit-safety-note { margin-top: 22rpx; padding: 20rpx 22rpx; color: #854d0e; background: #fffbeb; border: 2rpx solid #fde68a; border-radius: 20rpx; font-size: 22rpx; line-height: 1.6; }
+.benefit-agreement { color: #78634d; }
+.benefit-submit-bar { padding-top: 14rpx; background: rgba(255, 253, 249, .95); border-top: 1rpx solid rgba(217, 119, 6, .13); box-shadow: 0 -8rpx 24rpx rgba(120, 53, 15, .08); backdrop-filter: blur(16px); }
+.benefit-submit-button { min-height: 88rpx; background: linear-gradient(135deg, #10b981, #059669); border-radius: 44rpx; box-shadow: 0 8rpx 18rpx rgba(5, 150, 105, .24); }
+
 @media (max-width: 340px) {
   .form-content { padding-right: 24rpx; padding-left: 24rpx; }
   .food-form-content { padding-right: 24rpx; padding-left: 24rpx; }
@@ -803,4 +958,13 @@
   .companion-range-fields { padding: 12rpx 8rpx; }
   .companion-range-field { gap: 5rpx; font-size: 20rpx; }
   .companion-range-field input { width: 70rpx; }
+  .benefit-form-content { padding-right: 20rpx; padding-left: 20rpx; }
+  .benefit-hero { min-height: 198rpx; padding-right: 18rpx; padding-left: 24rpx; }
+  .benefit-hero-art { flex-basis: 170rpx; width: 170rpx; height: 145rpx; }
+  .benefit-hero-title { font-size: 34rpx; }
+  .form-page--benefit .benefit-card { padding: 30rpx 24rpx; }
+  .benefit-choice { flex-basis: calc(50% - 6rpx); min-width: 0; }
+  .benefit-price-grid,
+  .benefit-number-grid { grid-template-columns: 1fr; gap: 0; }
+  .benefit-picker-grid { gap: 10rpx; }
 }

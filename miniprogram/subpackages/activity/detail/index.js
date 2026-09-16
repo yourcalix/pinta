@@ -13,6 +13,14 @@ const OWNER_MBTI_TYPES = new Set([
   'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
   'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'
 ]);
+const BENEFIT_DEAL_LABELS = Object.freeze({
+  FULL_REDUCTION: '满减优惠',
+  GROUP_BUY: '团购价',
+  COUPON_SHARE: '优惠券共享',
+  MEMBERSHIP_SHARE: '会员权益共享',
+  BUNDLE_DISCOUNT: '组合优惠',
+  OTHER: '其他优惠'
+});
 
 function publishedDateLabel(value) {
   const date = new Date(value);
@@ -49,11 +57,26 @@ function ownerPersonalTags(profile) {
 
 function presentation(activity) {
   const slots = normalizeAvatarSlots(activity.avatarSlots, activity.maxMembers);
-  const supported = ['companion', 'sport', 'food'].includes(activity.typeTone);
+  const supported = ['companion', 'sport', 'food', 'benefit'].includes(activity.typeTone);
   const data = activity.typeData || {};
-  const fields = activity.typeTone === 'food' ? [['venue', '餐厅'], ['cuisine', '口味'], ['budgetRange', '人均预算'], ['dietaryNotes', '饮食偏好']]
+  const fields = activity.typeTone === 'benefit'
+    ? [
+        ['merchantOrPlatform', '商家 / 平台'],
+        ['dealTypeLabel', '优惠类型'],
+        ['offerThreshold', '优惠门槛'],
+        ['targetPrice', '目标价格'],
+        ['estimatedSaving', '预计节省'],
+        ['fulfillmentLabel', '参与方式'],
+        ['details', '优惠详情']
+      ]
+    : activity.typeTone === 'food' ? [['venue', '餐厅'], ['cuisine', '口味'], ['budgetRange', '人均预算'], ['dietaryNotes', '饮食偏好']]
     : activity.typeTone === 'sport' ? [['sportType', '运动项目'], ['venue', '场地'], ['equipment', '装备说明']]
       : [['originLabel', '出发地'], ['destinationLabel', '目的地']];
+  const detailData = activity.typeTone === 'benefit' ? {
+    ...data,
+    dealTypeLabel: BENEFIT_DEAL_LABELS[data.dealType] || '',
+    fulfillmentLabel: data.fulfillmentType === 'OFFLINE' ? '线下到店' : data.fulfillmentType === 'ONLINE' ? '线上拼单' : ''
+  } : data;
   let primaryAction = '', primaryLabel = activity.statusLabel;
   const legacy = activity.legacy && activity.legacy.readOnly;
   if (legacy) primaryLabel = '历史活动 · 仅供查看';
@@ -72,10 +95,14 @@ function presentation(activity) {
     coverSrc: supported ? `/assets/images/publish/publish-cover-${activity.typeTone}.png` : '',
     coverFailed: false,
     deadlineLabel: formatDateTime(activity.deadlineAt),
+    placeInfoLabel: activity.typeTone === 'benefit' ? '优惠信息' : '集合地点',
+    safetyText: activity.typeTone === 'benefit'
+      ? '平台仅提供信息撮合与成员交流，不代收款项、不承诺优惠有效性；请核验规则并通过官方渠道或当面结算。'
+      : '成团后请在成员空间核验身份并自行确认安排；平台不提供运输、配送、担保或预订服务。',
     detailSlots: slots.slice(0, 6),
     hiddenMembers: slots.slice(6).filter(slot => !slot.empty).length,
     groupHint: activity.status === 'RECRUITING' && needed > 0 ? `还差 ${needed} 人达到成团人数` : `${activity.minMembers} 人成团 · 最多 ${activity.maxMembers} 人`,
-    detailRows: fields.filter(([key]) => typeof data[key] === 'string' && data[key].trim()).map(([key, label]) => ({ key, label, value: data[key] })),
+    detailRows: fields.filter(([key]) => typeof detailData[key] === 'string' && detailData[key].trim()).map(([key, label]) => ({ key, label, value: detailData[key] })),
     ownerAvatar: ownerAvatarPresentation(activity),
     ownerNickname,
     ownerPersonalTags: ownerTags,

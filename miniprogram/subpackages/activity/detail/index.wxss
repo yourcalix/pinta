@@ -7,6 +7,7 @@ button::after { display: none; }
 .detail-hero { position: relative; width: 100%; height: calc(75vh + 48rpx); min-height: 900rpx; overflow: hidden; background: #f16b99; }
 .detail-hero--sport { background: #c9b7ef; }
 .detail-hero--food { background: #f4aa75; }
+.detail-hero--benefit { background: #f2a24f; }
 .hero-art { width: 100%; height: 100%; background: transparent; }
 .hero-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.24) 0%, transparent 22%, transparent 72%, rgba(0,0,0,.22) 100%); pointer-events: none; }
 .hero-caption { position: absolute; left: 34rpx; bottom: 82rpx; display: flex; flex-direction: column; gap: 4rpx; color: #fff; font-size: 22rpx; font-weight: 700; letter-spacing: 3rpx; text-shadow: 0 2rpx 8rpx rgba(0,0,0,.3); }
@@ -20,6 +21,7 @@ button::after { display: none; }
 .type-tag--companion { background: #e4f5ef; color: #08785c; }
 .type-tag--sport { background: #eee8fb; color: #58408f; }
 .type-tag--food { background: #ffeadc; color: #a4421b; }
+.type-tag--benefit { background: #fff0d8; color: #9a4714; }
 .archive-label { color: #777; font-size: 24rpx; }
 .detail-title { margin-top: 20rpx; font-size: 39rpx; line-height: 1.35; font-weight: 800; overflow-wrap: anywhere; word-break: break-all; }
 .detail-subline { margin-top: 12rpx; color: #8a8a8a; font-size: 25rpx; line-height: 1.45; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

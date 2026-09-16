@@ -23,7 +23,8 @@ Page({
       { value: '', label: '全部' },
       { value: 'companion', label: '拼同行' },
       { value: 'sport', label: '拼运动' },
-      { value: 'food', label: '拼饭桌' }
+      { value: 'food', label: '拼饭桌' },
+      { value: 'benefit', label: '拼享惠' }
     ],
     type: '',
     keyword: '',

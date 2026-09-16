@@ -17,7 +17,7 @@ Page({
     state: 'intro',
     radiusOptions: [{ value: 1000, label: '1km' }, { value: 3000, label: '3km' }, { value: 5000, label: '5km' }, { value: 10000, label: '10km' }],
     radiusMeters: 3000,
-    typeOptions: [{ value: '', label: '全部' }, { value: 'companion', label: '拼同行' }, { value: 'sport', label: '拼运动' }, { value: 'food', label: '拼饭桌' }],
+    typeOptions: [{ value: '', label: '全部' }, { value: 'companion', label: '拼同行' }, { value: 'sport', label: '拼运动' }, { value: 'food', label: '拼饭桌' }, { value: 'benefit', label: '拼享惠' }],
     type: '', activities: [], hasMore: false, loadingMore: false, loadMoreError: '', errorMessage: ''
   },
 

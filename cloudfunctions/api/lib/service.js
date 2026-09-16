@@ -14,6 +14,8 @@ const {
   COMPANION_TRANSPORT_PREFERENCES,
   FOOD_PAYMENT_METHODS,
   FOOD_GENDER_PREFERENCES,
+  BENEFIT_DEAL_TYPES,
+  BENEFIT_FULFILLMENT_TYPES,
   COMPANION_PREFERENCE_VALUES,
   LEGACY_ACTIVITY_TYPE_MAP
 } = require('./constants');
@@ -251,6 +253,19 @@ function publicFoodTypeData(source) {
   };
 }
 
+function publicBenefitTypeData(source) {
+  const typeData = source && typeof source === 'object' ? source : {};
+  return {
+    merchantOrPlatform: typeof typeData.merchantOrPlatform === 'string' ? typeData.merchantOrPlatform : '',
+    dealType: BENEFIT_DEAL_TYPES.includes(typeData.dealType) ? typeData.dealType : 'OTHER',
+    offerThreshold: typeof typeData.offerThreshold === 'string' ? typeData.offerThreshold : '',
+    targetPrice: typeof typeData.targetPrice === 'string' ? typeData.targetPrice : '',
+    estimatedSaving: typeof typeData.estimatedSaving === 'string' ? typeData.estimatedSaving : '',
+    fulfillmentType: BENEFIT_FULFILLMENT_TYPES.includes(typeData.fulfillmentType) ? typeData.fulfillmentType : 'ONLINE',
+    details: typeof typeData.details === 'string' ? typeData.details : ''
+  };
+}
+
 function publicCompanionTypeData(source) {
   const typeData = source && typeof source === 'object' ? source : {};
   const preferences = typeData.preferences && typeof typeData.preferences === 'object' && !Array.isArray(typeData.preferences)
@@ -330,6 +345,8 @@ function publicActivity(activity, viewer = {}, at, avatarHydration = {}) {
           }
         : storedType === 'food'
           ? publicFoodTypeData(activity.typeData)
+          : storedType === 'benefit'
+          ? publicBenefitTypeData(activity.typeData)
           : storedType === 'product'
           ? {
               venue: activity.placeLabel || '',
@@ -1377,6 +1394,11 @@ function createPinbaService(options) {
         activityPayload.title,
         activityPayload.description,
         activityPayload.rules,
+        activityPayload.type === 'benefit' && activityPayload.typeData.merchantOrPlatform,
+        activityPayload.type === 'benefit' && activityPayload.typeData.offerThreshold,
+        activityPayload.type === 'benefit' && activityPayload.typeData.targetPrice,
+        activityPayload.type === 'benefit' && activityPayload.typeData.estimatedSaving,
+        activityPayload.type === 'benefit' && activityPayload.typeData.details,
         activityPayload.meetingPoint && activityPayload.meetingPoint.label,
         activityPayload.meetingPoint && activityPayload.meetingPoint.address
       ].filter(Boolean), { actorId: user.id, scene: 2 });

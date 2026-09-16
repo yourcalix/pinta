@@ -5,7 +5,8 @@ const { fallbackAvatarSlot, normalizeAvatarSlots } = require('../../utils/passen
 const COVERS = Object.freeze({
   companion: '/assets/images/publish/publish-cover-companion.png',
   sport: '/assets/images/publish/publish-cover-sport.png',
-  food: '/assets/images/publish/publish-cover-food.png'
+  food: '/assets/images/publish/publish-cover-food.png',
+  benefit: '/assets/images/publish/publish-cover-benefit.png'
 });
 
 Component({

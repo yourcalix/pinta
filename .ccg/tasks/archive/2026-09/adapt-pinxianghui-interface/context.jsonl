@@ -1,0 +1,12 @@
+{"path":"miniprogram/pages/publish/index.js","reason":"当前发布入口将拼享惠标记为筹备中，附件版本拟改为可用"}
+{"path":"miniprogram/subpackages/publish/form/index.js","reason":"现有生产表单包含地图、7天时间窗、草稿和真实发布契约，不能被附件旧版本覆盖"}
+{"path":"miniprogram/subpackages/publish/form/index.wxml","reason":"需要新增独立拼享惠表单分支并保留其他三类页面"}
+{"path":"miniprogram/subpackages/publish/form/index.wxss","reason":"需要适配用户提供的橙色纸张与手绘插画视觉"}
+{"path":"cloudfunctions/api/lib/constants.js","reason":"生产活动类型白名单当前仅支持 companion/sport/food"}
+{"path":"cloudfunctions/api/lib/validation.js","reason":"需要新增独立 benefit typeData 校验而非复用 food"}
+{"path":"cloudfunctions/api/lib/service.js","reason":"需要公开 DTO 清洗和内容安全扫描拼享惠字段"}
+{"path":"miniprogram/utils/display.js","reason":"列表与详情需要正确显示拼享惠类型和摘要"}
+{"path":"miniprogram/subpackages/activity/detail/index.js","reason":"详情页当前仅支持三种正式活动"}
+{"path":"miniprogram/components/activity-card/index.js","reason":"活动卡片需要拼享惠封面"}
+{"path":"tests/package-size-budget.test.js","reason":"附件原始素材约9.3MB，必须压缩并遵守发布分包预算"}
+

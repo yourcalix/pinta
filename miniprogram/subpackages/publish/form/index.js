@@ -9,7 +9,8 @@ const { PILOT_CITY, PILOT_DISTRICTS } = require('../../../config/locations');
 const TYPES = Object.freeze({
   companion: { title: '发布拼同行', subtitle: '找同路伙伴，一起商量合规出行方式', tone: 'companion', icon: './assets/food/pin_food.png' },
   sport: { title: '发布拼运动', subtitle: '约球、跑步或组队，找到合适的运动搭子', tone: 'sport', icon: './assets/food/pin_food.png' },
-  food: { title: ' 发布拼饭桌 ', subtitle: '发起拼饭桌 \n 一起探索附近好味道!', tone: 'food', icon: './assets/food/pin_food.png' }
+  food: { title: ' 发布拼饭桌 ', subtitle: '发起拼饭桌 \n 一起探索附近好味道!', tone: 'food', icon: './assets/food/pin_food.png' },
+  benefit: { title: '发布拼享惠', subtitle: '一起凑单，一起省', tone: 'benefit', icon: '/assets/images/publish/publish-cover-benefit.png' }
 });
 
 const CUISINE_IMAGES = Object.freeze({
@@ -41,6 +42,8 @@ const FOOD_PAYMENT_VALUES = Object.freeze({
   '真的只是拼张桌': 'TABLE_ONLY'
 });
 const FOOD_GENDER_VALUES = Object.freeze({ 男生: 'MALE', 女生: 'FEMALE', 男女均可: 'ALL' });
+const BENEFIT_DEAL_TYPES = Object.freeze(['FULL_REDUCTION', 'GROUP_BUY', 'COUPON_SHARE', 'MEMBERSHIP_SHARE', 'BUNDLE_DISCOUNT', 'OTHER']);
+const BENEFIT_FULFILLMENT_TYPES = Object.freeze(['ONLINE', 'OFFLINE']);
 const COMPANION_FORM_ENUMS = Object.freeze({
   timeFlexibility: ['ON_TIME', 'WITHIN_30_MIN', 'WITHIN_60_MIN'],
   transportPreference: ['PUBLIC_TRANSIT', 'LICENSED_TAXI', 'DISCUSS_AFTER_FORMED'],
@@ -64,7 +67,8 @@ const TYPE_FORM_FIELDS = Object.freeze({
     'silenceComfort', 'garlicPreference', 'fragrancePreference', 'slippersPreference'
   ],
   sport: ['sportType', 'venue', 'level', 'intensity', 'equipment'],
-  food: ['venue', 'cuisine', 'budgetRange', 'dietaryNotes', 'dietaryCustom', 'genderPreference', 'mbtiPreference', 'paymentMethod', 'memberRangeText']
+  food: ['venue', 'cuisine', 'budgetRange', 'dietaryNotes', 'dietaryCustom', 'genderPreference', 'mbtiPreference', 'paymentMethod', 'memberRangeText'],
+  benefit: ['merchantOrPlatform', 'dealType', 'offerThreshold', 'targetPrice', 'estimatedSaving', 'fulfillmentType', 'details']
 });
 
 function initialForm(type) {
@@ -78,7 +82,9 @@ function initialForm(type) {
     sportType: '', venue: '', level: 'ANY', intensity: 'MEDIUM', equipment: '',
     cuisine: '', budgetRange: '', dietaryNotes: '',
     genderPreference: '',
-    paymentMethod: '', dietaryCustom: '', memberRangeText: '4'
+    paymentMethod: '', dietaryCustom: '', memberRangeText: '4',
+    merchantOrPlatform: '', dealType: 'FULL_REDUCTION', offerThreshold: '', targetPrice: '', estimatedSaving: '',
+    fulfillmentType: 'ONLINE', details: ''
   };
 }
 
@@ -115,6 +121,11 @@ function cleanFormData(type, source = {}) {
     Object.entries(COMPANION_FORM_ENUMS).forEach(([field, values]) => {
       if (!values.includes(result[field])) result[field] = initial[field];
     });
+  }
+  if (type === 'benefit') {
+    if (!BENEFIT_DEAL_TYPES.includes(result.dealType)) result.dealType = initial.dealType;
+    if (!BENEFIT_FULFILLMENT_TYPES.includes(result.fulfillmentType)) result.fulfillmentType = initial.fulfillmentType;
+    if (result.fulfillmentType === 'ONLINE') result.meetingPoint = null;
   }
   const meetingPoint = result.meetingPoint;
   if (!meetingPoint || typeof meetingPoint !== 'object'
@@ -260,6 +271,18 @@ Page({
     genderIndex: 0,
     mbtiOptions: ['不限', 'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISTP', 'ESTJ', 'ESTP', 'ISFJ', 'ISFP', 'ESFJ', 'ESFP'],
     mbtiIndex: 0,
+    benefitDealOptions: [
+      { value: 'FULL_REDUCTION', label: '满减凑单' },
+      { value: 'GROUP_BUY', label: '多人团购' },
+      { value: 'COUPON_SHARE', label: '优惠券共享' },
+      { value: 'MEMBERSHIP_SHARE', label: '会员权益共享' },
+      { value: 'BUNDLE_DISCOUNT', label: '组合优惠' },
+      { value: 'OTHER', label: '其他' }
+    ],
+    benefitFulfillmentOptions: [
+      { value: 'ONLINE', label: '线上拼单' },
+      { value: 'OFFLINE', label: '线下到店' }
+    ],
     safetyAgreed: false,
     submitting: false,
     errorMessage: '',
@@ -316,6 +339,14 @@ Page({
   },
   handleNumber(event) { const field = event.currentTarget.dataset.field; this.setData({ [`form.${field}`]: Number(event.detail.value) || 0, errorMessage: '' }); },
   handleChoice(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.currentTarget.dataset.value, errorMessage: '' }); },
+  handleBenefitFulfillment(event) {
+    const value = event.currentTarget.dataset.value === 'OFFLINE' ? 'OFFLINE' : 'ONLINE';
+    this.setData({
+      'form.fulfillmentType': value,
+      ...(value === 'ONLINE' ? { 'form.meetingPoint': null } : {}),
+      errorMessage: ''
+    });
+  },
   handleCompanionOptionalChoice(event) {
     const field = event.currentTarget.dataset.field;
     const value = event.currentTarget.dataset.value;
@@ -383,12 +414,12 @@ Page({
       url: '/subpackages/publish/location-picker/index',
       events: {
         meetingPointSelected: (meetingPoint) => {
+          if (this.data.type === 'benefit') {
+            this.setData({ 'form.meetingPoint': meetingPoint, errorMessage: '' });
+            return;
+          }
           const linkedField = this.data.type === 'companion' ? 'originLabel' : 'venue';
-          this.setData({
-            'form.meetingPoint': meetingPoint,
-            [`form.${linkedField}`]: meetingPoint.label,
-            errorMessage: ''
-          });
+          this.setData({ 'form.meetingPoint': meetingPoint, [`form.${linkedField}`]: meetingPoint.label, errorMessage: '' });
         }
       },
       fail: () => this.setData({ errorMessage: '地点选择页打开失败，请稍后重试' })
@@ -420,8 +451,9 @@ Page({
       ? foodCapacity(form)
       : this.data.type === 'companion' ? companionCapacity(form) : standardCapacity(form);
     if (capacity.error) return capacity.error;
-    if (!form.meetingPoint || form.meetingPoint.provider !== 'AMAP' || form.meetingPoint.coordinateSystem !== 'GCJ02'
-      || !Number.isFinite(form.meetingPoint.latitude) || !Number.isFinite(form.meetingPoint.longitude)) {
+    const requiresMeetingPoint = this.data.type !== 'benefit' || form.fulfillmentType === 'OFFLINE';
+    if (requiresMeetingPoint && (!form.meetingPoint || form.meetingPoint.provider !== 'AMAP' || form.meetingPoint.coordinateSystem !== 'GCJ02'
+      || !Number.isFinite(form.meetingPoint.latitude) || !Number.isFinite(form.meetingPoint.longitude))) {
       return '请选择有效的活动会合地点';
     }
     if (this.data.type === 'companion' && (!form.originLabel.trim() || !form.destinationLabel.trim())) return '请填写出发地和目的地';
@@ -429,6 +461,19 @@ Page({
     if (this.data.type === 'food' && (!form.venue.trim() || !form.cuisine.trim() || !FOOD_PAYMENT_VALUES[form.paymentMethod])) return '请填写餐厅、口味和拼桌形式';
     if (this.data.type === 'food' && form.paymentMethod === 'Fifty Fifty (均摊)' && !form.budgetRange.trim()) return '请选择人均预算';
     if (this.data.type === 'food' && combinedDietaryNotes(form).length > 100) return '饮食偏好不能超过 100 个字';
+    if (this.data.type === 'benefit') {
+      const merchantOrPlatform = normalizedText(form.merchantOrPlatform);
+      const offerThreshold = normalizedText(form.offerThreshold);
+      if (!merchantOrPlatform) return '请填写商家或平台名称';
+      if (merchantOrPlatform.length > 50) return '商家或平台名称不能超过 50 个字';
+      if (!BENEFIT_DEAL_TYPES.includes(form.dealType)) return '请选择优惠类型';
+      if (!offerThreshold) return '请填写优惠门槛';
+      if (offerThreshold.length > 80) return '优惠门槛不能超过 80 个字';
+      if (normalizedText(form.targetPrice).length > 40) return '目标价格不能超过 40 个字';
+      if (normalizedText(form.estimatedSaving).length > 40) return '预计节省不能超过 40 个字';
+      if (!BENEFIT_FULFILLMENT_TYPES.includes(form.fulfillmentType)) return '请选择优惠形式';
+      if (normalizedText(form.details).length > 300) return '优惠详情不能超过 300 个字';
+    }
     if (!this.data.safetyAgreed) return '请阅读并同意拼单安全规则';
     return '';
   },
@@ -441,10 +486,12 @@ Page({
     const common = {
       type: this.data.type,
       title: isFood ? foodTitle(form) : normalizedText(form.title),
-      description: isFood ? foodDescription(form) : normalizedText(form.description),
+      description: isFood ? foodDescription(form) : this.data.type === 'benefit' ? normalizedText(form.details) : normalizedText(form.description),
       city: PILOT_CITY,
       district: PILOT_DISTRICTS[0],
-      placeLabel: (this.data.type === 'companion' ? `${form.originLabel.trim()} → ${form.destinationLabel.trim()}` : form.venue.trim()),
+      placeLabel: this.data.type === 'companion'
+        ? `${form.originLabel.trim()} → ${form.destinationLabel.trim()}`
+        : this.data.type === 'benefit' ? truncateText(normalizedText(form.merchantOrPlatform), 40) : form.venue.trim(),
       startsAt,
       deadlineAt: new Date(Date.parse(startsAt) - 30 * 60 * 1000).toISOString(),
       targetMembers: capacity.maxMembers,
@@ -452,7 +499,9 @@ Page({
       maxMembers: capacity.maxMembers,
       rules: normalizedText(form.rules)
     };
-    common.meetingPoint = { ...form.meetingPoint };
+    if (form.meetingPoint && (this.data.type !== 'benefit' || form.fulfillmentType === 'OFFLINE')) {
+      common.meetingPoint = { ...form.meetingPoint };
+    }
     if (this.data.type === 'companion') common.typeData = {
       originLabel: form.originLabel.trim(),
       destinationLabel: form.destinationLabel.trim(),
@@ -480,6 +529,15 @@ Page({
       paymentMethod: FOOD_PAYMENT_VALUES[form.paymentMethod] || '',
       genderPreference: FOOD_GENDER_VALUES[form.genderPreference] || '',
       mbtiPreference: normalizedText(form.mbtiPreference)
+    };
+    if (this.data.type === 'benefit') common.typeData = {
+      merchantOrPlatform: normalizedText(form.merchantOrPlatform),
+      dealType: form.dealType,
+      offerThreshold: normalizedText(form.offerThreshold),
+      targetPrice: normalizedText(form.targetPrice),
+      estimatedSaving: normalizedText(form.estimatedSaving),
+      fulfillmentType: form.fulfillmentType,
+      details: normalizedText(form.details)
     };
     return common;
   },

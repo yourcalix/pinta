@@ -7,7 +7,7 @@ const { refreshUnread } = require('../../../utils/tab-bar');
 
 const PAGE_SIZE = 20;
 const POLL_MS = 8000;
-const SOURCE_LABELS = Object.freeze({ companion: '拼同行', sport: '拼运动', food: '拼饭桌' });
+const SOURCE_LABELS = Object.freeze({ companion: '拼同行', sport: '拼运动', food: '拼饭桌', benefit: '拼享惠' });
 
 function makeClientMessageId() {
   return `client_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;

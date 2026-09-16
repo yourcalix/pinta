@@ -14,11 +14,12 @@ function pngDimensions(buffer) {
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
 
-test('发现页四个类型筛选使用受控英文图标路径', () => {
+test('发现页五个类型筛选使用受控英文图标路径', () => {
   const script = read('pages/discover/index.js');
   icons.forEach((name) => {
     assert.match(script, new RegExp(`filter-${name}\\.png`));
   });
+  assert.match(script, /value: 'benefit'[\s\S]*publish-cover-benefit\.png/);
   assert.doesNotMatch(script, /模块图标|桌面|Desktop/);
 });
 
