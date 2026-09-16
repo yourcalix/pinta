@@ -393,6 +393,8 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.doesNotMatch(template, /<button wx:for="\{\{types\}\}"[^>]*class="type-card/);
   assert.match(script, /publish-cover-companion\.png/);
   assert.match(template, /wx:if="{{draft}}"/);
+  assert.match(template, /<view wx:if="\{\{draft\}\}" class="draft-strip"/);
+  assert.doesNotMatch(template, /<button wx:if="\{\{draft\}\}" class="draft-strip"/);
   assert.match(template, /publish-draft-avatar\.png/);
   assert.match(template, /aria-label="{{item\.ariaLabel}}"/);
   assert.match(script, /pinba_publish_draft_/);
@@ -404,7 +406,7 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.match(style, /\.type-card-art\s*{[\s\S]*width:\s*100%[\s\S]*height:\s*100%/);
   assert.match(style, /\.type-card-action\s*{[\s\S]*pointer-events:\s*none/);
   assert.match(style, /@media\s*\(max-width:\s*340px\)/);
-  assert.equal((template.match(/hover-class="none"/g) || []).length, 2);
+  assert.equal((template.match(/hover-class="none"/g) || []).length, 1);
   assert.doesNotMatch(template, /hover-stay-time|type-card--pressed|draft-strip--pressed|safety-note--pressed/);
   assert.doesNotMatch(style, /type-card--pressed|draft-strip--pressed|safety-note--pressed/);
   assert.doesNotMatch(template, /搜索|推荐|type-panel|module-row/);
