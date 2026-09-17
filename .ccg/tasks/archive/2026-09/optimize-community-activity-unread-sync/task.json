@@ -1,0 +1,12 @@
+{
+  "id": "optimize-community-activity-unread-sync",
+  "title": "讨论动态阅读后同步红点与铃铛未读数",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-09-17T00:00:00Z",
+  "branch": "main"
+}

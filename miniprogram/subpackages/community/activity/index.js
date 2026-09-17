@@ -205,8 +205,10 @@ Page({
       this._readLocks.add(id);
       try {
         const result = await communityService.readActivity(id, item.updatedAt, item.postId);
-        if (this._disposed || result.stale) return;
-        this.setData({ items: this.data.items.map((candidate) => candidate.id === id ? { ...candidate, read: true } : candidate) });
+        if (this._disposed) return;
+        if (result && result.read === true && result.stale !== true) {
+          this.setData({ items: this.data.items.map((candidate) => candidate.id === id ? { ...candidate, read: true } : candidate) });
+        }
         this.refreshUnreadSummary();
       } catch (error) {
         // The removed activity remains unread when the acknowledgement fails.

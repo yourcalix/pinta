@@ -114,6 +114,17 @@ test('动态卡片运行时只导航，失效卡片确认后才消费', async ()
   assert.deepEqual(reads[0], ['activity-2', '2026-09-15T02:00:00.000Z', 'post-2']);
   assert.equal(page.data.items[0].read, true);
   assert.equal(toasts.at(-1), '该内容已被删除或下架');
+
+  const stalePage = instantiate('subpackages/community/activity/index.js', {
+    community: { readActivity: async () => ({ read: false, stale: true }) }
+  }, { showToast: () => {} });
+  stalePage._disposed = false;
+  stalePage.data.items = [{ id: 'activity-stale', postId: 'post-2', updatedAt: '2026-09-15T03:00:00.000Z', read: false, removed: true }];
+  let staleSummaryRefreshes = 0;
+  stalePage.refreshUnreadSummary = () => { staleSummaryRefreshes += 1; };
+  await stalePage.handleActivity({ currentTarget: { dataset: { id: 'activity-stale' } } });
+  assert.equal(stalePage.data.items[0].read, false);
+  assert.equal(staleSummaryRefreshes, 1);
 });
 
 test('帖子详情首屏成功后消费一次，失败时不消费', async () => {
