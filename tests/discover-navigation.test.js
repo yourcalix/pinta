@@ -80,7 +80,12 @@ test('发布与我的页面正文动态避让顶部并使用完整视口盒模�
     assert.match(template, /style="padding-top: \{\{contentTopInset\}\}px;"/);
     assert.ok(rootRule);
     assert.match(rootRule[1], /box-sizing:\s*border-box/);
-    assert.match(rootRule[1], /min-height:\s*100vh/);
+    if (pageName === 'publish') {
+      assert.match(rootRule[1], /height:\s*100vh/);
+      assert.match(rootRule[1], /overflow:\s*hidden/);
+    } else {
+      assert.match(rootRule[1], /min-height:\s*100vh/);
+    }
     assert.doesNotMatch(rootRule[1], /padding-top:\s*(?:42|28)rpx/);
   }
 });

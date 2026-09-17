@@ -1,14 +1,22 @@
 .publish-page {
   position: relative;
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
   padding-bottom: calc(132rpx + env(safe-area-inset-bottom));
   background: #075aa7;
 }
 .publish-content {
   position: relative;
   z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   padding: 8rpx 0 34rpx;
 }
 .publish-hero {
@@ -64,8 +72,12 @@
 }
 .type-grid {
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
+  align-content: stretch;
   align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
   gap: 20rpx;
   box-sizing: border-box;
   margin: 28rpx 36rpx 24rpx;
@@ -76,8 +88,9 @@
   flex: 0 0 calc((100% - 20rpx) / 2);
   width: calc((100% - 20rpx) / 2);
   min-width: 0;
-  min-height: 430rpx;
-  aspect-ratio: 304 / 430;
+  height: calc((100% - 20rpx) / 2);
+  min-height: 0;
+  aspect-ratio: auto;
   box-sizing: border-box;
   overflow: hidden;
   margin: 0 !important;
@@ -262,7 +275,7 @@
   .hero-title { font-size: 38rpx; }
   .hero-scribble { right: 32rpx; transform: scale(.84) rotate(-8deg); transform-origin: right top; }
   .type-grid { gap: 14rpx; margin-right: 28rpx; margin-left: 28rpx; }
-  .type-card { flex-basis: calc((100% - 14rpx) / 2); width: calc((100% - 14rpx) / 2); min-height: 404rpx; padding-right: 19rpx !important; padding-left: 19rpx !important; }
+  .type-card { flex-basis: calc((100% - 14rpx) / 2); width: calc((100% - 14rpx) / 2); height: calc((100% - 14rpx) / 2); padding-right: 19rpx !important; padding-left: 19rpx !important; }
   .type-card-title { font-size: 31rpx; }
   .type-card-description { max-width: 226rpx; font-size: 24rpx; }
   .draft-strip,
@@ -276,4 +289,13 @@
   .type-grid { margin-top: 18rpx; margin-bottom: 18rpx; }
   .draft-strip { min-height: 116rpx; }
   .safety-note { margin-top: 6rpx !important; }
+}
+@media (max-width: 340px) and (max-height: 620px) {
+  .publish-hero { min-height: 100rpx; padding-top: 8rpx; padding-bottom: 8rpx; }
+  .hero-brand, .hero-description, .hero-scribble, .type-card-description { display: none; }
+  .hero-title { margin-top: 0; font-size: 34rpx; }
+  .draft-strip { min-height: 88rpx; padding-left: 94rpx !important; }
+  .draft-art { width: 94rpx; height: 84rpx; }
+  .safety-note { min-height: 72rpx; padding-top: 8rpx !important; padding-bottom: 8rpx !important; }
+  .safety-copy { font-size: 20rpx; }
 }

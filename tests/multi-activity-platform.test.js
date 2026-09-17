@@ -386,6 +386,7 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8');
+  const config = JSON.parse(fs.readFileSync(path.join(root, 'index.json'), 'utf8'));
   assert.match(template, /class="type-grid"/);
   assert.doesNotMatch(template, /scroll-view[^>]*scroll-x/);
   assert.match(template, /class="type-card/);
@@ -401,7 +402,11 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.match(script, /hasMeaningfulDraft/);
   assert.match(template, /class="global-page-background"/);
   assert.match(style, /\.type-grid\s*{[\s\S]*flex-wrap:\s*wrap[\s\S]*gap:\s*20rpx/);
-  assert.match(style, /\.type-card\s*{[\s\S]*calc\(\(100% - 20rpx\) \/ 2\)[\s\S]*min-height:\s*430rpx[\s\S]*aspect-ratio:\s*304 \/ 430/);
+  assert.equal(config.disableScroll, true);
+  assert.match(style, /\.publish-page\s*{[\s\S]*height:\s*100vh[\s\S]*overflow:\s*hidden/);
+  assert.match(style, /\.publish-content\s*{[\s\S]*display:\s*flex[\s\S]*min-height:\s*0[\s\S]*overflow:\s*hidden/);
+  assert.match(style, /\.type-grid\s*{[\s\S]*min-height:\s*0[\s\S]*overflow:\s*hidden/);
+  assert.match(style, /\.type-card\s*{[\s\S]*height:\s*calc\(\(100% - 20rpx\) \/ 2\)[\s\S]*aspect-ratio:\s*auto/);
   assert.match(style, /\.type-card-description\s*{[\s\S]*white-space:\s*normal/);
   assert.match(style, /\.type-card-art\s*{[\s\S]*width:\s*100%[\s\S]*height:\s*100%/);
   assert.match(style, /\.type-card-action\s*{[\s\S]*pointer-events:\s*none/);

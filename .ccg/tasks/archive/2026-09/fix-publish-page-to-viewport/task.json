@@ -1,0 +1,12 @@
+{
+  "id": "fix-publish-page-to-viewport",
+  "title": "将发布入口页固定在单个视口内并禁止上下滑动",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-09-16T00:00:00Z",
+  "branch": "main"
+}
