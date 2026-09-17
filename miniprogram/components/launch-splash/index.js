@@ -2,7 +2,6 @@
 
 const definition = {
   properties: {
-    progress: { type: Number, value: 0 },
     exiting: { type: Boolean, value: false }
   },
   methods: {

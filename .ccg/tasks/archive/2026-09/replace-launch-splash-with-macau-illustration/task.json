@@ -1,0 +1,12 @@
+{
+  "id": "replace-launch-splash-with-macau-illustration",
+  "title": "用澳门插画完整替换原启动加载动画",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交启动图替换",
+  "createdAt": "2026-09-17T06:10:00Z",
+  "branch": "main"
+}

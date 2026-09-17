@@ -12,16 +12,10 @@ const {
 const { resolveProfileAvatar } = require('../../utils/profile-avatar');
 const { resolveBeijingGreeting } = require('../../utils/home-greeting');
 const {
-  TOTAL_BLOCKS,
-  PRELOAD_BLOCKS,
-  STEP_INTERVAL_MS,
-  FINISH_GATE_MS,
-  FINISH_INTERVAL_MS,
-  DROP_DURATION_MS,
-  HOLD_MS,
+  MINIMUM_DISPLAY_MS,
   FADE_MS,
   MAX_SPLASH_WAIT_MS
-} = require('../../utils/launch-progress');
+} = require('../../utils/launch-splash-timing');
 const { selectTab } = require('../../utils/tab-bar');
 
 const PAGE_SIZE = 3;
@@ -63,8 +57,7 @@ Page({
     contentTopInset: 88,
     largeTextMode: false,
     launchSplashVisible: false,
-    launchSplashExiting: false,
-    launchProgress: 0
+    launchSplashExiting: false
   },
 
   onLoad() {
@@ -232,22 +225,15 @@ Page({
     this._launchTimers = new Set();
     this.setData({
       launchSplashVisible: true,
-      launchSplashExiting: false,
-      launchProgress: 0
+      launchSplashExiting: false
     });
     this.hideLaunchTabBar();
 
-    for (let progress = 1; progress <= PRELOAD_BLOCKS; progress += 1) {
-      this.queueLaunchTimer(() => {
-        if (!this._launchSplashActive) return;
-        this.setData({ launchProgress: progress });
-      }, (progress - 1) * STEP_INTERVAL_MS);
-    }
     this.queueLaunchTimer(() => {
       if (!this._launchSplashActive) return;
       this._launchSplashMinimumReached = true;
       this.completeLaunchSplashWhenReady();
-    }, FINISH_GATE_MS);
+    }, MINIMUM_DISPLAY_MS);
     this.queueLaunchTimer(() => {
       if (!this._launchSplashActive || this._launchSplashReady) return;
       this.teardownLaunchSplash(true);
@@ -270,16 +256,8 @@ Page({
     ) return;
 
     this._launchSplashCompleting = true;
-    for (let progress = PRELOAD_BLOCKS + 1; progress <= TOTAL_BLOCKS; progress += 1) {
-      this.queueLaunchTimer(() => {
-        if (this._launchSplashActive) this.setData({ launchProgress: progress });
-      }, (progress - PRELOAD_BLOCKS - 1) * FINISH_INTERVAL_MS);
-    }
-    const fullAt = (TOTAL_BLOCKS - PRELOAD_BLOCKS - 1) * FINISH_INTERVAL_MS + DROP_DURATION_MS;
-    this.queueLaunchTimer(() => {
-      if (this._launchSplashActive) this.setData({ launchSplashExiting: true });
-    }, fullAt + HOLD_MS);
-    this.queueLaunchTimer(() => this.finishLaunchSplash(), fullAt + HOLD_MS + FADE_MS);
+    this.setData({ launchSplashExiting: true });
+    this.queueLaunchTimer(() => this.finishLaunchSplash(), FADE_MS);
   },
 
   queueLaunchTimer(callback, delay) {

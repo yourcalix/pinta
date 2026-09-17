@@ -80,26 +80,15 @@ function unloadDiscoverPage(context) {
   global.clearTimeout = context.originalClearTimeout;
 }
 
-test('启动进度采用四块拼图顺序、1.2 秒门限和 4.5 秒硬退出', () => {
-  const progress = require('../miniprogram/utils/launch-progress');
-  assert.equal(progress.TOTAL_BLOCKS, 4);
-  assert.equal(progress.PRELOAD_BLOCKS, 3);
-  assert.equal(progress.STEP_INTERVAL_MS, 350);
-  assert.equal(progress.FINISH_GATE_MS, 1200);
-  assert.equal(progress.FINISH_INTERVAL_MS, 0);
-  assert.equal(progress.DROP_DURATION_MS, 350);
-  assert.equal(progress.HOLD_MS, 300);
-  assert.equal(progress.FADE_MS, 300);
-  assert.equal(progress.MAX_SPLASH_WAIT_MS, 4500);
-  assert.deepEqual(progress.createProgressBlocks(), [
-    { id: 1, key: 'top-left', color: '#16A36A', zIndex: 4 },
-    { id: 2, key: 'bottom-left', color: '#2EBD85', zIndex: 3 },
-    { id: 3, key: 'bottom-right', color: '#5CD19E', zIndex: 2 },
-    { id: 4, key: 'top-right', color: '#8EE3B8', zIndex: 1 }
-  ]);
+test('启动插画采用 1.2 秒最短展示、300 毫秒淡出和 4.5 秒硬退出', () => {
+  const timing = require('../miniprogram/utils/launch-splash-timing');
+  assert.equal(timing.MINIMUM_DISPLAY_MS, 1200);
+  assert.equal(timing.FADE_MS, 300);
+  assert.equal(timing.MAX_SPLASH_WAIT_MS, 4500);
+  assert.deepEqual(Object.keys(timing).sort(), ['FADE_MS', 'MAX_SPLASH_WAIT_MS', 'MINIMUM_DISPLAY_MS']);
 });
 
-test('快速首屏请求也等待前三块落下，再补齐第四块并恢复 TabBar', async () => {
+test('快速首屏请求等待最短展示后淡出并恢复 TabBar', async () => {
   const originalList = activityService.list;
   activityService.list = async () => ({ items: [], nextCursor: null });
   const context = loadDiscoverPage();
@@ -107,22 +96,15 @@ test('快速首屏请求也等待前三块落下，再补齐第四块并恢复 T
     const loading = context.page.onLoad();
     await loading;
     assert.equal(context.page.data.launchSplashVisible, true);
-    assert.equal(context.page.data.launchProgress, 0);
+    assert.equal(context.page.data.launchSplashExiting, false);
     assert.equal(context.appGlobalData.launchSplashShown, true);
     assert.equal(context.tabBar.hidden, true);
     assert.deepEqual(context.tabBar.transitions, [true]);
     assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
 
-    context.timers.filter((timer) => timer.delay < 1200).forEach(runTimer);
-    assert.equal(context.page.data.launchProgress, 3);
-    assert.equal(context.page.data.launchSplashVisible, true);
-    assert.equal(context.timers.length, 5);
-
     runTimer(context.timers.find((timer) => timer.delay === 1200));
-    const finishTimers = context.timers.filter((timer) => !timer.ran).sort((left, right) => left.delay - right.delay);
-    assert.deepEqual(finishTimers.map((timer) => timer.delay), [0, 650, 950, 4500]);
-    finishTimers.forEach(runTimer);
-    assert.equal(context.page.data.launchProgress, 4);
+    assert.equal(context.page.data.launchSplashExiting, true);
+    runTimer(context.timers.find((timer) => timer.delay === 300));
     assert.equal(context.page.data.launchSplashVisible, false);
     assert.equal(context.tabBar.hidden, false);
     assert.deepEqual(context.tabBar.transitions, [true, false]);
@@ -134,22 +116,21 @@ test('快速首屏请求也等待前三块落下，再补齐第四块并恢复 T
   }
 });
 
-test('数据未完成时停在第三块，结束后才允许第四块落下', async () => {
+test('数据未完成时保持插画，完成后才开始淡出', async () => {
   const originalList = activityService.list;
   let resolveList;
   activityService.list = () => new Promise((resolve) => { resolveList = resolve; });
   const context = loadDiscoverPage();
   try {
     const loading = context.page.onLoad();
-    context.timers.filter((timer) => timer.delay <= 1200).forEach(runTimer);
-    assert.equal(context.page.data.launchProgress, 3);
-    assert.equal(context.timers.length, 5);
+    runTimer(context.timers.find((timer) => timer.delay === 1200));
+    assert.equal(context.page.data.launchSplashVisible, true);
+    assert.equal(context.page.data.launchSplashExiting, false);
 
     resolveList({ items: [], nextCursor: null });
     await loading;
-    assert.equal(context.timers.length, 8);
-    context.timers.filter((timer) => !timer.ran).sort((left, right) => left.delay - right.delay).forEach(runTimer);
-    assert.equal(context.page.data.launchProgress, 4);
+    assert.equal(context.page.data.launchSplashExiting, true);
+    runTimer(context.timers.find((timer) => timer.delay === 300));
     assert.equal(context.page.data.launchSplashVisible, false);
   } finally {
     activityService.list = originalList;
@@ -157,24 +138,25 @@ test('数据未完成时停在第三块，结束后才允许第四块落下', as
   }
 });
 
-test('首屏请求超过 4.5 秒时安全退出，但不伪造第四块完成', async () => {
+test('首屏请求超过 4.5 秒时安全退出且不伪造完成动效', async () => {
   const originalList = activityService.list;
   let resolveList;
   activityService.list = () => new Promise((resolve) => { resolveList = resolve; });
   const context = loadDiscoverPage();
   try {
     const loading = context.page.onLoad();
-    context.timers.filter((timer) => timer.delay <= 1200).forEach(runTimer);
-    assert.equal(context.page.data.launchProgress, 3);
+    runTimer(context.timers.find((timer) => timer.delay === 1200));
+    assert.equal(context.page.data.launchSplashExiting, false);
     runTimer(context.timers.find((timer) => timer.delay === 4500));
     assert.equal(context.page.data.launchSplashVisible, false);
-    assert.equal(context.page.data.launchProgress, 3);
+    assert.equal(context.page.data.launchSplashExiting, false);
     assert.equal(context.tabBar.hidden, false);
     assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
 
     resolveList({ items: [], nextCursor: null });
     await loading;
-    assert.equal(context.page.data.launchProgress, 3);
+    assert.equal(context.page._launchSplashActive, false);
+    assert.equal(Object.prototype.hasOwnProperty.call(context.page.data, 'launchProgress'), false);
   } finally {
     activityService.list = originalList;
     unloadDiscoverPage(context);
@@ -189,19 +171,20 @@ test('页面卸载会清理启动计时器并恢复 TabBar，当前会话不重�
   try {
     const loading = context.page.onLoad();
     context.page.onUnload();
-    assert.equal(context.timers.slice(0, 5).every((timer) => timer.cleared), true);
+    assert.equal(context.timers.slice(0, 2).every((timer) => timer.cleared), true);
     assert.equal(context.tabBar.hidden, false);
     assert.deepEqual(context.nativeTabBar, { hidden: 0, shown: 0 });
     resolveList({ items: [], nextCursor: null });
     await loading;
-    assert.equal(context.page.data.launchProgress, 0);
+    assert.equal(context.page._launchSplashActive, false);
+    assert.equal(Object.prototype.hasOwnProperty.call(context.page.data, 'launchProgress'), false);
   } finally {
     activityService.list = originalList;
     unloadDiscoverPage(context);
   }
 });
 
-test('任一拼图图片加载失败会立即退出蒙层、清理计时器并恢复 TabBar', async () => {
+test('启动插画加载失败会立即退出蒙层、清理计时器并恢复 TabBar', async () => {
   const originalList = activityService.list;
   let resolveList;
   activityService.list = () => new Promise((resolve) => { resolveList = resolve; });
@@ -222,51 +205,35 @@ test('任一拼图图片加载失败会立即退出蒙层、清理计时器并�
   }
 });
 
-test('启动组件使用四块独立 PNG、外层落下与内层静态定位', () => {
+test('启动组件只使用全屏澳门插画并彻底移除旧拼图与视觉进度', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/components/launch-splash/index.wxml'), 'utf8');
   const pageTemplate = fs.readFileSync(path.join(root, 'miniprogram/pages/discover/index.wxml'), 'utf8');
   const style = fs.readFileSync(path.join(root, 'miniprogram/components/launch-splash/index.wxss'), 'utf8');
-  const expectedAssets = ['piece-top-left', 'piece-bottom-left', 'piece-bottom-right', 'piece-top-right'];
-
-  expectedAssets.forEach((name) => assert.match(template, new RegExp(`launch-puzzle/${name}\\.png`)));
-  assert.equal((template.match(/binderror="handleAssetError"/g) || []).length, 4);
+  assert.match(template, /launch\/macau-companion-launch\.jpg/);
+  assert.match(template, /mode="aspectFill"/);
+  assert.equal((template.match(/binderror="handleAssetError"/g) || []).length, 1);
   assert.match(template, /aria-role="alert"/);
   assert.match(template, /aria-label="拼吧正在加载，请稍候"/);
-  assert.match(template, /正在为您拼吧/);
-  assert.match(template, /一起组队，马上出发/);
-  assert.match(template, /launch-piece-drop--top-left/);
-  assert.match(template, /launch-piece-drop--top-right/);
-  assert.match(template, /launch-piece-drop--bottom-left/);
-  assert.match(template, /launch-piece-drop--bottom-right/);
-  assert.match(template, /launch-piece-static/);
-  assert.equal((template.match(/launch-progress-segment--[1-4]/g) || []).length, 4);
+  assert.doesNotMatch(template, /launch-piece|launch-puzzle|launch-progress|正在为您拼吧|一起组队/);
+  assert.doesNotMatch(pageTemplate, /launchProgress|progress="/);
   assert.match(pageTemplate, /bindasseterror="handleLaunchAssetError"/);
-  assert.match(style, /\.launch-piece-drop--active[\s\S]*launch-piece-drop 350ms/);
-  assert.match(style, /@keyframes launch-piece-drop/);
-  assert.match(style, /@keyframes launch-puzzle-lock/);
-  assert.match(style, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(style, /width:\s*78vw/);
-  assert.match(style, /max-width:\s*580rpx/);
-  assert.match(style, /font-size:\s*42rpx/);
-  assert.match(style, /\.launch-content\s*\{[\s\S]*?top:\s*24vh/);
-  assert.match(style, /@media \(max-height:\s*700px\)[\s\S]*?\.launch-content\s*\{[\s\S]*?top:\s*17vh/);
-  assert.match(style, /\.launch-piece-drop\s*\{[\s\S]*inset:\s*0/);
+  assert.match(style, /background-color:\s*#f7ba3e/);
+  assert.match(style, /\.launch-splash__image\s*\{[^}]*width:\s*100%[^}]*height:\s*100%/s);
+  assert.match(style, /\.launch-splash--exiting\s*\{[^}]*opacity:\s*0[^}]*transition:\s*opacity 300ms ease-out/s);
+  assert.doesNotMatch(style, /@keyframes|launch-piece|launch-puzzle|launch-progress|launch-title|launch-subtitle/);
 });
 
-test('四张启动拼图为透明 PNG，主包资源总量不超过 220KB', () => {
-  const names = ['piece-top-left.png', 'piece-bottom-left.png', 'piece-bottom-right.png', 'piece-top-right.png'];
-  let totalBytes = 0;
-  names.forEach((name) => {
-    const bytes = fs.readFileSync(path.join(root, 'miniprogram/assets/images/launch-puzzle', name));
-    totalBytes += bytes.length;
-    assert.deepEqual([...bytes.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-    assert.equal(bytes.readUInt32BE(16), 800, `${name} 画布宽度必须统一为 800px`);
-    assert.equal(bytes.readUInt32BE(20), 800, `${name} 画布高度必须统一为 800px`);
-    const colorType = bytes[25];
-    const hasPaletteTransparency = bytes.includes(Buffer.from('tRNS'));
-    assert.ok(colorType === 4 || colorType === 6 || hasPaletteTransparency, `${name} 缺少透明通道`);
-  });
-  assert.ok(totalBytes <= 220 * 1024, `启动素材总量为 ${totalBytes} bytes`);
+test('澳门启动插画为 750×1334 Baseline JPEG 且满足主包预算', () => {
+  const assetPath = path.join(root, 'miniprogram/assets/images/launch/macau-companion-launch.jpg');
+  const bytes = fs.readFileSync(assetPath);
+  const baselineMarkerIndex = bytes.indexOf(Buffer.from([0xff, 0xc0]));
+  assert.deepEqual([...bytes.subarray(0, 2)], [0xff, 0xd8]);
+  assert.notEqual(baselineMarkerIndex, -1, '启动图必须包含 Baseline SOF0 标记');
+  assert.equal(bytes.readUInt16BE(baselineMarkerIndex + 5), 1334);
+  assert.equal(bytes.readUInt16BE(baselineMarkerIndex + 7), 750);
+  assert.equal(bytes.includes(Buffer.from([0xff, 0xc2])), false, '启动图不得为 Progressive JPEG');
+  assert.ok(bytes.length <= 140 * 1024, `启动插画为 ${bytes.length} bytes`);
+  assert.equal(fs.existsSync(path.join(root, 'miniprogram/assets/images/launch-puzzle')), false);
 });
 
 test('启动组件对重复图片错误只向页面上报一次', () => {
