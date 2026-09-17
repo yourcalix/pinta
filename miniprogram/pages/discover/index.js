@@ -13,7 +13,9 @@ const { resolveProfileAvatar } = require('../../utils/profile-avatar');
 const { resolveBeijingGreeting } = require('../../utils/home-greeting');
 const {
   MINIMUM_DISPLAY_MS,
+  FINISH_MS,
   FADE_MS,
+  LATE_READY_THRESHOLD_MS,
   MAX_SPLASH_WAIT_MS
 } = require('../../utils/launch-splash-timing');
 const { selectTab } = require('../../utils/tab-bar');
@@ -57,6 +59,7 @@ Page({
     contentTopInset: 88,
     largeTextMode: false,
     launchSplashVisible: false,
+    launchSplashFinishing: false,
     launchSplashExiting: false
   },
 
@@ -220,11 +223,14 @@ Page({
     globalData.launchSplashShown = true;
     this._launchSplashActive = true;
     this._launchSplashReady = false;
+    this._launchSplashAssetsReady = false;
     this._launchSplashMinimumReached = false;
     this._launchSplashCompleting = false;
+    this._launchSplashStartedAt = Date.now();
     this._launchTimers = new Set();
     this.setData({
       launchSplashVisible: true,
+      launchSplashFinishing: false,
       launchSplashExiting: false
     });
     this.hideLaunchTabBar();
@@ -247,15 +253,34 @@ Page({
     this.completeLaunchSplashWhenReady();
   },
 
+  handleLaunchAssetsReady() {
+    if (!this._launchSplashActive || this._launchSplashAssetsReady) return;
+    this._launchSplashAssetsReady = true;
+    this.completeLaunchSplashWhenReady();
+  },
+
   completeLaunchSplashWhenReady() {
     if (
       !this._launchSplashActive
       || !this._launchSplashReady
+      || !this._launchSplashAssetsReady
       || !this._launchSplashMinimumReached
       || this._launchSplashCompleting
     ) return;
 
     this._launchSplashCompleting = true;
+    const elapsed = Math.max(0, Date.now() - this._launchSplashStartedAt);
+    if (elapsed > LATE_READY_THRESHOLD_MS) {
+      this.beginLaunchSplashFade();
+      return;
+    }
+
+    this.setData({ launchSplashFinishing: true });
+    this.queueLaunchTimer(() => this.beginLaunchSplashFade(), FINISH_MS);
+  },
+
+  beginLaunchSplashFade() {
+    if (!this._launchSplashActive) return;
     this.setData({ launchSplashExiting: true });
     this.queueLaunchTimer(() => this.finishLaunchSplash(), FADE_MS);
   },
@@ -306,6 +331,7 @@ Page({
     this.clearLaunchTimers();
     this.setData({
       launchSplashVisible: false,
+      launchSplashFinishing: false,
       launchSplashExiting: false
     });
     this.restoreLaunchTabBar();
@@ -318,6 +344,7 @@ Page({
     if (wasActive && updateView) {
       this.setData({
         launchSplashVisible: false,
+        launchSplashFinishing: false,
         launchSplashExiting: false
       });
     }

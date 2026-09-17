@@ -1,11 +1,15 @@
 'use strict';
 
-const MINIMUM_DISPLAY_MS = 1200;
-const FADE_MS = 300;
+const MINIMUM_DISPLAY_MS = 900;
+const FINISH_MS = 380;
+const FADE_MS = 240;
+const LATE_READY_THRESHOLD_MS = 3800;
 const MAX_SPLASH_WAIT_MS = 4500;
 
 module.exports = {
   MINIMUM_DISPLAY_MS,
+  FINISH_MS,
   FADE_MS,
+  LATE_READY_THRESHOLD_MS,
   MAX_SPLASH_WAIT_MS
 };

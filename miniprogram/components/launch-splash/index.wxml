@@ -1,15 +1,33 @@
 <view
-  class="launch-splash {{exiting ? 'launch-splash--exiting' : ''}}"
+  class="launch-splash {{assetsReady ? 'launch-splash--ready' : ''}} {{exiting ? 'launch-splash--exiting' : ''}}"
   aria-role="alert"
   aria-label="拼吧正在加载，请稍候"
   catchtouchmove="preventTouchMove"
 >
-  <image
-    class="launch-splash__image"
-    src="../../assets/images/launch/macau-companion-launch.jpg"
-    mode="aspectFill"
-    data-asset="macau-companion-launch"
-    aria-hidden="true"
-    binderror="handleAssetError"
-  />
+  <image class="launch-background" src="../../assets/images/launch/macau-companion-launch.jpg" mode="aspectFill" data-asset="background" aria-hidden="true" bindload="handleAssetLoad" binderror="handleAssetError" />
+  <view class="launch-bottom-veil" aria-hidden="true"></view>
+
+  <view class="loading-shell {{assetsReady ? 'loading-shell--ready' : ''}}" aria-hidden="true">
+    <view class="runner-position" style="left: {{runnerLeft}}rpx;">
+      <view class="runner-group {{finishing ? 'is-finish' : ''}}">
+        <view class="runner-shadow"></view>
+        <view class="dog-bounce">
+          <image class="runner-img dog-img" src="../../assets/images/launch/loading-dog.png" mode="widthFix" data-asset="dog" aria-hidden="true" bindload="handleAssetLoad" binderror="handleAssetError" />
+        </view>
+        <view class="cat-bounce">
+          <image class="runner-img cat-img" src="../../assets/images/launch/loading-cat.png" mode="widthFix" data-asset="cat" aria-hidden="true" bindload="handleAssetLoad" binderror="handleAssetError" />
+        </view>
+      </view>
+    </view>
+
+    <image class="loading-deco {{finishing ? 'is-burst' : ''}}" src="../../assets/images/launch/loading-deco.png" mode="widthFix" data-asset="deco" aria-hidden="true" bindload="handleAssetLoad" binderror="handleAssetError" />
+
+    <view class="progress-wrap">
+      <image class="progress-track" src="../../assets/images/launch/loading-track.png" mode="scaleToFill" data-asset="track" aria-hidden="true" bindload="handleAssetLoad" binderror="handleAssetError" />
+      <view class="progress-mask" style="width: {{progress}}%;">
+        <image class="progress-fill" src="../../assets/images/launch/loading-fill.png" mode="scaleToFill" data-asset="fill" aria-hidden="true" bindload="handleAssetLoad" binderror="handleAssetError" />
+      </view>
+      <view class="progress-soft-light" style="width: {{progress}}%;"></view>
+    </view>
+  </view>
 </view>

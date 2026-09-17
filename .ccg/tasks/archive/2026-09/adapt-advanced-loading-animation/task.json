@@ -1,0 +1,12 @@
+{
+  "id": "adapt-advanced-loading-animation",
+  "title": "适配用户提供的高级启动加载动画与素材",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-17T07:10:00Z",
+  "branch": "main"
+}
