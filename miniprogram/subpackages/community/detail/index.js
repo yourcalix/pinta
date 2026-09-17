@@ -14,6 +14,8 @@ const MAX_REPLY_LOCATE_ITEMS = PAGE_SIZE * MAX_REPLY_LOCATE_PAGES;
 const REPLY_LOCATE_RETRY_MS = 50;
 const REPLY_HIGHLIGHT_MS = 1600;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
+const EMPTY_MODAL = Object.freeze({ visible: false, type: 'delete', title: '', description: '', confirmText: '', cancelText: '', danger: false, loading: false, closeOnMask: false });
+function modalState(patch = {}) { return { ...EMPTY_MODAL, ...patch }; }
 function normalizeReplyRouteId(value) {
   const id = String(value || '').trim();
   return id && id.length <= 80 ? id : '';
@@ -81,7 +83,8 @@ Page({
     postId: '', post: null, replies: [], replyContent: '', replyTarget: null,
     replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120, submitting: false,
     loading: true, error: '', nextCursor: '', hasMore: false,
-    loadingMore: false, loadMoreError: '', replyInputFocus: false, locatedReplyId: ''
+    loadingMore: false, loadMoreError: '', replyInputFocus: false, locatedReplyId: '',
+    modal: modalState()
   },
 
   onLoad(options) {
@@ -117,6 +120,7 @@ Page({
     if (!this._replyLocateStopped && !this._replyLocatePending) this.startReplyLocating();
   },
   onHide() {
+    this.cancelPendingDelete(true);
     this._resumeDetailLoad = Boolean(!this.data.post && this.data.postId && this.data.loading);
     this.cancelReplyLocating(true);
     if (this.data.loadingMore) this.setData({ loadingMore: false });
@@ -124,6 +128,7 @@ Page({
     this._loadSeq = (this._loadSeq || 0) + 1;
   },
   onUnload() {
+    this.cancelPendingDelete(false);
     this._resumeDetailLoad = false;
     this.cancelReplyLocating(false);
     this._disposed = true;
@@ -448,10 +453,48 @@ Page({
     }));
   },
   confirmDelete() {
-    return new Promise((resolve) => wx.showModal({
-      title: '确认删除', content: '删除后其他用户将无法再查看，且无法恢复。', confirmText: '删除', confirmColor: '#E5484D',
-      success: (result) => resolve(Boolean(result.confirm)), fail: () => resolve(false)
-    }));
+    this.cancelPendingDelete(false);
+    return new Promise((resolve) => {
+      this._deleteResolver = resolve;
+      this.setData({ modal: modalState({
+        visible: true,
+        type: 'delete',
+        title: '确定删除吗？',
+        description: '删除后，这条内容将无法恢复。',
+        cancelText: '先留着',
+        confirmText: '删除',
+        danger: true,
+        closeOnMask: false
+      }) });
+    });
+  },
+  settleDeleteConfirmation(confirmed, closeModal) {
+    const resolve = this._deleteResolver;
+    this._deleteResolver = null;
+    if (closeModal && !this._disposed) this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
+    if (typeof resolve === 'function') resolve(Boolean(confirmed));
+  },
+  cancelPendingDelete(updateView) {
+    if (updateView && this.data.modal.visible) this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
+    const resolve = this._deleteResolver;
+    this._deleteResolver = null;
+    if (typeof resolve === 'function') resolve(false);
+  },
+  handleModalConfirm() {
+    if (this.data.modal.loading || !this._deleteResolver) return;
+    this.setData({ modal: { ...this.data.modal, loading: true } });
+    this.settleDeleteConfirmation(true, false);
+  },
+  handleModalCancel() {
+    if (this.data.modal.loading) return;
+    this.settleDeleteConfirmation(false, true);
+  },
+  handleModalClose() { this.handleModalCancel(); },
+  handleModalClosed() {
+    const switchCommunity = this._afterDeleteClosed === 'switchCommunity';
+    this._afterDeleteClosed = '';
+    if (!this._disposed) this.setData({ modal: modalState() });
+    if (switchCommunity && !this._disposed) wx.switchTab({ url: '/pages/community/index' });
   },
   async showContentActions(targetType, targetId, isAuthor) {
     const lockKey = `${targetType}:${targetId}`;
@@ -467,13 +510,17 @@ Page({
         if (!await this.confirmDelete() || this._disposed) return;
         if (targetType === 'communityPost') {
           await communityService.deletePost(targetId);
-          if (!this._disposed) wx.switchTab({ url: '/pages/community/index' });
+          if (!this._disposed) {
+            this._afterDeleteClosed = 'switchCommunity';
+            this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
+          }
           return;
         }
         const deleted = await communityService.deleteReply(targetId);
         if (!this._disposed) this.setData({
           replies: this.data.replies.filter((item) => item.id !== targetId),
           'post.replyCount': Math.max(0, Number(deleted.replyCount) || 0),
+          modal: { ...this.data.modal, visible: false, loading: false },
           ...(this.data.replyTarget && this.data.replyTarget.id === targetId
             ? { replyTarget: null, replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120 }
             : {})
@@ -488,6 +535,7 @@ Page({
       await safetyService.report({ targetType, targetId, reason: reason.value, description: '' });
       if (!this._disposed) wx.showToast({ title: '已收到举报', icon: 'success' });
     } catch (error) {
+      if (!this._disposed && operation === 'delete') this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
       if (!this._disposed && !error.handled) wx.showToast({ title: operation === 'delete' ? '删除失败，请重试' : '举报失败，请重试', icon: 'none' });
     } finally {
       this._actionLocks.delete(lockKey);

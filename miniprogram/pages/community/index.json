@@ -5,5 +5,8 @@
   "backgroundColorTop": "#F9F7F2",
   "backgroundColorBottom": "#F9F7F2",
   "backgroundTextStyle": "dark",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "pinba-modal": "/components/pinba-modal/index"
+  }
 }

@@ -44,6 +44,18 @@ const FOOD_PAYMENT_VALUES = Object.freeze({
 const FOOD_GENDER_VALUES = Object.freeze({ 男生: 'MALE', 女生: 'FEMALE', 男女均可: 'ALL' });
 const BENEFIT_DEAL_TYPES = Object.freeze(['FULL_REDUCTION', 'GROUP_BUY', 'COUPON_SHARE', 'MEMBERSHIP_SHARE', 'BUNDLE_DISCOUNT', 'OTHER']);
 const BENEFIT_FULFILLMENT_TYPES = Object.freeze(['ONLINE', 'OFFLINE']);
+const EMPTY_MODAL = Object.freeze({
+  visible: false,
+  type: 'success',
+  title: '',
+  description: '',
+  confirmText: '',
+  cancelText: '',
+  danger: false,
+  loading: false,
+  closeOnMask: false,
+  action: ''
+});
 const COMPANION_FORM_ENUMS = Object.freeze({
   timeFlexibility: ['ON_TIME', 'WITHIN_30_MIN', 'WITHIN_60_MIN'],
   transportPreference: ['PUBLIC_TRANSIT', 'LICENSED_TAXI', 'DISCUSS_AFTER_FORMED'],
@@ -155,6 +167,21 @@ function normalizedText(value) {
 
 function truncateText(value, maxLength) {
   return Array.from(value).slice(0, maxLength).join('');
+}
+
+function modalState(patch = {}) {
+  return { ...EMPTY_MODAL, ...patch };
+}
+
+function cloneSubmissionPayload(payload) {
+  return JSON.parse(JSON.stringify(payload));
+}
+
+function isRetryablePublishError(error) {
+  if (!error || error.handled) return false;
+  if (error.code === 'TIMEOUT' || error.code === 'NETWORK_ERROR') return true;
+  const transportText = String(error.errMsg || '');
+  return /(?:request|callFunction|network|socket):?fail|network is unavailable|timeout/i.test(transportText);
 }
 
 function selectedOptionIndex(options, value) {
@@ -286,10 +313,13 @@ Page({
     safetyAgreed: false,
     submitting: false,
     errorMessage: '',
-    submissionKey: ''
+    submissionKey: '',
+    modal: modalState()
   },
 
   onLoad(options = {}) {
+    this._disposed = false;
+    this._publishSucceeded = false;
     const type = TYPES[options.type] ? options.type : 'companion';
     this.draftKey = `pinba_publish_draft_${type}`;
     const draft = wx.getStorageSync(this.draftKey);
@@ -315,10 +345,74 @@ Page({
     });
   },
 
-  onHide() { if (!this.data.submitting) this.saveDraft(); },
-  onUnload() { if (!this.data.submitting) this.saveDraft(); },
+  onHide() { if (!this.data.submitting && !this._publishSucceeded) this.saveDraft(); },
+  onUnload() {
+    this._disposed = true;
+    if (!this.data.submitting && !this._publishSucceeded) this.saveDraft();
+  },
 
   saveDraft() { wx.setStorageSync(this.draftKey, { form: cleanFormData(this.data.type, this.data.form), safetyAgreed: this.data.safetyAgreed, savedAt: Date.now() }); },
+
+  openModal(options) {
+    if (this._disposed) return;
+    this._modalAfterClosed = '';
+    this.setData({ modal: modalState({ ...options, visible: true }) });
+  },
+
+  closeModal(afterClosed = '') {
+    if (this._disposed || !this.data.modal.visible) return;
+    this._modalAfterClosed = afterClosed;
+    this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
+  },
+
+  handleModalClose() {
+    if (this.data.modal.action === 'networkRetry') this.handleModalCancel();
+  },
+
+  handleModalCancel() {
+    if (this.data.modal.loading) return;
+    if (this.data.modal.action === 'networkRetry') {
+      this._frozenSubmission = null;
+      this.setData({
+        submitting: false,
+        errorMessage: '发布尚未完成，可以稍后再次提交',
+        submissionKey: `publish_${this.data.type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      });
+      this.saveDraft();
+    }
+    this.closeModal();
+  },
+
+  handleModalConfirm() {
+    if (this.data.modal.loading) return;
+    if (this.data.modal.action === 'publishSuccess') {
+      if (this._successNavigationPending) return;
+      this._successNavigationPending = true;
+      this.closeModal('openPublishedActivity');
+      return;
+    }
+    if (this.data.modal.action === 'networkRetry') {
+      this.setData({ modal: { ...this.data.modal, loading: true }, submitting: true, errorMessage: '' });
+      return this.submitFrozenPayload();
+    }
+  },
+
+  handleModalClosed() {
+    const afterClosed = this._modalAfterClosed;
+    this._modalAfterClosed = '';
+    if (!this._disposed) this.setData({ modal: modalState() });
+    if (afterClosed !== 'openPublishedActivity' || this._disposed) return;
+    const activityId = String(this._publishedActivityId || '');
+    if (!activityId) {
+      this._successNavigationPending = false;
+      wx.switchTab({ url: '/pages/discover/index' });
+      return;
+    }
+    wx.redirectTo({
+      url: `/subpackages/activity/detail/index?id=${encodeURIComponent(activityId)}`,
+      fail: () => { this._successNavigationPending = false; }
+    });
+  },
 
   handleInput(event) {
     const field = event.currentTarget.dataset.field;
@@ -543,19 +637,66 @@ Page({
   },
 
   async handleSubmit() {
-    if (this.data.submitting) return;
+    if (this.data.submitting || this.data.modal.visible) return;
     const errorMessage = this.validateForm();
     if (errorMessage) return this.setData({ errorMessage });
+    this._frozenSubmission = {
+      payload: cloneSubmissionPayload(this.buildPayload()),
+      submissionKey: this.data.submissionKey
+    };
     this.setData({ submitting: true, errorMessage: '' });
     try {
       await subscriptionService.requestStatusUpdates();
-      const result = await activityService.create(this.buildPayload(), this.data.submissionKey);
-      wx.removeStorageSync(this.draftKey);
-      wx.showToast({ title: '发布成功', icon: 'success' });
-      setTimeout(() => wx.redirectTo({ url: `/subpackages/activity/detail/index?id=${result.activity.id}` }), 400);
     } catch (error) {
-      this.setData({ submitting: false, errorMessage: error.handled ? '账号暂时无法使用' : error.message || '发布失败，请重试' });
+      // Subscription prompts are optional and must never strand a valid publish.
+    }
+    return this.submitFrozenPayload();
+  },
+
+  async submitFrozenPayload() {
+    const frozen = this._frozenSubmission;
+    if (!frozen || this._disposed) return false;
+    try {
+      const result = await activityService.create(frozen.payload, frozen.submissionKey);
+      if (this._disposed) return false;
+      this._publishSucceeded = true;
+      this._publishedActivityId = result && result.activity && result.activity.id;
+      this._frozenSubmission = null;
+      wx.removeStorageSync(this.draftKey);
+      this.setData({ submitting: false, errorMessage: '' });
+      this.openModal({
+        type: 'success',
+        title: '发布成功！',
+        description: '你的拼局已经发布啦，等待同频的小伙伴加入吧。',
+        confirmText: '去看看',
+        closeOnMask: false,
+        action: 'publishSuccess'
+      });
+      return true;
+    } catch (error) {
+      if (this._disposed) return false;
+      if (isRetryablePublishError(error)) {
+        this.setData({ submitting: false, errorMessage: '' });
+        this.openModal({
+          type: 'network',
+          title: '网络开小差了',
+          description: '连接似乎不太稳定，请稍后再试一次。',
+          cancelText: '取消',
+          confirmText: '重新加载',
+          closeOnMask: true,
+          action: 'networkRetry'
+        });
+        return false;
+      }
+      this._frozenSubmission = null;
+      this.setData({
+        submitting: false,
+        modal: modalState(),
+        errorMessage: error.handled ? '账号暂时无法使用' : error.message || '发布失败，请重试',
+        submissionKey: `publish_${this.data.type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      });
       this.saveDraft();
+      return false;
     }
   }
 });

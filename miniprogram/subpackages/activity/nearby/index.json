@@ -7,6 +7,7 @@
   "enablePullDownRefresh": true,
   "onReachBottomDistance": 160,
   "usingComponents": {
-    "activity-card": "/components/activity-card/index"
+    "activity-card": "/components/activity-card/index",
+    "pinba-modal": "/components/pinba-modal/index"
   }
 }

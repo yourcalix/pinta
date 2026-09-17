@@ -4,5 +4,8 @@
   "backgroundColor": "#075AA7",
   "backgroundColorTop": "#075AA7",
   "backgroundColorBottom": "#075AA7",
-  "backgroundTextStyle": "light"
+  "backgroundTextStyle": "light",
+  "usingComponents": {
+    "pinba-modal": "/components/pinba-modal/index"
+  }
 }

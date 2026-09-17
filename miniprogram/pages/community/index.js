@@ -11,6 +11,9 @@ const { openCommunityAuthor } = require('../../utils/open-community-author');
 
 const PAGE_SIZE = 12;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
+const EMPTY_MODAL = Object.freeze({ visible: false, type: 'delete', title: '', description: '', confirmText: '', cancelText: '', danger: false, loading: false, closeOnMask: false });
+
+function modalState(patch = {}) { return { ...EMPTY_MODAL, ...patch }; }
 
 function formatUnreadCount(value){const count=Number(value);if(!Number.isSafeInteger(count)||count<0)throw new Error('Invalid community unread count');return count>99?'99+':String(count||'')}
 
@@ -44,7 +47,8 @@ Page({
     error: '',
     activityUnreadTotal: 0,
     activityUnreadLabel: '',
-    activityUnreadAriaLabel: '打开讨论动态'
+    activityUnreadAriaLabel: '打开讨论动态',
+    modal: modalState()
   },
 
   onLoad() {
@@ -66,6 +70,7 @@ Page({
   },
 
   onHide() {
+    this.cancelPendingDelete(true);
     this._disposed = true;
     this._loadSeq = (this._loadSeq || 0) + 1;
     this._unreadSeq = (this._unreadSeq || 0) + 1;
@@ -73,6 +78,7 @@ Page({
   },
 
   onUnload() {
+    this.cancelPendingDelete(false);
     this._disposed = true;
     this._loadSeq = (this._loadSeq || 0) + 1;
     this._unreadSeq = (this._unreadSeq || 0) + 1;
@@ -247,14 +253,51 @@ Page({
   },
 
   confirmPostDelete() {
-    return new Promise((resolve) => wx.showModal({
-      title: '确认删除',
-      content: '删除后其他用户将无法再查看，且无法恢复。',
-      confirmText: '删除',
-      confirmColor: '#E5484D',
-      success: (result) => resolve(Boolean(result.confirm)),
-      fail: () => resolve(false)
-    }));
+    this.cancelPendingDelete(false);
+    return new Promise((resolve) => {
+      this._deleteResolver = resolve;
+      this.setData({ modal: modalState({
+        visible: true,
+        type: 'delete',
+        title: '确定删除吗？',
+        description: '删除后，这条内容将无法恢复。',
+        cancelText: '先留着',
+        confirmText: '删除',
+        danger: true,
+        closeOnMask: false
+      }) });
+    });
+  },
+
+  settleDeleteConfirmation(confirmed, closeModal) {
+    const resolve = this._deleteResolver;
+    this._deleteResolver = null;
+    if (closeModal && !this._disposed) this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
+    if (typeof resolve === 'function') resolve(Boolean(confirmed));
+  },
+
+  cancelPendingDelete(updateView) {
+    if (updateView && this.data.modal.visible) this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
+    const resolve = this._deleteResolver;
+    this._deleteResolver = null;
+    if (typeof resolve === 'function') resolve(false);
+  },
+
+  handleModalConfirm() {
+    if (this.data.modal.loading || !this._deleteResolver) return;
+    this.setData({ modal: { ...this.data.modal, loading: true } });
+    this.settleDeleteConfirmation(true, false);
+  },
+
+  handleModalCancel() {
+    if (this.data.modal.loading) return;
+    this.settleDeleteConfirmation(false, true);
+  },
+
+  handleModalClose() { this.handleModalCancel(); },
+
+  handleModalClosed() {
+    if (!this._disposed) this.setData({ modal: modalState() });
   },
 
   async handlePostAction(event) {
@@ -273,9 +316,10 @@ Page({
         operation = 'delete';
         if (!await this.confirmPostDelete()) return;
         await communityService.deletePost(postId);
+        if (this._disposed) return;
         this._deletedPostIds = this._deletedPostIds || new Set();
         this._deletedPostIds.add(postId);
-        this.setData({ posts: this.data.posts.filter((item) => item.id !== postId) });
+        this.setData({ posts: this.data.posts.filter((item) => item.id !== postId), modal: { ...this.data.modal, visible: false, loading: false } });
         wx.showToast({ title: '已删除', icon: 'success' });
         return;
       }
@@ -287,7 +331,8 @@ Page({
       await safetyService.report({ targetType: 'communityPost', targetId: postId, reason: reason.value, description: '' });
       wx.showToast({ title: '已收到举报', icon: 'success' });
     } catch (error) {
-      if (!error.handled) wx.showToast({ title: operation === 'delete' ? '删除失败，请重试' : '举报失败，请重试', icon: 'none' });
+      if (!this._disposed && operation === 'delete') this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
+      if (!this._disposed && !error.handled) wx.showToast({ title: operation === 'delete' ? '删除失败，请重试' : '举报失败，请重试', icon: 'none' });
     } finally {
       this._postActionLocks.delete(postId);
     }

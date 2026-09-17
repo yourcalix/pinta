@@ -1,0 +1,42 @@
+<view
+  wx:if="{{rendered}}"
+  class="pinba-modal-mask {{opened ? 'pinba-modal-mask--open' : ''}}"
+  catchtap="handleMaskTap"
+  catchtouchmove="noop"
+  role="presentation"
+>
+  <view
+    class="pinba-modal-card {{opened ? 'pinba-modal-card--open' : ''}}"
+    catchtap="noop"
+    aria-role="dialog"
+    aria-modal="true"
+    aria-label="{{title}}，{{description}}"
+  >
+    <image class="pinba-modal-art {{opened ? 'pinba-modal-art--open' : ''}}" src="{{imageSrc}}" mode="aspectFit" aria-hidden="true" />
+    <scroll-view class="pinba-modal-content" scroll-y="true" enhanced="true" show-scrollbar="false">
+      <text class="pinba-modal-title" role="heading" aria-level="2">{{title}}</text>
+      <text wx:if="{{description}}" class="pinba-modal-description">{{description}}</text>
+    </scroll-view>
+    <view class="pinba-modal-actions {{cancelText ? 'pinba-modal-actions--double' : 'pinba-modal-actions--single'}}">
+      <button
+        wx:if="{{cancelText}}"
+        class="pinba-modal-button pinba-modal-button--secondary"
+        bindtap="handleCancel"
+        hover-class="pinba-modal-button--pressed"
+        hover-stay-time="70"
+        aria-disabled="{{loading}}"
+      >{{cancelText}}</button>
+      <button
+        class="pinba-modal-button pinba-modal-button--primary {{danger ? 'pinba-modal-button--danger' : ''}} {{loading ? 'pinba-modal-button--loading' : ''}}"
+        bindtap="handleConfirm"
+        hover-class="pinba-modal-button--pressed"
+        hover-stay-time="70"
+        aria-disabled="{{loading}}"
+        aria-label="{{loading ? '正在处理，请稍候' : confirmText}}"
+      >
+        <text class="pinba-modal-button-label" aria-hidden="true">{{confirmText}}</text>
+        <view wx:if="{{loading}}" class="pinba-modal-loading" aria-hidden="true"><view></view><view></view><view></view></view>
+      </button>
+    </view>
+  </view>
+</view>

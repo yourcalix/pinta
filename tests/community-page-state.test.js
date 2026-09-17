@@ -116,15 +116,15 @@ test('作者菜单二次确认后删除帖子且同一目标操作防重', async
     assert.equal(itemColor, undefined);
     success({ tapIndex: 0 });
   };
-  global.wx.showModal = ({ title, success }) => {
-    assert.equal(title, '确认删除');
-    success({ confirm: true });
-  };
   try {
     context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: true }, { id: 'post-2', viewerIsAuthor: false }] });
     const event = { currentTarget: { dataset: { id: 'post-1' } } };
     const first = context.page.handlePostAction(event);
     const second = context.page.handlePostAction(event);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(context.page.data.modal.type, 'delete');
+    assert.equal(context.page.data.modal.visible, true);
+    context.page.handleModalConfirm();
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(deleteCalls, 1);
     deletion.resolve({ deleted: true });
@@ -143,10 +143,12 @@ test('作者取消删除时不调用接口且保留帖子', async () => {
   communityService.deletePost = async () => { deleteCalls += 1; };
   const context = loadCommunityPage();
   global.wx.showActionSheet = ({ success }) => success({ tapIndex: 0 });
-  global.wx.showModal = ({ success }) => success({ confirm: false });
   try {
     context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: true }] });
-    await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    const action = context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    await new Promise((resolve) => setImmediate(resolve));
+    context.page.handleModalCancel();
+    await action;
     assert.equal(deleteCalls, 0);
     assert.equal(context.page.data.posts.length, 1);
   } finally {
@@ -243,11 +245,13 @@ test('删除墓碑过滤删除期间发起的晚到刷新结果', async () => {
   communityService.deletePost = async () => ({ deleted: true });
   const context = loadCommunityPage();
   global.wx.showActionSheet = ({ success }) => success({ tapIndex: 0 });
-  global.wx.showModal = ({ success }) => success({ confirm: true });
   try {
     context.page.setData({ posts: [{ id: 'post-1', viewerIsAuthor: true }], loading: false });
     const refresh = context.page.loadPosts(false, true);
-    await context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    const deletion = context.page.handlePostAction({ currentTarget: { dataset: { id: 'post-1' } } });
+    await new Promise((resolve) => setImmediate(resolve));
+    context.page.handleModalConfirm();
+    await deletion;
     listResponse.resolve({ items: [{ id: 'post-1', viewerIsAuthor: true, author: { nickname: '作者' }, content: '旧快照', createdAt: new Date().toISOString() }], nextCursor: null });
     await refresh;
     assert.deepEqual(context.page.data.posts, []);

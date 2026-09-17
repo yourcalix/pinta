@@ -129,6 +129,80 @@ test('附近页不会冷启动索取定位，授权坐标只留在页面实例�
   }
 });
 
+test('定位曾被拒绝时显示品牌弹窗，取消不索权，确认后复用设置与原定位流程', async () => {
+  const originalNearby = activityService.nearby;
+  let openSettingCalls = 0;
+  activityService.nearby = async () => ({ items: [], nextCursor: null });
+  const context = loadNearbyPage();
+  global.wx.getSetting = ({ success, complete }) => {
+    success({ authSetting: { 'scope.userLocation': false } });
+    if (complete) complete();
+  };
+  global.wx.openSetting = ({ success, complete }) => {
+    openSettingCalls += 1;
+    success({ authSetting: { 'scope.userLocation': true } });
+    if (complete) complete();
+  };
+  try {
+    context.page.onLoad();
+    await context.page.handleEnableLocation();
+    assert.equal(context.getLocationCalls(), 0);
+    assert.equal(context.page.data.modal.type, 'location');
+    assert.equal(context.page.data.modal.visible, true);
+    context.page.handleModalCancel();
+    assert.equal(context.getLocationCalls(), 0);
+    assert.equal(openSettingCalls, 0);
+    context.page.handleModalClosed();
+
+    context.page.handleOpenSettings();
+    context.page.handleModalConfirm();
+    assert.equal(openSettingCalls, 1);
+    assert.equal(context.page.data.modal.visible, false);
+    await context.page.handleModalClosed();
+    assert.equal(context.getLocationCalls(), 1);
+    assert.equal(context.page.data.state, 'empty');
+  } finally {
+    activityService.nearby = originalNearby;
+    unloadNearbyPage(context);
+  }
+});
+
+test('跳转系统设置期间切到后台，返回后继续消费授权结果且不重复索权', async () => {
+  const originalNearby = activityService.nearby;
+  let settingCallbacks;
+  let openSettingCalls = 0;
+  activityService.nearby = async () => ({ items: [], nextCursor: null });
+  const context = loadNearbyPage();
+  global.wx.openSetting = (callbacks) => {
+    openSettingCalls += 1;
+    settingCallbacks = callbacks;
+  };
+  try {
+    context.page.onLoad();
+    context.page.onShow();
+    context.page.handleOpenSettings();
+    context.page.handleModalConfirm();
+    assert.equal(openSettingCalls, 1);
+    assert.equal(context.page.data.modal.loading, true);
+
+    context.page.onHide();
+    settingCallbacks.success({ authSetting: { 'scope.userLocation': true } });
+    settingCallbacks.complete();
+    assert.equal(context.getLocationCalls(), 0);
+    assert.deepEqual(context.page._resumeLocationSettingResult, { granted: true });
+
+    context.page.onShow();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(context.getLocationCalls(), 1);
+    assert.equal(context.page.data.state, 'empty');
+    assert.equal(context.page._resumeLocationSettingResult, null);
+    assert.equal(context.page.data.modal.visible, false);
+  } finally {
+    activityService.nearby = originalNearby;
+    unloadNearbyPage(context);
+  }
+});
+
 test('POI 再搜索时销毁原生地图预览，并阻止旧异步结果覆盖新关键词', async () => {
   const amapService = require('../miniprogram/services/amap');
   const originalSearchPoi = amapService.searchPoi;

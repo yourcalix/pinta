@@ -198,13 +198,13 @@ test('详情页作者确认删除回复后移除回复并校准计数', async ()
     assert.deepEqual(itemList, ['删除内容', '举报']);
     success({ tapIndex: 0 });
   };
-  global.wx.showModal = ({ confirmColor, success }) => {
-    assert.equal(confirmColor, '#E5484D');
-    success({ confirm: true });
-  };
   try {
     context.page.setData({ post: { id: 'post', replyCount: 2 }, replies: [{ id: 'reply', viewerIsAuthor: true }, { id: 'kept' }] });
-    await context.page.handleReplyMore({ currentTarget: { dataset: { id: 'reply' } } });
+    const action = context.page.handleReplyMore({ currentTarget: { dataset: { id: 'reply' } } });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(context.page.data.modal.visible, true);
+    context.page.handleModalConfirm();
+    await action;
     assert.deepEqual(context.page.data.replies.map((item) => item.id), ['kept']);
     assert.equal(context.page.data.post.replyCount, 1);
   } finally {
@@ -235,11 +235,12 @@ test('详情页删除请求返回前卸载不会更新或跳转', async () => {
   const context = loadDetailPage();
   let switchTabCalls = 0;
   global.wx.showActionSheet = ({ success }) => success({ tapIndex: 0 });
-  global.wx.showModal = ({ success }) => success({ confirm: true });
   global.wx.switchTab = () => { switchTabCalls += 1; };
   try {
     context.page.setData({ post: { id: 'post', viewerIsAuthor: true } });
     const action = context.page.handlePostMore();
+    await new Promise((resolve) => setImmediate(resolve));
+    context.page.handleModalConfirm();
     await new Promise((resolve) => setImmediate(resolve));
     context.page.onUnload();
     deletion.resolve({ deleted: true });

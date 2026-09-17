@@ -431,4 +431,19 @@
   <view wx:else class="fixed-submit-bar {{type === 'food' ? 'fixed-submit-bar--food' : ''}}">
     <button class="submit-button" hover-class="submit-button--pressed" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}" aria-label="{{submitting ? '正在发布拼单' : '立即发布拼单'}}">{{submitting ? '正在发布…' : '立即发布拼单'}}</button>
   </view>
+  <pinba-modal
+    visible="{{modal.visible}}"
+    type="{{modal.type}}"
+    title="{{modal.title}}"
+    description="{{modal.description}}"
+    confirm-text="{{modal.confirmText}}"
+    cancel-text="{{modal.cancelText}}"
+    danger="{{modal.danger}}"
+    loading="{{modal.loading}}"
+    close-on-mask="{{modal.closeOnMask}}"
+    bind:confirm="handleModalConfirm"
+    bind:cancel="handleModalCancel"
+    bind:close="handleModalClose"
+    bind:closed="handleModalClosed"
+  />
 </view>

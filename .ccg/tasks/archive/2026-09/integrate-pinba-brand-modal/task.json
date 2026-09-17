@@ -1,0 +1,12 @@
+{
+  "id": "integrate-pinba-brand-modal",
+  "title": "接入猫狗品牌弹窗组件并适配核心业务场景",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "无",
+  "createdAt": "2026-09-17T08:30:00Z",
+  "branch": "main"
+}
