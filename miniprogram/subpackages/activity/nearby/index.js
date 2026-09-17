@@ -15,13 +15,26 @@ function locationErrorState(error) {
   return /auth deny|authorize:fail|permission|denied|拒绝/i.test(text) ? 'denied' : 'error';
 }
 
+function resolveNearbyError(error) {
+  if (error && error.code === 'NEARBY_UNAVAILABLE') {
+    return { state: 'unavailable', message: '附近活动服务正在准备中，请稍后重试' };
+  }
+  const text = String(error && (error.errMsg || error.message) || '');
+  const networkFailure = Boolean(error && ['TIMEOUT', 'NETWORK_ERROR'].includes(error.code))
+    || /(?:request|callFunction|network|socket):?fail|network is unavailable|timeout|超时/i.test(text);
+  return {
+    state: 'error',
+    message: networkFailure ? '网络连接不稳定，请稍后重试' : '附近活动暂时无法加载，请稍后重试'
+  };
+}
+
 Page({
   data: {
     state: 'intro',
     radiusOptions: [{ value: 1000, label: '1km' }, { value: 3000, label: '3km' }, { value: 5000, label: '5km' }, { value: 10000, label: '10km' }],
     radiusMeters: 3000,
     typeOptions: [{ value: '', label: '全部' }, { value: 'companion', label: '拼同行' }, { value: 'sport', label: '拼运动' }, { value: 'food', label: '拼饭桌' }, { value: 'benefit', label: '拼享惠' }],
-    type: '', activities: [], hasMore: false, loadingMore: false, loadMoreError: '', errorMessage: '',
+    type: '', activities: [], hasMore: false, loadingMore: false, loadMoreError: '', errorMessage: '', canRetryNearby: false,
     modal: modalState()
   },
 
@@ -39,7 +52,9 @@ Page({
       if (result.granted) return void this.locateAndLoad();
     }
     if (this._skipFirstShow) { this._skipFirstShow = false; return; }
-    if (!this._viewerLocation && ['success', 'empty'].includes(this.data.state)) this.setData({ state: 'intro', activities: [], hasMore: false });
+    if (!this._viewerLocation && ['loading', 'success', 'empty', 'error', 'unavailable'].includes(this.data.state)) {
+      this.setData({ state: 'intro', activities: [], hasMore: false, canRetryNearby: false });
+    }
   },
   onHide() {
     if (this.data.modal.visible && !this._locationSettingsPending) this.setData({ modal: { ...this.data.modal, visible: false, loading: false } });
@@ -53,7 +68,11 @@ Page({
     finally { if (typeof wx.stopPullDownRefresh === 'function') wx.stopPullDownRefresh(); }
   },
 
-  clearViewerLocation() { this._viewerLocation = null; this._requestSeq = (this._requestSeq || 0) + 1; },
+  clearViewerLocation() {
+    this._viewerLocation = null;
+    this._requestSeq = (this._requestSeq || 0) + 1;
+    if (!this._unloaded && (this.data.loadingMore || this.data.loadMoreError)) this.setData({ loadingMore: false, loadMoreError: '' });
+  },
   handleEnableLocation() {
     if (this.data.modal.visible || this._permissionCheckPending) return false;
     if (typeof wx.getSetting !== 'function') return this.locateAndLoad();
@@ -130,20 +149,21 @@ Page({
   },
   locateAndLoad() {
     const sequence = (this._requestSeq = (this._requestSeq || 0) + 1);
-    this.setData({ state: 'loading', activities: [], errorMessage: '', loadMoreError: '' });
+    this.setData({ state: 'loading', activities: [], errorMessage: '', loadMoreError: '', canRetryNearby: false });
     return new Promise((resolve) => {
       wx.getLocation({
         type: 'gcj02', isHighAccuracy: true,
         success: (position) => {
           if (sequence !== this._requestSeq) return resolve(false);
           this._viewerLocation = { latitude: Number(position.latitude), longitude: Number(position.longitude) };
+          this.setData({ canRetryNearby: true });
           resolve(this.fetchNearby());
         },
         fail: (error) => {
           if (sequence !== this._requestSeq) return resolve(false);
           this._viewerLocation = null;
           const state = locationErrorState(error);
-          this.setData({ state, errorMessage: state === 'denied' ? '未获取到定位权限' : '暂时无法获取位置，请稍后重试' });
+          this.setData({ state, errorMessage: state === 'denied' ? '未获取到定位权限' : '暂时无法获取位置，请稍后重试', canRetryNearby: false });
           if (state === 'denied') this.openLocationModal();
           resolve(false);
         }
@@ -154,19 +174,29 @@ Page({
   async fetchNearby(options = {}) {
     if (!this._viewerLocation) return false;
     const sequence = (this._requestSeq = (this._requestSeq || 0) + 1);
-    if (!options.keepContent) this.setData({ state: 'loading', activities: [], hasMore: false, loadingMore: false, loadMoreError: '' });
-    this._nextCursor = undefined;
+    const keepContent = Boolean(options.keepContent && this.data.activities.length);
+    if (!keepContent) this.setData({ state: 'loading', activities: [], hasMore: false, loadingMore: false, loadMoreError: '', canRetryNearby: true });
     try {
       const result = await this.requestPage();
       if (sequence !== this._requestSeq) return false;
       const activities = safetyService.filterHiddenActivities(result.items || []).map(decorateActivity);
       this._nextCursor = result.nextCursor || undefined;
-      this.setData({ state: activities.length ? 'success' : 'empty', activities, hasMore: Boolean(result.nextCursor), loadingMore: false, errorMessage: '', loadMoreError: '' });
+      this.setData({ state: activities.length ? 'success' : 'empty', activities, hasMore: Boolean(result.nextCursor), loadingMore: false, errorMessage: '', loadMoreError: '', canRetryNearby: true });
       return true;
     } catch (error) {
       if (sequence !== this._requestSeq) return false;
-      const unavailable = error && error.code === 'NEARBY_UNAVAILABLE';
-      this.setData({ state: unavailable ? 'unavailable' : (options.keepContent && this.data.activities.length ? 'success' : 'error'), loadingMore: false, errorMessage: unavailable ? '附近活动服务正在准备中，请稍后重试' : '附近活动加载失败，请检查网络' });
+      const resolved = resolveNearbyError(error);
+      if (keepContent) {
+        const rollback = options.rollback || {};
+        const preserved = { loadingMore: false, canRetryNearby: true };
+        if (Object.prototype.hasOwnProperty.call(rollback, 'radiusMeters')) preserved.radiusMeters = rollback.radiusMeters;
+        if (Object.prototype.hasOwnProperty.call(rollback, 'type')) preserved.type = rollback.type;
+        this.setData(preserved);
+        if (typeof wx.showToast === 'function') wx.showToast({ title: resolved.message, icon: 'none' });
+        return false;
+      }
+      this._nextCursor = undefined;
+      this.setData({ state: resolved.state, loadingMore: false, errorMessage: resolved.message, canRetryNearby: true });
       return false;
     }
   },
@@ -195,9 +225,10 @@ Page({
     }
   },
   handleRetryLoadMore() { this.setData({ loadMoreError: '' }); return this.loadMore(); },
-  handleRadiusChange(event) { const radiusMeters = Number(event.currentTarget.dataset.value); if (radiusMeters === this.data.radiusMeters) return false; this.setData({ radiusMeters }); return this.fetchNearby(); },
-  handleTypeChange(event) { const type = event.currentTarget.dataset.value || ''; if (type === this.data.type) return false; this.setData({ type }); return this.fetchNearby(); },
-  handleExpandRadius() { const radiusMeters = this.data.radiusMeters < 5000 ? 5000 : 10000; this.setData({ radiusMeters }); return this.fetchNearby(); },
+  handleRetryNearby() { return this._viewerLocation ? this.fetchNearby() : this.locateAndLoad(); },
+  handleRadiusChange(event) { const radiusMeters = Number(event.currentTarget.dataset.value); if (radiusMeters === this.data.radiusMeters) return false; const previous = this.data.radiusMeters; this.setData({ radiusMeters }); return this.fetchNearby({ keepContent: true, rollback: { radiusMeters: previous } }); },
+  handleTypeChange(event) { const type = event.currentTarget.dataset.value || ''; if (type === this.data.type) return false; const previous = this.data.type; this.setData({ type }); return this.fetchNearby({ keepContent: true, rollback: { type: previous } }); },
+  handleExpandRadius() { const previous = this.data.radiusMeters; const radiusMeters = previous < 5000 ? 5000 : 10000; this.setData({ radiusMeters }); return this.fetchNearby({ keepContent: true, rollback: { radiusMeters: previous } }); },
   handleOpenSettings() { this.openLocationModal(); },
   handleAllActivities() { wx.redirectTo({ url: '/subpackages/activity/list/index' }); },
   handleCardSelect(event) { wx.navigateTo({ url: `/subpackages/activity/detail/index?id=${encodeURIComponent(event.detail.id)}` }); }

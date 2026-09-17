@@ -1,0 +1,12 @@
+{
+  "id": "fix-nearby-activity-loading",
+  "title": "修复附近拼吧定位成功后仍无法加载活动",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交",
+  "createdAt": "2026-09-17T21:29:00+08:00",
+  "branch": "main"
+}

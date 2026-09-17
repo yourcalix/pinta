@@ -96,6 +96,21 @@ function isMissingDocumentError(error) {
     || /document_not_found/i.test(message);
 }
 
+function isNearbyQueryUnavailableError(error) {
+  const details = error && error.details;
+  const text = [
+    error && error.code,
+    error && error.errCode,
+    error && error.message,
+    error && error.errMsg,
+    typeof details === 'string' ? details : details && (details.message || details.errMsg)
+  ].filter((value) => value !== undefined && value !== null).join(' ');
+  const hasGeoContext = /meetingGeoPoint|geo\s*near|geo[_ -]?(?:index|spatial)|2d\s*sphere|地理(?:位置|空间)?|空间/i.test(text);
+  const hasIndexFailure = /(?:index|索引).*(?:missing|required|not found|不存在|缺少|未创建|必须)|(?:missing|required|not found|不存在|缺少|未创建|必须).*(?:index|索引)/i.test(text);
+  const hasUnavailableOperator = /(?:geo\s*near|2d\s*sphere).*(?:not supported|unavailable|disabled|不支持|不可用|未启用)/i.test(text);
+  return (hasGeoContext && hasIndexFailure) || hasUnavailableOperator;
+}
+
 async function getTransactionDocument(documentReference) {
   try {
     return first(await documentReference.get());
@@ -815,8 +830,7 @@ class CloudStore {
         if (batch.length < 100) { exhausted = true; break; }
       }
     } catch (error) {
-      const message = String(error && (error.message || error.errMsg) || error);
-      if (/index|索引|geo/i.test(message)) throw new AppError('NEARBY_UNAVAILABLE');
+      if (isNearbyQueryUnavailableError(error)) throw new AppError('NEARBY_UNAVAILABLE');
       throw error;
     }
     if (!exhausted) throw new AppError('NEARBY_UNAVAILABLE', '附近活动过多，请缩小搜索半径后重试');

@@ -81,7 +81,7 @@ test('activity.nearby 仅返回半径内坐标活动、按距离排序且不泄�
 
 test('Cloud 附近查询使用 GeoPoint 与 geoNear，并把索引故障归一为可恢复错误', async () => {
   const reads = [];
-  let shouldFail = false;
+  let failure = null;
   const row = { ...activity('cloud', 22.1990, 113.5439), _id: 'cloud' };
   delete row.id;
   const db = {
@@ -98,7 +98,7 @@ test('Cloud 附近查询使用 GeoPoint 与 geoNear，并把索引故障归一�
           return {
             skip() { return this; }, limit() { return this; },
             async get() {
-              if (shouldFail) throw new Error('geo index not found');
+              if (failure) throw failure;
               return { data: [row] };
             }
           };
@@ -112,8 +112,17 @@ test('Cloud 附近查询使用 GeoPoint 与 geoNear，并把索引故障归一�
   assert.deepEqual(reads[0].meetingGeoPoint.$geoNear.geometry, { longitude: ORIGIN.longitude, latitude: ORIGIN.latitude, kind: 'Point' });
   assert.equal(reads[0].meetingGeoPoint.$geoNear.maxDistance, 3000);
   assert.deepEqual(reads[0].type, { $in: ['sport', 'buddy'] });
-  shouldFail = true;
+  failure = new Error('geo index not found');
   await assert.rejects(() => store.listNearbyActivities({ ...ORIGIN, city: '澳门', type: 'sport', radiusMeters: 3000, after: null, limit: 10 }, NOW.toISOString()), (error) => error.code === 'NEARBY_UNAVAILABLE');
+
+  failure = Object.assign(new Error('database request failed'), { errCode: -502001, errMsg: 'geo index not found for meetingGeoPoint' });
+  await assert.rejects(() => store.listNearbyActivities({ ...ORIGIN, city: '澳门', type: 'sport', radiusMeters: 3000, after: null, limit: 10 }, NOW.toISOString()), (error) => error.code === 'NEARBY_UNAVAILABLE');
+
+  failure = Object.assign(new Error('permission denied'), { errCode: -601002 });
+  await assert.rejects(() => store.listNearbyActivities({ ...ORIGIN, city: '澳门', type: 'sport', radiusMeters: 3000, after: null, limit: 10 }, NOW.toISOString()), (error) => error.code !== 'NEARBY_UNAVAILABLE');
+
+  failure = Object.assign(new Error('meetingGeoPoint permission denied'), { errCode: -601002 });
+  await assert.rejects(() => store.listNearbyActivities({ ...ORIGIN, city: '澳门', type: 'sport', radiusMeters: 3000, after: null, limit: 10 }, NOW.toISOString()), (error) => error.code !== 'NEARBY_UNAVAILABLE');
 });
 
 test('Cloud 发布活动把会合点写成可建地理索引的顶层 GeoPoint', async () => {

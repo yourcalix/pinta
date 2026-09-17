@@ -12,10 +12,12 @@ const ORIGIN = { latitude: 22.198745, longitude: 113.543873 };
 function loadNearbyPage() {
   let definition;
   let getLocationCalls = 0;
+  const toastCalls = [];
   global.Page = (value) => { definition = value; };
   global.wx = {
     getLocation(options) { getLocationCalls += 1; options.success({ latitude: 22.198745, longitude: 113.543873 }); },
-    stopPullDownRefresh() {}, openSetting() {}, redirectTo() {}, navigateTo() {}
+    stopPullDownRefresh() {}, openSetting() {}, redirectTo() {}, navigateTo() {},
+    showToast(options) { toastCalls.push(options); }
   };
   const pagePath = require.resolve('../miniprogram/subpackages/activity/nearby/index');
   delete require.cache[pagePath];
@@ -23,6 +25,7 @@ function loadNearbyPage() {
   return {
     pagePath,
     getLocationCalls: () => getLocationCalls,
+    toastCalls,
     page: { ...definition, data: { ...definition.data }, setData(value) { Object.assign(this.data, value); } }
   };
 }
@@ -104,6 +107,8 @@ test('附近页先说明再由用户点击授权，并具备半径筛选和完�
   assert.match(template, /1km[\s\S]*3km[\s\S]*5km[\s\S]*10km/);
   assert.match(template, /去查看全城活动/);
   assert.match(template, /打开设置/);
+  assert.match(template, /bindtap="handleRetryNearby"/);
+  assert.match(template, /canRetryNearby \? '重新加载' : '重新定位'/);
 });
 
 test('附近页不会冷启动索取定位，授权坐标只留在页面实例且离屏即清除', async () => {
@@ -121,8 +126,10 @@ test('附近页不会冷启动索取定位，授权坐标只留在页面实例�
     assert.equal(Object.hasOwn(context.page.data, 'latitude'), false);
     assert.equal(Object.hasOwn(context.page.data, 'longitude'), false);
     assert.ok(context.page._viewerLocation);
+    context.page.setData({ loadingMore: true });
     context.page.onHide();
     assert.equal(context.page._viewerLocation, null);
+    assert.equal(context.page.data.loadingMore, false);
   } finally {
     activityService.nearby = originalNearby;
     unloadNearbyPage(context);
@@ -247,6 +254,63 @@ test('附近筛选打断续页时会释放 loadingMore 锁并采用最新筛选�
     resolveLoadMore({ items: [], nextCursor: null });
     assert.equal(await pending, false);
     assert.equal(context.page.data.loadingMore, false);
+  } finally {
+    activityService.nearby = originalNearby;
+    unloadNearbyPage(context);
+  }
+});
+
+test('附近读取按服务未就绪、网络异常与通用服务异常展示准确文案', async () => {
+  const originalNearby = activityService.nearby;
+  const context = loadNearbyPage();
+  const cases = [
+    ['NEARBY_UNAVAILABLE', 'unavailable', '附近活动服务正在准备中，请稍后重试'],
+    ['TIMEOUT', 'error', '网络连接不稳定，请稍后重试'],
+    ['INTERNAL', 'error', '附近活动暂时无法加载，请稍后重试']
+  ];
+  try {
+    context.page.onLoad();
+    context.page._viewerLocation = { ...ORIGIN };
+    for (const [code, state, message] of cases) {
+      activityService.nearby = async () => { throw Object.assign(new Error('raw cloud failure'), { code }); };
+      await context.page.fetchNearby();
+      assert.equal(context.page.data.state, state);
+      assert.equal(context.page.data.errorMessage, message);
+      assert.equal(context.page.data.canRetryNearby, true);
+      assert.doesNotMatch(context.page.data.errorMessage, /raw cloud|检查网络/);
+    }
+  } finally {
+    activityService.nearby = originalNearby;
+    unloadNearbyPage(context);
+  }
+});
+
+test('已有有效坐标时重新加载不再次定位，筛选失败保留旧列表', async () => {
+  const originalNearby = activityService.nearby;
+  let nearbyCalls = 0;
+  const context = loadNearbyPage();
+  const existing = [{ id: 'existing-nearby' }];
+  activityService.nearby = async () => {
+    nearbyCalls += 1;
+    throw Object.assign(new Error('service failed'), { code: 'INTERNAL' });
+  };
+  try {
+    context.page.onLoad();
+    context.page._viewerLocation = { ...ORIGIN };
+    context.page.setData({ state: 'error', canRetryNearby: true });
+    await context.page.handleRetryNearby();
+    assert.equal(nearbyCalls, 1);
+    assert.equal(context.getLocationCalls(), 0);
+
+    context.page._nextCursor = 'existing-next-page';
+    context.page.setData({ state: 'success', activities: existing, hasMore: true });
+    await context.page.handleRadiusChange({ currentTarget: { dataset: { value: 5000 } } });
+    assert.equal(context.page.data.state, 'success');
+    assert.deepEqual(context.page.data.activities, existing);
+    assert.equal(context.page.data.radiusMeters, 3000);
+    assert.equal(context.page._nextCursor, 'existing-next-page');
+    assert.equal(context.page.data.hasMore, true);
+    assert.equal(context.toastCalls.at(-1).title, '附近活动暂时无法加载，请稍后重试');
   } finally {
     activityService.nearby = originalNearby;
     unloadNearbyPage(context);
