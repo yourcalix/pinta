@@ -1,0 +1,12 @@
+{
+  "id": "jump-to-community-reply",
+  "title": "讨论动态点击回复后定位到帖子内对应回复",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-09-17T00:00:00Z",
+  "branch": "main"
+}

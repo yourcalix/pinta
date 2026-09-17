@@ -50,7 +50,7 @@
 
       <view class="reply-heading"><text>全部回复</text><text class="reply-count">{{post.replyCount}}</text></view>
       <view wx:if="{{replies.length}}" class="reply-list">
-        <view wx:for="{{replies}}" wx:key="id" class="reply-card surface" role="article" aria-label="{{item.authorNickname}}{{item.replyContextLabel}}回复：{{item.content}}，{{item.displayTime}}">
+        <view wx:for="{{replies}}" wx:key="id" id="community-reply-{{index}}" class="reply-card surface {{item.id === locatedReplyId ? 'reply-card--located' : ''}}" role="article" aria-label="{{item.authorNickname}}{{item.replyContextLabel}}回复：{{item.content}}，{{item.displayTime}}">
             <view class="reply-meta">
               <button class="reply-author-profile" data-source-type="reply" data-id="{{item.id}}" catchtap="handleAuthorProfile" hover-class="author-profile--pressed" hover-stop-propagation="true" aria-label="查看{{item.authorNickname}}的个人主页">
                 <image wx:if="{{!item.avatarSlot.empty}}" class="reply-avatar reply-avatar-image" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" lazy-load="true" data-id="{{item.id}}" binderror="handleReplyAvatarError" aria-hidden="true"></image>

@@ -83,7 +83,8 @@ test('动态卡片不再提前已读，详情成功后才按版本消费', () =>
   assert.match(regularNavigation, /activityId=/);
   assert.match(regularNavigation, /activityUpdatedAt=/);
   assert.match(handler, /if \(item\.removed\)[\s\S]*readActivity\(id, item\.updatedAt, item\.postId\)/);
-  assert.match(detailScript, /if \(!append\) this\.consumeSourceActivity\(\)/);
+  assert.match(detailScript, /if \(this\._targetReplyId\) this\.startReplyLocating\(\);\s*else this\.consumeSourceActivity\(\)/);
+  assert.match(detailScript, /this\._replyLocateSettled = true;[\s\S]*await this\.consumeSourceActivity\(\)/);
   assert.match(detailScript, /readActivity\(source\.id, source\.updatedAt, source\.postId\)/);
   assert.match(detailScript, /source\.done \|\| source\.pending/);
   assert.match(detailScript, /result\.read === true \|\| result\.stale === true/);
@@ -100,10 +101,11 @@ test('动态卡片运行时只导航，失效卡片确认后才消费', async ()
     showToast: (options) => toasts.push(options.title)
   });
   page._disposed = false;
-  page.data.items = [{ id: 'activity-1', postId: 'post-1', updatedAt: '2026-09-15T01:00:00.000Z', read: false, removed: false }];
+  page.data.items = [{ id: 'activity-1', postId: 'post-1', replyId: 'reply-1', updatedAt: '2026-09-15T01:00:00.000Z', read: false, removed: false }];
   await page.handleActivity({ currentTarget: { dataset: { id: 'activity-1' } } });
   assert.equal(reads.length, 0);
   assert.match(routes[0], /id=post-1&activityId=activity-1&activityUpdatedAt=/);
+  assert.match(routes[0], /replyId=reply-1/);
 
   page._navigationPending = false;
   page.data.items = [{ id: 'activity-2', postId: 'post-2', updatedAt: '2026-09-15T02:00:00.000Z', read: false, removed: true }];

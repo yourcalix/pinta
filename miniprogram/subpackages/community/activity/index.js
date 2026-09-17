@@ -217,7 +217,9 @@ Page({
     }
     if (item.postId && !this._navigationPending) {
       this._navigationPending = true;
-      const query = `id=${encodeURIComponent(item.postId)}&activityId=${encodeURIComponent(item.id)}&activityUpdatedAt=${encodeURIComponent(item.updatedAt)}`;
+      const replyId = String(item.replyId || '').trim();
+      const replyQuery = replyId && replyId.length <= 80 ? `&replyId=${encodeURIComponent(replyId)}` : '';
+      const query = `id=${encodeURIComponent(item.postId)}&activityId=${encodeURIComponent(item.id)}&activityUpdatedAt=${encodeURIComponent(item.updatedAt)}${replyQuery}`;
       wx.navigateTo({
         url: `/subpackages/community/detail/index?${query}`,
         fail: () => { this._navigationPending = false; }

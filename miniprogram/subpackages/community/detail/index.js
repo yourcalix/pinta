@@ -9,7 +9,15 @@ const { normalizeAvatarSlots, fallbackAvatarSlot } = require('../../../utils/pas
 const { openCommunityAuthor } = require('../../../utils/open-community-author');
 
 const PAGE_SIZE = 20;
+const MAX_REPLY_LOCATE_PAGES = 10;
+const MAX_REPLY_LOCATE_ITEMS = PAGE_SIZE * MAX_REPLY_LOCATE_PAGES;
+const REPLY_LOCATE_RETRY_MS = 50;
+const REPLY_HIGHLIGHT_MS = 1600;
 const AVATAR_TONES = ['blue', 'purple', 'orange', 'green', 'teal'];
+function normalizeReplyRouteId(value) {
+  const id = String(value || '').trim();
+  return id && id.length <= 80 ? id : '';
+}
 function splitContentSegments(content) {
   const source = String(content || '');
   const segments = [];
@@ -73,12 +81,18 @@ Page({
     postId: '', post: null, replies: [], replyContent: '', replyTarget: null,
     replyPlaceholder: '写下你的回复…', replyCursorSpacing: 120, submitting: false,
     loading: true, error: '', nextCursor: '', hasMore: false,
-    loadingMore: false, loadMoreError: '', replyInputFocus: false
+    loadingMore: false, loadMoreError: '', replyInputFocus: false, locatedReplyId: ''
   },
 
   onLoad(options) {
     options = options || {};
     this._disposed = false;
+    this._replyLocateSeq = 0;
+    this._replyLocatePending = false;
+    this._replyLocateSettled = false;
+    this._replyLocateStopped = false;
+    this._resumeDetailLoad = false;
+    this._targetReplyId = normalizeReplyRouteId(options.replyId);
     const postId = String(options.id || '').trim();
     const activityId = String(options.activityId || '').trim();
     const activityUpdatedAt = String(options.activityUpdatedAt || '').trim();
@@ -94,10 +108,24 @@ Page({
   onShow() {
     this._disposed = false;
     this._authorNavPending = false;
-    if (this.data.post) this.consumeSourceActivity();
+    if (this._resumeDetailLoad) {
+      this._resumeDetailLoad = false;
+      return void this.loadDetail(false);
+    }
+    if (!this.data.post) return;
+    if (!this._targetReplyId || this._replyLocateSettled) return void this.consumeSourceActivity();
+    if (!this._replyLocateStopped && !this._replyLocatePending) this.startReplyLocating();
   },
-  onHide() { this._disposed = true; },
+  onHide() {
+    this._resumeDetailLoad = Boolean(!this.data.post && this.data.postId && this.data.loading);
+    this.cancelReplyLocating(true);
+    if (this.data.loadingMore) this.setData({ loadingMore: false });
+    this._disposed = true;
+    this._loadSeq = (this._loadSeq || 0) + 1;
+  },
   onUnload() {
+    this._resumeDetailLoad = false;
+    this.cancelReplyLocating(false);
     this._disposed = true;
     this._replyFocus = false;
     this._loadSeq = (this._loadSeq || 0) + 1;
@@ -105,12 +133,12 @@ Page({
   },
 
   async loadDetail(append = false) {
-    if (this._disposed || !this.data.postId || (append && (!this.data.nextCursor || this.data.loadingMore))) return;
+    if (this._disposed || !this.data.postId || (append && (!this.data.nextCursor || this.data.loadingMore))) return false;
     const seq = append ? (this._loadSeq || 0) : (this._loadSeq = (this._loadSeq || 0) + 1);
     this.setData(append ? { loadingMore: true, loadMoreError: '' } : { loading: true, error: '', loadMoreError: '', replies: [], nextCursor: '', hasMore: false });
     try {
       const result = await communityService.getPost(this.data.postId, { limit: PAGE_SIZE, cursor: append ? this.data.nextCursor : undefined });
-      if (this._disposed || seq !== this._loadSeq) return;
+      if (this._disposed || seq !== this._loadSeq) return false;
       const incoming = (result.replies || []).map(decorate);
       const nextData = {
         replies: append ? mergeReplies(this.data.replies, incoming) : incoming,
@@ -124,16 +152,144 @@ Page({
         this._replyFocus = false;
       }
       this.setData(nextData);
-      if (!append) this.consumeSourceActivity();
+      if (!append) {
+        if (this._targetReplyId) this.startReplyLocating();
+        else this.consumeSourceActivity();
+      }
       if (focus && await this.ensureInteractionAccess() && !this._disposed && seq === this._loadSeq) {
         this._replyAuthorized = true;
         this.setData({ replyInputFocus: true });
       }
+      return true;
     } catch (error) {
-      if (this._disposed || seq !== this._loadSeq) return;
-      if (append) return void this.setData({ loadingMore: false, loadMoreError: '更多回复加载失败，请重试' });
+      if (this._disposed || seq !== this._loadSeq) return false;
+      if (append) {
+        this.setData({ loadingMore: false, loadMoreError: '更多回复加载失败，请重试' });
+        return false;
+      }
       this._replyFocus = false;
       this.setData({ loading: false, loadingMore: false, post: null, replies: [], replyInputFocus: false, error: error.code === 'NOT_FOUND' ? '该讨论已被作者删除或不存在' : '讨论暂时无法查看，请稍后重试' });
+      return false;
+    }
+  },
+
+  cancelReplyLocating(clearHighlight = false) {
+    this._replyLocateSeq = (this._replyLocateSeq || 0) + 1;
+    this._replyLocatePending = false;
+    if (this._replyLocateProbeTimer) clearTimeout(this._replyLocateProbeTimer);
+    if (this._replyHighlightTimer) clearTimeout(this._replyHighlightTimer);
+    this._replyLocateProbeTimer = null;
+    this._replyHighlightTimer = null;
+    if (clearHighlight && this.data.locatedReplyId) this.setData({ locatedReplyId: '' });
+  },
+
+  async startReplyLocating() {
+    if (!this._targetReplyId || this._disposed || this._replyLocatePending || this._replyLocateSettled || this._replyLocateStopped) return false;
+    const seq = this._replyLocateSeq = (this._replyLocateSeq || 0) + 1;
+    this._replyLocatePending = true;
+    let pageCount = Math.max(1, Math.ceil((this.data.replies || []).length / PAGE_SIZE));
+    try {
+      while (!this._disposed && seq === this._replyLocateSeq) {
+        const replies = this.data.replies || [];
+        const targetIndex = replies.findIndex((item) => item.id === this._targetReplyId);
+        if (targetIndex >= 0) {
+          const located = await this.scrollToReply(targetIndex, this._targetReplyId, seq);
+          if (!located || this._disposed || seq !== this._replyLocateSeq) {
+            if (!this._disposed && seq === this._replyLocateSeq) wx.showToast({ title: '暂时无法定位该回复', icon: 'none' });
+            return false;
+          }
+          this._replyLocateSettled = true;
+          await this.consumeSourceActivity();
+          return true;
+        }
+        if (!this.data.hasMore) {
+          this._replyLocateSettled = true;
+          wx.showToast({ title: '该回复已删除或不可见', icon: 'none' });
+          await this.consumeSourceActivity();
+          return false;
+        }
+        if (pageCount >= MAX_REPLY_LOCATE_PAGES || replies.length >= MAX_REPLY_LOCATE_ITEMS) {
+          this._replyLocateStopped = true;
+          wx.showToast({ title: '回复较多，请继续加载查看', icon: 'none' });
+          return false;
+        }
+        const loaded = await this.loadDetail(true);
+        if (this._disposed || seq !== this._replyLocateSeq) return false;
+        if (!loaded) {
+          wx.showToast({ title: '暂时无法定位该回复', icon: 'none' });
+          return false;
+        }
+        pageCount = Math.max(pageCount + 1, Math.ceil((this.data.replies || []).length / PAGE_SIZE));
+      }
+      return false;
+    } finally {
+      if (seq === this._replyLocateSeq) this._replyLocatePending = false;
+    }
+  },
+
+  waitForReplyAnchor(index, seq, attempt = 0) {
+    return new Promise((resolve) => {
+      const inspect = () => {
+        if (this._disposed || seq !== this._replyLocateSeq) return resolve(false);
+        if (!wx.createSelectorQuery) return resolve(true);
+        try {
+          const query = wx.createSelectorQuery();
+          const scoped = query && typeof query.in === 'function' ? query.in(this) : query;
+          if (!scoped || typeof scoped.select !== 'function') return resolve(true);
+          scoped.select(`#community-reply-${index}`).boundingClientRect((rect) => {
+            if (rect) return resolve(true);
+            if (attempt >= 2 || this._disposed || seq !== this._replyLocateSeq) return resolve(false);
+            this._replyLocateProbeTimer = setTimeout(() => {
+              this._replyLocateProbeTimer = null;
+              this.waitForReplyAnchor(index, seq, attempt + 1).then(resolve);
+            }, REPLY_LOCATE_RETRY_MS);
+          }).exec();
+        } catch (error) {
+          resolve(false);
+        }
+      };
+      if (wx.nextTick) wx.nextTick(inspect);
+      else this._replyLocateProbeTimer = setTimeout(inspect, 0);
+    });
+  },
+
+  async scrollToReply(index, targetId, seq) {
+    if (!await this.waitForReplyAnchor(index, seq) || this._disposed || seq !== this._replyLocateSeq || !wx.pageScrollTo) return false;
+    this.setData({ locatedReplyId: targetId });
+    const scrolled = await new Promise((resolve) => wx.pageScrollTo({
+      selector: `#community-reply-${index}`,
+      offsetTop: -(Math.max(0, Number(this.data.contentTopInset) || 0) + 12),
+      duration: 260,
+      success: () => resolve(true),
+      fail: () => resolve(false)
+    }));
+    if (!scrolled || this._disposed || seq !== this._replyLocateSeq) {
+      if (!this._disposed && this.data.locatedReplyId === targetId) this.setData({ locatedReplyId: '' });
+      return false;
+    }
+    if (this._replyHighlightTimer) clearTimeout(this._replyHighlightTimer);
+    this._replyHighlightTimer = setTimeout(() => {
+      this._replyHighlightTimer = null;
+      if (!this._disposed && this.data.locatedReplyId === targetId) this.setData({ locatedReplyId: '' });
+    }, REPLY_HIGHLIGHT_MS);
+    return true;
+  },
+
+  async settleTargetAfterManualAppend() {
+    if (!this._targetReplyId || this._replyLocateSettled || this._disposed) return;
+    const targetIndex = this.data.replies.findIndex((item) => item.id === this._targetReplyId);
+    if (targetIndex >= 0) {
+      const seq = this._replyLocateSeq = (this._replyLocateSeq || 0) + 1;
+      if (await this.scrollToReply(targetIndex, this._targetReplyId, seq)) {
+        this._replyLocateSettled = true;
+        await this.consumeSourceActivity();
+      }
+      return;
+    }
+    if (!this.data.hasMore) {
+      this._replyLocateSettled = true;
+      wx.showToast({ title: '该回复已删除或不可见', icon: 'none' });
+      await this.consumeSourceActivity();
     }
   },
 
@@ -338,8 +494,17 @@ Page({
     }
   },
   handleRetryDetail() { return this.loadDetail(false); },
-  handleRetryLoadMore() { this.loadDetail(true); },
-  handleLoadMore() { this.loadDetail(true); },
+  handleRetryLoadMore() {
+    if (this._replyLocatePending) return;
+    if (this._targetReplyId && !this._replyLocateSettled && !this._replyLocateStopped) return this.startReplyLocating();
+    return this.handleLoadMore();
+  },
+  async handleLoadMore() {
+    if (this._replyLocatePending) return false;
+    const loaded = await this.loadDetail(true);
+    if (loaded) await this.settleTargetAfterManualAppend();
+    return loaded;
+  },
   handleBack() {
     const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
     if (pages.length > 1) return wx.navigateBack({ delta: 1 });
