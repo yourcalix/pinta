@@ -64,8 +64,17 @@ Page({
 
   handleConfirm() {
     if (!this.data.selected) return false;
-    const channel = typeof this.getOpenerEventChannel === 'function' ? this.getOpenerEventChannel() : null;
-    if (channel && typeof channel.emit === 'function') channel.emit('meetingPointSelected', this.data.selected);
+    let channel = null;
+    try {
+      channel = typeof this.getOpenerEventChannel === 'function' ? this.getOpenerEventChannel() : null;
+      if (!channel || typeof channel.emit !== 'function') throw new Error('EVENT_CHANNEL_UNAVAILABLE');
+      channel.emit('meetingPointSelected', this.data.selected);
+    } catch (error) {
+      const message = '地点回传失败，请重试';
+      this.setData({ error: message });
+      if (typeof wx.showToast === 'function') wx.showToast({ title: message, icon: 'none' });
+      return false;
+    }
     wx.navigateBack({ delta: 1 });
     return true;
   }

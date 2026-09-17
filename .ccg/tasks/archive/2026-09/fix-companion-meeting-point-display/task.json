@@ -1,0 +1,12 @@
+{
+  "id": "fix-companion-meeting-point-display",
+  "title": "修复拼同行选择会合地点后无法正常回显",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-17T22:10:00+08:00",
+  "branch": "main"
+}

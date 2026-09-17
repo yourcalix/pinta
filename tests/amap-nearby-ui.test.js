@@ -237,6 +237,35 @@ test('POI 再搜索时销毁原生地图预览，并阻止旧异步结果覆盖�
   }
 });
 
+test('选点确认仅在 EventChannel 成功回传后返回，通道缺失时留页提示', () => {
+  const context = loadLocationPickerPage();
+  const selected = { poiId: 'poi-confirmed', label: '澳门大学', address: '大学大马路' };
+  const emitted = [];
+  const toasts = [];
+  let navigateBackCalls = 0;
+  global.wx.navigateBack = () => { navigateBackCalls += 1; };
+  global.wx.showToast = (options) => { toasts.push(options); };
+  context.page.setData({ selected });
+  try {
+    context.page.getOpenerEventChannel = () => ({ emit(name, payload) { emitted.push({ name, payload }); } });
+    assert.equal(context.page.handleConfirm(), true);
+    assert.deepEqual(emitted, [{ name: 'meetingPointSelected', payload: selected }]);
+    assert.equal(navigateBackCalls, 1);
+
+    context.page.getOpenerEventChannel = () => null;
+    assert.equal(context.page.handleConfirm(), false);
+    assert.equal(navigateBackCalls, 1);
+    assert.equal(toasts.at(-1).title, '地点回传失败，请重试');
+
+    context.page.getOpenerEventChannel = () => ({ emit() { throw new Error('channel closed'); } });
+    assert.equal(context.page.handleConfirm(), false);
+    assert.equal(navigateBackCalls, 1);
+    assert.equal(toasts.at(-1).title, '地点回传失败，请重试');
+  } finally {
+    unloadLocationPickerPage(context);
+  }
+});
+
 test('附近筛选打断续页时会释放 loadingMore 锁并采用最新筛选结果', async () => {
   const originalNearby = activityService.nearby;
   let resolveLoadMore;

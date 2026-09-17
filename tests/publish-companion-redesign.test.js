@@ -85,6 +85,94 @@ test('拼同行九组偏好仅在同行分支展示并具有可取消单选语�
   assert.equal(page.data.form.travelPace, '');
 });
 
+test('拼同行选点回填可抵御原生 input 的迟到同值事件，真实修改仍清除坐标', () => {
+  const definition = loadFormDefinition();
+  const page = companionPage(definition);
+  const previousWx = global.wx;
+  let pickerEvents;
+  const meetingPoint = {
+    poiId: 'companion-poi',
+    label: 'Ａvenida　Central',
+    address: '澳门 · 中区',
+    latitude: 22.1931,
+    longitude: 113.5396,
+    coordinateSystem: 'GCJ02',
+    provider: 'AMAP'
+  };
+  global.wx = {
+    navigateTo(options) { pickerEvents = options.events; }
+  };
+  try {
+    definition.handleOpenMeetingPointPicker.call(page);
+    pickerEvents.meetingPointSelected(meetingPoint);
+    assert.equal(page.data.form.originLabel, meetingPoint.label);
+    assert.deepEqual(page.data.form.meetingPoint, meetingPoint);
+
+    definition.handleInput.call(page, {
+      currentTarget: { dataset: { field: 'originLabel' } },
+      detail: { value: 'Avenida Central' }
+    });
+    assert.deepEqual(page.data.form.meetingPoint, meetingPoint);
+
+    definition.handleInput.call(page, {
+      currentTarget: { dataset: { field: 'originLabel' } },
+      detail: { value: '议事亭前地' }
+    });
+    assert.equal(page.data.form.meetingPoint, null);
+  } finally {
+    if (previousWx) global.wx = previousWx;
+    else delete global.wx;
+  }
+});
+
+test('拼运动与拼饭桌的同值场馆事件保留地点，地点草稿可安全恢复', () => {
+  const definition = loadFormDefinition();
+  const previousWx = global.wx;
+  const meetingPoint = {
+    poiId: 'shared-venue-poi',
+    label: '塔石体育馆',
+    address: '澳门 · 荷兰园大马路',
+    latitude: 22.19975,
+    longitude: 113.55215,
+    coordinateSystem: 'GCJ02',
+    provider: 'AMAP'
+  };
+  let storedDraft;
+  global.wx = {
+    setStorageSync(key, value) { storedDraft = structuredClone(value); },
+    getStorageSync() { return storedDraft; }
+  };
+  try {
+    for (const type of ['sport', 'food']) {
+      const page = companionPage(definition, { venue: meetingPoint.label, meetingPoint: structuredClone(meetingPoint) });
+      page.data.type = type;
+      definition.handleInput.call(page, {
+        currentTarget: { dataset: { field: 'venue' } },
+        detail: { value: ` ${meetingPoint.label} ` }
+      });
+      assert.deepEqual(page.data.form.meetingPoint, meetingPoint, type);
+      if (type === 'sport') {
+        definition.handleInput.call(page, {
+          currentTarget: { dataset: { field: 'venue' } },
+          detail: { value: '塔石 体育馆' }
+        });
+        assert.equal(page.data.form.meetingPoint, null);
+      }
+    }
+
+    const source = companionPage(definition, { originLabel: meetingPoint.label, meetingPoint: structuredClone(meetingPoint) });
+    source.draftKey = 'pinba_publish_draft_companion';
+    definition.saveDraft.call(source);
+    const restored = { ...definition, data: structuredClone(definition.data), setData(patch) { Object.assign(this.data, patch); } };
+    restored.onLoad({ type: 'companion' });
+    assert.equal(restored.data.form.originLabel, meetingPoint.label);
+    assert.deepEqual(restored.data.form.meetingPoint, meetingPoint);
+  } finally {
+    if (previousWx) global.wx = previousWx;
+    else delete global.wx;
+  }
+});
+
 test('拼同行固定与范围拼友数提交时转换为含发起人的总人数', () => {
   const definition = loadFormDefinition();
   const fixed = companionPage(definition, {

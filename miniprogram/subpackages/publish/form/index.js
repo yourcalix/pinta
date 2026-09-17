@@ -165,6 +165,12 @@ function normalizedText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function comparableMeetingPointText(value) {
+  const text = String(value || '');
+  const normalized = typeof text.normalize === 'function' ? text.normalize('NFKC') : text;
+  return normalized.trim();
+}
+
 function truncateText(value, maxLength) {
   return Array.from(value).slice(0, maxLength).join('');
 }
@@ -416,11 +422,16 @@ Page({
 
   handleInput(event) {
     const field = event.currentTarget.dataset.field;
+    const value = event.detail.value;
     const linkedMeetingField = (this.data.type === 'companion' && field === 'originLabel')
       || (['sport', 'food'].includes(this.data.type) && field === 'venue');
+    const meetingPoint = this.data.form.meetingPoint;
+    const matchesSelectedMeetingPoint = Boolean(linkedMeetingField && meetingPoint
+      && comparableMeetingPointText(value) === comparableMeetingPointText(meetingPoint.label)
+      && comparableMeetingPointText(meetingPoint.label));
     this.setData({
-      [`form.${field}`]: event.detail.value,
-      ...(linkedMeetingField ? { 'form.meetingPoint': null } : {}),
+      [`form.${field}`]: matchesSelectedMeetingPoint ? meetingPoint.label : value,
+      ...(linkedMeetingField && meetingPoint && !matchesSelectedMeetingPoint ? { 'form.meetingPoint': null } : {}),
       errorMessage: ''
     });
   },
