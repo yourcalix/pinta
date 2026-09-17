@@ -2,7 +2,6 @@
 
 const api = require('./api');
 
-const ACTIVITY_READ_BARRIER_TIMEOUT_MS = 2000;
 const pendingActivityReads = new Set();
 
 function trackActivityRead(promise) {
@@ -16,15 +15,7 @@ function trackActivityRead(promise) {
 async function waitForPendingActivityReads() {
   const pending = [...pendingActivityReads];
   if (!pending.length) return;
-  let timer = null;
-  const timeout = new Promise((resolve) => {
-    timer = setTimeout(resolve, ACTIVITY_READ_BARRIER_TIMEOUT_MS);
-  });
-  try {
-    await Promise.race([Promise.allSettled(pending), timeout]);
-  } finally {
-    if (timer !== null) clearTimeout(timer);
-  }
+  await Promise.allSettled(pending);
 }
 
 async function listActivities(filters = {}) {

@@ -1,0 +1,12 @@
+{
+  "id": "fix-community-unread-barrier-timeout",
+  "title": "修复讨论动态阅读后红点与未读数不更新",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并交付真机验收",
+  "createdAt": "2026-09-17T05:48:35Z",
+  "branch": "main"
+}

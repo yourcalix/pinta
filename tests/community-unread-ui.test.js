@@ -72,6 +72,74 @@ test('讨论动态筛选项展示等宽未读徽标并由权威汇总刷新', ()
   assert.match(script, /communityService\.getActivityUnread\(\)/);
   assert.match(script, /REPLIES:\s*readCount\('REPLIES'\)/);
   assert.match(script, /LIKES:\s*readCount\('LIKES'\)/);
+  assert.match(script, /onShow\(\)[\s\S]*loadActivities\(false, true\)/);
+});
+
+test('讨论动态从详情返回时保留现有列表，权威快照到达后再替换', async () => {
+  let resolveList;
+  const page = instantiate('subpackages/community/activity/index.js', {
+    community: {
+      listActivities: () => new Promise((resolve) => { resolveList = resolve; })
+    }
+  });
+  page._disposed = false;
+  page.data.loading = false;
+  page.data.items = [{ id: 'activity-1', read: false, actorName: '旧动态' }];
+
+  const request = page.loadActivities(false, true);
+  assert.deepEqual(page.data.items, [{ id: 'activity-1', read: false, actorName: '旧动态' }]);
+  assert.equal(page.data.loading, false);
+  for (let index = 0; index < 4 && !resolveList; index += 1) await Promise.resolve();
+
+  resolveList({
+    items: [{
+      id: 'activity-1', type: 'POST_REPLIED', postId: 'post-1', read: true,
+      actors: [{ nickname: '小树' }], updatedAt: '2026-09-17T01:00:00.000Z'
+    }],
+    nextCursor: null
+  });
+  await request;
+  assert.equal(page.data.items.length, 1);
+  assert.equal(page.data.items[0].read, true);
+  assert.equal(page.data.loading, false);
+});
+
+test('讨论动态静默刷新失败时保留现有列表', async () => {
+  const page = instantiate('subpackages/community/activity/index.js', {
+    community: { listActivities: async () => { throw new Error('offline'); } }
+  });
+  page._disposed = false;
+  page.data.loading = false;
+  page.data.items = [{ id: 'activity-1', read: false }];
+
+  await page.loadActivities(false, true);
+  assert.deepEqual(page.data.items, [{ id: 'activity-1', read: false }]);
+  assert.equal(page.data.loading, false);
+  assert.equal(page.data.error, '');
+});
+
+test('讨论动态刷新在登录等待前固定筛选快照', async () => {
+  let releaseLogin;
+  const filters = [];
+  const page = instantiate('subpackages/community/activity/index.js', {
+    user: { login: () => new Promise((resolve) => { releaseLogin = resolve; }) },
+    community: {
+      listActivities: async (input) => {
+        filters.push(input);
+        return { items: [], nextCursor: null };
+      }
+    }
+  });
+  page._disposed = false;
+  page.data.currentTab = 'ALL';
+
+  const request = page.loadActivities(false, true);
+  page.data.currentTab = 'LIKES';
+  releaseLogin({ profileComplete: true });
+  await request;
+
+  assert.equal(filters.length, 1);
+  assert.equal(filters[0].tab, 'ALL');
 });
 
 test('动态卡片不再提前已读，详情成功后才按版本消费', () => {

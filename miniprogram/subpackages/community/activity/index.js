@@ -121,7 +121,7 @@ Page({
     this._navigationPending = false;
     this.refreshUnreadSummary();
     if (this._skipNextShow) return void (this._skipNextShow = false);
-    if (!this._disposed) this.loadActivities(false);
+    if (!this._disposed) this.loadActivities(false, true);
   },
   onUnload() {
     this._disposed = true;
@@ -143,18 +143,23 @@ Page({
     }
   },
 
-  async loadActivities(append = false) {
+  async loadActivities(append = false, preserveContent = false) {
     if (this._disposed || (append && (!this.data.hasMore || this.data.loadingMore))) return;
     const seq = append ? (this._loadSeq || 0) : (this._loadSeq = (this._loadSeq || 0) + 1);
+    const tab = this.data.currentTab;
+    const cursor = append ? this.data.nextCursor : '';
+    const keepVisibleItems = !append && preserveContent && this.data.items.length > 0;
     this.setData(append
       ? { loadingMore: true, loadMoreError: '' }
-      : { loading: true, error: '', loadMoreError: '', items: [], nextCursor: '', hasMore: false });
+      : keepVisibleItems
+        ? { loading: false, error: '', loadMoreError: '' }
+        : { loading: true, error: '', loadMoreError: '', items: [], nextCursor: '', hasMore: false });
     try {
       await userService.login();
       const result = await communityService.listActivities({
-        tab: this.data.currentTab,
+        tab,
         limit: PAGE_SIZE,
-        ...(append && this.data.nextCursor ? { cursor: this.data.nextCursor } : {})
+        ...(cursor ? { cursor } : {})
       });
       if (this._disposed || seq !== this._loadSeq) return;
       const incoming = (result.items || []).map(decorateActivity);
@@ -170,6 +175,7 @@ Page({
     } catch (error) {
       if (this._disposed || seq !== this._loadSeq) return;
       if (append) return void this.setData({ loadingMore: false, loadMoreError: '更多动态加载失败，点击重试' });
+      if (keepVisibleItems) return void this.setData({ loading: false, loadingMore: false, error: '', loadMoreError: '' });
       this.setData({ loading: false, loadingMore: false, items: [], error: error.message || '讨论动态暂时无法查看' });
     }
   },

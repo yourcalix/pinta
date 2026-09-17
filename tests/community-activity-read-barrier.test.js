@@ -86,14 +86,15 @@ test('已读请求失败会释放屏障并让后续读取保留服务端未读�
   assert.equal(calls.filter((action) => action === 'community.activity.unread').length, 2);
 });
 
-test('已读请求长期挂起时屏障在两秒熔断后放行读取', async () => {
+test('已读请求超过旧两秒阈值时屏障仍等待真实写入结算', async () => {
   const calls = [];
   const timers = [];
+  let resolveRead;
   const service = loadService({
     invoke(action) {
       calls.push(action);
-      if (action === 'community.activity.read') return new Promise(() => {});
-      if (action === 'community.activity.unread') return Promise.resolve({ total: 1, tabs: { ALL: 1, REPLIES: 0, LIKES: 1 } });
+      if (action === 'community.activity.read') return new Promise((resolve) => { resolveRead = resolve; });
+      if (action === 'community.activity.unread') return Promise.resolve({ total: 0, tabs: { ALL: 0, REPLIES: 0, LIKES: 0 } });
       throw new Error(`Unexpected action: ${action}`);
     }
   }, {
@@ -110,11 +111,38 @@ test('已读请求长期挂起时屏障在两秒熔断后放行读取', async ()
   const unreadRequest = service.getActivityUnread();
   await flush();
   assert.deepEqual(calls, ['community.activity.read']);
-  assert.equal(timers.length, 1);
-  assert.equal(timers[0].delay, 2000);
+  assert.equal(timers.length, 0);
 
-  timers[0].callback();
+  resolveRead({ activityId: 'activity-1', read: true, stale: false });
+  await flush();
+  assert.equal((await unreadRequest).total, 0);
+  assert.deepEqual(calls, ['community.activity.read', 'community.activity.unread']);
+});
+
+test('读取只等待调用时的已读快照，不被随后产生的写入饿死', async () => {
+  const calls = [];
+  const readResolvers = [];
+  const service = loadService({
+    invoke(action) {
+      calls.push(action);
+      if (action === 'community.activity.read') {
+        return new Promise((resolve) => { readResolvers.push(resolve); });
+      }
+      if (action === 'community.activity.unread') return Promise.resolve({ total: 1, tabs: { ALL: 1, REPLIES: 1, LIKES: 0 } });
+      throw new Error(`Unexpected action: ${action}`);
+    }
+  });
+
+  service.readActivity('activity-1');
+  const unreadRequest = service.getActivityUnread();
+  service.readActivity('activity-2');
+  await flush();
+  assert.deepEqual(calls, ['community.activity.read', 'community.activity.read']);
+
+  readResolvers[0]({ activityId: 'activity-1', read: true, stale: false });
   await flush();
   assert.equal((await unreadRequest).total, 1);
-  assert.deepEqual(calls, ['community.activity.read', 'community.activity.unread']);
+  assert.deepEqual(calls, ['community.activity.read', 'community.activity.read', 'community.activity.unread']);
+
+  readResolvers[1]({ activityId: 'activity-2', read: true, stale: false });
 });
