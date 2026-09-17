@@ -1,15 +1,19 @@
 'use strict';
 
 const defaults = require('./index');
-const { resolveRuntimeConfig } = require('./runtime-resolver');
+const { isMiniProgramHost, resolveRuntimeConfig } = require('./runtime-resolver');
 
 function loadLocalConfig() {
-  const isNodeRuntime = typeof process !== 'undefined' && process.versions && process.versions.node;
-  if (isNodeRuntime || typeof wx === 'undefined') return {};
+  const host = typeof wx === 'undefined' ? null : wx;
+  if (!isMiniProgramHost(host)) return {};
   try {
     return require('./local');
   } catch (error) {
-    return {};
+    const missingLocalConfig = error
+      && error.code === 'MODULE_NOT_FOUND'
+      && /['"]\.\/local['"]/.test(String(error.message || ''));
+    if (missingLocalConfig) return {};
+    throw error;
   }
 }
 

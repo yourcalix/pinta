@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { resolveRuntimeConfig } = require('../miniprogram/config/runtime-resolver');
+const { isMiniProgramHost, resolveRuntimeConfig } = require('../miniprogram/config/runtime-resolver');
 
 const root = path.resolve(__dirname, '..');
 
@@ -45,6 +45,22 @@ test('Node 测试环境不读取本机 local.js 且运行消费者统一使用 r
     const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
     assert.match(source, /config\/runtime/);
   });
+});
+
+test('微信宿主判定不受 process polyfill 干扰且纯 Node 环境保持隔离', () => {
+  const wxHost = {
+    getSystemInfoSync() { return {}; },
+    request() {}
+  };
+  assert.equal(isMiniProgramHost(wxHost), true);
+  assert.equal(isMiniProgramHost(null), false);
+  assert.equal(isMiniProgramHost({ request() {} }), false);
+
+  const runtimeSource = fs.readFileSync(path.join(root, 'miniprogram/config/runtime.js'), 'utf8');
+  assert.match(runtimeSource, /isMiniProgramHost/);
+  assert.doesNotMatch(runtimeSource, /isNodeRuntime/);
+  assert.match(runtimeSource, /MODULE_NOT_FOUND/);
+  assert.match(runtimeSource, /throw error/);
 });
 
 test('无效本地覆盖 fail-closed', () => {

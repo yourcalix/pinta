@@ -7,7 +7,10 @@
     <input class="poi-search-input" value="{{keyword}}" bindinput="handleKeywordInput" bindconfirm="handleSearch" confirm-type="search" placeholder="搜索地点 / 场馆 / 餐厅" cursor-spacing="24" aria-label="搜索高德地图地点" />
     <button class="poi-search-button" bindtap="handleSearch" hover-class="control--pressed">搜索</button>
   </view>
-  <view wx:if="{{error}}" class="picker-error" role="alert">{{error}}</view>
+  <view wx:if="{{error}}" class="picker-error" role="alert">
+    <text class="picker-error-copy">{{error}}</text>
+    <button wx:if="{{canRetrySearch}}" class="picker-retry-button" bindtap="handleRetrySearch" hover-class="control--pressed" aria-label="重新加载地点搜索">重新加载</button>
+  </view>
   <view wx:if="{{selected && showMapPreview}}" class="map-shell">
     <map class="poi-map" latitude="{{mapLatitude}}" longitude="{{mapLongitude}}" markers="{{markers}}" scale="16" show-location="{{false}}" enable-zoom="{{true}}" aria-label="已选公开会合地点地图预览" />
     <view class="selected-summary"><text class="selected-name">已选：{{selected.label}}</text><text class="selected-address">{{selected.address}}</text></view>

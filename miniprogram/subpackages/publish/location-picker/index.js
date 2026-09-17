@@ -6,7 +6,8 @@ Page({
   data: {
     keyword: '', results: [], selected: null, markers: [],
     mapLatitude: 22.198745, mapLongitude: 113.543873,
-    loading: false, searched: false, error: '', showMapPreview: false
+    loading: false, searched: false, error: '', errorCode: '', canRetrySearch: false,
+    showMapPreview: false
   },
 
   onUnload() {
@@ -17,7 +18,7 @@ Page({
   handleKeywordInput(event) {
     const keyword = event.detail.value;
     this._searchSeq = (this._searchSeq || 0) + 1;
-    this.setData({ keyword, error: '', showMapPreview: false });
+    this.setData({ keyword, error: '', errorCode: '', canRetrySearch: false, showMapPreview: false });
     if (this._searchTimer) clearTimeout(this._searchTimer);
     if (!keyword.trim()) {
       this.setData({ results: [], searched: false, loading: false });
@@ -35,17 +36,37 @@ Page({
     const keyword = this.data.keyword.trim();
     if (!keyword) return false;
     const sequence = (this._searchSeq = (this._searchSeq || 0) + 1);
-    this.setData({ loading: true, searched: true, error: '', showMapPreview: false });
+    this.setData({
+      loading: true,
+      searched: true,
+      error: '',
+      errorCode: '',
+      canRetrySearch: false,
+      showMapPreview: false
+    });
     try {
       const results = await amapService.searchPoi(keyword);
       if (sequence !== this._searchSeq) return false;
-      this.setData({ results, loading: false });
+      this.setData({ results, loading: false, error: '', errorCode: '', canRetrySearch: false });
       return true;
     } catch (error) {
       if (sequence !== this._searchSeq) return false;
-      this.setData({ results: [], loading: false, error: error.message || '地点搜索失败，请重试' });
+      const errorCode = typeof error.code === 'string' ? error.code : 'AMAP_SEARCH_FAILED';
+      const canRetrySearch = ['AMAP_NETWORK_FAILED', 'AMAP_REQUEST_FAILED', 'AMAP_RESPONSE_INVALID'].includes(errorCode);
+      this.setData({
+        results: [],
+        loading: false,
+        error: error.message || '地点搜索失败，请重试',
+        errorCode,
+        canRetrySearch
+      });
       return false;
     }
+  },
+
+  handleRetrySearch() {
+    if (!this.data.canRetrySearch || this.data.loading) return false;
+    return this.search();
   },
 
   handleSelectPoi(event) {

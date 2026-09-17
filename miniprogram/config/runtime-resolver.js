@@ -10,6 +10,12 @@ const ALLOWED_KEYS = Object.freeze([
   'demoCity'
 ]);
 
+function isMiniProgramHost(host) {
+  return Boolean(host
+    && typeof host.request === 'function'
+    && typeof host.getSystemInfoSync === 'function');
+}
+
 function resolveRuntimeConfig(defaults, local) {
   const base = defaults && typeof defaults === 'object' ? defaults : {};
   const overrides = local && typeof local === 'object' ? local : {};
@@ -27,4 +33,4 @@ function resolveRuntimeConfig(defaults, local) {
   return Object.freeze(resolved);
 }
 
-module.exports = { resolveRuntimeConfig };
+module.exports = { isMiniProgramHost, resolveRuntimeConfig };

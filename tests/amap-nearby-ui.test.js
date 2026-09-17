@@ -55,6 +55,28 @@ function unloadLocationPickerPage(context) {
   delete global.wx;
 }
 
+function loadAmapService(config, requestImpl) {
+  const runtimePath = require.resolve('../miniprogram/config/runtime');
+  const servicePath = require.resolve('../miniprogram/services/amap');
+  const previousRuntime = require.cache[runtimePath];
+  const previousService = require.cache[servicePath];
+  const previousWx = global.wx;
+  require.cache[runtimePath] = { exports: config };
+  delete require.cache[servicePath];
+  global.wx = { request: requestImpl };
+  return {
+    service: require(servicePath),
+    cleanup() {
+      delete require.cache[servicePath];
+      if (previousService) require.cache[servicePath] = previousService;
+      if (previousRuntime) require.cache[runtimePath] = previousRuntime;
+      else delete require.cache[runtimePath];
+      if (previousWx) global.wx = previousWx;
+      else delete global.wx;
+    }
+  };
+}
+
 test('高德 Key 仅通过运行配置注入且 POI 适配器不持久化用户位置', () => {
   const defaults = require('../miniprogram/config/index');
   const example = require('../miniprogram/config/local.example');
@@ -65,6 +87,67 @@ test('高德 Key 仅通过运行配置注入且 POI 适配器不持久化用户�
   assert.match(resolver, /amapMiniProgramKey/);
   assert.match(amap, /restapi\.amap\.com\/v3\/assistant\/inputtips/);
   assert.doesNotMatch(amap, /setStorage|setStorageSync/);
+});
+
+test('POI 服务只把真实零结果作为空态，并区分网络、响应与坐标异常', async () => {
+  const responses = [
+    { statusCode: 200, data: { status: '1', tips: [] } },
+    { statusCode: 200, data: { status: '1', tips: [{ id: 'missing-location', name: '大三巴', location: [] }] } },
+    { statusCode: 200, data: { status: '1', tips: [{ id: 'valid', name: '大三巴牌坊', district: '澳门特别行政区花王堂区', address: '耶稣会纪念广场', location: '113.545883,22.194627' }] } },
+    { statusCode: 200, data: { status: '1', tips: null } },
+    { statusCode: 200, data: { status: '0', info: 'INVALID_USER_KEY', infocode: '10001' } },
+    { statusCode: 503, data: { status: '0', info: 'RAW_UPSTREAM_FAILURE' } }
+  ];
+  const context = loadAmapService(
+    { useMock: false, amapMiniProgramKey: 'synthetic-key' },
+    ({ success }) => success(responses.shift())
+  );
+  try {
+    assert.deepEqual(await context.service.searchPoi('不存在的地点'), []);
+    await assert.rejects(context.service.searchPoi('大三巴'), (error) => error.code === 'AMAP_COORDINATES_UNAVAILABLE');
+    const results = await context.service.searchPoi('大三巴');
+    assert.equal(results[0].label, '大三巴牌坊');
+    assert.equal(results[0].latitude, 22.194627);
+    await assert.rejects(context.service.searchPoi('响应异常'), (error) => error.code === 'AMAP_RESPONSE_INVALID');
+    await assert.rejects(context.service.searchPoi('接口异常'), (error) => (
+      error.code === 'AMAP_REQUEST_FAILED'
+      && !error.message.includes('INVALID_USER_KEY')
+    ));
+    await assert.rejects(context.service.searchPoi('服务异常'), (error) => (
+      error.code === 'AMAP_REQUEST_FAILED'
+      && !error.message.includes('RAW_UPSTREAM_FAILURE')
+    ));
+  } finally {
+    context.cleanup();
+  }
+
+  const network = loadAmapService(
+    { useMock: false, amapMiniProgramKey: 'synthetic-key' },
+    ({ fail }) => fail({ errMsg: 'request:fail url not in domain list' })
+  );
+  try {
+    await assert.rejects(network.service.searchPoi('澳门大学'), (error) => (
+      error.code === 'AMAP_NETWORK_FAILED'
+      && error.message === '地点搜索连接失败，请稍后重试'
+      && !error.message.includes('domain list')
+    ));
+  } finally {
+    network.cleanup();
+  }
+});
+
+test('Mock 未命中不会伪装成真实高德零结果', async () => {
+  const context = loadAmapService(
+    { useMock: true, amapMiniProgramKey: '' },
+    () => { throw new Error('Mock 模式不应请求网络'); }
+  );
+  try {
+    await assert.rejects(context.service.searchPoi('大三巴'), (error) => error.code === 'AMAP_MOCK_NO_MATCH');
+    const results = await context.service.searchPoi('澳门大学');
+    assert.equal(results[0].label, '澳门大学');
+  } finally {
+    context.cleanup();
+  }
 });
 
 test('活动和发布分包注册附近页与 POI 选点页，并声明定位用途', () => {
@@ -232,6 +315,41 @@ test('POI 再搜索时销毁原生地图预览，并阻止旧异步结果覆盖�
     assert.equal(context.page.data.showMapPreview, false);
   } finally {
     if (context.page._searchTimer) clearTimeout(context.page._searchTimer);
+    amapService.searchPoi = originalSearchPoi;
+    unloadLocationPickerPage(context);
+  }
+});
+
+test('POI 选点页区分可重试错误与真实空态，并复用当前关键词重试', async () => {
+  const amapService = require('../miniprogram/services/amap');
+  const originalSearchPoi = amapService.searchPoi;
+  const context = loadLocationPickerPage();
+  let calls = 0;
+  try {
+    context.page.setData({ keyword: '大三巴' });
+    amapService.searchPoi = async () => {
+      calls += 1;
+      if (calls === 1) {
+        const error = new Error('地点搜索连接失败，请稍后重试');
+        error.code = 'AMAP_NETWORK_FAILED';
+        throw error;
+      }
+      return [{ poiId: 'ruins', label: '大三巴牌坊', address: '花王堂区', latitude: 22.194627, longitude: 113.545883 }];
+    };
+
+    assert.equal(await context.page.search(), false);
+    assert.equal(context.page.data.errorCode, 'AMAP_NETWORK_FAILED');
+    assert.equal(context.page.data.canRetrySearch, true);
+    assert.equal(await context.page.handleRetrySearch(), true);
+    assert.equal(context.page.data.results[0].label, '大三巴牌坊');
+    assert.equal(context.page.data.error, '');
+
+    amapService.searchPoi = async () => [];
+    assert.equal(await context.page.search(), true);
+    assert.deepEqual(context.page.data.results, []);
+    assert.equal(context.page.data.error, '');
+    assert.equal(context.page.data.canRetrySearch, false);
+  } finally {
     amapService.searchPoi = originalSearchPoi;
     unloadLocationPickerPage(context);
   }

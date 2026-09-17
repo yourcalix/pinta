@@ -31,7 +31,15 @@ function cleanPoi(item) {
 
 function request(options) {
   return new Promise((resolve, reject) => {
-    wx.request({ ...options, success: resolve, fail: reject });
+    wx.request({
+      ...options,
+      success: resolve,
+      fail() {
+        const error = new Error('地点搜索连接失败，请稍后重试');
+        error.code = 'AMAP_NETWORK_FAILED';
+        reject(error);
+      }
+    });
   });
 }
 
@@ -39,7 +47,14 @@ async function searchPoi(keyword) {
   const normalized = String(keyword || '').trim().slice(0, 40);
   if (!normalized) return [];
   if (config.useMock) {
-    return MOCK_POIS.filter((item) => `${item.name}${item.address}`.includes(normalized)).map(cleanPoi).filter(Boolean);
+    const results = MOCK_POIS
+      .filter((item) => `${item.name}${item.address}`.includes(normalized))
+      .map(cleanPoi)
+      .filter(Boolean);
+    if (results.length) return results;
+    const error = new Error('当前为演示地点数据，暂时无法搜索其他地点');
+    error.code = 'AMAP_MOCK_NO_MATCH';
+    throw error;
   }
   if (!config.amapMiniProgramKey) {
     const error = new Error('高德地图尚未配置，请联系管理员');
@@ -51,13 +66,30 @@ async function searchPoi(keyword) {
     method: 'GET',
     data: { key: config.amapMiniProgramKey, keywords: normalized, city: '澳门', citylimit: true, datatype: 'all' }
   });
+  if (!response || !Number.isFinite(response.statusCode) || response.statusCode < 200 || response.statusCode >= 300) {
+    const error = new Error('地点搜索暂时不可用，请稍后重试');
+    error.code = 'AMAP_REQUEST_FAILED';
+    throw error;
+  }
   const body = response && response.data || {};
   if (String(body.status) !== '1') {
     const error = new Error('地点搜索暂时不可用，请稍后重试');
     error.code = 'AMAP_REQUEST_FAILED';
     throw error;
   }
-  return (Array.isArray(body.tips) ? body.tips : []).map(cleanPoi).filter(Boolean).slice(0, 20);
+  if (!Array.isArray(body.tips)) {
+    const error = new Error('地点搜索响应异常，请稍后重试');
+    error.code = 'AMAP_RESPONSE_INVALID';
+    throw error;
+  }
+  if (!body.tips.length) return [];
+  const results = body.tips.map(cleanPoi).filter(Boolean).slice(0, 20);
+  if (!results.length) {
+    const error = new Error('搜索到了地点，但暂时无法取得有效坐标，请换个更具体的关键词');
+    error.code = 'AMAP_COORDINATES_UNAVAILABLE';
+    throw error;
+  }
+  return results;
 }
 
 module.exports = { INPUT_TIPS_URL, cleanPoi, searchPoi };
