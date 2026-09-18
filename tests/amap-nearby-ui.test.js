@@ -90,7 +90,7 @@ test('高德 Key 仅通过运行配置注入且 POI 适配器不持久化用户�
   assert.doesNotMatch(amap, /setStorage|setStorageSync/);
 });
 
-test('Input Tips 有有效坐标时直接返回且不触发文本检索', async () => {
+test('Input Tips 全国地点有有效坐标时直接返回行政区且不触发文本检索', async () => {
   const requests = [];
   const context = loadAmapService(
     { useMock: false, amapMiniProgramKey: 'synthetic-key' },
@@ -98,24 +98,30 @@ test('Input Tips 有有效坐标时直接返回且不触发文本检索', async 
       requests.push(options);
       options.success({
         statusCode: 200,
-        data: { status: '1', tips: [{ id: 'valid', name: '大三巴牌坊', district: '澳门特别行政区花王堂区', address: '耶稣会纪念广场', location: '113.545883,22.194627' }] }
+        data: { status: '1', tips: [{ id: 'valid', name: '北京大学', district: '北京市海淀区', adcode: '110108', address: '颐和园路5号', location: '116.310918,39.992833' }] }
       });
     }
   );
   try {
-    const results = await context.service.searchPoi('大三巴');
-    assert.equal(results[0].label, '大三巴牌坊');
-    assert.equal(results[0].latitude, 22.194627);
+    const results = await context.service.searchPoi('北京大学');
+    assert.equal(results[0].label, '北京大学');
+    assert.equal(results[0].province, '北京市');
+    assert.equal(results[0].city, '北京市');
+    assert.equal(results[0].district, '海淀区');
+    assert.equal(results[0].adcode, '110108');
+    assert.equal(results[0].latitude, 39.992833);
     assert.equal(requests.length, 1);
     assert.equal(requests[0].url, context.service.INPUT_TIPS_URL);
+    assert.equal('city' in requests[0].data, false);
+    assert.equal('citylimit' in requests[0].data, false);
   } finally {
     context.cleanup();
   }
 });
 
-test('Input Tips 缺少坐标或为空时由 place/text 补齐真实澳门 POI', async () => {
+test('Input Tips 缺少坐标或为空时由 place/text 补齐全国 POI', async () => {
   const scenarios = [
-    [{ id: 'generic', name: '新马路' }],
+    [{ id: 'generic', name: '天河体育中心' }],
     []
   ];
   for (const tips of scenarios) {
@@ -130,33 +136,34 @@ test('Input Tips 缺少坐标或为空时由 place/text 补齐真实澳门 POI',
         }
         options.success({
           statusCode: 200,
-          data: { status: '1', pois: [{ id: 'poi-text', name: '新马路', pname: '澳门特别行政区', cityname: '澳门特别行政区', adname: '澳门半岛', address: '亚美打利庇卢大马路', location: '113.540941,22.193941' }] }
+          data: { status: '1', pois: [{ id: 'poi-text', name: '天河体育中心', pname: '广东省', cityname: '广州市', adname: '天河区', adcode: '440106', address: '天河路299号', location: '113.327677,23.134965' }] }
         });
       }
     );
     try {
-      const results = await context.service.searchPoi('新马路');
+      const results = await context.service.searchPoi('天河体育中心');
       assert.equal(requests.length, 2);
       assert.equal(requests[1].url, context.service.POI_TEXT_SEARCH_URL);
       assert.deepEqual(requests[1].data, {
         key: 'synthetic-key',
-        keywords: '新马路',
-        city: '澳门',
-        citylimit: true,
+        keywords: '天河体育中心',
         offset: 20,
         page: 1,
         extensions: 'base'
       });
-      assert.equal(results[0].label, '新马路');
-      assert.equal(results[0].address, '澳门半岛 · 亚美打利庇卢大马路');
-      assert.equal(results[0].longitude, 113.540941);
+      assert.equal(results[0].label, '天河体育中心');
+      assert.equal(results[0].province, '广东省');
+      assert.equal(results[0].city, '广州市');
+      assert.equal(results[0].district, '天河区');
+      assert.equal(results[0].address, '天河路299号');
+      assert.equal(results[0].longitude, 113.327677);
     } finally {
       context.cleanup();
     }
   }
 });
 
-test('两层都为空才返回真实空态，有原始候选但无澳门坐标则保持坐标错误', async () => {
+test('两层都为空才返回真实空态，有原始候选但无全国合法坐标则保持坐标错误', async () => {
   const emptyResponses = [
     { statusCode: 200, data: { status: '1', tips: [] } },
     { statusCode: 200, data: { status: '1', pois: [] } }
@@ -173,7 +180,7 @@ test('两层都为空才返回真实空态，有原始候选但无澳门坐标�
 
   const invalidResponses = [
     { statusCode: 200, data: { status: '1', tips: [{ id: 'missing-location', name: '公园' }] } },
-    { statusCode: 200, data: { status: '1', pois: [{ id: 'outside-macau', name: '公园', pname: '广东省', cityname: '珠海市', adname: '香洲区', address: '横琴', location: '113.531947,22.197180' }] } }
+    { statusCode: 200, data: { status: '1', pois: [{ id: 'outside-china', name: '公园', pname: '海外', cityname: '海外', adname: '海外', address: '未知', location: '10.000000,60.000000' }] } }
   ];
   const invalid = loadAmapService(
     { useMock: false, amapMiniProgramKey: 'synthetic-key' },
@@ -182,7 +189,7 @@ test('两层都为空才返回真实空态，有原始候选但无澳门坐标�
   try {
     await assert.rejects(invalid.service.searchPoi('公园'), (error) => (
       error.code === 'AMAP_COORDINATES_UNAVAILABLE'
-      && !error.message.includes('珠海市')
+      && !error.message.includes('海外')
     ));
   } finally {
     invalid.cleanup();
@@ -267,6 +274,20 @@ test('Mock 未命中不会伪装成真实高德零结果', async () => {
   }
 });
 
+test('POI 行政区归一化覆盖直辖市、省直管市和特别行政区', () => {
+  const context = loadAmapService({ useMock: false, amapMiniProgramKey: 'synthetic-key' }, () => {});
+  try {
+    const municipality = context.service.cleanPoi({ name: '人民广场', district: '上海市黄浦区', location: '121.473701,31.230416' });
+    assert.deepEqual([municipality.province, municipality.city, municipality.district], ['上海市', '上海市', '黄浦区']);
+    const directAdmin = context.service.cleanPoi({ name: '仙桃市政府', pname: '湖北省', cityname: '', adname: '仙桃市', location: '113.453974,30.364953' });
+    assert.deepEqual([directAdmin.province, directAdmin.city, directAdmin.district], ['湖北省', '仙桃市', '仙桃市']);
+    const sar = context.service.cleanPoi({ name: '澳门大学', district: '澳门特别行政区路氹填海区', location: '113.543873,22.198745' });
+    assert.deepEqual([sar.province, sar.city, sar.district], ['澳门特别行政区', '澳门', '路氹填海区']);
+  } finally {
+    context.cleanup();
+  }
+});
+
 test('活动和发布分包注册附近页与 POI 选点页，并声明定位用途', () => {
   const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
   assert.ok(app.subPackages.find((item) => item.root === 'subpackages/activity').pages.includes('nearby/index'));
@@ -284,6 +305,9 @@ test('三类表单共用公开会合地点 POI 控件，文本修改会清除旧
   assert.match(script, /form\.meetingPoint': null/);
   assert.equal((template.match(/公开会合地点/g) || []).length >= 3, true);
   assert.match(template, /这是活动公开地点，用于附近发现，不会保存您的实时位置/);
+  const picker = fs.readFileSync(path.join(root, 'subpackages/publish/location-picker/index.wxml'), 'utf8');
+  assert.match(picker, /poi-region-tag/);
+  assert.match(picker, /item\.province/);
 });
 
 test('首页入口分工为组队拼团进全城列表、发现更多进附近页，标题不冒充附近', () => {

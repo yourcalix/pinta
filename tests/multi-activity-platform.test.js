@@ -23,6 +23,13 @@ function common(type, typeData) {
     minMembers: 2,
     maxMembers: 4,
     rules: '请守时并尊重其他成员',
+    ...(type === 'benefit' ? {} : {
+      meetingPoint: {
+        label: '公共活动区域', address: '澳门公共活动区域', province: '澳门特别行政区',
+        city: '澳门', district: '澳门城区', adcode: '820000', latitude: 22.198745, longitude: 113.543873,
+        coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'common-poi'
+      }
+    }),
     typeData
   };
 }

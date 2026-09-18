@@ -806,13 +806,13 @@ class CloudStore {
   async listNearbyActivities(filters = {}, at) {
     const where = {
       status: this.command.in([ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED]),
-      city: filters.city,
       meetingGeoPoint: this.command.geoNear({
         geometry: this.db.Geo.Point(filters.longitude, filters.latitude),
         minDistance: 0,
         maxDistance: filters.radiusMeters
       })
     };
+    if (filters.city) where.city = filters.city;
     if (filters.type) {
       const legacyTypes = Object.entries(LEGACY_ACTIVITY_TYPE_MAP)
         .filter(([, currentType]) => currentType === filters.type)

@@ -6,7 +6,7 @@ const { AppError, invariant } = require('./errors');
 const COORDINATE_SYSTEM = 'GCJ02';
 const DEFAULT_NEARBY_RADIUS_METERS = 3000;
 const MAX_NEARBY_RADIUS_METERS = 10000;
-const MACAU_BOUNDS = Object.freeze({ minLatitude: 22.05, maxLatitude: 22.25, minLongitude: 113.45, maxLongitude: 113.65 });
+const CHINA_GCJ_BOUNDS = Object.freeze({ minLatitude: 3.86, maxLatitude: 53.55, minLongitude: 73.66, maxLongitude: 135.05 });
 
 function finiteCoordinate(value, field, minimum, maximum) {
   const number = Number(value);
@@ -14,15 +14,15 @@ function finiteCoordinate(value, field, minimum, maximum) {
   return number;
 }
 
-function macauCoordinate(latitude, longitude) {
+function chinaCoordinate(latitude, longitude, field = 'meetingPoint') {
   const point = {
     latitude: finiteCoordinate(latitude, '纬度', -90, 90),
     longitude: finiteCoordinate(longitude, '经度', -180, 180)
   };
   invariant(
-    point.latitude >= MACAU_BOUNDS.minLatitude && point.latitude <= MACAU_BOUNDS.maxLatitude
-      && point.longitude >= MACAU_BOUNDS.minLongitude && point.longitude <= MACAU_BOUNDS.maxLongitude,
-    'VALIDATION_ERROR', '活动地点须位于当前试点区域', { field: 'meetingPoint' }
+    point.latitude >= CHINA_GCJ_BOUNDS.minLatitude && point.latitude <= CHINA_GCJ_BOUNDS.maxLatitude
+      && point.longitude >= CHINA_GCJ_BOUNDS.minLongitude && point.longitude <= CHINA_GCJ_BOUNDS.maxLongitude,
+    'VALIDATION_ERROR', '位置坐标超出全国有效范围', { field }
   );
   return point;
 }
@@ -81,8 +81,8 @@ module.exports = {
   COORDINATE_SYSTEM,
   DEFAULT_NEARBY_RADIUS_METERS,
   MAX_NEARBY_RADIUS_METERS,
-  MACAU_BOUNDS,
-  macauCoordinate,
+  CHINA_GCJ_BOUNDS,
+  chinaCoordinate,
   haversineDistanceMeters,
   encodeNearbyCursor,
   decodeNearbyCursor,

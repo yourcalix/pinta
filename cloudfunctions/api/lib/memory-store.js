@@ -490,7 +490,7 @@ class MemoryStore {
   async listNearbyActivities(filters = {}, at) {
     const candidates = [...this.activities.values()]
       .filter((activity) => [ACTIVITY_STATUS.RECRUITING, ACTIVITY_STATUS.FORMED].includes(activity.status))
-      .filter((activity) => activity.city === filters.city)
+      .filter((activity) => !filters.city || activity.city === filters.city)
       .filter((activity) => !filters.type || (LEGACY_ACTIVITY_TYPE_MAP[activity.type] || activity.type) === filters.type)
       .filter((activity) => !filters.district || activity.district === filters.district)
       .filter((activity) => activity.meetingPoint && Number.isFinite(activity.meetingPoint.latitude) && Number.isFinite(activity.meetingPoint.longitude))

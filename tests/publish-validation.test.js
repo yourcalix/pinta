@@ -38,6 +38,14 @@ function activityInput(type, overrides = {}) {
     maxMembers: 4,
     targetMembers: 4,
     rules: '',
+    ...(type === 'benefit' ? {} : {
+      meetingPoint: {
+        label: type === 'companion' ? '关闸' : typeData[type].venue,
+        address: '澳门公共活动区域', province: '澳门特别行政区', city: '澳门', district: '澳门城区',
+        adcode: '820000', latitude: 22.198745, longitude: 113.543873,
+        coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: `validation-${type}-poi`
+      }
+    }),
     typeData: typeData[type],
     ...overrides
   };

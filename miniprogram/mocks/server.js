@@ -1,7 +1,6 @@
 'use strict';
 const {
 PILOT_CITY,
-PILOT_DISTRICTS,
 RIDE_ROUTES,
 getRideRoute
 } = require('../config/locations');
@@ -1333,40 +1332,49 @@ return normalized;
 function validateActivityListFilters(input) {
 assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '筛选条件格式无效');
 const type = optionalFilterString(input.type, '活动类型', 20);
-const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+const city = optionalFilterString(input.city, '城市', 30);
 const district = optionalFilterString(input.district, '行政区', 30);
 const keyword = optionalFilterString(input.keyword, '搜索词', 30);
 assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效', { field: '活动类型' });
-assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
-assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效', { field: '行政区' });
 return {
 type: type || undefined,
-city,
+city: city || undefined,
 district: district || undefined,
 keyword: keyword || undefined
 };
 }
-function mockMacauPoint(latitude, longitude) {
+function mockChinaPoint(latitude, longitude) {
 const point = { latitude: Number(latitude), longitude: Number(longitude) };
 assert(Number.isFinite(point.latitude) && Number.isFinite(point.longitude), 'VALIDATION_ERROR', '位置坐标格式无效');
-assert(point.latitude >= 22.05 && point.latitude <= 22.25 && point.longitude >= 113.45 && point.longitude <= 113.65, 'VALIDATION_ERROR', '活动地点须位于当前试点区域');
+assert(point.latitude >= 3.86 && point.latitude <= 53.55 && point.longitude >= 73.66 && point.longitude <= 135.05, 'VALIDATION_ERROR', '位置坐标超出全国有效范围');
 return point;
 }
 function validateMockMeetingPoint(value) {
 if (value === undefined || value === null) return undefined;
 assert(value && typeof value === 'object' && !Array.isArray(value), 'VALIDATION_ERROR', '会合地点格式无效');
-const allowed = ['label', 'address', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
+const allowed = ['label', 'address', 'province', 'city', 'district', 'adcode', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
 assert(Object.keys(value).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '会合地点包含未知字段');
 assert(value.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '会合地点坐标系必须为 GCJ-02');
 assert(value.provider === 'AMAP', 'VALIDATION_ERROR', '请选择高德地图地点');
-const point = mockMacauPoint(value.latitude, value.longitude);
-return {
+const point = mockChinaPoint(value.latitude, value.longitude);
+const province = optionalNormalizedContent(value.province, '省级行政区', 30);
+const city = optionalNormalizedContent(value.city, '城市', 30);
+const district = optionalNormalizedContent(value.district, '行政区', 30);
+const adcode = optionalNormalizedContent(value.adcode, '行政区划代码', 6);
+assert(Boolean(city && district), 'VALIDATION_ERROR', '会合地点行政区信息不完整');
+assert(!adcode || /^\d{6}$/.test(adcode), 'VALIDATION_ERROR', '行政区划代码格式无效');
+const result = {
 label: requiredNormalizedContent(value.label, '会合地点', 1, 80),
 address: optionalNormalizedContent(value.address, '会合地点地址', 120),
 ...point,
 coordinateSystem: 'GCJ02', provider: 'AMAP',
 poiId: optionalNormalizedContent(value.poiId, '高德地点ID', 80)
 };
+if (province) result.province = province;
+if (city) result.city = city;
+if (district) result.district = district;
+if (adcode) result.adcode = adcode;
+return result;
 }
 function mockDistanceMeters(left, right) {
 const rad = (value) => value * Math.PI / 180;
@@ -1378,7 +1386,7 @@ const value = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Ma
 return Math.round(6371008.8 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)));
 }
 function mockNearbyFingerprint(query) {
-const text = `${query.latitude.toFixed(5)}|${query.longitude.toFixed(5)}|${query.radiusMeters}|${query.type || ''}|${query.city}|${query.district || ''}`;
+const text = `${query.latitude.toFixed(5)}|${query.longitude.toFixed(5)}|${query.radiusMeters}|${query.type || ''}|${query.city || ''}|${query.district || ''}`;
 let hash = 2166136261;
 for (let index = 0; index < text.length; index += 1) hash = Math.imul(hash ^ text.charCodeAt(index), 16777619) >>> 0;
 return hash.toString(36);
@@ -1397,18 +1405,16 @@ assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_
 const allowed = ['latitude', 'longitude', 'coordinateSystem', 'radiusMeters', 'type', 'city', 'district', 'cursor', 'limit'];
 assert(Object.keys(input).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '附近筛选条件无效');
 assert(input.coordinateSystem === 'GCJ02', 'VALIDATION_ERROR', '定位坐标系必须为 GCJ-02');
-const point = mockMacauPoint(input.latitude, input.longitude);
+const point = mockChinaPoint(input.latitude, input.longitude);
 const radiusMeters = Number(input.radiusMeters === undefined ? 3000 : input.radiusMeters);
 const limit = Number(input.limit === undefined ? 10 : input.limit);
 assert(Number.isInteger(radiusMeters) && radiusMeters >= 100 && radiusMeters <= 10000, 'VALIDATION_ERROR', '搜索半径必须在100到10000之间');
 assert(Number.isInteger(limit) && limit >= 1 && limit <= 30, 'VALIDATION_ERROR', '分页数量无效');
 const type = optionalFilterString(input.type, '活动类型', 20);
-const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+const city = optionalFilterString(input.city, '城市', 30);
 const district = optionalFilterString(input.district, '行政区', 30);
 assert(!type || ACTIVITY_TYPES.includes(type), 'VALIDATION_ERROR', '活动类型选项无效');
-assert(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域');
-assert(!district || PILOT_DISTRICTS.includes(district), 'VALIDATION_ERROR', '行政区选项无效');
-const query = { ...point, radiusMeters, type: type || undefined, city, district: district || undefined };
+const query = { ...point, radiusMeters, type: type || undefined, city: city || undefined, district: district || undefined };
 let after = null;
 if (input.cursor) {
 try {
@@ -1497,7 +1503,7 @@ const filters = validateActivityListFilters(input);
 const now = new Date().toISOString();
 let candidates = state.activities.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status));
 if (filters.type) candidates = candidates.filter((item) => (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type);
-candidates = candidates.filter((item) => item.city === filters.city);
+if (filters.city) candidates = candidates.filter((item) => item.city === filters.city);
 if (filters.district) candidates = candidates.filter((item) => item.district === filters.district);
 candidates.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
 const offset = parsePublicCursor(input.cursor);
@@ -1531,7 +1537,8 @@ function listNearbyActivities(input) {
 const filters = validateMockNearby(input);
 const now = new Date().toISOString();
 const candidates = state.activities
-.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status) && item.city === PILOT_CITY)
+.filter((item) => ['RECRUITING', 'FORMED'].includes(item.status))
+.filter((item) => !filters.city || item.city === filters.city)
 .filter((item) => !filters.type || (LEGACY_ACTIVITY_TYPE_MAP[item.type] || item.type) === filters.type)
 .filter((item) => !filters.district || item.district === filters.district)
 .filter((item) => item.meetingPoint && Number.isFinite(item.meetingPoint.latitude) && Number.isFinite(item.meetingPoint.longitude))
@@ -1568,7 +1575,7 @@ const activityInput = clone(input);
 assert(ACTIVITY_TYPES.includes(activityInput.type), 'VALIDATION_ERROR', '活动类型选项无效');
 activityInput.title = requiredNormalizedContent(activityInput.title, '标题', 2, 30);
 activityInput.description = optionalNormalizedContent(activityInput.description, '补充说明', 300);
-activityInput.city = requiredNormalizedContent(activityInput.city, '城市', 1, 20);
+activityInput.city = requiredNormalizedContent(activityInput.city, '城市', 1, 30);
 activityInput.district = requiredNormalizedContent(activityInput.district, '行政区', 1, 30);
 activityInput.placeLabel = requiredNormalizedContent(activityInput.placeLabel, '商圈或地标', 1, 40);
 activityInput.rules = optionalNormalizedContent(activityInput.rules, '参与规则', 200);
@@ -1588,7 +1595,11 @@ if (activityInput.type === 'companion') activityInput.typeData = normalizeMockCo
 if (activityInput.type === 'sport') activityInput.typeData = normalizeMockSportTypeData(activityInput.typeData);
 if (activityInput.type === 'food') activityInput.typeData = normalizeMockFoodTypeData(activityInput.typeData);
 if (activityInput.type === 'benefit') activityInput.typeData = normalizeMockBenefitTypeData(activityInput.typeData);
+if (activityInput.type === 'benefit' && activityInput.typeData.fulfillmentType === 'ONLINE') delete activityInput.meetingPoint;
 if (activityInput.meetingPoint !== undefined) activityInput.meetingPoint = validateMockMeetingPoint(activityInput.meetingPoint);
+assert(activityInput.type === 'benefit' || Boolean(activityInput.meetingPoint), 'VALIDATION_ERROR', '请选择公开会合地点', { field: 'meetingPoint' });
+assert(!activityInput.meetingPoint || activityInput.city === activityInput.meetingPoint.city, 'VALIDATION_ERROR', '活动城市与所选地点不一致');
+assert(!activityInput.meetingPoint || activityInput.district === activityInput.meetingPoint.district, 'VALIDATION_ERROR', '活动行政区与所选地点不一致');
 assert(activityInput.type !== 'benefit' || activityInput.typeData.fulfillmentType !== 'OFFLINE' || Boolean(activityInput.meetingPoint), 'VALIDATION_ERROR', '线下到店优惠请选择公开会合地点', { field: 'meetingPoint' });
 if (activityInput.type === 'benefit' && activityInput.typeData.fulfillmentType === 'ONLINE') delete activityInput.meetingPoint;
 if (activityInput.type === 'companion') activityInput.placeLabel = `${activityInput.typeData.originLabel} → ${activityInput.typeData.destinationLabel}`;

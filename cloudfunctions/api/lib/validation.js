@@ -10,13 +10,11 @@ const {
   COORDINATE_SYSTEM,
   DEFAULT_NEARBY_RADIUS_METERS,
   MAX_NEARBY_RADIUS_METERS,
-  macauCoordinate,
+  chinaCoordinate,
   decodeNearbyCursor
 } = require('./activity-location');
 const {
   ACTIVITY_TYPES,
-  PILOT_CITY,
-  PILOT_DISTRICTS,
   MEMBER_LUGGAGE_TYPES,
   COMPANION_TIME_FLEXIBILITY,
   COMPANION_TRANSPORT_PREFERENCES,
@@ -78,12 +76,18 @@ function isoDateValue(value, field) {
 function validateMeetingPointInput(value) {
   if (value === undefined || value === null) return undefined;
   invariant(value && typeof value === 'object' && !Array.isArray(value), 'VALIDATION_ERROR', '会合地点格式无效', { field: 'meetingPoint' });
-  const allowed = ['label', 'address', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
+  const allowed = ['label', 'address', 'province', 'city', 'district', 'adcode', 'latitude', 'longitude', 'coordinateSystem', 'provider', 'poiId'];
   invariant(Object.keys(value).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '会合地点包含未知字段', { field: 'meetingPoint' });
   invariant(value.coordinateSystem === COORDINATE_SYSTEM, 'VALIDATION_ERROR', '会合地点坐标系必须为 GCJ-02', { field: 'meetingPoint.coordinateSystem' });
   invariant(value.provider === 'AMAP', 'VALIDATION_ERROR', '请选择高德地图地点', { field: 'meetingPoint.provider' });
-  const point = macauCoordinate(value.latitude, value.longitude);
-  return {
+  const point = chinaCoordinate(value.latitude, value.longitude);
+  const province = stringValue(value.province, '省级行政区', { max: 30 });
+  const city = stringValue(value.city, '城市', { max: 30 });
+  const district = stringValue(value.district, '行政区', { max: 30 });
+  const adcode = stringValue(value.adcode, '行政区划代码', { max: 6 });
+  invariant(Boolean(city && district), 'VALIDATION_ERROR', '会合地点行政区信息不完整', { field: 'meetingPoint.city' });
+  invariant(!adcode || /^\d{6}$/.test(adcode), 'VALIDATION_ERROR', '行政区划代码格式无效', { field: 'meetingPoint.adcode' });
+  const result = {
     label: stringValue(value.label, '会合地点', { required: true, max: 80 }),
     address: stringValue(value.address, '会合地点地址', { max: 120 }),
     ...point,
@@ -91,6 +95,11 @@ function validateMeetingPointInput(value) {
     provider: 'AMAP',
     poiId: stringValue(value.poiId, '高德地点ID', { max: 80 })
   };
+  if (province) result.province = province;
+  if (city) result.city = city;
+  if (district) result.district = district;
+  if (adcode) result.adcode = adcode;
+  return result;
 }
 
 function validateActivityInput(input, now = new Date()) {
@@ -110,7 +119,7 @@ function validateActivityInput(input, now = new Date()) {
     type,
     title: stringValue(input.title, '标题', { required: true, min: 2, max: 30 }),
     description: stringValue(input.description, '补充说明', { max: 300 }),
-    city: stringValue(input.city, '城市', { required: true, max: 20 }),
+    city: stringValue(input.city, '城市', { required: true, max: 30 }),
     district: stringValue(input.district, '行政区', { required: true, max: 30 }),
     placeLabel: stringValue(input.placeLabel, '商圈或地标', { required: true, max: 40 }),
     startsAt,
@@ -120,10 +129,15 @@ function validateActivityInput(input, now = new Date()) {
     maxMembers,
     rules: stringValue(input.rules, '参与规则', { max: 200 })
   };
-  const meetingPoint = validateMeetingPointInput(input.meetingPoint);
-  if (meetingPoint) result.meetingPoint = meetingPoint;
-
   const typeData = input.typeData || {};
+  const ignoresMeetingPoint = type === 'benefit' && typeData.fulfillmentType === 'ONLINE';
+  const meetingPoint = ignoresMeetingPoint ? undefined : validateMeetingPointInput(input.meetingPoint);
+  if (meetingPoint) {
+    invariant(result.city === meetingPoint.city, 'VALIDATION_ERROR', '活动城市与所选地点不一致', { field: 'city' });
+    invariant(result.district === meetingPoint.district, 'VALIDATION_ERROR', '活动行政区与所选地点不一致', { field: 'district' });
+    result.meetingPoint = meetingPoint;
+  }
+
   if (type === 'companion') {
     const originLabel = stringValue(typeData.originLabel, '出发地', { required: true, max: 40 });
     const destinationLabel = stringValue(typeData.destinationLabel, '目的地', { required: true, max: 40 });
@@ -194,6 +208,8 @@ function validateActivityInput(input, now = new Date()) {
     result.placeLabel = fulfillmentType === 'OFFLINE' ? meetingPoint.label : result.typeData.merchantOrPlatform;
   }
 
+  invariant(type === 'benefit' || Boolean(meetingPoint), 'VALIDATION_ERROR', '请选择公开会合地点', { field: 'meetingPoint' });
+
   return result;
 }
 
@@ -202,15 +218,13 @@ function validateActivityNearbyInput(input) {
   const allowed = ['latitude', 'longitude', 'coordinateSystem', 'radiusMeters', 'type', 'city', 'district', 'cursor', 'limit'];
   invariant(Object.keys(input).every((key) => allowed.includes(key)), 'VALIDATION_ERROR', '附近筛选条件无效');
   invariant(input.coordinateSystem === COORDINATE_SYSTEM, 'VALIDATION_ERROR', '定位坐标系必须为 GCJ-02', { field: 'coordinateSystem' });
-  const point = macauCoordinate(input.latitude, input.longitude);
+  const point = chinaCoordinate(input.latitude, input.longitude, 'location');
   const radiusMeters = integerValue(input.radiusMeters === undefined ? DEFAULT_NEARBY_RADIUS_METERS : input.radiusMeters, '搜索半径', 100, MAX_NEARBY_RADIUS_METERS);
   const type = optionalFilterString(input.type, '活动类型', 20);
-  const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+  const city = optionalFilterString(input.city, '城市', 30);
   const district = optionalFilterString(input.district, '行政区', 30);
   if (type) enumValue(type, '活动类型', ACTIVITY_TYPES);
-  invariant(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
-  if (district) enumValue(district, '行政区', PILOT_DISTRICTS);
-  const query = { ...point, coordinateSystem: COORDINATE_SYSTEM, radiusMeters, type: type || undefined, city, district: district || undefined };
+  const query = { ...point, coordinateSystem: COORDINATE_SYSTEM, radiusMeters, type: type || undefined, city: city || undefined, district: district || undefined };
   return {
     ...query,
     after: decodeNearbyCursor(input.cursor, query),
@@ -221,15 +235,13 @@ function validateActivityNearbyInput(input) {
 function validateActivityListInput(input) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   const type = optionalFilterString(input.type, '活动类型', 20);
-  const city = optionalFilterString(input.city, '城市', 20) || PILOT_CITY;
+  const city = optionalFilterString(input.city, '城市', 30);
   const district = optionalFilterString(input.district, '行政区', 30);
   const keyword = optionalFilterString(input.keyword, '搜索词', 30);
   if (type) enumValue(type, '活动类型', ACTIVITY_TYPES);
-  invariant(city === PILOT_CITY, 'VALIDATION_ERROR', '当前仅支持试点区域', { field: 'city' });
-  if (district) enumValue(district, '行政区', PILOT_DISTRICTS);
   return {
     type: type || undefined,
-    city,
+    city: city || undefined,
     district: district || undefined,
     keyword: keyword || undefined
   };

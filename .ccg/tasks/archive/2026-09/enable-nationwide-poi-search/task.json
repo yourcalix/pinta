@@ -1,0 +1,12 @@
+{
+  "id": "enable-nationwide-poi-search",
+  "title": "将公开会合地点从澳门限定升级为全国搜索与发布",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-09-18T00:00:00+08:00",
+  "branch": "main"
+}

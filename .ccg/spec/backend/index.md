@@ -73,8 +73,8 @@
 - 公开列表与游客详情不得暴露成员个人行李；只可在当前用户自己的 `viewerMembership` 或经授权的成团/管理成员视图中按需返回。
 - 公开问答 DTO 只输出问题、回答、昵称快照和公开时间，不得包含 `askerId`、`responderId`、openid、联系方式、幂等 hash 或内容审核内部字段。
 - 通知 DTO 只输出显式字段白名单，目标使用由通知类型计算的 `MANAGE | GROUP | DETAIL` 语义枚举；不得透传数据库中的自由 `url` 或 `page` 字段。未来微信服务通知的 `page` 也必须由同一类型映射纯函数生成。
-- 普通地点展示继续使用城市、行政区、商圈/地标标签和成团后说明。发布者主动选择的公开会合地点可额外保存 `meetingPoint: { label, address, latitude, longitude, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId }`，并在 Cloud 文档中物化顶层 `meetingGeoPoint` 供空间索引查询。普通列表、详情和附近 DTO 均不得返回精确坐标；附近 DTO 只增加服务端计算的 `nearby.distanceMeters`。查看者定位仅存在于单次 `activity.nearby` 调用栈，不落库、不写审计、不写日志。历史无坐标活动保留在全城列表，但不进入附近结果。
-- `activity.nearby` 是独立公开只读动作：限定 GCJ-02、澳门试点边界、100m—10km 半径和最多 30 条；Memory/Mock 使用 Haversine，Cloud 使用顶层 `meetingGeoPoint` 的 `geoNear` 并以 Haversine 统一最终排序。附近游标必须绑定坐标、半径与筛选条件，并以距离、开始时间和活动 ID 的末项元组续页，禁止跨查询复用；单次半径结果扫描达到 2,000 条时明确返回缩小半径提示，绝不静默漏数。缺失地理索引时返回可恢复的 `NEARBY_UNAVAILABLE`，不得偷偷回退成全城结果；错误归一化必须同时匹配地理查询上下文与索引缺失语义，不得因错误文本仅出现 `meetingGeoPoint` 就吞掉权限或通用数据库故障。
+- 普通地点展示继续使用城市、行政区、商圈/地标标签和成团后说明。除 `benefit + ONLINE` 外，新活动必须保存全国高德公开会合地点 `meetingPoint: { label, address, province?, city, district, adcode?, latitude, longitude, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId }`；活动顶层 `city/district` 必须与选点一致，并在 Cloud 文档中物化顶层 `meetingGeoPoint` 供空间索引查询。线上拼享惠必须在校验前忽略客户端残留地点。普通列表、详情和附近 DTO 均不得返回精确坐标、`poiId` 或 `adcode`；附近 DTO 只增加服务端计算的 `nearby.distanceMeters`。查看者定位仅存在于单次 `activity.nearby` 调用栈，不落库、不写审计、不写日志。历史无坐标活动保留在全城列表，但不进入附近结果，也不得借兼容读路径继续创建无坐标新活动。
+- `activity.nearby` 是独立公开只读动作：限定 GCJ-02、全国有效粗边界、100m—10km 半径和最多 30 条，`city/district` 仅为可选筛选条件，不得固定澳门；Memory/Mock 使用 Haversine，Cloud 使用顶层 `meetingGeoPoint` 的 `geoNear` 并以 Haversine 统一最终排序。附近游标必须绑定坐标、半径与筛选条件，并以距离、开始时间和活动 ID 的末项元组续页，禁止跨查询复用；游标是不透明且仅限签发它的当前后端环境使用，不保证 Mock 与 Cloud 之间互通。单次半径结果扫描达到 2,000 条时明确返回缩小半径提示，绝不静默漏数。缺失地理索引时返回可恢复的 `NEARBY_UNAVAILABLE`，不得偷偷回退成全城结果；错误归一化必须同时匹配地理查询上下文与索引缺失语义，不得因错误文本仅出现 `meetingGeoPoint` 就吞掉权限或通用数据库故障。
 - 拼车费用只允许 `FREE | SHARED_COST | NO_COST`，禁止自定义收费金额。
 - 日志不得记录完整联系方式、微信凭据或用户提交的敏感原文。
 - 公开活动列表的 `nextCursor` 是客户端不可解释的不透明字符串；当前 raw-offset 实现必须在服务入口校验非负十进制安全整数，并在 keyword、截止状态等后置过滤场景中扫描 `limit + 1` 个匹配项，以下一个匹配项的原始偏移作为续页游标。

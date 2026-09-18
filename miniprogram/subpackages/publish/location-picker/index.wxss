@@ -22,6 +22,9 @@ button::after { display: none; }
 .poi-result { display: flex; width: 100%; min-height: 96rpx; box-sizing: border-box; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6rpx; padding: 16rpx 20rpx; text-align: left; background: #fff; border: 2rpx solid transparent; border-radius: 18rpx; }
 .poi-result--selected { border-color: #16a36a; background: #eefaf4; }
 .poi-name { font-size: 27rpx; font-weight: 700; }
+.poi-sub-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10rpx 12rpx; width: 100%; min-width: 0; }
+.poi-region-tag { display: inline-flex; flex: 0 0 auto; align-items: center; max-width: 100%; padding: 4rpx 12rpx; border-radius: 10rpx; background: #f2efe8; color: #5f5a52; font-size: 22rpx; line-height: 1.4; }
+.poi-address { flex: 1 1 180rpx; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .picker-footer { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; padding: 18rpx 28rpx calc(18rpx + env(safe-area-inset-bottom)); background: rgba(249,247,242,.96); }
 .confirm-button { width: 100%; height: 88rpx; color: #fff; background: #16a36a; border-radius: 44rpx; font-size: 28rpx; font-weight: 800; }
 .confirm-button[disabled] { color: #a8a29e; background: #e7e1d8; }

@@ -11,20 +11,21 @@ const mockServer = require('../miniprogram/mocks/server');
 
 const NOW = new Date('2026-09-10T02:00:00.000Z');
 const ORIGIN = { latitude: 22.198745, longitude: 113.543873 };
+const BEIJING = { latitude: 39.992833, longitude: 116.310918 };
 
 function activity(id, latitude, longitude, overrides = {}) {
   return {
     id, ownerId: 'owner', owner: { nickname: '发起人' }, type: 'sport', title: `活动${id}`,
-    description: '', city: '澳门', district: '澳门校园', placeLabel: '公共场馆',
+    description: '', city: '澳门', district: '路氹填海区', placeLabel: '公共场馆',
     startsAt: '2026-09-11T04:00:00.000Z', deadlineAt: '2026-09-10T10:00:00.000Z',
     minMembers: 2, maxMembers: 4, targetMembers: 4, memberCount: 1, status: 'RECRUITING', rules: '',
     typeData: { sportType: '羽毛球', venue: '公共场馆', level: 'ANY', intensity: 'LIGHT', equipment: '' },
-    meetingPoint: { label: '公共场馆', address: '澳门公共场馆', latitude, longitude, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: id },
+    meetingPoint: { label: '公共场馆', address: '公共场馆', province: '澳门特别行政区', city: '澳门', district: '路氹填海区', adcode: '820008', latitude, longitude, coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: id },
     createdAt: NOW.toISOString(), updatedAt: NOW.toISOString(), ...overrides
   };
 }
 
-test('发布会合地点严格接受高德 GCJ-02 结构化 POI，并兼容历史无坐标活动', () => {
+test('发布会合地点接受全国高德 GCJ-02 结构化 POI，并拒绝新建无坐标活动', () => {
   const payload = {
     ...activity('draft', ORIGIN.latitude, ORIGIN.longitude),
     deadlineAt: '2026-09-10T10:00:00.000Z', startsAt: '2026-09-11T04:00:00.000Z'
@@ -32,17 +33,38 @@ test('发布会合地点严格接受高德 GCJ-02 结构化 POI，并兼容历�
   const validated = validateActivityInput(payload, NOW);
   assert.equal(validated.meetingPoint.provider, 'AMAP');
   assert.equal(validated.meetingPoint.coordinateSystem, 'GCJ02');
-  assert.equal(validateActivityInput({ ...payload, meetingPoint: undefined }, NOW).meetingPoint, undefined);
+  assert.equal(validated.meetingPoint.city, '澳门');
+  assert.throws(() => validateActivityInput({ ...payload, meetingPoint: undefined }, NOW), /请选择公开会合地点/);
+  const { province, city, district, adcode, ...legacyPoint } = payload.meetingPoint;
+  assert.throws(() => validateActivityInput({ ...payload, meetingPoint: legacyPoint }, NOW), /行政区信息不完整/);
   assert.throws(() => validateActivityInput({ ...payload, meetingPoint: { ...payload.meetingPoint, coordinateSystem: 'WGS84' } }, NOW), /坐标系/);
-  assert.throws(() => validateActivityInput({ ...payload, meetingPoint: { ...payload.meetingPoint, latitude: 80 } }, NOW), /试点区域/);
+  const beijing = validateActivityInput({
+    ...payload,
+    city: '北京市', district: '海淀区',
+    meetingPoint: { ...payload.meetingPoint, ...BEIJING, province: '北京市', city: '北京市', district: '海淀区', adcode: '110108' }
+  }, NOW);
+  assert.equal(beijing.city, '北京市');
+  assert.equal(beijing.district, '海淀区');
+  assert.throws(() => validateActivityInput({
+    ...payload,
+    city: '上海市', district: '黄浦区',
+    meetingPoint: { ...payload.meetingPoint, ...BEIJING, province: '北京市', city: '北京市', district: '海淀区', adcode: '110108' }
+  }, NOW), /城市与所选地点不一致/);
+  assert.throws(() => validateActivityInput({ ...payload, meetingPoint: { ...payload.meetingPoint, latitude: 80 } }, NOW), /全国有效范围/);
 });
 
-test('附近查询绑定澳门、半径、坐标系和不可跨条件复用的游标', () => {
+test('附近查询支持全国坐标、可选城市、半径、坐标系和不可跨条件复用的游标', () => {
   const first = validateActivityNearbyInput({ ...ORIGIN, coordinateSystem: 'GCJ02', radiusMeters: 3000, type: 'sport', limit: 10 });
   assert.equal(first.radiusMeters, 3000);
   assert.equal(first.after, null);
+  assert.equal(first.city, undefined);
+  assert.equal(validateActivityNearbyInput({ ...BEIJING, coordinateSystem: 'GCJ02', radiusMeters: 3000 }).latitude, BEIJING.latitude);
   assert.throws(() => validateActivityNearbyInput({ ...ORIGIN, coordinateSystem: 'WGS84', radiusMeters: 3000 }), /坐标系/);
   assert.throws(() => validateActivityNearbyInput({ ...ORIGIN, coordinateSystem: 'GCJ02', radiusMeters: 20000 }), /搜索半径/);
+  assert.throws(
+    () => validateActivityNearbyInput({ latitude: 80, longitude: 116.31, coordinateSystem: 'GCJ02', radiusMeters: 3000 }),
+    (error) => error.code === 'VALIDATION_ERROR' && error.details.field === 'location'
+  );
 });
 
 test('Haversine 使用米制距离并保持对称', () => {
@@ -77,6 +99,9 @@ test('activity.nearby 仅返回半径内坐标活动、按距离排序且不泄�
   assert.equal(result.data.items[0].meetingPoint.label, '公共场馆');
   assert.equal(JSON.stringify(result.data).includes('latitude'), false);
   assert.equal(JSON.stringify(result.data).includes('longitude'), false);
+  assert.equal(JSON.stringify(result.data).includes('adcode'), false);
+  assert.equal(JSON.stringify(result.data).includes('poiId'), false);
+  assert.equal(JSON.stringify(result.data).includes('province'), false);
 });
 
 test('Cloud 附近查询使用 GeoPoint 与 geoNear，并把索引故障归一为可恢复错误', async () => {
@@ -107,11 +132,12 @@ test('Cloud 附近查询使用 GeoPoint 与 geoNear，并把索引故障归一�
     }
   };
   const store = new CloudStore({ database: () => db });
-  const result = await store.listNearbyActivities({ ...ORIGIN, city: '澳门', type: 'sport', radiusMeters: 3000, after: null, limit: 10 }, NOW.toISOString());
+  const result = await store.listNearbyActivities({ ...ORIGIN, type: 'sport', radiusMeters: 3000, after: null, limit: 10 }, NOW.toISOString());
   assert.equal(result.items[0].id, 'cloud');
   assert.deepEqual(reads[0].meetingGeoPoint.$geoNear.geometry, { longitude: ORIGIN.longitude, latitude: ORIGIN.latitude, kind: 'Point' });
   assert.equal(reads[0].meetingGeoPoint.$geoNear.maxDistance, 3000);
   assert.deepEqual(reads[0].type, { $in: ['sport', 'buddy'] });
+  assert.equal('city' in reads[0], false);
   failure = new Error('geo index not found');
   await assert.rejects(() => store.listNearbyActivities({ ...ORIGIN, city: '澳门', type: 'sport', radiusMeters: 3000, after: null, limit: 10 }, NOW.toISOString()), (error) => error.code === 'NEARBY_UNAVAILABLE');
 
@@ -183,7 +209,7 @@ test('米级距离相同的附近活动按开始时间与 ID 稳定分页，历�
   assert.deepEqual(companion.data.items.map((item) => item.id), ['legacy-ride']);
 });
 
-test('Mock nearby 与正式契约同样校验 city/district、绑定游标并隐藏精确坐标', async () => {
+test('Mock nearby 与正式契约同样支持全国可选 city/district、绑定游标并隐藏精确坐标', async () => {
   mockServer.reset();
   const first = await mockServer.call({ action: 'activity.nearby', requestId: 'mock-nearby-1', data: { ...ORIGIN, coordinateSystem: 'GCJ02', radiusMeters: 3000, limit: 1 } });
   assert.equal(first.ok, true);
@@ -197,7 +223,6 @@ test('Mock nearby 与正式契约同样校验 city/district、绑定游标并隐
     assert.equal(mismatch.ok, false);
     assert.equal(mismatch.error.code, 'VALIDATION_ERROR');
   }
-  const invalidCity = await mockServer.call({ action: 'activity.nearby', requestId: 'mock-nearby-3', data: { ...ORIGIN, coordinateSystem: 'GCJ02', city: '珠海', radiusMeters: 3000 } });
-  assert.equal(invalidCity.ok, false);
-  assert.equal(invalidCity.error.code, 'VALIDATION_ERROR');
+  const nationwideCity = await mockServer.call({ action: 'activity.nearby', requestId: 'mock-nearby-3', data: { ...ORIGIN, coordinateSystem: 'GCJ02', city: '珠海市', radiusMeters: 3000 } });
+  assert.equal(nationwideCity.ok, true);
 });

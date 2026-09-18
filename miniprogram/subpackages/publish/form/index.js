@@ -4,7 +4,6 @@ const activityService = require('../../../services/activity');
 const subscriptionService = require('../../../services/subscription');
 const { combineLocal } = require('../../../utils/date');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
-const { PILOT_CITY, PILOT_DISTRICTS } = require('../../../config/locations');
 
 const TYPES = Object.freeze({
   companion: { title: '发布拼同行', subtitle: '找同路伙伴，一起商量合规出行方式', tone: 'companion', icon: './assets/food/pin_food.png' },
@@ -146,13 +145,22 @@ function cleanFormData(type, source = {}) {
     || typeof meetingPoint.label !== 'string' || !meetingPoint.label.trim()) {
     result.meetingPoint = null;
   } else {
-    result.meetingPoint = {
+    const cleanedMeetingPoint = {
       poiId: normalizedText(meetingPoint.poiId).slice(0, 80),
       label: normalizedText(meetingPoint.label).slice(0, 80),
       address: normalizedText(meetingPoint.address).slice(0, 120),
       latitude: Number(meetingPoint.latitude), longitude: Number(meetingPoint.longitude),
       coordinateSystem: 'GCJ02', provider: 'AMAP'
     };
+    const province = normalizedText(meetingPoint.province).slice(0, 30);
+    const city = normalizedText(meetingPoint.city).slice(0, 30);
+    const district = normalizedText(meetingPoint.district).slice(0, 30);
+    const adcode = normalizedText(meetingPoint.adcode);
+    if (province) cleanedMeetingPoint.province = province;
+    if (city) cleanedMeetingPoint.city = city;
+    if (district) cleanedMeetingPoint.district = district;
+    if (/^\d{6}$/.test(adcode)) cleanedMeetingPoint.adcode = adcode;
+    result.meetingPoint = cleanedMeetingPoint;
   }
   return result;
 }
@@ -558,7 +566,8 @@ Page({
     if (capacity.error) return capacity.error;
     const requiresMeetingPoint = this.data.type !== 'benefit' || form.fulfillmentType === 'OFFLINE';
     if (requiresMeetingPoint && (!form.meetingPoint || form.meetingPoint.provider !== 'AMAP' || form.meetingPoint.coordinateSystem !== 'GCJ02'
-      || !Number.isFinite(form.meetingPoint.latitude) || !Number.isFinite(form.meetingPoint.longitude))) {
+      || !Number.isFinite(form.meetingPoint.latitude) || !Number.isFinite(form.meetingPoint.longitude)
+      || !normalizedText(form.meetingPoint.city) || !normalizedText(form.meetingPoint.district))) {
       return '请选择有效的活动会合地点';
     }
     if (this.data.type === 'companion' && (!form.originLabel.trim() || !form.destinationLabel.trim())) return '请填写出发地和目的地';
@@ -587,13 +596,16 @@ Page({
     const form = this.data.form;
     const startsAt = safeStartsAt(form);
     const isFood = this.data.type === 'food';
+    const meetingPoint = form.meetingPoint && (this.data.type !== 'benefit' || form.fulfillmentType === 'OFFLINE')
+      ? form.meetingPoint
+      : null;
     const capacity = isFood ? foodCapacity(form) : this.data.type === 'companion' ? companionCapacity(form) : standardCapacity(form);
     const common = {
       type: this.data.type,
       title: isFood ? foodTitle(form) : normalizedText(form.title),
       description: isFood ? foodDescription(form) : this.data.type === 'benefit' ? normalizedText(form.details) : normalizedText(form.description),
-      city: PILOT_CITY,
-      district: PILOT_DISTRICTS[0],
+      city: meetingPoint ? normalizedText(meetingPoint.city) : '全国',
+      district: meetingPoint ? normalizedText(meetingPoint.district) : '线上',
       placeLabel: this.data.type === 'companion'
         ? `${form.originLabel.trim()} → ${form.destinationLabel.trim()}`
         : this.data.type === 'benefit' ? truncateText(normalizedText(form.merchantOrPlatform), 40) : form.venue.trim(),
@@ -604,8 +616,8 @@ Page({
       maxMembers: capacity.maxMembers,
       rules: normalizedText(form.rules)
     };
-    if (form.meetingPoint && (this.data.type !== 'benefit' || form.fulfillmentType === 'OFFLINE')) {
-      common.meetingPoint = { ...form.meetingPoint };
+    if (meetingPoint) {
+      common.meetingPoint = { ...meetingPoint };
     }
     if (this.data.type === 'companion') common.typeData = {
       originLabel: form.originLabel.trim(),

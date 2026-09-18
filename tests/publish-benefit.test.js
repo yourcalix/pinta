@@ -42,6 +42,7 @@ function benefitInput(overrides = {}) {
 function meetingPoint() {
   return {
     label: '氹仔线下门店', address: '澳门氹仔某商场一层', latitude: 22.1536, longitude: 113.5564,
+    province: '澳门特别行政区', city: '澳门', district: '澳门校园', adcode: '820000',
     coordinateSystem: 'GCJ02', provider: 'AMAP', poiId: 'benefit-offline-poi'
   };
 }
@@ -131,7 +132,7 @@ test('线下拼享惠进入附近列表，线上模式强制丢弃残留坐标',
   assert.equal(created.data.activity.placeLabel, meetingPoint().label);
   assert.equal(Object.hasOwn(created.data.activity.typeData, 'internalContact'), false);
   assert.deepEqual(created.data.activity.meetingPoint, { label: meetingPoint().label, address: meetingPoint().address });
-  const onlineInput = benefitInput({ placeLabel: '客户端旧地点', meetingPoint: meetingPoint() });
+  const onlineInput = benefitInput({ placeLabel: '客户端旧地点', meetingPoint: { legacyMalformedPoint: true } });
   const onlineValue = validateActivityInput(onlineInput);
   assert.equal(onlineValue.meetingPoint, undefined);
   assert.equal(onlineValue.placeLabel, '山姆会员店');

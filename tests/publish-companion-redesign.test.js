@@ -93,7 +93,11 @@ test('拼同行选点回填可抵御原生 input 的迟到同值事件，真实�
   const meetingPoint = {
     poiId: 'companion-poi',
     label: 'Ａvenida　Central',
-    address: '澳门 · 中区',
+    address: '颐和园路5号',
+    province: '北京市',
+    city: '北京市',
+    district: '海淀区',
+    adcode: '110108',
     latitude: 22.1931,
     longitude: 113.5396,
     coordinateSystem: 'GCJ02',
@@ -132,6 +136,10 @@ test('拼运动与拼饭桌的同值场馆事件保留地点，地点草稿可�
     poiId: 'shared-venue-poi',
     label: '塔石体育馆',
     address: '澳门 · 荷兰园大马路',
+    province: '澳门特别行政区',
+    city: '澳门',
+    district: '澳门校园',
+    adcode: '820000',
     latitude: 22.19975,
     longitude: 113.55215,
     coordinateSystem: 'GCJ02',
@@ -207,6 +215,20 @@ test('拼同行固定与范围拼友数提交时转换为含发起人的总人�
     definition.validateForm.call(ranged),
     '拼友人数需在 1—19 位之间（成团总人数 2—20 人）'
   );
+});
+
+test('发布载荷从全国 POI 派生城市与行政区且草稿完整保留行政字段', () => {
+  const definition = loadFormDefinition();
+  const meetingPoint = {
+    poiId: 'beijing-university', label: '北京大学', address: '颐和园路5号',
+    province: '北京市', city: '北京市', district: '海淀区', adcode: '110108',
+    latitude: 39.992833, longitude: 116.310918, coordinateSystem: 'GCJ02', provider: 'AMAP'
+  };
+  const page = companionPage(definition, { originLabel: meetingPoint.label, meetingPoint });
+  const payload = definition.buildPayload.call(page);
+  assert.equal(payload.city, '北京市');
+  assert.equal(payload.district, '海淀区');
+  assert.deepEqual(payload.meetingPoint, meetingPoint);
 });
 
 test('拼同行旧总人数草稿只迁移一次且不影响其他类型字段白名单', () => {

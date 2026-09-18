@@ -13,13 +13,17 @@
   </view>
   <view wx:if="{{selected && showMapPreview}}" class="map-shell">
     <map class="poi-map" latitude="{{mapLatitude}}" longitude="{{mapLongitude}}" markers="{{markers}}" scale="16" show-location="{{false}}" enable-zoom="{{true}}" aria-label="已选公开会合地点地图预览" />
-    <view class="selected-summary"><text class="selected-name">已选：{{selected.label}}</text><text class="selected-address">{{selected.address}}</text></view>
+    <view class="selected-summary"><text class="selected-name">已选：{{selected.label}}</text><text class="selected-address">{{selected.province}} · {{selected.city}} · {{selected.district}}{{selected.address ? ' · ' + selected.address : ''}}</text></view>
   </view>
   <view class="poi-results">
     <view wx:if="{{loading}}" class="picker-state" role="status">正在搜索高德地图地点…</view>
     <view wx:elif="{{searched && !results.length && !error}}" class="picker-state">没有找到地点，请换个关键词</view>
-    <button wx:for="{{results}}" wx:key="poiId" class="poi-result {{selected && selected.poiId === item.poiId ? 'poi-result--selected' : ''}}" data-index="{{index}}" bindtap="handleSelectPoi" hover-class="control--pressed" aria-label="选择{{item.label}}，{{item.address}}">
-      <text class="poi-name">{{item.label}}</text><text class="poi-address">{{item.address}}</text>
+    <button wx:for="{{results}}" wx:key="poiId" class="poi-result {{selected && selected.poiId === item.poiId ? 'poi-result--selected' : ''}}" data-index="{{index}}" bindtap="handleSelectPoi" hover-class="control--pressed" aria-label="选择{{item.label}}，位于{{item.province}}{{item.city}}{{item.district}}，{{item.address}}">
+      <text class="poi-name">{{item.label}}</text>
+      <view class="poi-sub-row">
+        <text class="poi-region-tag">{{item.province !== item.city ? item.province + ' · ' : ''}}{{item.city}} · {{item.district}}</text>
+        <text wx:if="{{item.address}}" class="poi-address">{{item.address}}</text>
+      </view>
     </button>
   </view>
   <view class="picker-footer"><button class="confirm-button" disabled="{{!selected}}" bindtap="handleConfirm" hover-class="control--pressed">确认公开会合地点</button></view>
