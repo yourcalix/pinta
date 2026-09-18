@@ -1,0 +1,12 @@
+{
+  "id": "review-generated-home-hero-v3",
+  "title": "复核第三版首页 Hero IP 图与首页遮挡线",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "等待用户完成猫狗拼图组的最后一次局部上移",
+  "createdAt": "2026-09-18T12:20:00Z",
+  "branch": "main"
+}
