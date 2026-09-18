@@ -1,0 +1,12 @@
+{
+  "id": "fix-home-empty-state-fixed-viewport",
+  "title": "优化首页固定视口下的活动空状态",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-18T00:00:00+08:00",
+  "branch": "main"
+}

@@ -49,6 +49,9 @@ test('公共空状态组件覆盖六类语义、尺寸档和无几何抖动动�
   assert.doesNotMatch(template, /\sdisabled=/);
   assert.match(template, /slot name="footer"/);
   assert.match(style, /\.pinba-empty-state__footer\s*\{[\s\S]*width:\s*100%[\s\S]*justify-content:\s*center/);
+  assert.match(script, /\['compact', 'small', 'default', 'large'\]/);
+  assert.match(style, /\.pinba-empty-state--compact\s*\{[^}]*display:\s*grid;[^}]*height:\s*275rpx;[^}]*grid-template-columns:\s*180rpx minmax\(0, 1fr\);/s);
+  assert.match(style, /\.pinba-empty-state--compact \.pinba-empty-state__button\s*\{[^}]*min-height:\s*88rpx;/s);
   assert.match(style, /\.pinba-empty-state--small[\s\S]*180rpx/);
   assert.match(style, /\.pinba-empty-state--large[\s\S]*300rpx/);
   assert.match(style, /@media \(max-width: 340px\), \(max-height: 620px\)/);
@@ -63,6 +66,7 @@ test('真实页面按业务语义接入空状态且首屏加载分支优先', ()
   const nearby = read('subpackages/activity/nearby/index.wxml');
 
   assert.ok(home.indexOf('wx:if="{{loading}}"') < home.indexOf('type="{{error ? \'empty-network\''));
+  assert.match(home, /<empty-state[^>]*size="compact"/);
   assert.ok(community.indexOf('wx:if="{{loading}}"') < community.indexOf("'empty-network' : (appliedKeyword ? 'empty-search'"));
   assert.match(user, /currentList === 'joined' \? 'empty-joined' : 'empty-activity'/);
   assert.match(messages, /type="empty-message"/);

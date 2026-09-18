@@ -57,7 +57,7 @@
       <view wx:elif="{{activities.length}}" class="home-activity-grid {{largeTextMode ? 'home-activity-grid--large-text' : ''}}">
         <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" variant="home-preview" large-text="{{largeTextMode}}" bindselect="handleCardSelect" />
       </view>
-      <view wx:else class="empty-state-shell"><empty-state type="{{error ? 'empty-network' : (hasActiveFilters ? 'empty-search' : 'empty-activity')}}" size="default" title="{{error ? '活动暂时走丢了' : (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error || (hasActiveFilters ? '换个关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : '去发起拼单')}}" bindaction="handleEmptyAction" /></view>
+      <view wx:else class="empty-state-shell"><empty-state type="{{error ? 'empty-network' : (hasActiveFilters ? 'empty-search' : 'empty-activity')}}" size="compact" title="{{error ? '活动暂时走丢了' : (hasActiveFilters ? '没有找到合适的活动' : '暂时还没有拼单')}}" description="{{error || (hasActiveFilters ? '换个关键词再试试。' : '发起一个拼单，邀请附近伙伴加入。')}}" action-text="{{error ? '重新加载' : (hasActiveFilters ? '清除筛选' : '去发起拼单')}}" bindaction="handleEmptyAction" /></view>
     </view>
 
   </view>

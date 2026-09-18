@@ -8,7 +8,7 @@ const IMAGE_MAP = Object.freeze({
   'empty-favorite': '/assets/images/empty/favorite.png',
   'empty-network': '/assets/images/empty/network.png'
 });
-const VALID_SIZES = new Set(['small', 'default', 'large']);
+const VALID_SIZES = new Set(['compact', 'small', 'default', 'large']);
 
 Component({
   externalClasses: ['custom-class'],

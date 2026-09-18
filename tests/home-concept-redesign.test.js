@@ -99,6 +99,18 @@ test('全城热拼常规模式严格使用三列紧凑卡并把发现更多导�
   assert.match(script, /handleNavigateToAll[\s\S]*url:\s*'\/subpackages\/activity\/nearby\/index'/);
 });
 
+test('首页空态使用固定视口专用横向规格且不改变活动卡与骨架比例', () => {
+  const template = read('pages/discover/index.wxml');
+  const style = read('pages/discover/index.wxss');
+  assert.match(template, /<empty-state[^>]*size="compact"/);
+  assert.match(style, /\.empty-state-shell\s*\{[^}]*height:\s*275rpx;[^}]*overflow:\s*hidden;/s);
+  assert.doesNotMatch(style, /\.empty-state-shell\s*\{[^}]*padding:/s);
+  assert.match(style, /\.activity-skeleton-card\s*\{[^}]*height:\s*275rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.activity-skeleton-card\s*\{[^}]*height:\s*240rpx;/s);
+  assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.empty-state-shell\s*\{[^}]*height:\s*240rpx;/s);
+  assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*21rpx;/s);
+});
+
 test('用户提供的十张首页素材按槽位缩放且保留完整 Alpha', () => {
   const assets = [
     ['assets/images/home/shortcut-group.png', 160],
