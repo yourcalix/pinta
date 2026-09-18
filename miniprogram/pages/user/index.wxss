@@ -687,40 +687,11 @@ button::after { display: none; }
 
 .list-empty {
   min-height: 390rpx;
-  padding: 64rpx 20rpx 40rpx;
+  padding: 0;
+  overflow: hidden;
   text-align: center;
 }
 
-.empty-puzzle {
-  position: relative;
-  width: 82rpx;
-  height: 72rpx;
-  margin: 0 auto;
-  background: #b6e2c9;
-  border: 4rpx solid #16825b;
-  border-radius: 22rpx 19rpx 23rpx 20rpx;
-  opacity: 0.82;
-}
-
-.empty-puzzle::before {
-  position: absolute;
-  top: -20rpx;
-  left: 25rpx;
-  width: 28rpx;
-  height: 28rpx;
-  background: #b6e2c9;
-  border: 4rpx solid #16825b;
-  border-bottom: 0;
-  border-radius: 50% 50% 0 0;
-  content: '';
-}
-
-.empty-puzzle-eye { position: absolute; top: 24rpx; width: 7rpx; height: 7rpx; background: #123451; border-radius: 50%; }
-.empty-puzzle-eye--left { left: 22rpx; }
-.empty-puzzle-eye--right { right: 22rpx; }
-.empty-puzzle-smile { position: absolute; top: 38rpx; left: 33rpx; width: 14rpx; height: 7rpx; border-bottom: 3rpx solid #123451; border-radius: 0 0 14rpx 14rpx; }
-
-.empty-title,
 .state-title {
   margin-top: 24rpx;
   color: #17202a;
@@ -729,7 +700,6 @@ button::after { display: none; }
   line-height: 1.4;
 }
 
-.empty-copy,
 .state-copy {
   margin-top: 8rpx;
   color: #697785;
@@ -737,7 +707,6 @@ button::after { display: none; }
   line-height: 1.5;
 }
 
-.empty-action,
 .state-action {
   display: inline-flex;
   min-height: 88rpx;
@@ -895,12 +864,7 @@ button::after { display: none; }
 .profile-content-sheet .sheet-status--success { color: #11784f; background: #e5f6ed; }
 .profile-content-sheet .sheet-status--info { color: #275fc3; background: #eaf1ff; }
 .profile-content-sheet .sheet-status--danger { color: #b4232a; background: #ffe9ea; }
-.profile-content-sheet .list-empty { margin-top: 4rpx; padding: 48rpx 28rpx; background: #fff; border: 1.5rpx solid #efece6; border-radius: 24rpx; }
-.profile-content-sheet .empty-title { color: #111827; font-size: 30rpx; }
-.profile-content-sheet .empty-copy { color: #78716c; font-size: 24rpx; }
-.profile-content-sheet .empty-action { min-height: 44px; max-width: 100%; color: #fff; background: #111827; font-size: 28rpx; }
-.profile-content-sheet .empty-puzzle { background: #e0f2fe; border-color: #075985; pointer-events: none; user-select: none; }
-.profile-content-sheet .empty-puzzle::before { background: #e0f2fe; border-color: #075985; }
+.profile-content-sheet .list-empty { margin-top: 4rpx; padding: 0; background: #fff; border: 1.5rpx solid #efece6; border-radius: 24rpx; }
 @media (max-width: 340px) {
   .profile-content-sheet .list-tab { flex-direction: column; flex-wrap: nowrap; }
   .profile-content-sheet .timeline-activity { margin-left: 24rpx; padding: 16rpx; gap: 12rpx; border-radius: 20rpx; }

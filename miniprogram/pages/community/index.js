@@ -410,6 +410,12 @@ Page({
     });
   },
 
-  handleRetry(){this.loadPosts(false)},
-  handleRetryLoadMore(){this.loadPosts(true)}
+  handleEmptyAction() {
+    if (this.data.error) return this.handleRetry();
+    if (this.data.appliedKeyword && this.data.hasMore) return this.handleRetryLoadMore();
+    if (this.data.appliedKeyword) return this.handleResetSearch();
+    return this.handleCompose();
+  },
+  handleRetry(){return this.loadPosts(false)},
+  handleRetryLoadMore(){return this.loadPosts(true)}
 });

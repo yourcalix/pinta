@@ -9,29 +9,12 @@ const assetRoot = path.resolve(__dirname, '../miniprogram/assets/images/discover
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 const EXPECTED_ASSETS = {
-  'brand-puzzle.png': [144, 144],
   'filter-all.png': [72, 72],
   'filter-companion.png': [72, 72],
   'filter-sport.png': [72, 72],
   'filter-food.png': [72, 72],
-  'ride-car-green.png': [192, 192],
-  'node-start-green.png': [144, 144],
-  'node-start-blue.png': [144, 144],
-  'node-end-taipa.png': [144, 144],
-  'node-end-golden-dragon.png': [144, 144],
-  'phone-section-handset.png': [144, 144],
-  'route-section-pin.png': [144, 144],
-  'avatar-passenger-a.png': [144, 144],
-  'avatar-passenger-b.png': [144, 144],
-  'avatar-passenger-empty.png': [144, 144],
-  'tab-discover-active.png': [96, 96],
-  'tab-discover-inactive.png': [96, 96],
-  'tab-community-active.png': [96, 96],
-  'tab-community-inactive.png': [96, 96],
   'tab-publish-active.png': [96, 96],
-  'tab-publish-inactive.png': [96, 96],
-  'tab-user-active.png': [96, 96],
-  'tab-user-inactive.png': [96, 96]
+  'tab-publish-inactive.png': [96, 96]
 };
 
 function inspectPng(filename) {
@@ -46,7 +29,7 @@ function inspectPng(filename) {
   return { bytes, width, height, hasAlpha };
 }
 
-test('发现页体素素材使用稳定英文文件名、约定尺寸和真实透明通道', () => {
+test('发现页仍在运行时使用的素材保持稳定文件名、约定尺寸和透明通道', () => {
   const actualNames = fs.readdirSync(assetRoot).filter((name) => name.endsWith('.png')).sort();
   const expectedNames = Object.keys(EXPECTED_ASSETS).sort();
   assert.deepEqual(actualNames, expectedNames);
@@ -58,16 +41,16 @@ test('发现页体素素材使用稳定英文文件名、约定尺寸和真实�
   });
 });
 
-test('四个 Tab 与发现页体素素材总量保持在主包安全预算内', () => {
+test('发现页筛选与发布 Tab 素材总量保持在主包安全预算内', () => {
   let totalBytes = 0;
   Object.keys(EXPECTED_ASSETS).forEach((filename) => {
     totalBytes += inspectPng(filename).bytes.length;
   });
-  assert.ok(totalBytes <= 480 * 1024, `发现页与四个 Tab 体素素材总量为 ${totalBytes} bytes`);
+  assert.ok(totalBytes <= 32 * 1024, `发现页运行素材总量为 ${totalBytes} bytes`);
 });
 
-test('Tab 状态图标成对使用同一画布尺寸且内容不重复', () => {
-  ['discover', 'community', 'publish', 'user'].forEach((tab) => {
+test('发布 Tab 状态图标成对使用同一画布尺寸且内容不重复', () => {
+  ['publish'].forEach((tab) => {
     const active = inspectPng(`tab-${tab}-active.png`);
     const inactive = inspectPng(`tab-${tab}-inactive.png`);
     assert.deepEqual([active.width, active.height], [inactive.width, inactive.height]);

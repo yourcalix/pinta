@@ -56,5 +56,5 @@ test('详情页把下架、可恢复错误和正常内容保持为互斥分支',
   assert.match(script, /activity:\s*null,[\s\S]*detailRows:\s*\[\]/);
   assert.match(script, /loadSeq\s*!==\s*this\._loadSeq/);
   assert.match(script, /wx\.switchTab\(\{\s*url:\s*'\/pages\/discover\/index'/);
-  assert.match(emptyStateStyle, /\.empty-action\s*\{[\s\S]*min-height:\s*88rpx/);
+  assert.match(emptyStateStyle, /\.pinba-empty-state__button\s*\{[\s\S]*min-height:\s*88rpx/);
 });

@@ -59,19 +59,21 @@ test('发现页采用真实讨论搜索、通知入口、真实主题动作和�
   assert.equal(config.backgroundColor, '#F9F7F2');
 });
 
-test('发现页空状态与帖子卡使用白卡、当前头像及受控单字回退', () => {
+test('发现页空状态复用猫狗 IP 白卡，帖子使用当前头像及受控单字回退', () => {
   const template = read('pages/community/index.wxml');
   const style = read('pages/community/index.wxss');
   const script = read('pages/community/index.js');
-  assert.match(template, /class="empty-bubble"[^>]*aria-hidden="true"/);
+  const config = JSON.parse(read('pages/community/index.json'));
+  assert.match(template, /<empty-state[\s\S]*type="\{\{error \? 'empty-network' : \(appliedKeyword \? 'empty-search' : 'empty-activity'\)\}\}"/);
   assert.match(template, /class="post-avatar post-avatar--\{\{item\.avatarTone\}\}"/);
   assert.match(template, /\{\{item\.avatarInitial\}\}/);
   assert.match(template, /\{\{item\.likeCount\}\}/);
   assert.match(template, /\{\{item\.replyCount\}\}/);
-  assert.match(style, /\.post-card,\.skeleton-card,\.empty-card\s*\{[^}]*background:\s*#fff/s);
+  assert.match(style, /\.community-empty-shell\s*\{[^}]*background:\s*#fff/s);
   assert.doesNotMatch(template, /post-detail-link|查看详情/);
   assert.match(template, /class="like-count reply-count"[^>]*data-r="1"[^>]*catchtap="handlePost"/);
-  assert.match(template, /community-empty-discussion\.png/);
+  assert.doesNotMatch(template, /community-empty-discussion\.png/);
+  assert.equal(config.usingComponents['empty-state'], '/components/empty-state/index');
   assert.doesNotMatch(template, /认证邻居|关联活动|收藏|分享|帖子图片|post-image|围观|浏览量|#反诈提醒/);
   assert.match(script, /normalizeAvatarSlots/);
   assert.match(script, /fallbackAvatarSlot/);
@@ -148,18 +150,18 @@ test('发现讨论搜索具备提交态、清空、空态、失败和分页语�
   assert.match(template, /搜索暂时走丢了/);
   assert.match(template, /重新搜索/);
   assert.match(template, /还在查找更多讨论/);
-  assert.match(template, /bindtap="handleRetryLoadMore"[^>]*>继续查找/);
+  assert.match(template, /button-text="\{\{error[\s\S]*继续查找/);
+  assert.match(script, /handleEmptyAction\(\)[\s\S]*handleRetryLoadMore/);
   assert.match(template, /已显示全部相关讨论/);
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.discussion-search-entry\s*\{[^}]*padding:\s*0 16rpx/s);
 });
 
-test('发现页新增 Image2 素材为本地透明 PNG 且总量不突破 90KB', () => {
+test('发现页主题与铃铛素材为本地透明 PNG 且总量不突破 90KB', () => {
   const assets = [
     'assets/images/community/community-topic-companion.png',
     'assets/images/community/community-topic-guidelines.png',
     'assets/images/community/community-topic-compose.png',
-    'assets/images/community/community-notification-bell.png',
-    'assets/images/community/community-empty-discussion.png'
+    'assets/images/community/community-notification-bell.png'
   ];
   let total = 0;
   assets.forEach((relativePath) => {

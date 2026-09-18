@@ -18,12 +18,7 @@
       </view>
     </view>
 
-    <view wx:elif="{{error}}" class="activity-state-card" role="alert">
-      <view class="state-bubble" aria-hidden="true"><text>···</text></view>
-      <text class="state-title">动态暂时走丢了</text>
-      <text class="state-description">{{error}}</text>
-      <button class="state-action" bindtap="handleRetry" hover-class="activity-control--pressed">重新加载</button>
-    </view>
+    <view wx:elif="{{error}}" class="activity-state-card" role="alert"><empty-state type="empty-network" title="动态暂时走丢了" description="{{error}}" button-text="重新加载" bind:action="handleRetry" /></view>
 
     <view wx:elif="{{items.length}}" class="activity-list">
       <button wx:for="{{items}}" wx:key="id" class="activity-card {{item.read ? 'activity-card--read' : ''}}" data-id="{{item.id}}" bindtap="handleActivity" hover-class="activity-card--pressed" hover-start-time="60" hover-stay-time="70" aria-label="{{item.accessibilityLabel}}">
@@ -66,11 +61,6 @@
       </view>
     </view>
 
-    <view wx:else class="activity-state-card" role="status" aria-label="当前分类暂无讨论动态">
-      <view class="state-bubble" aria-hidden="true"><text>···</text></view>
-      <text class="state-title">{{currentTab === 'REPLIES' ? '还没有人回复你' : (currentTab === 'LIKES' ? '还没有收到新的赞' : '这里暂时没有动态')}}</text>
-      <text class="state-description">{{currentTab === 'REPLIES' ? '发布一条讨论，和身边同频的人聊起来吧' : (currentTab === 'LIKES' ? '有新的认可时，会第一时间出现在这里' : '近 30 天的回复与点赞会显示在这里')}}</text>
-      <button class="state-action" bindtap="handleEmptyAction" hover-class="activity-control--pressed">{{currentTab === 'REPLIES' ? '发布讨论' : '返回发现'}}</button>
-    </view>
+    <view wx:else class="activity-state-card" role="status"><empty-state type="empty-message" title="{{currentTab === 'REPLIES' ? '还没有人回复你' : (currentTab === 'LIKES' ? '还没有收到新的赞' : '这里暂时没有动态')}}" description="{{currentTab === 'REPLIES' ? '发布一条讨论，和身边同频的人聊起来吧' : (currentTab === 'LIKES' ? '有新的认可时，会第一时间出现在这里' : '近 30 天的回复与点赞会显示在这里')}}" button-text="{{currentTab === 'REPLIES' ? '发布讨论' : '返回发现'}}" bind:action="handleEmptyAction" /></view>
   </view>
 </view>

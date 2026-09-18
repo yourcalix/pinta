@@ -4,8 +4,8 @@ page{background:#f9f7f2}
 .messages-title{font-size:40rpx;font-weight:800}
 .messages-content{padding:0 28rpx}
 .message-entry-list, .conversation-list { display: grid; gap: 16rpx; }
-.message-entry, .conversation-card, .state-paper { width: 100%; margin: 0; box-sizing: border-box; border: 1.5rpx solid #efece6; background: #fff; }
-.message-entry::after, .conversation-card::after, .state-action::after, .footer-retry::after { display: none; }
+.message-entry, .conversation-card, .message-empty-shell { width: 100%; margin: 0; box-sizing: border-box; border: 1.5rpx solid #efece6; background: #fff; }
+.message-entry::after, .conversation-card::after, .footer-retry::after { display: none; }
 .message-entry { display: flex; min-height: 140rpx; align-items: center; padding: 18rpx 24rpx; border-radius: 28rpx; text-align: left; }
 .message-card--pressed { background: #f6f4ee; }
 .message-entry-icon-wrap { position: relative; display: flex; flex: 0 0 96rpx; width: 96rpx; height: 96rpx; align-items: center; justify-content: center; overflow: visible; }
@@ -29,11 +29,8 @@ page{background:#f9f7f2}
 .conversation-preview { display: -webkit-box; margin-top: 7rpx; overflow: hidden; color: #4b4642; font-size: 28rpx; line-height: 1.45; word-break: break-all; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .message-source-panel { display: flex; min-width: 0; align-items: center; margin-top: 14rpx; padding: 12rpx 18rpx; overflow: hidden; border: 1rpx solid #efece6; border-radius: 16rpx; background: #faf8f4; color: #78716c; font-size: 24rpx; line-height: 1.4; }
 .message-source-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.state-paper { display: flex; min-height: 310rpx; flex-direction: column; align-items: center; justify-content: center; padding: 36rpx 24rpx; border-radius: 28rpx; text-align: center; }
-.state-bubble { display: flex; width: 88rpx; height: 68rpx; align-items: center; justify-content: center; border-radius: 34rpx 34rpx 34rpx 12rpx; color: #c98522; background: #ffe4a3; font-size: 30rpx; }
-.state-title { margin-top: 20rpx; font-size: 28rpx; font-weight: 800; }
-.state-desc { margin-top: 10rpx; color: #78716c; font-size: 24rpx; line-height: 1.5; }
-.state-action, .footer-retry { min-height: max(88rpx,44px); margin-top: 20rpx; padding: 12rpx 30rpx; border: 0; border-radius: 44rpx; color: #78350f; background: #fcd15b; font-size: 28rpx; font-weight: 700; }
+.message-empty-shell { overflow: hidden; border-radius: 28rpx; }
+.footer-retry { min-height: max(88rpx,44px); margin-top: 20rpx; padding: 12rpx 30rpx; border: 0; border-radius: 44rpx; color: #78350f; background: #fcd15b; font-size: 28rpx; font-weight: 700; }
 .list-footer { display: flex; min-height: 88rpx; align-items: center; justify-content: center; color: #9a948f; font-size: 24rpx; }
 .footer-retry { margin: 0; }
 .skeleton-card { align-items: center; }

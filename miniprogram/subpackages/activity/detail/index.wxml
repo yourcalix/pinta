@@ -7,8 +7,8 @@
     <view class="skeleton-cover"></view>
     <view class="skeleton-panel"><view></view><view></view><view></view></view>
   </view>
-  <view wx:elif="{{errorCode === 'TAKEDOWN' || errorCode === 'NOT_FOUND'}}" class="detail-error" style="padding-top: {{contentTopInset}}px;"><empty-state symbol="!" title="{{error}}" action-text="返回发现页" bindaction="handleGoDiscover" /></view>
-  <view wx:elif="{{errorCode}}" class="detail-error" style="padding-top: {{contentTopInset}}px;"><empty-state symbol="!" title="{{error}}" action-text="重新加载" bindaction="handleRetry" /></view>
+  <view wx:elif="{{errorCode === 'TAKEDOWN' || errorCode === 'NOT_FOUND'}}" class="detail-error" style="padding-top: {{contentTopInset}}px;"><empty-state type="empty-activity" title="{{error}}" action-text="返回发现页" bindaction="handleGoDiscover" /></view>
+  <view wx:elif="{{errorCode}}" class="detail-error" style="padding-top: {{contentTopInset}}px;"><empty-state type="empty-network" title="{{error}}" action-text="重新加载" bindaction="handleRetry" /></view>
 
   <block wx:elif="{{activity}}">
     <view class="detail-hero detail-hero--{{activity.typeTone}}">

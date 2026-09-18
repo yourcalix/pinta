@@ -105,10 +105,13 @@
         </view>
 
         <view wx:if="{{!currentItems.length}}" class="list-empty">
-          <view class="empty-puzzle" aria-hidden="true"><view class="empty-puzzle-eye empty-puzzle-eye--left"></view><view class="empty-puzzle-eye empty-puzzle-eye--right"></view><view class="empty-puzzle-smile"></view></view>
-          <view class="empty-title">暂无相关拼单记录</view>
-          <view class="empty-copy">去发现页看看正在发生什么吧。</view>
-          <button class="empty-action" bindtap="handleGoDiscover" hover-class="soft-button--pressed">去发现页看看</button>
+          <empty-state
+            type="{{currentList === 'joined' ? 'empty-joined' : 'empty-activity'}}"
+            title="{{currentList === 'owned' ? '还没有发起过拼单' : (currentList === 'joined' ? '还没有参与过拼单' : (currentList === 'formed' ? '还没有成团记录' : '还没有历史足迹'))}}"
+            description="去发现页看看正在发生什么吧。"
+            button-text="去发现"
+            bind:action="handleGoDiscover"
+          />
         </view>
       </view>
     </view>

@@ -26,6 +26,6 @@
       </view>
     </view>
 
-    <view wx:else class="activity-empty-shell"><empty-state symbol="{{error ? '!' : '+'}}" title="{{error ? '全部活动加载失败' : (hasActiveFilters ? '没有找到相关活动' : '暂时还没有活动')}}" description="{{error || (hasActiveFilters ? '换个关键词或活动类型再试试。' : '发起一个活动，邀请同频伙伴加入。')}}" action-text="{{error ? '点击重试' : (hasActiveFilters ? '清除筛选' : '去发起活动')}}" bindaction="handleEmptyAction" /></view>
+    <view wx:else class="activity-empty-shell"><empty-state type="{{error ? 'empty-network' : (hasActiveFilters ? 'empty-search' : 'empty-activity')}}" size="large" title="{{error ? '全部活动暂时走丢了' : (hasActiveFilters ? '没有找到相关活动' : '暂时还没有活动')}}" description="{{error || (hasActiveFilters ? '换个关键词或活动类型再试试。' : '发起一个活动，邀请同频伙伴加入。')}}" action-text="{{error ? '点击重试' : (hasActiveFilters ? '清除筛选' : '去发起活动')}}" bindaction="handleEmptyAction" /></view>
   </view>
 </view>

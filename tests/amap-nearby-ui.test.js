@@ -331,7 +331,7 @@ test('附近页先说明再由用户点击授权，并具备半径筛选和完�
   assert.match(template, /1km[\s\S]*3km[\s\S]*5km[\s\S]*10km/);
   assert.match(template, /去查看全城活动/);
   assert.match(template, /打开设置/);
-  assert.match(template, /bindtap="handleRetryNearby"/);
+  assert.match(template, /bind:action="handleRetryNearby"/);
   assert.match(template, /canRetryNearby \? '重新加载' : '重新定位'/);
 });
 
