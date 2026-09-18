@@ -1,0 +1,12 @@
+{
+  "id": "review-generated-home-hero-v2",
+  "title": "复核第二版首页 Hero IP 图的构图与适配性",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "等待用户按精确坐标提示调整图片后再接入",
+  "createdAt": "2026-09-18T12:07:58Z",
+  "branch": "main"
+}
