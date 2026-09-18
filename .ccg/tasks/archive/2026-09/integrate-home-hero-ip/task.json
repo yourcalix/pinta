@@ -1,0 +1,12 @@
+{
+  "id": "integrate-home-hero-ip",
+  "title": "接入定稿猫狗拼图首页 Hero",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "在微信开发者工具预览标准屏与320px真机效果",
+  "createdAt": "2026-09-18T12:18:22Z",
+  "branch": "main"
+}
