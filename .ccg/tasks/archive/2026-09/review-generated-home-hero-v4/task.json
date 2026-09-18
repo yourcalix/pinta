@@ -1,0 +1,12 @@
+{
+  "id": "review-generated-home-hero-v4",
+  "title": "验收第四版首页 Hero IP 图并确定接入参数",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "等待用户确认后压缩资产并接入首页",
+  "createdAt": "2026-09-18T12:35:00Z",
+  "branch": "main"
+}
