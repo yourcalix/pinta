@@ -86,44 +86,117 @@ test('高德 Key 仅通过运行配置注入且 POI 适配器不持久化用户�
   assert.equal(example.amapMiniProgramKey, 'your-amap-mini-program-key');
   assert.match(resolver, /amapMiniProgramKey/);
   assert.match(amap, /restapi\.amap\.com\/v3\/assistant\/inputtips/);
+  assert.match(amap, /restapi\.amap\.com\/v3\/place\/text/);
   assert.doesNotMatch(amap, /setStorage|setStorageSync/);
 });
 
-test('POI 服务只把真实零结果作为空态，并区分网络、响应与坐标异常', async () => {
-  const responses = [
-    { statusCode: 200, data: { status: '1', tips: [] } },
-    { statusCode: 200, data: { status: '1', tips: [{ id: 'missing-location', name: '大三巴', location: [] }] } },
-    { statusCode: 200, data: { status: '1', tips: [{ id: 'valid', name: '大三巴牌坊', district: '澳门特别行政区花王堂区', address: '耶稣会纪念广场', location: '113.545883,22.194627' }] } },
-    { statusCode: 200, data: { status: '1', tips: null } },
-    { statusCode: 200, data: { status: '0', info: 'INVALID_USER_KEY', infocode: '10001' } },
-    { statusCode: 503, data: { status: '0', info: 'RAW_UPSTREAM_FAILURE' } }
-  ];
+test('Input Tips 有有效坐标时直接返回且不触发文本检索', async () => {
+  const requests = [];
   const context = loadAmapService(
     { useMock: false, amapMiniProgramKey: 'synthetic-key' },
-    ({ success }) => success(responses.shift())
+    (options) => {
+      requests.push(options);
+      options.success({
+        statusCode: 200,
+        data: { status: '1', tips: [{ id: 'valid', name: '大三巴牌坊', district: '澳门特别行政区花王堂区', address: '耶稣会纪念广场', location: '113.545883,22.194627' }] }
+      });
+    }
   );
   try {
-    assert.deepEqual(await context.service.searchPoi('不存在的地点'), []);
-    await assert.rejects(context.service.searchPoi('大三巴'), (error) => error.code === 'AMAP_COORDINATES_UNAVAILABLE');
     const results = await context.service.searchPoi('大三巴');
     assert.equal(results[0].label, '大三巴牌坊');
     assert.equal(results[0].latitude, 22.194627);
-    await assert.rejects(context.service.searchPoi('响应异常'), (error) => error.code === 'AMAP_RESPONSE_INVALID');
-    await assert.rejects(context.service.searchPoi('接口异常'), (error) => (
-      error.code === 'AMAP_REQUEST_FAILED'
-      && !error.message.includes('INVALID_USER_KEY')
-    ));
-    await assert.rejects(context.service.searchPoi('服务异常'), (error) => (
-      error.code === 'AMAP_REQUEST_FAILED'
-      && !error.message.includes('RAW_UPSTREAM_FAILURE')
-    ));
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, context.service.INPUT_TIPS_URL);
   } finally {
     context.cleanup();
   }
+});
 
+test('Input Tips 缺少坐标或为空时由 place/text 补齐真实澳门 POI', async () => {
+  const scenarios = [
+    [{ id: 'generic', name: '新马路' }],
+    []
+  ];
+  for (const tips of scenarios) {
+    const requests = [];
+    const context = loadAmapService(
+      { useMock: false, amapMiniProgramKey: 'synthetic-key' },
+      (options) => {
+        requests.push(options);
+        if (requests.length === 1) {
+          options.success({ statusCode: 200, data: { status: '1', tips } });
+          return;
+        }
+        options.success({
+          statusCode: 200,
+          data: { status: '1', pois: [{ id: 'poi-text', name: '新马路', pname: '澳门特别行政区', cityname: '澳门特别行政区', adname: '澳门半岛', address: '亚美打利庇卢大马路', location: '113.540941,22.193941' }] }
+        });
+      }
+    );
+    try {
+      const results = await context.service.searchPoi('新马路');
+      assert.equal(requests.length, 2);
+      assert.equal(requests[1].url, context.service.POI_TEXT_SEARCH_URL);
+      assert.deepEqual(requests[1].data, {
+        key: 'synthetic-key',
+        keywords: '新马路',
+        city: '澳门',
+        citylimit: true,
+        offset: 20,
+        page: 1,
+        extensions: 'base'
+      });
+      assert.equal(results[0].label, '新马路');
+      assert.equal(results[0].address, '澳门半岛 · 亚美打利庇卢大马路');
+      assert.equal(results[0].longitude, 113.540941);
+    } finally {
+      context.cleanup();
+    }
+  }
+});
+
+test('两层都为空才返回真实空态，有原始候选但无澳门坐标则保持坐标错误', async () => {
+  const emptyResponses = [
+    { statusCode: 200, data: { status: '1', tips: [] } },
+    { statusCode: 200, data: { status: '1', pois: [] } }
+  ];
+  const empty = loadAmapService(
+    { useMock: false, amapMiniProgramKey: 'synthetic-key' },
+    ({ success }) => success(emptyResponses.shift())
+  );
+  try {
+    assert.deepEqual(await empty.service.searchPoi('不存在的地点'), []);
+  } finally {
+    empty.cleanup();
+  }
+
+  const invalidResponses = [
+    { statusCode: 200, data: { status: '1', tips: [{ id: 'missing-location', name: '公园' }] } },
+    { statusCode: 200, data: { status: '1', pois: [{ id: 'outside-macau', name: '公园', pname: '广东省', cityname: '珠海市', adname: '香洲区', address: '横琴', location: '113.531947,22.197180' }] } }
+  ];
+  const invalid = loadAmapService(
+    { useMock: false, amapMiniProgramKey: 'synthetic-key' },
+    ({ success }) => success(invalidResponses.shift())
+  );
+  try {
+    await assert.rejects(invalid.service.searchPoi('公园'), (error) => (
+      error.code === 'AMAP_COORDINATES_UNAVAILABLE'
+      && !error.message.includes('珠海市')
+    ));
+  } finally {
+    invalid.cleanup();
+  }
+});
+
+test('Input Tips 网络、响应与 API 失败会安全短路且不触发第二次请求', async () => {
+  const networkRequests = [];
   const network = loadAmapService(
     { useMock: false, amapMiniProgramKey: 'synthetic-key' },
-    ({ fail }) => fail({ errMsg: 'request:fail url not in domain list' })
+    (options) => {
+      networkRequests.push(options);
+      options.fail({ errMsg: 'request:fail url not in domain list' });
+    }
   );
   try {
     await assert.rejects(network.service.searchPoi('澳门大学'), (error) => (
@@ -131,8 +204,52 @@ test('POI 服务只把真实零结果作为空态，并区分网络、响应与�
       && error.message === '地点搜索连接失败，请稍后重试'
       && !error.message.includes('domain list')
     ));
+    assert.equal(networkRequests.length, 1);
   } finally {
     network.cleanup();
+  }
+
+  const responses = [
+    { statusCode: 200, data: { status: '1', tips: null } },
+    { statusCode: 200, data: { status: '0', info: 'INVALID_USER_KEY', infocode: '10001' } },
+    { statusCode: 503, data: { status: '0', info: 'RAW_UPSTREAM_FAILURE' } }
+  ];
+  for (const response of responses) {
+    let requestCount = 0;
+    const context = loadAmapService(
+      { useMock: false, amapMiniProgramKey: 'synthetic-key' },
+      ({ success }) => { requestCount += 1; success(response); }
+    );
+    try {
+      await assert.rejects(context.service.searchPoi('大三巴'), (error) => (
+        ['AMAP_RESPONSE_INVALID', 'AMAP_REQUEST_FAILED'].includes(error.code)
+        && !error.message.includes('INVALID_USER_KEY')
+        && !error.message.includes('RAW_UPSTREAM_FAILURE')
+      ));
+      assert.equal(requestCount, 1);
+    } finally {
+      context.cleanup();
+    }
+  }
+});
+
+test('place/text 兜底失败沿用脱敏错误并允许页面重试', async () => {
+  const responses = [
+    { statusCode: 200, data: { status: '1', tips: [] } },
+    { statusCode: 200, data: { status: '0', info: 'DAILY_QUERY_OVER_LIMIT', infocode: '10003' } }
+  ];
+  const context = loadAmapService(
+    { useMock: false, amapMiniProgramKey: 'synthetic-key' },
+    ({ success }) => success(responses.shift())
+  );
+  try {
+    await assert.rejects(context.service.searchPoi('咖啡店'), (error) => (
+      error.code === 'AMAP_REQUEST_FAILED'
+      && error.message === '地点搜索暂时不可用，请稍后重试'
+      && !error.message.includes('DAILY_QUERY_OVER_LIMIT')
+    ));
+  } finally {
+    context.cleanup();
   }
 });
 

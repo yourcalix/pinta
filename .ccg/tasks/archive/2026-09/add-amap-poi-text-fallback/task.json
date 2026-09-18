@@ -1,0 +1,12 @@
+{
+  "id": "add-amap-poi-text-fallback",
+  "title": "为缺少坐标的高德地点提示增加文本检索兜底",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送",
+  "createdAt": "2026-09-17T23:01:52+08:00",
+  "branch": "main"
+}
