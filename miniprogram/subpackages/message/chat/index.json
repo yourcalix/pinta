@@ -1,8 +1,8 @@
 {
   "navigationStyle": "custom",
   "navigationBarTitleText": "私信",
-  "navigationBarBackgroundColor": "#075AA7",
-  "navigationBarTextStyle": "white",
-  "backgroundColor": "#075AA7",
-  "backgroundTextStyle": "light"
+  "navigationBarBackgroundColor": "#F9F7F2",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#F9F7F2",
+  "backgroundTextStyle": "dark"
 }

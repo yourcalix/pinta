@@ -7,7 +7,7 @@
   box-sizing: border-box;
   overflow: hidden;
   padding-bottom: calc(132rpx + env(safe-area-inset-bottom));
-  background: #075aa7;
+  background: #f9f7f2;
 }
 .publish-content {
   position: relative;
@@ -24,14 +24,14 @@
   min-height: 164rpx;
   box-sizing: border-box;
   padding: 20rpx 44rpx 24rpx;
-  color: #fff5df;
+  color: #27312c;
 }
 .hero-brand {
   font-size: 24rpx;
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: 2rpx;
-  opacity: .88;
+  color: #68746d;
 }
 .hero-title {
   margin-top: 9rpx;
@@ -44,7 +44,7 @@
   margin-top: 10rpx;
   font-size: 25rpx;
   line-height: 1.45;
-  opacity: .82;
+  color: #748078;
 }
 .hero-scribble {
   position: absolute;
@@ -99,7 +99,7 @@
   text-align: left;
   border: 3rpx solid rgba(255, 245, 222, .58) !important;
   border-radius: 28rpx;
-  box-shadow: inset 0 0 0 3rpx rgba(20, 32, 43, .08), 0 12rpx 24rpx rgba(1, 34, 78, .2);
+  box-shadow: inset 0 0 0 3rpx rgba(20, 32, 43, .08), 0 12rpx 24rpx rgba(39, 49, 44, .12);
   line-height: normal;
   transform: translateZ(0);
 }
@@ -186,7 +186,7 @@
   color: #18342a;
   background: #fff4df !important;
   border: 3rpx solid rgba(255, 255, 255, .48) !important;
-  box-shadow: 0 10rpx 22rpx rgba(1, 34, 78, .18);
+  box-shadow: 0 10rpx 22rpx rgba(39, 49, 44, .1);
 }
 .safety-note::after { display: none; }
 .draft-strip {

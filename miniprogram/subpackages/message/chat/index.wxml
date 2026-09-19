@@ -1,7 +1,4 @@
-<view class="chat-page global-background-host" style="padding-top: {{contentTopInset}}px;">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-  <view class="global-page-background-tint" aria-hidden="true"></view>
-
+<view class="chat-page" style="padding-top: {{contentTopInset}}px;">
   <view class="chat-navigation" style="height: {{contentTopInset}}px;">
     <view class="chat-navigation-row">
       <button class="chat-back-button" bindtap="handleBack" hover-class="chat-nav-button--pressed" aria-label="返回消息列表"><view class="chat-back-chevron" aria-hidden="true"></view></button>

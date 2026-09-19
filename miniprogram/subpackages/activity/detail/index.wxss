@@ -27,6 +27,8 @@ button::after { display: none; }
 .detail-subline { margin-top: 12rpx; color: #8a8a8a; font-size: 25rpx; line-height: 1.45; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .info-card { margin-top: 34rpx; padding: 0 22rpx; border-radius: 24rpx; background: #f7f7f7; }
 .info-row { display: flex; align-items: flex-start; gap: 14rpx; min-height: 96rpx; padding: 24rpx 0; box-sizing: border-box; border-bottom: 1rpx solid #e5e5e5; font-size: 27rpx; line-height: 1.55; }
+.info-row--action { cursor: pointer; }
+.info-row--pressed { background: #f0eee9; }
 .info-symbol { flex: 0 0 30rpx; color: #111; text-align: center; font-size: 24rpx; }
 .info-label { flex: 0 0 120rpx; color: #171717; font-weight: 750; }
 .info-value { flex: 1; min-width: 0; color: #333; overflow-wrap: anywhere; word-break: break-all; }

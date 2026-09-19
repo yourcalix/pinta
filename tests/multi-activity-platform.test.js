@@ -310,8 +310,8 @@ test('三类发布表单共用沉浸式自定义导航、纸纹卡片和完整�
   const textControls = template.match(/<(?:input|textarea)\b[^>]*>/g) || [];
 
   assert.equal(config.navigationStyle, 'custom');
-  assert.equal(config.navigationBarTextStyle, 'white');
-  assert.equal(config.backgroundColorTop, '#075AA7');
+  assert.equal(config.navigationBarTextStyle, 'black');
+  assert.equal(config.backgroundColorTop, '#F9F7F2');
   assert.match(script, /calculateContentTopInset/);
   assert.match(script, /contentTopInset:\s*88/);
   assert.match(script, /handleBack\(\)/);
@@ -319,15 +319,14 @@ test('三类发布表单共用沉浸式自定义导航、纸纹卡片和完整�
   assert.match(template, /class="form-navigation"/);
   assert.match(template, /aria-label="返回上一页"/);
   assert.doesNotMatch(template, /class="form-navigation-title"/);
-  assert.match(template, /shared-paper-bg\.jpg/);
+  assert.doesNotMatch(template, /shared-paper-bg\.jpg|global-page-background/);
   assert.doesNotMatch(template, /class="publish-hero/);
   assert.ok(textControls.length > 0);
   textControls.forEach((control) => {
     assert.match(control, /adjust-position="true"/);
     assert.match(control, /cursor-spacing="140"/);
   });
-  assert.match(style, /\.form-page\s*{[\s\S]*background:\s*#075aa7/);
-  assert.match(template, /class="global-page-background"/);
+  assert.match(style, /\.form-page\s*{[\s\S]*background:\s*#f9f7f2/i);
   const backSurfaceRule = style.match(/\.form-back-surface\s*{([^}]*)\}/);
   assert.ok(backSurfaceRule);
   assert.doesNotMatch(backSurfaceRule[1], /background\s*:/);
@@ -407,7 +406,7 @@ test('发布入口使用双列手绘网格、真实草稿条并兼容窄屏与�
   assert.match(template, /aria-label="{{item\.ariaLabel}}"/);
   assert.match(script, /pinba_publish_draft_/);
   assert.match(script, /hasMeaningfulDraft/);
-  assert.match(template, /class="global-page-background"/);
+  assert.doesNotMatch(template, /class="global-page-background"/);
   assert.match(style, /\.type-grid\s*{[\s\S]*flex-wrap:\s*wrap[\s\S]*gap:\s*20rpx/);
   assert.equal(config.disableScroll, true);
   assert.match(style, /\.publish-page\s*{[\s\S]*height:\s*100vh[\s\S]*overflow:\s*hidden/);

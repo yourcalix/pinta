@@ -1,6 +1,6 @@
 page {
   height: 100%;
-  background: #075aa7;
+  background: #f9f7f2;
 }
 
 .chat-page {
@@ -10,7 +10,7 @@ page {
   width: 100%;
   height: 100vh;
   overflow: hidden;
-  background: #075aa7;
+  background: #f9f7f2;
   box-sizing: border-box;
 }
 
@@ -20,7 +20,7 @@ page {
   top: 0;
   right: 0;
   left: 0;
-  color: #fff8ee;
+  color: #27312c;
 }
 
 .chat-navigation-row {
@@ -60,8 +60,8 @@ page {
   width: 19rpx;
   height: 19rpx;
   margin-left: 7rpx;
-  border-bottom: 5rpx solid #fff8ee;
-  border-left: 5rpx solid #fff8ee;
+  border-bottom: 5rpx solid #27312c;
+  border-left: 5rpx solid #27312c;
   border-radius: 2rpx;
   transform: rotate(45deg);
 }
@@ -74,7 +74,7 @@ page {
   right: 206rpx;
   left: 102rpx;
   overflow: hidden;
-  color: #fff8ee;
+  color: #27312c;
   font-size: 31rpx;
   font-weight: 760;
   line-height: 88rpx;
@@ -206,7 +206,7 @@ page {
   min-height: 64rpx;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 248, 238, 0.82);
+  color: #748078;
   font-size: 21rpx;
 }
 
@@ -216,8 +216,8 @@ page {
   padding: 8rpx 22rpx;
   border: 0;
   border-radius: 28rpx;
-  background: rgba(255, 248, 238, 0.19);
-  color: #fff8ee;
+  background: #eeeae2;
+  color: #57534e;
   font-size: 21rpx;
   line-height: 38rpx;
 }
@@ -231,8 +231,8 @@ page {
   margin: 17rpx auto 10rpx;
   padding: 0 16rpx;
   border-radius: 20rpx;
-  background: rgba(255, 248, 238, 0.2);
-  color: rgba(255, 248, 238, 0.86);
+  background: #eeeae2;
+  color: #78716c;
   font-size: 20rpx;
   line-height: 40rpx;
   text-align: center;
@@ -260,7 +260,7 @@ page {
   height: 64rpx;
   border: 2rpx solid rgba(255, 248, 238, 0.86);
   border-radius: 50%;
-  color: #fff8ee;
+  color: #27312c;
   font-size: 28rpx;
   font-weight: 700;
   line-height: 60rpx;
@@ -318,7 +318,7 @@ page {
   align-items: center;
   justify-content: center;
   gap: 8rpx;
-  border: 5rpx solid rgba(255, 248, 238, 0.82);
+  border: 5rpx solid #9aa59f;
   border-radius: 30rpx 27rpx 31rpx 25rpx;
   transform: rotate(-3deg);
 }
@@ -329,8 +329,8 @@ page {
   left: 18rpx;
   width: 20rpx;
   height: 20rpx;
-  border-bottom: 5rpx solid rgba(255, 248, 238, 0.82);
-  border-left: 5rpx solid rgba(255, 248, 238, 0.82);
+  border-bottom: 5rpx solid #9aa59f;
+  border-left: 5rpx solid #9aa59f;
   content: '';
   transform: skewY(-28deg);
 }
@@ -338,7 +338,7 @@ page {
 .empty-dot {
   width: 9rpx;
   height: 9rpx;
-  background: #fff8ee;
+  background: #9aa59f;
   border-radius: 50%;
 }
 
@@ -350,7 +350,7 @@ page {
 
 .empty-copy {
   margin-top: 10rpx;
-  color: rgba(255, 248, 238, 0.82);
+  color: #748078;
   font-size: 24rpx;
   line-height: 1.5;
 }
@@ -380,7 +380,7 @@ page {
 
 .empty-safety {
   margin-top: 24rpx;
-  color: rgba(255, 248, 238, 0.7);
+  color: #8b958f;
   font-size: 21rpx;
   line-height: 1.5;
 }
@@ -480,7 +480,7 @@ page {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  color: #fff8ee;
+  color: #27312c;
   text-align: center;
   box-sizing: border-box;
 }
@@ -491,7 +491,7 @@ page {
 .state-bubble-skeleton {
   height: 74rpx;
   border-radius: 22rpx;
-  background: rgba(255, 248, 238, 0.3);
+  background: #eeeae2;
 }
 
 .state-source-skeleton { width: 100%; }
@@ -510,7 +510,7 @@ page {
   position: relative;
   width: 88rpx;
   height: 68rpx;
-  border: 5rpx solid #fff8ee;
+  border: 5rpx solid #9aa59f;
   border-radius: 30rpx 27rpx 31rpx 25rpx;
 }
 
@@ -520,13 +520,13 @@ page {
   left: 18rpx;
   width: 20rpx;
   height: 20rpx;
-  border-bottom: 5rpx solid #fff8ee;
-  border-left: 5rpx solid #fff8ee;
+  border-bottom: 5rpx solid #9aa59f;
+  border-left: 5rpx solid #9aa59f;
   content: '';
 }
 
 .state-title { margin-top: 30rpx; font-size: 31rpx; font-weight: 760; }
-.state-copy { max-width: 520rpx; margin-top: 12rpx; color: rgba(255, 248, 238, 0.8); font-size: 24rpx; line-height: 1.5; }
+.state-copy { max-width: 520rpx; margin-top: 12rpx; color: #748078; font-size: 24rpx; line-height: 1.5; }
 
 .state-action {
   min-height: 88rpx;
@@ -534,8 +534,8 @@ page {
   padding: 0 38rpx;
   border: 0;
   border-radius: 44rpx;
-  background: #fff8ee;
-  color: #11784f;
+  background: #16a36a;
+  color: #fff;
   font-size: 25rpx;
   font-weight: 700;
   line-height: 88rpx;

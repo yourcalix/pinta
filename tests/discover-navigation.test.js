@@ -9,7 +9,7 @@ const { calculateContentTopInset } = require('../miniprogram/utils/navigation-la
 
 const root = path.join(__dirname, '..');
 
-test('四个 Tab 页面使用 custom navigation，首页与发现页切换为暖白背景黑色状态栏', () => {
+test('四个 Tab 页面使用 custom navigation，普通页面统一暖米白状态栏', () => {
   const discover = require('../miniprogram/pages/discover/index.json');
   const community = require('../miniprogram/pages/community/index.json');
   const publish = require('../miniprogram/pages/publish/index.json');
@@ -17,8 +17,8 @@ test('四个 Tab 页面使用 custom navigation，首页与发现页切换为暖
   assert.equal(user.navigationStyle, 'custom');
   assert.equal(user.navigationBarTitleText, undefined);
   assert.equal(user.navigationBarTextStyle, 'white');
-  assert.equal(user.backgroundColorTop, '#075AA7');
-  assert.equal(user.backgroundTextStyle, 'light');
+  assert.equal(user.backgroundColorTop, '#F9F7F2');
+  assert.equal(user.backgroundTextStyle, 'dark');
   assert.equal(discover.navigationStyle, 'custom');
   assert.equal(discover.navigationBarTitleText, undefined);
   assert.equal(discover.navigationBarTextStyle, 'black');
@@ -31,8 +31,8 @@ test('四个 Tab 页面使用 custom navigation，首页与发现页切换为暖
   assert.equal(community.backgroundTextStyle, 'dark');
   assert.equal(publish.navigationStyle, 'custom');
   assert.equal(publish.navigationBarTitleText, undefined);
-  assert.equal(publish.navigationBarTextStyle, 'white');
-  assert.equal(publish.backgroundColorTop, '#075AA7');
+  assert.equal(publish.navigationBarTextStyle, 'black');
+  assert.equal(publish.backgroundColorTop, '#F9F7F2');
 });
 
 test('顶部安全区使用胶囊底边、对称间距和 8px 呼吸区', () => {
@@ -90,12 +90,12 @@ test('发布与我的页面正文动态避让顶部并使用完整视口盒模�
   }
 });
 
-test('我的页面顶部与其他一级页面共用清晰纸纹背景且不叠加独立遮罩', () => {
+test('我的页面移除旧共享纸纹并保留个人沉浸氛围层', () => {
   const template = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxml'), 'utf8');
   const pageStyle = fs.readFileSync(path.join(root, 'miniprogram/pages/user/index.wxss'), 'utf8');
 
-  assert.match(template, /class="global-page-background"[^>]*shared-paper-bg\.jpg/);
-  assert.match(template, /class="global-page-background-tint"/);
+  assert.doesNotMatch(template, /shared-paper-bg\.jpg|global-page-background/);
+  assert.match(template, /class="profile-atmosphere"/);
   assert.doesNotMatch(template, /profile-status-mask/);
   assert.doesNotMatch(pageStyle, /\.profile-status-mask/);
 });

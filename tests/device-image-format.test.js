@@ -19,7 +19,6 @@ const TRANSPARENT_ASSETS = [
 ];
 const JPEG_ASSETS = [
   'assets/images/profile/profile-default-cover.jpg',
-  'assets/images/shared/shared-paper-bg.jpg',
   'subpackages/publish/form/assets/food/pin_food_interface.jpg',
   'subpackages/publish/form/assets/food/yuecai.jpg',
   'subpackages/publish/form/assets/food/pin_htht.jpg'
@@ -79,7 +78,7 @@ test('透明活动插画与头像使用保留多级 Alpha 的 PNG', () => {
   }
 });
 
-test('个人背景与共享纸纹使用非渐进式 Baseline JPEG', () => {
+test('个人背景与启动插画使用非渐进式 Baseline JPEG', () => {
   for (const relativePath of JPEG_ASSETS) {
     const buffer = fs.readFileSync(path.join(ROOT, relativePath));
     assert.deepEqual([...buffer.subarray(0, 3)], [0xff, 0xd8, 0xff], relativePath);

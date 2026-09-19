@@ -1,7 +1,4 @@
-<view class="page user-page global-background-host">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-  <view class="global-page-background-tint" aria-hidden="true"></view>
-
+<view class="page user-page">
   <view wx:if="{{loading}}" class="page-state-layer" style="margin-top: {{contentTopInset}}px;" role="status" aria-label="正在整理你的个人主页">
     <view class="profile-loading-avatar skeleton-shimmer"></view>
     <view class="profile-loading-line profile-loading-line--title skeleton-shimmer"></view>

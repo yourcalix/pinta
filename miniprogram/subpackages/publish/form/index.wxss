@@ -6,7 +6,7 @@
   padding-right: 0;
   padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
   padding-left: 0;
-  background: #075aa7;
+  background: #f9f7f2;
 }
 
 .form-page--food {
@@ -30,7 +30,7 @@
 
 .form-paper-tint {
   z-index: 1;
-  background: rgba(0, 58, 134, .14);
+  background: rgba(146, 64, 14, .04);
 }
 
 .form-navigation {
@@ -39,7 +39,7 @@
   top: 0;
   right: 0;
   left: 0;
-  color: #fff8e7;
+  color: #27312c;
 }
 
 .form-navigation-row {
@@ -80,8 +80,8 @@
   width: 19rpx;
   height: 19rpx;
   margin-left: 7rpx;
-  border-bottom: 5rpx solid #fff8e7;
-  border-left: 5rpx solid #fff8e7;
+  border-bottom: 5rpx solid #27312c;
+  border-left: 5rpx solid #27312c;
   border-radius: 2rpx;
   transform: rotate(45deg);
 }
@@ -98,7 +98,7 @@
   gap: 12rpx;
   min-height: 58rpx;
   margin: 4rpx 4rpx 20rpx;
-  color: rgba(255, 248, 231, .88);
+  color: #27312c;
   font-size: 42rpx;
   font-weight: 600;
   line-height: 1.45;

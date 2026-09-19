@@ -1,0 +1,7 @@
+{"file":"miniprogram/subpackages/activity/detail/index.js","reason":"地点查看交互与公开地点兼容"}
+{"file":"miniprogram/subpackages/activity/detail/index.wxml","reason":"集合地点行当前只有箭头无点击事件"}
+{"file":"miniprogram/subpackages/activity/manage/index.wxml","reason":"发布者申请管理页仍加载深蓝共享背景"}
+{"file":"miniprogram/subpackages/activity/manage/index.wxss","reason":"管理页文字和按钮按深蓝背景设计"}
+{"file":"miniprogram/app.wxss","reason":"全局 page 与 global-background-host 默认深蓝"}
+{"file":"miniprogram/app.json","reason":"全局原生窗口默认深蓝"}
+{"file":"cloudfunctions/api/lib/service.js","reason":"确认公开地点 DTO 已包含 label/address 且不含精确坐标"}

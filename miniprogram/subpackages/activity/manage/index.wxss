@@ -1,17 +1,26 @@
 .manage-page {
-  padding-top: 20rpx;
+  min-height: 100vh;
+  padding: 28rpx 28rpx calc(40rpx + env(safe-area-inset-bottom));
+  background: #f9f7f2;
+  color: #27312c;
 }
 
 .loading-block {
   margin-top: 60rpx;
   padding: 50rpx;
-  color: #718078;
+  color: #748078;
   text-align: center;
 }
 
-.activity-summary {
-  padding: 26rpx;
+.activity-summary,
+.application-card {
+  border: 1rpx solid #efece6;
+  border-radius: 32rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(39, 49, 44, 0.06);
 }
+
+.activity-summary { padding: 30rpx; }
 
 .summary-top,
 .section-heading,
@@ -22,105 +31,132 @@
 }
 
 .summary-top,
-.section-heading {
-  justify-content: space-between;
-}
+.section-heading { justify-content: space-between; }
 
 .summary-type {
   font-size: 24rpx;
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .summary-title {
   margin-top: 18rpx;
-  font-size: 32rpx;
-  font-weight: 680;
+  color: #27312c;
+  font-size: 34rpx;
+  font-weight: 780;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .summary-progress {
   margin-top: 10rpx;
-  color: #68756e;
+  color: #748078;
   font-size: 25rpx;
 }
 
-.group-button {
-  margin-top: 22rpx;
-}
+.group-button { margin-top: 24rpx; }
 
 .section-heading {
-  margin: 32rpx 2rpx 16rpx;
-  color: #fff8ee;
+  margin: 34rpx 4rpx 18rpx;
+  color: #27312c;
   font-size: 31rpx;
-  font-weight: 650;
-  text-shadow: 0 2rpx 4rpx rgba(7, 35, 70, 0.24);
+  font-weight: 750;
 }
 
 .section-count {
-  color: #d9e7f3;
-  font-size: 24rpx;
+  display: inline-flex;
+  min-width: 44rpx;
+  min-height: 44rpx;
+  padding: 0 12rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22rpx;
+  background: #eeeae2;
+  color: #78716c;
+  font-size: 23rpx;
+  font-variant-numeric: tabular-nums;
 }
 
 .application-card {
-  margin-bottom: 16rpx;
-  padding: 24rpx;
+  margin-bottom: 18rpx;
+  padding: 26rpx;
 }
 
 .applicant-avatar {
   display: flex;
+  flex: 0 0 72rpx;
+  width: 72rpx;
+  height: 72rpx;
   align-items: center;
   justify-content: center;
-  width: 66rpx;
-  height: 66rpx;
-  color: #fff;
-  background: #315f9d;
-  border-radius: 20rpx;
-  font-size: 28rpx;
-  font-weight: 650;
+  color: #11784f;
+  background: #e8f6ef;
+  border-radius: 24rpx;
+  font-size: 29rpx;
+  font-weight: 750;
 }
 
 .applicant-main {
   flex: 1;
+  min-width: 0;
   margin-left: 18rpx;
 }
 
 .applicant-name {
-  font-weight: 650;
+  overflow: hidden;
+  color: #27312c;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .application-time {
-  margin-top: 4rpx;
-  color: #7a867f;
+  margin-top: 5rpx;
+  color: #8a948e;
   font-size: 23rpx;
 }
 
 .application-note {
   margin-top: 20rpx;
-  padding: 18rpx;
-  color: #4f5c55;
-  background: #f6f8f7;
-  border-radius: 14rpx;
+  padding: 20rpx;
+  color: #56625b;
+  background: #f7f5f0;
+  border-radius: 18rpx;
   font-size: 25rpx;
-  line-height: 1.55;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .application-actions {
   gap: 14rpx;
-  margin-top: 20rpx;
+  margin-top: 22rpx;
 }
 
 .application-actions button {
   flex: 1;
-  min-height: 76rpx;
+  min-height: 88rpx;
   margin: 0;
   font-size: 26rpx;
 }
 
 .cancel-link {
-  min-height: 76rpx;
-  margin-top: 26rpx;
-  color: #fff0dc;
-  background: transparent;
+  min-height: 88rpx;
+  margin-top: 28rpx;
+  color: #c45555;
+  background: #fff0f0;
+  border: 1rpx solid #f2d4d4;
+  border-radius: 44rpx;
   font-size: 25rpx;
-  line-height: 1.4;
-  text-shadow: 0 1rpx 3rpx rgba(7, 35, 70, 0.24);
+  font-weight: 650;
+  line-height: 88rpx;
+}
+
+.cancel-link::after { display: none; }
+
+@media (max-width: 340px) {
+  .manage-page { padding-right: 20rpx; padding-left: 20rpx; }
+  .activity-summary,
+  .application-card { border-radius: 26rpx; }
+  .application-card { padding-right: 20rpx; padding-left: 20rpx; }
+  .applicant-avatar { flex-basis: 64rpx; width: 64rpx; height: 64rpx; }
+  .application-actions { gap: 10rpx; }
 }

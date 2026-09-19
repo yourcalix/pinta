@@ -10,7 +10,7 @@ function harness(activity, pages = 1, overrides = {}) {
   const events = [];
   const nativeRequire = createRequire(filename);
   const api = { detail: async () => ({ activity }), apply: async () => {}, ...overrides };
-  const wx = { showShareMenu() {}, switchTab: v => events.push(v.url), navigateBack: () => events.push('back'), showToast() {}, ...overrides.wx };
+  const wx = { showShareMenu() {}, switchTab: v => events.push(v.url), navigateBack: () => events.push('back'), showToast() {}, openLocation: () => events.push('openLocation'), ...overrides.wx };
   vm.runInNewContext(fs.readFileSync(filename, 'utf8'), { Page: v => { definition = v; }, wx, getCurrentPages: () => Array(pages).fill({}), require: name => name.endsWith('services/activity') ? api : name.endsWith('services/user') ? { login: overrides.login || (async () => ({ profile: { adultConfirmed: true, gender: 'MALE' } })) } : nativeRequire(name) });
   const page = { ...definition, data: structuredClone(definition.data), setData(patch, callback) { Object.assign(this.data, patch); if (callback) callback(); } };
   page.onLoad({ id: 'a' });
@@ -62,6 +62,40 @@ test('鉴权双击合并且页面卸载后不打开抽屉', async () => {
   page.onUnload(); release({ profile: { adultConfirmed: true, gender: 'MALE' } }); await Promise.all([first, second]);
   assert.equal(calls, 1); assert.equal(page.data.showApply, false);
 });
+test('拼好饭详情可查看公开集合地点但绝不暴露坐标或拉起地图', async () => {
+  const { page, events } = harness({
+    ...base,
+    type: 'food',
+    typeData: { venue: '春风饭店' },
+    sceneLine: '春风饭店 · 一楼大堂',
+    placeLabel: '春风饭店',
+    meetingPoint: {
+      label: '春风饭店',
+      address: '北京市东城区春风路 18 号',
+      latitude: 39.9,
+      longitude: 116.4,
+      poiId: 'private-poi'
+    }
+  });
+  await page.onShow();
+  assert.equal(page.data.canViewMeetingPoint, true);
+  page.handleOpenMeetingPointModal();
+  assert.equal(page.data.meetingPointModalVisible, true);
+  assert.equal(page.data.meetingPointModalTitle, '集合地点');
+  assert.match(page.data.meetingPointModalDescription, /春风饭店/);
+  assert.match(page.data.meetingPointModalDescription, /北京市东城区春风路 18 号/);
+  assert.doesNotMatch(page.data.meetingPointModalDescription, /39\.9|116\.4|private-poi/);
+  assert.doesNotMatch(events.join(','), /openLocation/);
+  page.handleCloseMeetingPointModal();
+  assert.equal(page.data.meetingPointModalVisible, false);
+});
+test('历史活动地点缺少结构化地址时使用公开文案安全回退', async () => {
+  const { page } = harness({ ...base, type: 'food', typeData: { venue: '老街口集合' }, placeLabel: '' });
+  await page.onShow();
+  page.handleOpenMeetingPointModal();
+  assert.match(page.data.meetingPointModalDescription, /老街口集合/);
+  assert.match(page.data.meetingPointModalDescription, /暂无详细门牌地址/);
+});
 test('详情布局采用大幅封面、白色连续面板、四段底栏并保留键盘与触控安全', () => {
   const template = fs.readFileSync(filename.replace('.js', '.wxml'), 'utf8');
   const style = fs.readFileSync(filename.replace('.js', '.wxss'), 'utf8');
@@ -74,6 +108,10 @@ test('详情布局采用大幅封面、白色连续面板、四段底栏并保�
   assert.match(template, /认识发起人/); assert.match(template, /Host · 活动发起人/);
   assert.match(template, /ownerAvatar\.src/); assert.match(template, /binderror="handleOwnerAvatarError"/);
   assert.match(template, /ownerPersonalTags/);
+  assert.match(template, /bindtap="handleOpenMeetingPointModal"/);
+  assert.match(template, /<pinba-modal[\s\S]*type="location"/);
+  assert.equal(config.usingComponents['pinba-modal'], '/components/pinba-modal/index');
+  assert.doesNotMatch(fs.readFileSync(filename, 'utf8'), /wx\.openLocation/);
   assert.match(template, /class="owner-personal-tags" aria-hidden="true"/);
   assert.doesNotMatch(template, /评分|职业|宠物|认证房东/);
   assert.match(style, /height:\s*calc\(75vh \+ 48rpx\)/); assert.match(style, /background:\s*#fff/);

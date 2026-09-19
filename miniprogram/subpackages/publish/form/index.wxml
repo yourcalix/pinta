@@ -1,4 +1,4 @@
-<view class="page form-page form-page--{{meta.tone}} global-background-host" style="padding-top: {{contentTopInset}}px;">
+<view class="page form-page form-page--{{meta.tone}}" style="padding-top: {{contentTopInset}}px;">
   <block wx:if="{{type === 'food'}}">
     <image class="form-paper-background" src="./assets/food/pin_food_interface.jpg" mode="aspectFill" aria-hidden="true" />
     <view class="form-paper-tint" aria-hidden="true"></view>
@@ -6,10 +6,6 @@
   <block wx:elif="{{type === 'benefit'}}">
     <view class="benefit-paper-background" aria-hidden="true"></view>
     <view class="benefit-paper-glow" aria-hidden="true"></view>
-  </block>
-  <block wx:else>
-    <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-    <view class="global-page-background-tint" aria-hidden="true"></view>
   </block>
   <image wx:if="{{type === 'companion'}}" class="companion-travel-frame" src="./assets/companion/companion-travel-frame.png" mode="aspectFill" aria-hidden="true" />
 

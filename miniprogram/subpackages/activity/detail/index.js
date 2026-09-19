@@ -55,6 +55,32 @@ function ownerPersonalTags(profile) {
   return tags;
 }
 
+function meetingPointPresentation(activity) {
+  const source = activity && activity.meetingPoint && typeof activity.meetingPoint === 'object'
+    ? activity.meetingPoint
+    : {};
+  const label = String(source.label || '').trim();
+  const address = String(source.address || '').trim();
+  const fallback = String(activity && (activity.sceneLine || activity.placeLabel) || '').trim();
+  if (label || address) {
+    const lines = [label, address && address !== label ? address : ''].filter(Boolean);
+    return {
+      title: '集合地点',
+      description: `${lines.join('\n')}\n\n该地点由发起人公开提供，活动前请与拼友在群内确认；暂不提供地图导航。`
+    };
+  }
+  if (fallback) {
+    return {
+      title: '集合地点',
+      description: `${fallback}\n\n暂无详细门牌地址。活动前请与拼友在群内确认。`
+    };
+  }
+  return {
+    title: '集合地点',
+    description: '发起人暂未补充公开地点。\n\n请在加入后通过群聊或私信与发起人沟通确认。'
+  };
+}
+
 function presentation(activity) {
   const slots = normalizeAvatarSlots(activity.avatarSlots, activity.maxMembers);
   const supported = ['companion', 'sport', 'food', 'benefit'].includes(activity.typeTone);
@@ -96,6 +122,7 @@ function presentation(activity) {
     coverFailed: false,
     deadlineLabel: formatDateTime(activity.deadlineAt),
     placeInfoLabel: activity.typeTone === 'benefit' ? '优惠信息' : '集合地点',
+    canViewMeetingPoint: activity.typeTone !== 'benefit',
     safetyText: activity.typeTone === 'benefit'
       ? '平台仅提供信息撮合与成员交流，不代收款项、不承诺优惠有效性；请核验规则并通过官方渠道或当面结算。'
       : '成团后请在成员空间核验身份并自行确认安排；平台不提供运输、配送、担保或预订服务。',
@@ -123,7 +150,8 @@ function presentation(activity) {
 
 Page({
   data: { id: '', activity: null, detailRows: [], loading: true, error: '', errorCode: '', applying: false, note: '', showApply: false,
-    contentTopInset: 88, navTop: 36, singlePage: true, navSolid: false, coverSrc: '', coverFailed: false, detailSlots: [], hiddenMembers: 0, ownerAvatar: null, ownerNickname: '', ownerPersonalTags: [], ownerFacts: [], ownerDutyText: '', ownerAccessibilityLabel: '', primaryAction: '', primaryLabel: '', opening: false, groupEnabled: false, consultEnabled: false, consulting: false },
+    contentTopInset: 88, navTop: 36, singlePage: true, navSolid: false, coverSrc: '', coverFailed: false, detailSlots: [], hiddenMembers: 0, ownerAvatar: null, ownerNickname: '', ownerPersonalTags: [], ownerFacts: [], ownerDutyText: '', ownerAccessibilityLabel: '', primaryAction: '', primaryLabel: '', opening: false, groupEnabled: false, consultEnabled: false, consulting: false,
+    canViewMeetingPoint: false, meetingPointModalVisible: false, meetingPointModalTitle: '集合地点', meetingPointModalDescription: '' },
   onLoad(options = {}) {
     this._disposed = false;
     const contentTopInset = calculateContentTopInset(typeof wx === 'undefined' ? null : wx);
@@ -142,7 +170,7 @@ Page({
       if (!this._disposed) this.setData({ navSolid: result.intersectionRatio === 0 && result.boundingClientRect.top < this.data.contentTopInset });
     });
   },
-  onHide() { this._visible = false; this._loadSeq = (this._loadSeq || 0) + 1; this.setData({ showApply: false }); },
+  onHide() { this._visible = false; this._loadSeq = (this._loadSeq || 0) + 1; this.setData({ showApply: false, meetingPointModalVisible: false }); },
   onUnload() { this._disposed = true; this._visible = false; this._loadSeq = (this._loadSeq || 0) + 1; if (this._heroObserver) this._heroObserver.disconnect(); this._heroObserver = null; },
   handleBack() {
     let pages = [];
@@ -156,6 +184,16 @@ Page({
     if (this.data.primaryAction === 'group') return this.handleGroup();
   },
   preventScroll() {},
+  handleOpenMeetingPointModal() {
+    if (!this.data.activity || !this.data.canViewMeetingPoint) return;
+    const modal = meetingPointPresentation(this.data.activity);
+    this.setData({
+      meetingPointModalVisible: true,
+      meetingPointModalTitle: modal.title,
+      meetingPointModalDescription: modal.description
+    });
+  },
+  handleCloseMeetingPointModal() { this.setData({ meetingPointModalVisible: false }); },
   handleCoverError() { this.setData({ coverFailed: true }); },
   handleMemberAvatarError(event) {
     const dataset = event && event.currentTarget && event.currentTarget.dataset || {};

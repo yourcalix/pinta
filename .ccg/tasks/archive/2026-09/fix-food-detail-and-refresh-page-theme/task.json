@@ -1,0 +1,12 @@
+{
+  "id": "fix-food-detail-and-refresh-page-theme",
+  "title": "修复拼好饭集合地点并统一成员管理与页面背景风格",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "无",
+  "createdAt": "2026-09-19T00:00:00+08:00",
+  "branch": "main"
+}

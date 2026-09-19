@@ -1,10 +1,10 @@
 {
   "navigationStyle": "custom",
   "navigationBarTextStyle": "white",
-  "backgroundColor": "#075AA7",
-  "backgroundColorTop": "#075AA7",
+  "backgroundColor": "#F9F7F2",
+  "backgroundColorTop": "#F9F7F2",
   "backgroundColorBottom": "#F9F7F2",
-  "backgroundTextStyle": "light",
+  "backgroundTextStyle": "dark",
   "usingComponents": {
     "empty-state": "/components/empty-state/index",
     "status-badge": "/components/status-badge/index"

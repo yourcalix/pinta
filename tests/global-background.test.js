@@ -11,102 +11,66 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
-function pageTemplates() {
-  return [
-    ...fs.readdirSync(path.join(root, 'pages'), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => `pages/${entry.name}/index.wxml`),
-    ...fs.readdirSync(path.join(root, 'subpackages'), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .flatMap((subpackage) => fs.readdirSync(path.join(root, 'subpackages', subpackage.name), { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => `subpackages/${subpackage.name}/${entry.name}/index.wxml`))
-  ].sort();
+function pageFiles(extension) {
+  const result = [];
+  function walk(directory, relative = '') {
+    fs.readdirSync(directory, { withFileTypes: true }).forEach((entry) => {
+      const nextRelative = path.join(relative, entry.name);
+      const nextPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) walk(nextPath, nextRelative);
+      else if (entry.name === `index.${extension}`) result.push(nextRelative.replaceAll(path.sep, '/'));
+    });
+  }
+  walk(path.join(root, 'pages'), 'pages');
+  walk(path.join(root, 'subpackages'), 'subpackages');
+  return result.sort();
 }
 
-test('除独立视觉首页、发现、发布讨论、在线星球、公开主页、活动列表、附近、成团记忆、选点、详情与资料页外，其余页面共用拼图纸纹背景', () => {
-  const templates = pageTemplates();
-  const referenceBackgroundPages = new Set([
-    'pages/discover/index.wxml',
-    'pages/community/index.wxml',
-    'pages/messages/index.wxml',
-    'subpackages/community/compose/index.wxml',
-    'subpackages/community/companion/index.wxml',
-    'subpackages/community/detail/index.wxml',
-    'subpackages/community/activity/index.wxml',
-    'subpackages/profile/public/index.wxml',
-    'subpackages/activity/list/index.wxml',
-    'subpackages/activity/nearby/index.wxml',
-    'subpackages/activity/memories/index.wxml',
-    'subpackages/activity/detail/index.wxml',
-    'subpackages/profile/edit/index.wxml',
-    'subpackages/publish/location-picker/index.wxml'
-  ]);
+test('普通页面不再挂载旧深蓝纸纹背景，搭子星球保留独立暗夜主题', () => {
+  const templates = pageFiles('wxml');
   assert.equal(templates.length, 22);
-  templates.filter((relativePath) => !referenceBackgroundPages.has(relativePath)).forEach((relativePath) => {
+  templates.forEach((relativePath) => {
     const template = read(relativePath);
-    assert.equal((template.match(/shared-paper-bg\.jpg/g) || []).length, 1, relativePath);
-    assert.match(template, /src="\/assets\/images\/shared\/shared-paper-bg\.jpg"/, relativePath);
-    assert.match(template, /class="global-page-background"[^>]*mode="aspectFill"[^>]*aria-hidden="true"/, relativePath);
-    assert.match(template, /class="global-page-background-tint"[^>]*aria-hidden="true"/, relativePath);
-    assert.match(template, /global-background-host/, relativePath);
-    assert.doesNotMatch(template, /publish-paper-texture\.webp/, relativePath);
+    assert.doesNotMatch(template, /shared-paper-bg\.jpg/, relativePath);
+    assert.doesNotMatch(template, /global-page-background(?:-tint)?/, relativePath);
+    assert.doesNotMatch(template, /global-background-host/, relativePath);
   });
+
+  const planetStyle = read('subpackages/community/companion/index.wxss');
+  assert.match(planetStyle, /#0D0C1B/i);
+  const profileTemplate = read('pages/user/index.wxml');
+  assert.match(profileTemplate, /class="profile-atmosphere"/);
+  assert.match(profileTemplate, /profile-atmosphere-image/);
 });
 
-test('共享背景资产和全局样式满足主包、固定视口与对比度保护要求', () => {
-  const assetPath = path.join(root, 'assets/images/shared/shared-paper-bg.jpg');
-  const asset = fs.readFileSync(assetPath);
+test('全局托底改为暖米白且旧共享背景资产被移除', () => {
   const style = read('app.wxss');
-  assert.deepEqual([...asset.subarray(0, 3)], [0xff, 0xd8, 0xff]);
-  assert.ok(asset.length <= 200 * 1024, `背景图超过 200KB：${asset.length}`);
-  assert.match(style, /\.global-page-background,[\s\S]*position:\s*fixed[\s\S]*width:\s*100vw[\s\S]*height:\s*100vh/);
-  assert.match(style, /\.global-page-background\s*{[\s\S]*opacity:\s*0\.88/);
-  assert.match(style, /\.global-page-background-tint\s*{[\s\S]*rgba\(7, 45, 90, 0\.45\)/);
-  assert.match(style, /\.global-page-background-tint\s*{[\s\S]*transform:\s*translateZ\(0\)/);
-  assert.match(style, /pointer-events:\s*none/);
+  assert.match(style, /page\s*{[\s\S]*background:\s*#f9f7f2/i);
+  assert.doesNotMatch(style, /#075aa7/i);
+  assert.doesNotMatch(style, /\.global-page-background/);
+  assert.equal(fs.existsSync(path.join(root, 'assets/images/shared/shared-paper-bg.jpg')), false);
 });
 
-test('全局与二级页面原生窗口使用深蓝占位避免图片解码前白闪', () => {
+test('原生窗口统一使用暖米白占位，暗夜星球显式例外', () => {
   const app = JSON.parse(read('app.json'));
-  assert.equal(app.window.navigationBarBackgroundColor, '#075AA7');
-  assert.equal(app.window.navigationBarTextStyle, 'white');
-  assert.equal(app.window.backgroundColor, '#075AA7');
-  assert.equal(app.window.backgroundTextStyle, 'light');
+  assert.equal(app.window.navigationBarBackgroundColor, '#F9F7F2');
+  assert.equal(app.window.navigationBarTextStyle, 'black');
+  assert.equal(app.window.backgroundColor, '#F9F7F2');
+  assert.equal(app.window.backgroundTextStyle, 'dark');
 
-  const configs = pageTemplates().map((template) => template.replace(/\.wxml$/, '.json'));
-  configs.forEach((relativePath) => {
+  const exceptions = {
+    'subpackages/community/companion/index.json': ['#0D0C1B', 'light'],
+    'subpackages/activity/detail/index.json': ['#FFFFFF', 'dark'],
+    'subpackages/profile/edit/index.json': ['#F6F7F9', 'dark']
+  };
+  pageFiles('json').forEach((relativePath) => {
     const config = JSON.parse(read(relativePath));
-    const lightBackgrounds = {
-      'pages/discover/index.json': '#F9F7F2',
-      'pages/community/index.json': '#F9F7F2',
-      'pages/messages/index.json': '#F9F7F2',
-      'subpackages/community/compose/index.json': '#F9F7F2',
-      'subpackages/community/companion/index.json': '#0D0C1B',
-      'subpackages/community/detail/index.json': '#F9F7F2',
-      'subpackages/community/activity/index.json': '#F9F7F2',
-      'subpackages/profile/public/index.json': '#F9F7F2',
-      'subpackages/activity/list/index.json': '#F9F7F2',
-      'subpackages/activity/nearby/index.json': '#F9F7F2',
-      'subpackages/activity/memories/index.json': '#F9F7F2',
-      'subpackages/activity/detail/index.json': '#FFFFFF',
-      'subpackages/profile/edit/index.json': '#F6F7F9',
-      'subpackages/publish/location-picker/index.json': '#F9F7F2'
-    };
-    if (lightBackgrounds[relativePath]) {
-      assert.equal(config.backgroundColor, lightBackgrounds[relativePath], relativePath);
-      assert.equal(
-        config.backgroundTextStyle,
-        relativePath === 'subpackages/community/companion/index.json' ? 'light' : 'dark',
-        relativePath
-      );
-      return;
-    }
-    assert.equal(config.backgroundColor, '#075AA7', relativePath);
-    assert.equal(config.backgroundTextStyle, 'light', relativePath);
+    const expected = exceptions[relativePath] || ['#F9F7F2', 'dark'];
+    assert.equal(config.backgroundColor, expected[0], relativePath);
+    assert.equal(config.backgroundTextStyle, expected[1], relativePath);
     if (config.navigationStyle !== 'custom') {
-      assert.equal(config.navigationBarBackgroundColor, '#075AA7', relativePath);
-      assert.equal(config.navigationBarTextStyle, 'white', relativePath);
+      assert.equal(config.navigationBarBackgroundColor, expected[0], relativePath);
+      assert.equal(config.navigationBarTextStyle, expected[1] === 'light' ? 'white' : 'black', relativePath);
     }
   });
 });

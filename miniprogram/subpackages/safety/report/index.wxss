@@ -1,20 +1,19 @@
 .report-page {
   padding-top: 36rpx;
+  background: #f9f7f2;
 }
 
 .report-title {
-  color: #fff8ee;
+  color: #27312c;
   font-size: 40rpx;
   font-weight: 720;
-  text-shadow: 0 2rpx 5rpx rgba(7, 35, 70, 0.28);
 }
 
 .report-description {
   margin-top: 12rpx;
-  color: #e6eef6;
+  color: #748078;
   font-size: 25rpx;
   line-height: 1.6;
-  text-shadow: 0 1rpx 3rpx rgba(7, 35, 70, 0.22);
 }
 
 .error-banner {

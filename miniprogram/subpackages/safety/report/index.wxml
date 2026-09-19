@@ -1,6 +1,4 @@
-<view class="page report-page safe-bottom global-background-host">
-  <image class="global-page-background" src="/assets/images/shared/shared-paper-bg.jpg" mode="aspectFill" aria-hidden="true" />
-  <view class="global-page-background-tint" aria-hidden="true"></view>
+<view class="page report-page safe-bottom">
   <view class="report-intro">
     <view class="report-title">告诉我们发生了什么</view>
     <view class="report-description">举报内容只用于安全处置。MVP 不上传图片证据，请避免填写无关的个人隐私。</view>

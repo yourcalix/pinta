@@ -30,7 +30,7 @@
 
       <view class="info-card">
         <view class="info-row"><text class="info-symbol" aria-hidden="true">●</text><text class="info-label">活动时间</text><text class="info-value">{{activity.displayTime}}</text></view>
-        <view class="info-row"><text class="info-symbol" aria-hidden="true">◆</text><text class="info-label">{{placeInfoLabel}}</text><text class="info-value">{{activity.sceneLine || activity.placeLabel || '暂未填写'}}</text><text class="info-arrow" aria-hidden="true">›</text></view>
+        <view class="info-row {{canViewMeetingPoint ? 'info-row--action' : ''}}" bindtap="handleOpenMeetingPointModal" hover-class="{{canViewMeetingPoint ? 'info-row--pressed' : 'none'}}" role="{{canViewMeetingPoint ? 'button' : 'text'}}" aria-label="{{canViewMeetingPoint ? '查看集合地点，' + (activity.sceneLine || activity.placeLabel || '暂未填写') : placeInfoLabel + '，' + (activity.sceneLine || activity.placeLabel || '暂未填写')}}"><text class="info-symbol" aria-hidden="true">◆</text><text class="info-label">{{placeInfoLabel}}</text><text class="info-value">{{activity.sceneLine || activity.placeLabel || '暂未填写'}}</text><text wx:if="{{canViewMeetingPoint}}" class="info-arrow" aria-hidden="true">›</text></view>
         <view class="info-row"><text class="info-symbol" aria-hidden="true">◒</text><text class="info-label">报名截止</text><text class="info-value">{{deadlineLabel}}</text></view>
         <view class="member-row">
           <view class="member-heading"><text class="info-symbol" aria-hidden="true">♟</text><text class="info-label">目前已加入</text><text class="member-count">· {{activity.memberCount}} / {{activity.maxMembers}} 人</text></view>
@@ -92,6 +92,8 @@
       <button class="primary-button {{!primaryAction ? 'primary-button--disabled' : ''}}" bindtap="handlePrimary" disabled="{{!primaryAction || opening || applying}}" loading="{{opening || applying}}" hover-class="primary-button--pressed"><text class="primary-label">{{primaryLabel}}</text></button>
     </view>
   </block>
+
+  <pinba-modal visible="{{meetingPointModalVisible}}" type="location" title="{{meetingPointModalTitle}}" description="{{meetingPointModalDescription}}" confirm-text="知道了" close-on-mask="{{true}}" bindconfirm="handleCloseMeetingPointModal" bindclose="handleCloseMeetingPointModal" />
 
   <view wx:if="{{showApply}}" class="apply-modal">
     <view class="apply-backdrop" bindtap="handleApplyClose" catchtouchmove="preventScroll"></view>

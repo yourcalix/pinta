@@ -9,7 +9,7 @@
   padding-bottom: 0;
   padding-left: 0;
   overflow-x: hidden;
-  background: #081e36;
+  background: #f9f7f2;
 }
 
 button::after { display: none; }
@@ -29,14 +29,14 @@ button::after { display: none; }
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #081e36;
+  background: #365449;
   pointer-events: none;
 }
 
 .profile-atmosphere-base {
   position: absolute;
   inset: 0;
-  background: #075aa7;
+  background: #365449;
 }
 
 .profile-atmosphere-image {
@@ -69,8 +69,8 @@ button::after { display: none; }
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 22% 35%, rgba(126, 207, 231, 0.32), transparent 42%),
-    linear-gradient(180deg, rgba(7, 90, 167, 0.32) 0%, rgba(7, 65, 120, 0.48) 44%, rgba(8, 30, 54, 0.88) 100%);
+    radial-gradient(circle at 22% 35%, rgba(190, 223, 200, 0.28), transparent 42%),
+    linear-gradient(180deg, rgba(54, 84, 73, 0.25) 0%, rgba(44, 72, 61, 0.46) 44%, rgba(30, 48, 41, 0.88) 100%);
 }
 
 .profile-atmosphere-shade--seascape {
@@ -731,9 +731,9 @@ button::after { display: none; }
   min-height: 420rpx;
   margin: 30rpx 28rpx 0;
   padding: 64rpx 30rpx;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
-  border: 2rpx solid rgba(255, 255, 255, 0.24);
+  color: #27312c;
+  background: #fff;
+  border: 2rpx solid #efece6;
   border-radius: 30rpx;
   text-align: center;
 }
@@ -744,7 +744,7 @@ button::after { display: none; }
 .profile-loading-line--title { width: 34%; height: 34rpx; margin-top: 28rpx; }
 
 .skeleton-shimmer {
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0.18) 25%, rgba(255, 255, 255, 0.42) 42%, rgba(255, 255, 255, 0.18) 60%);
+  background: linear-gradient(100deg, #eeeae2 25%, #fff 42%, #eeeae2 60%);
   background-size: 260% 100%;
   animation: skeleton-shimmer 1.35s ease-in-out infinite;
 }

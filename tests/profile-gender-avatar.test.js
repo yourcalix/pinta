@@ -119,11 +119,11 @@ test('资料页和我的页面使用真实性别选择与头像映射而非演�
   assert.match(editJs, /profileAvatarPath\(gender\)/);
   assert.match(userJs, /const avatar = resolveProfileAvatar\(user\.profile\)/);
   assert.match(userJs, /profileAvatarPath: avatar\.path/);
-  assert.match(userWxml, /shared-paper-bg\.jpg/);
+  assert.doesNotMatch(userWxml, /shared-paper-bg\.jpg|global-page-background/);
   assert.match(userWxml, /data-value="owned"[^>]*bindtap="handleMetricTap"/);
   assert.match(userWxml, /data-value="joined"[^>]*bindtap="handleMetricTap"/);
   assert.match(userWxml, /data-value="formed"[^>]*bindtap="handleMetricTap"/);
-  assert.match(userWxss, /background:\s*#075aa7/);
+  assert.match(userWxss, /\.user-page\s*{[\s\S]*background:\s*#f9f7f2/i);
   assert.match(userWxss, /\.user-page\s*{[\s\S]*padding-bottom:\s*0/);
   assert.match(userWxss, /\.profile-content-sheet\s*{[\s\S]*padding-bottom:\s*calc\(200rpx \+ env\(safe-area-inset-bottom\)\)/);
   assert.doesNotMatch(userWxml, /喜欢散步|个人简介|个人签名/);
