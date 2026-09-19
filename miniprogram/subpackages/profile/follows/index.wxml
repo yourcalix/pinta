@@ -1,0 +1,39 @@
+<view class="follow-page">
+  <view class="follow-tabs" role="tablist" aria-label="关注与粉丝列表">
+    <button class="follow-tab {{currentType === 'FOLLOWING' ? 'follow-tab--active' : ''}}" data-type="FOLLOWING" bindtap="handleTabChange" role="tab" aria-selected="{{currentType === 'FOLLOWING'}}" aria-label="关注，{{followingCountLabel}}人">
+      <text>关注</text><text class="follow-tab-count" aria-hidden="true">{{followingCountLabel}}</text>
+    </button>
+    <button class="follow-tab {{currentType === 'FOLLOWERS' ? 'follow-tab--active' : ''}}" data-type="FOLLOWERS" bindtap="handleTabChange" role="tab" aria-selected="{{currentType === 'FOLLOWERS'}}" aria-label="粉丝，{{followerCountLabel}}人">
+      <text>粉丝</text><text class="follow-tab-count" aria-hidden="true">{{followerCountLabel}}</text>
+    </button>
+  </view>
+
+  <view wx:if="{{status === 'loading'}}" class="follow-list" role="status" aria-label="正在加载成员">
+    <view wx:for="{{[1, 2, 3, 4]}}" wx:key="*this" class="follow-card follow-card--skeleton">
+      <view class="follow-skeleton-avatar skeleton-shimmer"></view>
+      <view class="follow-skeleton-copy"><view class="follow-skeleton-title skeleton-shimmer"></view><view class="follow-skeleton-line skeleton-shimmer"></view></view>
+    </view>
+  </view>
+
+  <view wx:elif="{{status === 'ready'}}" class="follow-list" aria-label="{{currentType === 'FOLLOWING' ? '我的关注成员' : '我的粉丝成员'}}">
+    <button wx:for="{{items}}" wx:key="memberKey" class="follow-card" data-index="{{index}}" bindtap="handleMemberTap" hover-class="follow-card--pressed" hover-stay-time="80" aria-label="{{item.accessibilityLabel}}">
+      <view class="follow-avatar-shell" aria-hidden="true">
+        <image wx:if="{{!item.avatarSlot.empty}}" class="follow-avatar" src="{{item.avatarSlot.src}}" mode="{{item.avatarSlot.mode}}" data-index="{{index}}" data-key="{{item.memberKey}}" binderror="handleAvatarError" aria-hidden="true" />
+        <text wx:else class="follow-avatar-empty">拼</text>
+      </view>
+      <view class="follow-copy" aria-hidden="true">
+        <view class="follow-name-row"><text class="follow-name">{{item.nickname}}</text><text class="follow-relation {{item.mutual ? 'follow-relation--mutual' : ''}}">{{item.relationLabel}}</text></view>
+        <text wx:if="{{item.factsLabel}}" class="follow-facts">{{item.factsLabel}}</text>
+        <text wx:if="{{item.interestsLabel}}" class="follow-interests">{{item.interestsLabel}}</text>
+      </view>
+      <text class="follow-arrow" aria-hidden="true">›</text>
+    </button>
+    <view wx:if="{{loadingMore}}" class="follow-more" role="status">正在加载更多…</view>
+    <view wx:elif="{{!hasMore}}" class="follow-more">已经到底啦</view>
+  </view>
+
+  <empty-state wx:elif="{{status === 'empty'}}" custom-class="follow-empty" type="empty-favorite" title="{{currentType === 'FOLLOWING' ? '还没有关注任何人' : '还没有粉丝'}}" description="{{currentType === 'FOLLOWING' ? '去发现志同道合的搭子吧。' : '完善主页并参与活动，会有更多人认识你。'}}" show-button="{{false}}" />
+  <empty-state wx:else custom-class="follow-empty" type="empty-network" title="成员列表暂时没有加载出来" description="请检查网络后再试一次。" button-text="重新加载" bind:action="handleRetry" />
+
+  <view wx:if="{{refreshing}}" class="follow-refreshing" role="status" aria-label="正在刷新"><view class="follow-refreshing-dot"></view></view>
+</view>

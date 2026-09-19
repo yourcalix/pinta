@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "关注与粉丝",
+  "navigationBarBackgroundColor": "#F9F7F2",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#F9F7F2",
+  "backgroundTextStyle": "dark",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 120,
+  "usingComponents": {
+    "empty-state": "/components/empty-state/index"
+  }
+}

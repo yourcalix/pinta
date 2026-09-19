@@ -35,6 +35,7 @@ const {
   validateCompanionDirectorySnapshotInput,
   validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
+  validateProfileFollowListInput,
   validateProfileFollowSetInput,
   validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,
@@ -101,8 +102,18 @@ const {
   resolveCommunityProfileNavTicket,
   createDirectoryProfileNavTicket,
   directoryProfileNavTicketId,
-  resolveDirectoryProfileNavTicket
+  resolveDirectoryProfileNavTicket,
+  createSocialProfileNavTicket,
+  socialProfileNavTicketId,
+  resolveSocialProfileNavTicket,
+  createProfileFollowCursorTicket,
+  profileFollowCursorTicketId,
+  resolveProfileFollowCursorTicket
 } = require('./community-profile-navigation');
+const {
+  profileFollowMemberKey,
+  profileFollowRelationId
+} = require('./profile-follow');
 
 const MUTATING_ACTIONS = new Set([
   'profile.update',
@@ -237,6 +248,26 @@ function publicCompanionProfile(user, viewerId, at, online = true, avatarFacts =
     followingCount: Math.max(0, Number(user && user.followingCount) || 0),
     followerCount: Math.max(0, Number(user && user.followerCount) || 0),
     viewerFollowing: social.viewerFollowing === true
+  };
+}
+
+function publicProfileFollowMember(user, viewerId, type, at, avatarFacts, social, issued) {
+  const profile = user && user.profile || {};
+  return {
+    memberKey: profileFollowMemberKey(viewerId, type, user.id),
+    nickname: safePresenceNickname(profile.nickname),
+    avatar: publicAvatarSlot(avatarFacts || { gender: profile.gender }),
+    gender: USER_GENDERS.includes(profile.gender) ? profile.gender : null,
+    age: calculateAgeOnMacauDate(profile.birthDate, at),
+    mbti: USER_MBTI_TYPES.includes(profile.mbti) ? profile.mbti : null,
+    city: typeof profile.city === 'string' ? profile.city.trim().slice(0, 20) : '',
+    interests: Array.isArray(profile.interests)
+      ? profile.interests.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+      : [],
+    viewerFollowing: social.viewerFollowing === true,
+    mutual: social.mutual === true,
+    profileNavToken: issued.profileNavToken,
+    profileNavExpiresAt: issued.expiresAt
   };
 }
 
@@ -758,6 +789,18 @@ function createPinbaService(options) {
     const requireViewer = options.requireViewer === true;
     let viewer = null;
     if (requireViewer) viewer = await requireActiveUser(context, false);
+    if (profileNavToken.startsWith('socialProfileNa_')) {
+      viewer = viewer || await requireActiveUser(context, false);
+      const ticketId = socialProfileNavTicketId(profileNavToken);
+      const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
+        ? await store.getPublicProfileNavTicket(ticketId)
+        : null;
+      const ticket = resolveSocialProfileNavTicket(candidate, profileNavToken, viewer.id, at);
+      invariant(ticket, 'NOT_FOUND');
+      const target = await store.getUser(ticket.targetUserId);
+      invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
+      return { target, viewerId: viewer.id, online: false, expiresAt: ticket.expiresAt };
+    }
     if (profileNavToken.startsWith('directoryProfileNa_')) {
       viewer = viewer || await requireActiveUser(context, false);
       const ticketId = directoryProfileNavTicketId(profileNavToken);
@@ -842,6 +885,106 @@ function createPinbaService(options) {
         profile: publicCompanionProfile(target, viewerId, at, online, avatarFacts, { viewerFollowing }),
         serverNow: at,
         expiresAt
+      };
+    }
+
+    if (action === 'profile.follow.list') {
+      const viewer = await requireActiveUser(context, false);
+      const payload = validateProfileFollowListInput(input);
+      let cursor = null;
+      if (payload.cursor) {
+        const ticketId = profileFollowCursorTicketId(payload.cursor);
+        const candidate = ticketId && typeof store.getPublicProfileNavTicket === 'function'
+          ? await store.getPublicProfileNavTicket(ticketId)
+          : null;
+        cursor = resolveProfileFollowCursorTicket(candidate, payload.cursor, viewer.id, payload.type, at);
+        invariant(cursor, 'VALIDATION_ERROR', '关注列表已更新，请重新加载');
+      }
+      const valid = [];
+      const scanBatchLimit = Math.min(80, Math.max(20, payload.limit * 2));
+      const maximumScannedRelations = 500;
+      let scanCursor = cursor;
+      let scannedRelations = 0;
+      let sourceHasMore = true;
+      let lastScanAnchor = null;
+      while (valid.length <= payload.limit && sourceHasMore && scannedRelations < maximumScannedRelations) {
+        const batchLimit = Math.min(scanBatchLimit, maximumScannedRelations - scannedRelations);
+        const page = await store.listProfileFollows(viewer.id, { type: payload.type, cursor: scanCursor, limit: batchLimit });
+        if (!page.items.length) {
+          sourceHasMore = false;
+          break;
+        }
+        scannedRelations += page.items.length;
+        lastScanAnchor = page.nextAnchor;
+        const memberIds = page.items.map((item) => payload.type === 'FOLLOWING' ? item.targetUserId : item.followerId);
+        const users = typeof store.getUsersByIds === 'function'
+          ? await store.getUsersByIds(memberIds)
+          : await Promise.all(memberIds.map((userId) => store.getUser(userId)));
+        const userById = new Map((users || []).filter(Boolean).map((user) => [user.id, user]));
+        const relationPairs = memberIds.flatMap((memberId) => [
+          { followerId: viewer.id, targetUserId: memberId },
+          { followerId: memberId, targetUserId: viewer.id }
+        ]);
+        const followStates = typeof store.getProfileFollowStates === 'function'
+          ? await store.getProfileFollowStates(relationPairs)
+          : Object.fromEntries(await Promise.all(relationPairs.map(async (pair) => [
+            profileFollowRelationId(pair.followerId, pair.targetUserId),
+            await store.getProfileFollowState(pair.followerId, pair.targetUserId)
+          ])));
+        valid.push(...page.items.map((row) => {
+          const memberId = payload.type === 'FOLLOWING' ? row.targetUserId : row.followerId;
+          const user = userById.get(memberId);
+          const viewerFollowing = followStates[profileFollowRelationId(viewer.id, memberId)] === true;
+          const followedByMember = followStates[profileFollowRelationId(memberId, viewer.id)] === true;
+          const belongs = payload.type === 'FOLLOWING' ? viewerFollowing : followedByMember;
+          return belongs && memberId !== viewer.id && user && user.status === 'ACTIVE' && user.profile
+            ? { row, user, viewerFollowing, mutual: viewerFollowing && followedByMember }
+            : null;
+        }).filter(Boolean));
+        sourceHasMore = page.hasMore === true;
+        if (!sourceHasMore || !page.nextAnchor) break;
+        scanCursor = page.nextAnchor;
+      }
+      const selected = valid.slice(0, payload.limit);
+      const avatarHydration = typeof store.hydratePublicCommunityAuthors === 'function'
+        ? await store.hydratePublicCommunityAuthors(selected.map((item) => ({ authorId: item.user.id })))
+        : { profilesByUserId: {} };
+      const items = await Promise.all(selected.map(async (item) => {
+        const issued = createSocialProfileNavTicket({ viewerId: viewer.id, targetUserId: item.user.id, at });
+        await store.createPublicProfileNavTicket(issued.ticket);
+        return publicProfileFollowMember(
+          item.user,
+          viewer.id,
+          payload.type,
+          at,
+          avatarHydration.profilesByUserId && avatarHydration.profilesByUserId[item.user.id],
+          item,
+          issued
+        );
+      }));
+      const hasMore = valid.length > selected.length || sourceHasMore;
+      let nextCursor = null;
+      if (hasMore) {
+        const anchor = valid.length > selected.length && selected.length
+          ? selected[selected.length - 1].row
+          : lastScanAnchor;
+        if (anchor) {
+          const issuedCursor = createProfileFollowCursorTicket({ viewerId: viewer.id, followType: payload.type, anchor, at });
+          await store.createPublicProfileNavTicket(issuedCursor.ticket);
+          nextCursor = issuedCursor.cursor;
+        }
+      }
+      const currentViewer = await store.getUser(viewer.id);
+      return {
+        type: payload.type,
+        items,
+        nextCursor,
+        hasMore: Boolean(nextCursor),
+        summary: {
+          followingCount: Math.max(0, Number(currentViewer && currentViewer.followingCount) || 0),
+          followerCount: Math.max(0, Number(currentViewer && currentViewer.followerCount) || 0)
+        },
+        serverNow: at
       };
     }
 

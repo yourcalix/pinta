@@ -1,0 +1,12 @@
+{
+  "id": "enable-following-followers-members",
+  "title": "打通关注与粉丝成员列表查看能力",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "已实现、验证并通过双模型审查，归档任务",
+  "createdAt": "2026-09-19T00:00:00+08:00",
+  "branch": "main"
+}

@@ -55,6 +55,8 @@ Page({
     errorCopy: '',
     pageTitle: '搭子主页',
     communitySource: false,
+    socialSource: false,
+    warmSource: false,
     directorySource: false
   },
 
@@ -73,9 +75,11 @@ Page({
       return;
     }
     const communitySource = ticket.source === 'community';
+    const socialSource = ticket.source === 'social';
+    const warmSource = communitySource || socialSource;
     const directorySource = ticket.source === 'companion-directory';
-    this.applyVisualTheme(communitySource);
-    this.setData({ communitySource, directorySource, pageTitle: communitySource ? '个人主页' : '搭子主页' });
+    this.applyVisualTheme(warmSource);
+    this.setData({ communitySource, socialSource, warmSource, directorySource, pageTitle: warmSource ? '个人主页' : '搭子主页' });
     this._profileNavToken = ticket.profileNavToken;
     this.loadProfile();
   },
@@ -97,7 +101,7 @@ Page({
     try {
       const result = await publicProfileService.get(this._profileNavToken);
       if (this._disposed || seq !== this._loadSeq) return;
-      this.setData({ status: 'ready', profile: publicView(result.profile, this.data.communitySource) });
+      this.setData({ status: 'ready', profile: publicView(result.profile, this.data.warmSource) });
     } catch (error) {
       if (this._disposed || seq !== this._loadSeq) return;
       if (error && error.code === 'NOT_FOUND') {
@@ -111,10 +115,10 @@ Page({
 
   handleRetry() { return this.loadProfile(); },
 
-  applyVisualTheme(communitySource) {
+  applyVisualTheme(warmSource) {
     if (typeof wx === 'undefined') return;
-    const backgroundColor = communitySource ? '#F9F7F2' : '#0D0C1B';
-    const frontColor = communitySource ? '#000000' : '#ffffff';
+    const backgroundColor = warmSource ? '#F9F7F2' : '#0D0C1B';
+    const frontColor = warmSource ? '#000000' : '#ffffff';
     if (typeof wx.setNavigationBarColor === 'function') wx.setNavigationBarColor({ frontColor, backgroundColor, animation: { duration: 0, timingFunc: 'linear' } });
     if (typeof wx.setBackgroundColor === 'function') wx.setBackgroundColor({ backgroundColor, backgroundColorTop: backgroundColor, backgroundColorBottom: backgroundColor });
   },

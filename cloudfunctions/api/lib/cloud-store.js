@@ -44,6 +44,11 @@ const {
   isAfterDirectCursor
 } = require('./direct-message');
 const {
+  compareProfileFollowsDescending,
+  isAfterProfileFollowCursor,
+  profileFollowRelationId
+} = require('./profile-follow');
+const {
   beginGroupMembership,
   resolveGroupAccess,
   assertGroupMessageVisible,
@@ -2447,6 +2452,64 @@ class CloudStore {
 
   async getPublicProfileNavTicket(ticketId) {
     return this.getDocument('publicProfileNavTickets', ticketId);
+  }
+
+  async listProfileFollows(viewerId, { type, cursor, limit }) {
+    const identityField = type === 'FOLLOWING' ? 'followerId' : 'targetUserId';
+    const base = { [identityField]: viewerId, status: 'ACTIVE' };
+    const query = (where) => this.db.collection('profileFollows')
+      .where(where)
+      .orderBy('updatedAt', 'desc')
+      .orderBy('_id', 'desc')
+      .limit(limit + 1)
+      .get();
+    let candidates;
+    if (!cursor) {
+      const result = await query(base);
+      candidates = (result.data || []).map(entity);
+    } else {
+      const [earlier, sameTime] = await Promise.all([
+        query({ ...base, updatedAt: this.command.lt(cursor.updatedAt) }),
+        query({ ...base, updatedAt: cursor.updatedAt, _id: this.command.lt(cursor.id) })
+      ]);
+      candidates = [...new Map([...(sameTime.data || []), ...(earlier.data || [])]
+        .map(entity)
+        .map((item) => [item.id, item])).values()]
+        .filter((item) => isAfterProfileFollowCursor(item, cursor))
+        .sort(compareProfileFollowsDescending);
+    }
+    const page = candidates.slice(0, limit + 1);
+    const items = page.slice(0, limit);
+    return {
+      items,
+      hasMore: page.length > limit,
+      nextAnchor: items.length ? { updatedAt: items[items.length - 1].updatedAt, id: items[items.length - 1].id } : null
+    };
+  }
+
+  async getUsersByIds(userIds = []) {
+    const ids = [...new Set(userIds.filter(Boolean))];
+    const users = [];
+    for (let index = 0; index < ids.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
+      const chunk = ids.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
+      const result = await this.db.collection('users').where({ _id: this.command.in(chunk) }).limit(chunk.length).get();
+      users.push(...(result.data || []).map(entity));
+    }
+    return users;
+  }
+
+  async getProfileFollowStates(pairs = []) {
+    const ids = [...new Set(pairs.map(({ followerId, targetUserId }) => profileFollowRelationId(followerId, targetUserId)))];
+    const active = new Set();
+    for (let index = 0; index < ids.length; index += CLOUD_IN_QUERY_CHUNK_SIZE) {
+      const chunk = ids.slice(index, index + CLOUD_IN_QUERY_CHUNK_SIZE);
+      const result = await this.db.collection('profileFollows')
+        .where({ _id: this.command.in(chunk), status: 'ACTIVE' })
+        .limit(chunk.length)
+        .get();
+      (result.data || []).map(entity).forEach((item) => active.add(item.id));
+    }
+    return Object.fromEntries(ids.map((id) => [id, active.has(id)]));
   }
 
   async getProfileFollowState(followerId, targetUserId) {

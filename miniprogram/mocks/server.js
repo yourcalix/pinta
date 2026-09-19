@@ -284,8 +284,18 @@ return match ? match[1] : '';
 function validateMockPublicProfileInput(input) {
 assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '公开主页参数无效');
 assert(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
-assert(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|(?:community|directory)ProfileNa_[a-f0-9]{64})$/.test(input.profileNavToken || ''), 'NOT_FOUND');
+assert(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|(?:community|directory|social)ProfileNa_[a-f0-9]{64})$/.test(input.profileNavToken || ''), 'NOT_FOUND');
 return input.profileNavToken;
+}
+function validateMockProfileFollowListInput(input = {}) {
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '关注列表参数无效');
+assert(Object.keys(input).every((key) => ['type', 'cursor', 'limit'].includes(key)), 'VALIDATION_ERROR', '关注列表参数无效');
+assert(['FOLLOWING', 'FOLLOWERS'].includes(input.type), 'VALIDATION_ERROR', '关注列表类型无效');
+const cursor = input.cursor === undefined ? '' : String(input.cursor || '').trim();
+assert(!cursor || /^profileFollowPage_[a-f0-9]{64}$/.test(cursor), 'VALIDATION_ERROR', '关注列表已更新，请重新加载');
+const limit = input.limit === undefined ? 20 : Number(input.limit);
+assert(Number.isInteger(limit) && limit >= 1 && limit <= 20, 'VALIDATION_ERROR', '关注列表分页大小无效');
+return { type: input.type, cursor, limit };
 }
 function mockTicketToken(p, ...parts) {
 return `${p}_${mockOpaque56(...parts)}${stableMockEntityId('h', ...parts).slice(-8)}`;
@@ -322,10 +332,22 @@ function issueMockProfile(viewer, target, type, sourceId, prefix) {
 if(target.id===viewer.id)return { target: 'self' };
 const now=new Date().toISOString();
 const token=mockTicketToken(prefix, viewer.id, target.id, sourceId, now, Math.random());
-const expiresAt=new Date(Date.parse(now)+6e4).toISOString();
+const expiresAt=new Date(Date.parse(now)+(type==='socialProfile'?5*60*1000:6e4)).toISOString();
 const hash=opaqueSensitiveHash(token);
 state.publicProfileNavTickets.push({ tokenHash: hash, viewerId: viewer.id, targetUserId: target.id, sourceType: type, sourceId, status: 'ACTIVE', expiresAt });
 return { target: 'public', profileNavToken: token, expiresAt };
+}
+function issueMockProfileFollowCursor(viewerId, type, anchor, now) {
+const cursor=mockTicketToken('profileFollowPage',viewerId,type,anchor.updatedAt,anchor.id,now,Math.random());
+const expiresAt=new Date(Date.parse(now)+10*60*1000).toISOString();
+state.publicProfileNavTickets.push({tokenHash:opaqueSensitiveHash(cursor),viewerId,sourceType:'profileFollowCursor',followType:type,anchor:{updatedAt:anchor.updatedAt,id:anchor.id},status:'ACTIVE',expiresAt});
+return cursor;
+}
+function resolveMockProfileFollowCursor(cursor, viewerId, type, now) {
+if(!cursor)return null;
+const ticket=state.publicProfileNavTickets.find((item)=>item.tokenHash===opaqueSensitiveHash(cursor)&&item.viewerId===viewerId&&item.sourceType==='profileFollowCursor'&&item.followType===type&&item.status==='ACTIVE'&&Date.parse(item.expiresAt)>Date.parse(now));
+assert(ticket&&ticket.anchor&&ticket.anchor.updatedAt&&ticket.anchor.id,'VALIDATION_ERROR','关注列表已更新，请重新加载');
+return ticket.anchor;
 }
 function publicMockPresenceSnapshot(at) {
 const active = state.companionPresences
@@ -658,17 +680,18 @@ viewerFollowing: Boolean(follow)
 }
 function resolveMockPublicProfileTarget(token, now, requireViewer = false) {
 if (requireViewer) requireActiveUser();
-if (token.startsWith('directoryProfileNa_') || token.startsWith('communityProfileNa_')) {
+if (token.startsWith('directoryProfileNa_') || token.startsWith('communityProfileNa_') || token.startsWith('socialProfileNa_')) {
 const v=requireActiveUser(), h=opaqueSensitiveHash(token);
 const t=state.publicProfileNavTickets.find((x)=>x.tokenHash===h&&x.viewerId===v.id&&x.status==='ACTIVE'&&Date.parse(x.expiresAt)>Date.parse(now));
 assert(t,'NOT_FOUND',PROFILE_TARGET_GONE);
 const dir=t.sourceType==='companionDirectory';
-const s=dir?null:t.sourceType==='post'?state.communityPosts.find((x)=>x.id===t.sourceId&&x.status==='ACTIVE'):state.communityReplies.find((x)=>x.id===t.sourceId&&x.status==='ACTIVE');
-if(!dir){
+const social=t.sourceType==='socialProfile';
+const s=dir||social?null:t.sourceType==='post'?state.communityPosts.find((x)=>x.id===t.sourceId&&x.status==='ACTIVE'):state.communityReplies.find((x)=>x.id===t.sourceId&&x.status==='ACTIVE');
+if(!dir&&!social){
 assert(s&&s.authorId===t.targetUserId,'NOT_FOUND','内容不存在或已被删除');
 if(t.sourceType==='reply')assert(state.communityPosts.some((x)=>x.id===s.postId&&x.status==='ACTIVE'),'NOT_FOUND','讨论不存在或已被删除');
 }
-const target=state.users.find((x)=>x.id===t.targetUserId&&x.status==='ACTIVE'&&(dir||x.profile));
+const target=state.users.find((x)=>x.id===t.targetUserId&&x.status==='ACTIVE'&&(dir||social||x.profile));
 assert(target,'NOT_FOUND',PROFILE_TARGET_GONE);
 return {target,viewerId:v.id,online:false,expiresAt:t.expiresAt};
 }
@@ -1848,6 +1871,31 @@ profile: publicMockProfile(resolved.target, now, resolved.online, resolved.onlin
 serverNow: now,
 expiresAt: resolved.expiresAt
 };
+}
+if (action === 'profile.follow.list') {
+const viewer=requireActiveUser(), payload=validateMockProfileFollowListInput(input), now=new Date().toISOString();
+const cursor=resolveMockProfileFollowCursor(payload.cursor,viewer.id,payload.type,now);
+const relations=state.profileFollows.filter((item)=>item.status==='ACTIVE'&&(payload.type==='FOLLOWING'?item.followerId===viewer.id:item.targetUserId===viewer.id))
+.sort((left,right)=>String(right.updatedAt||'').localeCompare(String(left.updatedAt||''))||String(right.id||'').localeCompare(String(left.id||'')))
+.filter((item)=>!cursor||item.updatedAt<cursor.updatedAt||(item.updatedAt===cursor.updatedAt&&item.id<cursor.id));
+const scanLimit=500, rawPage=relations.slice(0,scanLimit+1), scanned=rawPage.slice(0,scanLimit);
+const valid=scanned.map((row)=>{
+const memberId=payload.type==='FOLLOWING'?row.targetUserId:row.followerId;
+const member=state.users.find((item)=>item.id===memberId&&item.status==='ACTIVE'&&item.profile);
+const viewerFollowing=state.profileFollows.some((item)=>item.followerId===viewer.id&&item.targetUserId===memberId&&item.status==='ACTIVE');
+const followedByMember=state.profileFollows.some((item)=>item.followerId===memberId&&item.targetUserId===viewer.id&&item.status==='ACTIVE');
+const belongs=payload.type==='FOLLOWING'?viewerFollowing:followedByMember;
+return member&&member.id!==viewer.id&&belongs?{row,member,viewerFollowing,mutual:viewerFollowing&&followedByMember}:null;
+}).filter(Boolean);
+const selected=valid.slice(0,payload.limit);
+const items=selected.map(({member,viewerFollowing,mutual})=>{
+const issued=issueMockProfile(viewer,member,'socialProfile',payload.type,'socialProfileNa');
+const profile=member.profile||{}, nickname=Array.from(String(profile.nickname||'').trim()||'拼吧用户').slice(0,12).join('');
+return {memberKey:stableMockEntityId('profileFollowMember',viewer.id,payload.type,member.id),nickname,avatar:publicAvatarSlot(profile),gender:['MALE','FEMALE'].includes(profile.gender)?profile.gender:null,age:calculateAgeOnMacauDate(profile.birthDate,new Date(now)),mbti:USER_MBTI_TYPES.includes(profile.mbti)?profile.mbti:null,city:typeof profile.city==='string'?profile.city.trim().slice(0,20):'',interests:Array.isArray(profile.interests)?profile.interests.map((item)=>String(item||'').trim()).filter(Boolean).slice(0,3):[],viewerFollowing,mutual,profileNavToken:issued.profileNavToken,profileNavExpiresAt:issued.expiresAt};
+});
+const hasMore=valid.length>selected.length||rawPage.length>scanLimit;
+const anchor=hasMore?(valid.length>selected.length&&selected.length?selected[selected.length-1].row:scanned[scanned.length-1]):null;
+return {type:payload.type,items,nextCursor:anchor?issueMockProfileFollowCursor(viewer.id,payload.type,anchor,now):null,hasMore:Boolean(anchor),summary:{followingCount:Math.max(0,Number(viewer.followingCount)||0),followerCount:Math.max(0,Number(viewer.followerCount)||0)},serverNow:now};
 }
 if (action === 'profile.follow.set') {
 const viewer = requireActiveUser();

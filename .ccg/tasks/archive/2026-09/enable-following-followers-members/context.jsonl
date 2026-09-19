@@ -1,0 +1,9 @@
+{"path":"miniprogram/pages/user/index.wxml","reason":"关注与粉丝当前是不可点击的纯展示节点"}
+{"path":"miniprogram/pages/user/index.js","reason":"需要新增安全导航入口并在返回时权威刷新统计"}
+{"path":"cloudfunctions/api/lib/service.js","reason":"现有关注写入与公开主页读取契约，需要新增本人关系列表 action"}
+{"path":"cloudfunctions/api/lib/cloud-store.js","reason":"需要新增两类关系分页查询并依赖复合索引"}
+{"path":"cloudfunctions/api/lib/memory-store.js","reason":"Memory 测试实现需与 Cloud 同构"}
+{"path":"cloudfunctions/api/lib/community-profile-navigation.js","reason":"需要新增 socialProfileNa 短期访问票据"}
+{"path":"miniprogram/mocks/server.js","reason":"Mock 列表、分页、票据与关系状态需同构"}
+{"path":"miniprogram/subpackages/profile/public/index.js","reason":"列表成员继续复用只读公开主页及关注按钮"}
+{"path":"README.md","reason":"需记录 profileFollows 两个生产复合索引"}

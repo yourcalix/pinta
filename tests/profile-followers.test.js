@@ -185,7 +185,7 @@ test('Cloud Store 把关系、双方计数和审计放在同一事务', () => {
   assert.match(section, /const follower = await getTransactionDocument\(followerReference\);[\s\S]+const target = await getTransactionDocument\(targetReference\);/);
 });
 
-test('公开主页两套主题与我的主页只展示真实社交指标，不伪造列表入口', () => {
+test('公开主页两套主题与我的主页展示真实社交指标并提供列表入口', () => {
   const publicTemplate = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/public/index.wxml'), 'utf8');
   const publicStyle = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/public/index.wxss'), 'utf8');
   const publicScript = fs.readFileSync(path.join(ROOT, 'miniprogram/subpackages/profile/public/index.js'), 'utf8');
@@ -201,5 +201,5 @@ test('公开主页两套主题与我的主页只展示真实社交指标，不�
   assert.match(publicScript, /_followPending/);
   assert.match(publicScript, /Math\.max\(0,/);
   assert.match(selfTemplate, /profile-social-overview/);
-  assert.doesNotMatch(selfTemplate, /profile-social-overview[^>]+bindtap=/);
+  assert.match(selfTemplate, /profile-social-overview-item[^>]+bindtap="handleSocialListTap"/);
 });

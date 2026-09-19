@@ -384,8 +384,23 @@ function validatePublicProfileGetInput(input) {
   invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
   invariant(Object.keys(input).every((key) => key === 'profileNavToken'), 'VALIDATION_ERROR', '公开主页参数无效');
   const profileNavToken = stringValue(input.profileNavToken, '公开主页凭据', { required: true, min: 80, max: 160 });
-  invariant(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|communityProfileNa_[a-f0-9]{64}|directoryProfileNa_[a-f0-9]{64})$/.test(profileNavToken), 'NOT_FOUND');
+  invariant(/^(?:companionProfileNa_[a-f0-9]{56}_[0-9a-z]+_[a-f0-9]{56}|communityProfileNa_[a-f0-9]{64}|directoryProfileNa_[a-f0-9]{64}|socialProfileNa_[a-f0-9]{64})$/.test(profileNavToken), 'NOT_FOUND');
   return { profileNavToken };
+}
+
+function validateProfileFollowListInput(input = {}) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['type', 'cursor', 'limit'].includes(key)), 'VALIDATION_ERROR', '关注列表参数无效');
+  invariant(['FOLLOWING', 'FOLLOWERS'].includes(input.type), 'VALIDATION_ERROR', '关注列表类型无效');
+  const cursor = input.cursor === undefined || input.cursor === null || input.cursor === ''
+    ? ''
+    : stringValue(input.cursor, '关注列表游标', { required: true, min: 82, max: 82 });
+  if (cursor) invariant(/^profileFollowPage_[a-f0-9]{64}$/.test(cursor), 'VALIDATION_ERROR', '关注列表游标无效');
+  return {
+    type: input.type,
+    cursor,
+    limit: integerValue(input.limit === undefined ? 20 : input.limit, '分页数量', 1, 20)
+  };
 }
 
 function validateProfileFollowSetInput(input) {
@@ -546,6 +561,7 @@ module.exports = {
   validateCompanionDirectorySnapshotInput,
   validateCompanionDirectoryNavInput,
   validatePublicProfileGetInput,
+  validateProfileFollowListInput,
   validateProfileFollowSetInput,
   validateCommunityProfileNavCreateInput,
   validateCommunityPostCreateInput,

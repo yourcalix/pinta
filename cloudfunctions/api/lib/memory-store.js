@@ -46,6 +46,11 @@ const {
   isAfterDirectCursor
 } = require('./direct-message');
 const {
+  compareProfileFollowsDescending,
+  isAfterProfileFollowCursor,
+  profileFollowRelationId
+} = require('./profile-follow');
+const {
   beginGroupMembership,
   resolveGroupAccess,
   assertGroupMessageVisible,
@@ -1634,6 +1639,33 @@ class MemoryStore {
 
   async getPublicProfileNavTicket(ticketId) {
     return clone(this.publicProfileNavTickets.get(ticketId) || null);
+  }
+
+  async listProfileFollows(viewerId, { type, cursor, limit }) {
+    const items = [...this.profileFollows.values()]
+      .filter((item) => item.status === 'ACTIVE'
+        && (type === 'FOLLOWING' ? item.followerId === viewerId : item.targetUserId === viewerId))
+      .filter((item) => isAfterProfileFollowCursor(item, cursor))
+      .sort(compareProfileFollowsDescending);
+    const page = items.slice(0, limit + 1);
+    const visible = page.slice(0, limit);
+    return clone({
+      items: visible,
+      hasMore: page.length > limit,
+      nextAnchor: visible.length ? { updatedAt: visible[visible.length - 1].updatedAt, id: visible[visible.length - 1].id } : null
+    });
+  }
+
+  async getUsersByIds(userIds = []) {
+    return clone([...new Set(userIds)].map((userId) => this.users.get(userId)).filter(Boolean));
+  }
+
+  async getProfileFollowStates(pairs = []) {
+    return Object.fromEntries(pairs.map(({ followerId, targetUserId }) => {
+      const id = profileFollowRelationId(followerId, targetUserId);
+      const item = this.profileFollows.get(id);
+      return [id, Boolean(item && item.status === 'ACTIVE')];
+    }));
   }
 
   async getProfileFollowState(followerId, targetUserId) {

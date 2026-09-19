@@ -1,5 +1,5 @@
-<view class="public-profile-page {{communitySource ? 'public-profile-page--community' : 'public-profile-page--companion'}}">
-  <view class="public-profile-nav {{communitySource ? 'public-profile-nav--community' : 'public-profile-nav--companion'}}" style="height: {{contentTopInset}}px;">
+<view class="public-profile-page {{warmSource ? 'public-profile-page--community' : 'public-profile-page--companion'}}">
+  <view class="public-profile-nav {{warmSource ? 'public-profile-nav--community' : 'public-profile-nav--companion'}}" style="height: {{contentTopInset}}px;">
     <view class="public-profile-nav-inner">
       <button class="public-profile-back" bindtap="handleBack" hover-class="public-control--pressed" aria-label="返回上一页"><text aria-hidden="true">‹</text></button>
       <text class="public-profile-title" role="heading" aria-level="1">{{pageTitle}}</text>
@@ -7,15 +7,15 @@
     </view>
   </view>
 
-  <view wx:if="{{status === 'loading'}}" class="public-state {{communitySource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="status" aria-label="{{communitySource ? '正在读取公开资料' : '正在读取搭子公开资料'}}">
+  <view wx:if="{{status === 'loading'}}" class="public-state {{warmSource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="status" aria-label="{{warmSource ? '正在读取公开资料' : '正在读取搭子公开资料'}}">
     <view class="public-avatar-skeleton public-shimmer"></view>
     <view class="public-line-skeleton public-shimmer"></view>
     <view class="public-pill-skeletons" aria-hidden="true"><view class="public-pill-skeleton public-shimmer"></view><view class="public-pill-skeleton public-shimmer"></view><view class="public-pill-skeleton public-shimmer"></view></view>
-    <text class="public-state-loading-copy">{{communitySource ? '正在读取公开资料…' : (directorySource ? '正在读取搭子公开资料…' : '正在确认这位搭子的在线状态…')}}</text>
+    <text class="public-state-loading-copy">{{warmSource ? '正在读取公开资料…' : (directorySource ? '正在读取搭子公开资料…' : '正在确认这位搭子的在线状态…')}}</text>
   </view>
 
   <block wx:elif="{{status === 'ready'}}">
-    <view wx:if="{{communitySource}}" class="public-community-content" style="padding-top: calc({{contentTopInset}}px + 28rpx);" role="region" aria-label="{{profile.accessibilityLabel}}">
+    <view wx:if="{{warmSource}}" class="public-community-content" style="padding-top: calc({{contentTopInset}}px + 28rpx);" role="region" aria-label="{{profile.accessibilityLabel}}">
       <view class="public-community-card public-community-identity">
         <view class="public-community-avatar-glow" aria-hidden="true"></view>
         <view class="public-community-avatar-shell">
@@ -90,14 +90,14 @@
     </block>
   </block>
 
-  <view wx:elif="{{status === 'not-found'}}" class="public-state {{communitySource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="alert">
+  <view wx:elif="{{status === 'not-found'}}" class="public-state {{warmSource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="alert">
     <view class="public-state-orbit" aria-hidden="true"><view class="public-state-dot"></view></view>
-    <text class="public-state-title">{{communitySource || directorySource ? '主页访问已失效' : '这位搭子已经离开星球'}}</text>
-    <text class="public-state-copy">{{communitySource ? '请返回讨论后重新打开这位用户的主页' : (directorySource ? '请返回搭子星球后重新打开这位用户的主页' : '在线状态已失效，去星球看看其他搭子吧')}}</text>
-    <button class="public-state-action" bindtap="handleBack" hover-class="public-control--pressed">{{communitySource ? '返回讨论' : '返回搭子星球'}}</button>
+    <text class="public-state-title">{{warmSource || directorySource ? '主页访问已失效' : '这位搭子已经离开星球'}}</text>
+    <text class="public-state-copy">{{socialSource ? '请返回关注或粉丝列表后重新打开这位用户的主页' : (communitySource ? '请返回讨论后重新打开这位用户的主页' : (directorySource ? '请返回搭子星球后重新打开这位用户的主页' : '在线状态已失效，去星球看看其他搭子吧'))}}</text>
+    <button class="public-state-action" bindtap="handleBack" hover-class="public-control--pressed">{{warmSource ? '返回上一页' : '返回搭子星球'}}</button>
   </view>
 
-  <view wx:else class="public-state {{communitySource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="alert">
+  <view wx:else class="public-state {{warmSource ? 'public-state--community' : 'public-state--dark'}}" style="padding-top: {{contentTopInset}}px;" role="alert">
     <view class="public-state-symbol" aria-hidden="true">!</view>
     <text class="public-state-title">个人资料加载失败</text>
     <text class="public-state-copy">{{errorCopy}}</text>

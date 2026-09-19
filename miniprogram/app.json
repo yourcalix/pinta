@@ -51,7 +51,8 @@
       "root": "subpackages/profile",
       "pages": [
         "edit/index",
-        "public/index"
+        "public/index",
+        "follows/index"
       ]
     }
   ],

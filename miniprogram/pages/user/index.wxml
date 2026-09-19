@@ -41,9 +41,9 @@
         </button>
 
         <view class="profile-social-overview" role="group" aria-label="我的关注与粉丝，{{user.followingCount || 0}}个关注，{{user.followerCount || 0}}个粉丝">
-          <view class="profile-social-overview-item" aria-hidden="true"><text class="profile-social-overview-value">{{user.followingCount > 999 ? '999+' : (user.followingCount || 0)}}</text><text class="profile-social-overview-label">关注</text></view>
+          <button class="profile-social-overview-item" data-type="FOLLOWING" bindtap="handleSocialListTap" hover-class="profile-social-overview-item--pressed" hover-stay-time="80" aria-label="查看我的关注，{{user.followingCount || 0}}人"><text class="profile-social-overview-value" aria-hidden="true">{{user.followingCount > 999 ? '999+' : (user.followingCount || 0)}}</text><text class="profile-social-overview-label" aria-hidden="true">关注</text><text class="profile-social-overview-arrow" aria-hidden="true">›</text></button>
           <view class="profile-social-overview-divider" aria-hidden="true"></view>
-          <view class="profile-social-overview-item" aria-hidden="true"><text class="profile-social-overview-value">{{user.followerCount > 999 ? '999+' : (user.followerCount || 0)}}</text><text class="profile-social-overview-label">粉丝</text></view>
+          <button class="profile-social-overview-item" data-type="FOLLOWERS" bindtap="handleSocialListTap" hover-class="profile-social-overview-item--pressed" hover-stay-time="80" aria-label="查看我的粉丝，{{user.followerCount || 0}}人"><text class="profile-social-overview-value" aria-hidden="true">{{user.followerCount > 999 ? '999+' : (user.followerCount || 0)}}</text><text class="profile-social-overview-label" aria-hidden="true">粉丝</text><text class="profile-social-overview-arrow" aria-hidden="true">›</text></button>
         </view>
 
         <view class="profile-metrics" role="group" aria-label="我的活动概览">

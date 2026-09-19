@@ -96,6 +96,7 @@ Page({
 
   onLoad() {
     this._disposed = false;
+    this._socialNavigationPending = false;
     this._previewSeq = 0;
     this._isPreviewing = false;
     this._previewLoadingVisible = false;
@@ -110,6 +111,7 @@ Page({
 
   onShow() {
     this._disposed = false;
+    this._socialNavigationPending = false;
     this.refreshProfileCover();
     selectTab(this, 4);
     refreshUnread(this);
@@ -301,6 +303,16 @@ Page({
 
   handleProfile() { wx.navigateTo({ url: '/subpackages/profile/edit/index' }); },
 
+  handleSocialListTap(event) {
+    const type = event.currentTarget.dataset.type;
+    if (!['FOLLOWING', 'FOLLOWERS'].includes(type) || this._socialNavigationPending) return;
+    this._socialNavigationPending = true;
+    wx.navigateTo({
+      url: `/subpackages/profile/follows/index?type=${type}`,
+      complete: () => { this._socialNavigationPending = false; }
+    });
+  },
+
   handleGoDiscover() { wx.switchTab({ url: '/pages/discover/index' }); },
 
   handlePersona(event) {
@@ -320,6 +332,7 @@ Page({
 
   onUnload() {
     this._disposed = true;
+    this._socialNavigationPending = false;
     this.cancelImagePreview();
     this._loadSeq = (this._loadSeq || 0) + 1;
   }

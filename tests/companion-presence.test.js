@@ -218,7 +218,7 @@ test('公开球面样本不可分页且最多返回50个真实在线节点', asy
 
 test('Cloud presence 查询使用 scene 与 expiresAt 且不读取用户全表', () => {
   const source = fs.readFileSync(path.join(__dirname, '../cloudfunctions/api/lib/cloud-store.js'), 'utf8');
-  const section = source.slice(source.indexOf('async enterCompanionPresence'), source.indexOf('async getProfileFollowState'));
+  const section = source.slice(source.indexOf('async enterCompanionPresence'), source.indexOf('async listProfileFollows'));
   assert.match(section, /collection\('companionPresences'\)/);
   assert.match(section, /scene/);
   assert.match(section, /expiresAt:\s*this\.command\.gt\(at\)/);

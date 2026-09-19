@@ -296,8 +296,15 @@ button::after { display: none; }
 
 .profile-social-overview-item {
   display: flex; min-width: 0; flex: 1; align-items: center;
+  min-height: 86rpx; margin: 0; padding: 0 16rpx;
   justify-content: center; gap: 9rpx; white-space: nowrap;
+  color: inherit; background: transparent; border: 0; border-radius: 20rpx;
+  line-height: 1; transition: background-color 120ms ease, transform 120ms ease;
 }
+
+.profile-social-overview-item::after { border: 0; }
+.profile-social-overview-item--pressed { background: rgba(255, 255, 255, 0.1); transform: scale(0.98); }
+.profile-social-overview-arrow { color: rgba(255, 255, 255, 0.58); font-size: 30rpx; }
 
 .profile-social-overview-value {
   min-width: 62rpx; color: #fff; font-size: 30rpx; font-weight: 820;
