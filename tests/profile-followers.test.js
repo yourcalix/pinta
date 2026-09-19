@@ -181,6 +181,8 @@ test('Cloud Store 把关系、双方计数和审计放在同一事务', () => {
   assert.match(section, /followingCount/);
   assert.match(section, /followerCount/);
   assert.match(section, /collection\('auditLogs'\)/);
+  assert.doesNotMatch(section, /Promise\.all/);
+  assert.match(section, /const follower = await getTransactionDocument\(followerReference\);[\s\S]+const target = await getTransactionDocument\(targetReference\);/);
 });
 
 test('公开主页两套主题与我的主页只展示真实社交指标，不伪造列表入口', () => {

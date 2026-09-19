@@ -1,0 +1,12 @@
+{
+  "id": "fix-public-profile-follow-failure",
+  "title": "修复他人公开主页关注操作失败",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务",
+  "createdAt": "2026-09-18T14:02:48Z",
+  "branch": "main"
+}

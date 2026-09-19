@@ -2459,10 +2459,10 @@ class CloudStore {
     return this.db.runTransaction(async (transaction) => {
       const followerReference = transaction.collection('users').doc(followerId);
       const targetReference = transaction.collection('users').doc(targetUserId);
-      const [follower, target] = await Promise.all([
-        getTransactionDocument(followerReference),
-        getTransactionDocument(targetReference)
-      ]);
+      // CloudBase transactions serialize document operations internally. Keep
+      // reads strictly ordered so the SDK can build one deterministic read set.
+      const follower = await getTransactionDocument(followerReference);
+      const target = await getTransactionDocument(targetReference);
       invariant(follower && follower.status === 'ACTIVE', 'ACCOUNT_DISABLED');
       invariant(target && target.status === 'ACTIVE' && target.profile, 'NOT_FOUND');
       const id = stableEntityId('profileFollow', followerId, targetUserId);
