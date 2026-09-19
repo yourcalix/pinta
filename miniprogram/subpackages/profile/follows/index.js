@@ -44,8 +44,7 @@ Page({
     followingCountLabel: '0',
     followerCountLabel: '0',
     hasMore: false,
-    loadingMore: false,
-    refreshing: false
+    loadingMore: false
   },
 
   onLoad(options = {}) {
@@ -92,8 +91,7 @@ Page({
     if (append) this._loadingMore = true;
     if (type === this.data.currentType) {
       if (append) this.setData({ loadingMore: true });
-      else if (silent && tab.items.length) this.setData({ refreshing: true });
-      else this.setData({ status: 'loading', items: tab.items, hasMore: tab.hasMore });
+      else if (!silent || !tab.items.length) this.setData({ status: 'loading', items: tab.items, hasMore: tab.hasMore });
     }
     try {
       const result = await profileFollowService.list(type, append ? tab.cursor : '', PAGE_SIZE);
@@ -120,18 +118,17 @@ Page({
         items: tab.items,
         status: tab.items.length ? 'ready' : 'empty',
         hasMore: tab.hasMore,
-        loadingMore: false,
-        refreshing: false
+        loadingMore: false
       });
       this.setData(view);
     } catch (error) {
       if (this._disposed || seq !== this._requestSeq) return;
       if (type === this.data.currentType) {
         if (tab.items.length) {
-          this.setData({ status: 'ready', loadingMore: false, refreshing: false });
+          this.setData({ status: 'ready', loadingMore: false });
           if (typeof wx !== 'undefined') wx.showToast({ title: append ? '加载更多失败' : '刷新失败，请稍后重试', icon: 'none' });
         } else {
-          this.setData({ status: 'error', items: [], hasMore: false, loadingMore: false, refreshing: false });
+          this.setData({ status: 'error', items: [], hasMore: false, loadingMore: false });
         }
       }
     } finally {
@@ -151,8 +148,7 @@ Page({
       items: tab.items,
       status: tab.loaded ? (tab.items.length ? 'ready' : 'empty') : 'loading',
       hasMore: tab.hasMore,
-      loadingMore: false,
-      refreshing: false
+      loadingMore: false
     });
     if (!tab.loaded) this.loadTab(type);
   },

@@ -22,15 +22,12 @@ page { min-height: 100%; background: #f9f7f2; color: #27312c; }
 .follow-arrow { flex: 0 0 auto; color: #b4ada3; font-size: 42rpx; pointer-events: none; }
 .follow-more { min-height: 72rpx; display: flex; align-items: center; justify-content: center; color: #9a958d; font-size: 22rpx; }
 .follow-empty { margin-top: 80rpx; }
-.follow-refreshing { position: fixed; top: 150rpx; right: 34rpx; z-index: 6; display: flex; width: 42rpx; height: 42rpx; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, .92); box-shadow: 0 6rpx 22rpx rgba(72, 60, 42, .12); pointer-events: none; }
-.follow-refreshing-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: #21a66f; animation: follow-pulse 800ms ease-in-out infinite alternate; }
 .follow-card--skeleton { pointer-events: none; }
 .follow-skeleton-avatar { width: 88rpx; height: 88rpx; flex: 0 0 88rpx; border-radius: 50%; }
 .follow-skeleton-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 16rpx; }
 .follow-skeleton-title { width: 42%; height: 26rpx; border-radius: 13rpx; }
 .follow-skeleton-line { width: 72%; height: 20rpx; border-radius: 10rpx; }
 .skeleton-shimmer { background: linear-gradient(100deg, #f0ece5 20%, #faf8f4 40%, #f0ece5 60%); background-size: 200% 100%; animation: follow-shimmer 1.2s linear infinite; }
-@keyframes follow-pulse { from { opacity: .45; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
 @keyframes follow-shimmer { to { background-position-x: -200%; } }
 
 @media (max-width: 340px) {

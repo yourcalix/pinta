@@ -24,6 +24,7 @@ test('关注粉丝页具备双 Tab、完整列表状态和暖米白适配', () =
   const config = JSON.parse(read('miniprogram/subpackages/profile/follows/index.json'));
   const template = read('miniprogram/subpackages/profile/follows/index.wxml');
   const style = read('miniprogram/subpackages/profile/follows/index.wxss');
+  const script = read('miniprogram/subpackages/profile/follows/index.js');
   assert.equal(config.enablePullDownRefresh, true);
   assert.equal(config.backgroundColor.toUpperCase(), '#F9F7F2');
   assert.match(template, /role="tablist"/);
@@ -38,6 +39,9 @@ test('关注粉丝页具备双 Tab、完整列表状态和暖米白适配', () =
   assert.match(style, /font-variant-numeric:\s*tabular-nums/);
   assert.match(style, /pointer-events:\s*none/);
   assert.match(style, /@media\s*\(max-width:\s*340px\)/);
+  assert.doesNotMatch(template, /follow-refreshing/);
+  assert.doesNotMatch(style, /follow-refreshing|follow-pulse/);
+  assert.doesNotMatch(script, /\brefreshing\b/);
 });
 
 test('列表凭据仅留在页面实例并经一次性内存桥打开暖色公开主页', () => {

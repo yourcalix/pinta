@@ -35,5 +35,4 @@
   <empty-state wx:elif="{{status === 'empty'}}" custom-class="follow-empty" type="empty-favorite" title="{{currentType === 'FOLLOWING' ? '还没有关注任何人' : '还没有粉丝'}}" description="{{currentType === 'FOLLOWING' ? '去发现志同道合的搭子吧。' : '完善主页并参与活动，会有更多人认识你。'}}" show-button="{{false}}" />
   <empty-state wx:else custom-class="follow-empty" type="empty-network" title="成员列表暂时没有加载出来" description="请检查网络后再试一次。" button-text="重新加载" bind:action="handleRetry" />
 
-  <view wx:if="{{refreshing}}" class="follow-refreshing" role="status" aria-label="正在刷新"><view class="follow-refreshing-dot"></view></view>
 </view>

@@ -1,0 +1,12 @@
+{
+  "id": "remove-follow-refresh-dot",
+  "title": "移除关注列表返回刷新绿点",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已移除绿点并完成自动化验证，等待真机复验",
+  "createdAt": "2026-09-19T10:04:16Z",
+  "branch": "main"
+}
