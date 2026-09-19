@@ -1,0 +1,12 @@
+{
+  "id": "diagnose-ip-left-clipping",
+  "title": "诊断 IP 插画左侧截断来源",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已确认源素材边界截断，等待用户决定是否修复素材",
+  "createdAt": "2026-09-19T09:50:53Z",
+  "branch": "main"
+}
