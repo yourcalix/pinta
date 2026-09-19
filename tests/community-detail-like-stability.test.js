@@ -19,6 +19,8 @@ test('详情点赞切换不触发原生禁用态或操作区几何变化', () =>
   assert.match(template, /class="like-count-value"/);
   assert.match(style, /\.post-like\s*\{[^}]*flex:\s*0 0 110rpx[^}]*width:\s*110rpx[^}]*gap:\s*6rpx/s);
   assert.match(style, /\.reply-like\s*\{[^}]*flex:\s*0 0 96rpx[^}]*width:\s*96rpx[^}]*gap:\s*6rpx/s);
+  assert.match(style, /\.post-like\s*\{[^}]*box-sizing:\s*border-box[^}]*overflow:\s*visible[^}]*padding-left:\s*4rpx/s);
+  assert.match(style, /\.reply-like\s*\{[^}]*box-sizing:\s*border-box[^}]*overflow:\s*visible[^}]*padding-left:\s*4rpx/s);
   assert.match(style, /\.heart-icon[^}]*flex:\s*0 0 36rpx[^}]*width:\s*36rpx[^}]*height:\s*36rpx[^}]*font-size:\s*31rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
   assert.match(style, /\.reply-heart[^}]*flex:\s*0 0 36rpx[^}]*width:\s*36rpx[^}]*height:\s*36rpx[^}]*font-size:\s*31rpx[^}]*line-height:\s*1[^}]*transition:\s*color 120ms ease,\s*transform 120ms ease/s);
   assert.doesNotMatch(style.match(/\.heart-icon\s*\{[^}]*\}/s)[0], /font-family/);

@@ -1,0 +1,12 @@
+{
+  "id": "fix-community-heart-left-clipping",
+  "title": "修复讨论详情点赞红心左侧裁剪",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "已修复并完成自动化验证，等待真机复验",
+  "createdAt": "2026-09-19T09:58:20Z",
+  "branch": "main"
+}

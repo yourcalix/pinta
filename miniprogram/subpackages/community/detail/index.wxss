@@ -35,7 +35,7 @@ button::after { display: none; }
 .topic-pill { display: inline-flex; margin: 0 4rpx 4rpx 0; padding: 4rpx 16rpx; color: #b86108; background: #fef3c7; border-radius: 999rpx; font-size: 25rpx; font-weight: 700; line-height: 1.35; vertical-align: middle; white-space: nowrap; }
 .post-actions { display: flex; align-items: center; gap: 38rpx; margin-top: 26rpx; padding-top: 20rpx; border-top: 1rpx solid #f0ede7; }
 .post-action-button { display: flex; min-width: 92rpx; min-height: 88rpx; align-items: center; gap: 12rpx; color: #77736f; background: transparent; border: 0; font-size: 26rpx; }
-.post-like { flex: 0 0 110rpx; width: 110rpx; justify-content: flex-start; gap: 6rpx; color: #797774; }
+.post-like { flex: 0 0 110rpx; width: 110rpx; box-sizing: border-box; justify-content: flex-start; gap: 6rpx; overflow: visible; padding-left: 4rpx; color: #797774; }
 .heart-icon { display: inline-flex; flex: 0 0 36rpx; width: 36rpx; height: 36rpx; align-items: center; justify-content: center; color: #a19b94; font-size: 31rpx; line-height: 1; text-align: center; transition: color 120ms ease, transform 120ms ease; pointer-events: none; }
 .like-count-value { display: block; flex: 0 0 44rpx; width: 44rpx; min-width: 44rpx; overflow: hidden; color: #797774; font-variant-numeric: tabular-nums; line-height: 1; text-align: left; white-space: nowrap; }
 .comment-bubble-icon { position: relative; width: 34rpx; height: 28rpx; box-sizing: border-box; border: 4rpx solid #aaa6a1; border-radius: 14rpx; }
@@ -57,7 +57,7 @@ button::after { display: none; }
 .reply-target-name { overflow: hidden; max-width: 150rpx; color: #b86108; font-size: 23rpx; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .reply-time { flex: 0 0 auto; color: #9a938e; font-size: 22rpx; white-space: nowrap; }
 .reply-operations { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8rpx; }
-.reply-like { display: flex; flex: 0 0 96rpx; width: 96rpx; min-height: 88rpx; align-items: center; justify-content: flex-start; gap: 6rpx; color: #797774; background: transparent; border: 0; font-size: 22rpx; }
+.reply-like { display: flex; flex: 0 0 96rpx; width: 96rpx; min-height: 88rpx; box-sizing: border-box; align-items: center; justify-content: flex-start; gap: 6rpx; overflow: visible; padding-left: 4rpx; color: #797774; background: transparent; border: 0; font-size: 22rpx; }
 .reply-heart { display: inline-flex; flex: 0 0 36rpx; width: 36rpx; height: 36rpx; align-items: center; justify-content: center; color: #a19b94; font-size: 31rpx; line-height: 1; text-align: center; transition: color 120ms ease, transform 120ms ease; pointer-events: none; }
 .reply-more { flex-basis: 88rpx; min-width: 88rpx; min-height: 88rpx; font-size: 27rpx; line-height: 88rpx; }
 .reply-content { display: block; margin-top: 6rpx; padding-right: 8rpx; color: #3f3b37; font-size: 28rpx; line-height: 1.64; word-break: break-all; overflow-wrap: anywhere; }
