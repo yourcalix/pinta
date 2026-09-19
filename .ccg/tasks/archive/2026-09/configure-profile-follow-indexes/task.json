@@ -1,0 +1,12 @@
+{
+  "id": "configure-profile-follow-indexes",
+  "title": "说明如何创建关注与粉丝列表复合索引",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "已核对官方索引规则并交付控制台配置说明",
+  "createdAt": "2026-09-19T16:30:00+08:00",
+  "branch": "main"
+}
