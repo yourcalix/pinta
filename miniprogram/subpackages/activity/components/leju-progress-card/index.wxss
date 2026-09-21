@@ -7,14 +7,14 @@
   justify-content: center;
   box-sizing: border-box;
   padding: 48rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
-  background: rgba(18, 25, 21, 0);
+  background: rgba(15, 20, 17, 0);
   opacity: 0;
   pointer-events: none;
   transition: background-color 220ms ease, opacity 220ms ease;
 }
 
 .leju-progress-mask--open {
-  background: rgba(18, 25, 21, .62);
+  background: rgba(15, 20, 17, .74);
   opacity: 1;
   pointer-events: auto;
 }
@@ -29,7 +29,7 @@
   align-items: center;
   box-sizing: border-box;
   opacity: 0;
-  transform: translate3d(0, 36rpx, 0) scale(.88);
+  transform: translate3d(0, 28rpx, 0) scale(.92);
   transform-origin: 50% 54%;
   transition: opacity 200ms ease, transform 220ms ease;
   backface-visibility: hidden;
@@ -37,7 +37,7 @@
 
 .leju-progress-dialog--open {
   opacity: 1;
-  animation: leju-progress-dialog-in 480ms cubic-bezier(.2, .9, .25, 1.15) both;
+  animation: leju-progress-dialog-in 460ms cubic-bezier(.2, .9, .25, 1.1) both;
 }
 
 .leju-progress-image {
@@ -46,7 +46,7 @@
   height: auto;
   flex: 0 0 auto;
   border-radius: 30rpx;
-  box-shadow: 0 30rpx 80rpx rgba(15, 23, 19, .3);
+  box-shadow: 0 28rpx 72rpx rgba(0, 0, 0, .46);
   opacity: 0;
   pointer-events: none;
   user-select: none;
@@ -56,20 +56,72 @@
 .leju-progress-image--ready { opacity: 1; }
 
 .leju-progress-caption {
-  margin-top: 18rpx;
-  color: #FFFDF8;
-  font-size: 28rpx;
-  font-weight: 750;
-  line-height: 1.35;
+  display: flex;
+  min-height: 52rpx;
+  margin-top: 28rpx;
+  align-items: center;
+  justify-content: center;
+  gap: 18rpx;
+  color: #FFFFFF;
+  font-size: 36rpx;
+  font-weight: 800;
+  line-height: 1.2;
   letter-spacing: 1rpx;
-  text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, .2);
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, .4);
+  white-space: nowrap;
+}
+
+.leju-progress-caption__text { flex: 0 0 auto; }
+
+.leju-progress-caption__rays {
+  position: relative;
+  width: 30rpx;
+  height: 38rpx;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.leju-progress-caption__ray {
+  position: absolute;
+  display: block;
+  width: 6rpx;
+  border-radius: 999rpx;
+  background: #FFCA38;
+  box-shadow: 0 2rpx 8rpx rgba(255, 186, 40, .28);
+}
+
+.leju-progress-caption__ray--outer { height: 20rpx; }
+.leju-progress-caption__ray--inner { height: 14rpx; }
+
+.leju-progress-caption__rays--left .leju-progress-caption__ray--outer {
+  left: 2rpx;
+  bottom: 2rpx;
+  transform: rotate(-56deg);
+}
+
+.leju-progress-caption__rays--left .leju-progress-caption__ray--inner {
+  right: 4rpx;
+  top: 2rpx;
+  transform: rotate(-28deg);
+}
+
+.leju-progress-caption__rays--right .leju-progress-caption__ray--inner {
+  left: 4rpx;
+  top: 2rpx;
+  transform: rotate(28deg);
+}
+
+.leju-progress-caption__rays--right .leju-progress-caption__ray--outer {
+  right: 2rpx;
+  bottom: 2rpx;
+  transform: rotate(56deg);
 }
 
 .leju-progress-actions {
   display: flex;
-  width: 82%;
+  width: 78%;
   max-width: 500rpx;
-  margin-top: 14rpx;
+  margin-top: 22rpx;
   flex-direction: column;
   align-items: stretch;
   gap: 2rpx;
@@ -98,39 +150,50 @@
 .leju-progress-close::after { display: none; }
 
 .leju-progress-button--later {
-  color: rgba(255, 253, 248, .82);
+  color: rgba(255, 253, 248, .8);
   background: transparent;
   border: 0;
-  font-size: 25rpx;
-  font-weight: 600;
+  font-size: 26rpx;
+  font-weight: 500;
   text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, .24);
 }
 
 .leju-progress-button--collect {
-  color: #FFFFFF;
-  min-height: 92rpx;
-  border: 2rpx solid rgba(255, 255, 255, .2);
+  color: #124A2E;
+  min-height: 96rpx;
+  border: 2rpx solid rgba(255, 255, 255, .65);
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #1DB376 0%, #11915F 100%);
-  box-shadow: 0 14rpx 34rpx rgba(7, 76, 48, .36), inset 0 2rpx 0 rgba(255, 255, 255, .18);
-  font-size: 27rpx;
-  letter-spacing: 1rpx;
+  background: linear-gradient(180deg, #FFE785 0%, #FFBA2E 52%, #FFA812 100%);
+  box-shadow:
+    inset 0 3rpx 6rpx rgba(255, 255, 255, .85),
+    inset 0 -4rpx 8rpx rgba(204, 115, 0, .35),
+    0 12rpx 36rpx rgba(255, 175, 20, .42);
+  font-size: 32rpx;
+  letter-spacing: 0;
 }
 
 .leju-progress-button__spark {
-  margin-right: 12rpx;
-  color: #FFE38A;
-  font-size: 25rpx;
+  margin-right: 10rpx;
+  color: #124A2E;
+  font-size: 28rpx;
   line-height: 1;
 }
 
 .leju-progress-button--pressed { transform: scale(.96); opacity: .88; }
 
+.leju-progress-button--collect.leju-progress-button--pressed {
+  opacity: 1;
+  box-shadow:
+    inset 0 2rpx 5rpx rgba(255, 255, 255, .72),
+    inset 0 -3rpx 7rpx rgba(204, 115, 0, .3),
+    0 7rpx 22rpx rgba(255, 175, 20, .32);
+}
+
 .leju-progress-close {
   position: absolute;
   z-index: 2;
-  top: -48rpx;
-  right: -8rpx;
+  top: -8rpx;
+  right: -22rpx;
   display: flex;
   width: 88rpx;
   min-height: 88rpx;
@@ -140,60 +203,48 @@
   justify-content: center;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .16);
-  color: #FFFFFF;
-  font-size: 42rpx;
-  font-weight: 300;
-  line-height: 1;
+  background: transparent;
   transition: transform 100ms ease, opacity 100ms ease;
 }
 
 .leju-progress-close--pressed { transform: scale(.92); opacity: .72; }
 
-.leju-progress-sparks {
-  position: absolute;
-  z-index: 1;
-  top: 4%;
-  left: -22rpx;
-  right: -22rpx;
-  height: 80rpx;
-  pointer-events: none;
+.leju-progress-close__surface {
+  display: flex;
+  width: 68rpx;
+  height: 68rpx;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 2rpx solid rgba(255, 255, 255, .38);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .16);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, .22), inset 0 2rpx 0 rgba(255, 255, 255, .16);
+  color: #FFFFFF;
+  font-size: 36rpx;
+  font-weight: 300;
+  line-height: 1;
 }
-
-.leju-progress-sparks text {
-  position: absolute;
-  color: #FFD767;
-  font-size: 32rpx;
-  opacity: 0;
-}
-
-.leju-progress-dialog--open .leju-progress-sparks text {
-  animation: leju-progress-spark-in 480ms 260ms ease-out both;
-}
-
-.leju-progress-sparks text:nth-child(1) { left: 2%; top: 30rpx; transform: rotate(-16deg); }
-.leju-progress-sparks text:nth-child(2) { right: 2%; top: 8rpx; font-size: 42rpx; }
-.leju-progress-sparks text:nth-child(3) { right: 12%; top: 48rpx; transform: rotate(18deg); }
 
 @keyframes leju-progress-dialog-in {
-  0% { opacity: 0; transform: translate3d(0, 36rpx, 0) scale(.88); }
-  68% { opacity: 1; transform: translate3d(0, -3rpx, 0) scale(1.03); }
+  0% { opacity: 0; transform: translate3d(0, 28rpx, 0) scale(.92); }
+  68% { opacity: 1; transform: translate3d(0, -2rpx, 0) scale(1.02); }
   100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
 
-@keyframes leju-progress-spark-in {
-  0% { opacity: 0; margin-top: 10rpx; }
-  48% { opacity: 1; }
-  100% { opacity: .86; margin-top: 0; }
-}
-
-@media (max-width: 340px), (max-height: 620px) {
+@media (max-width: 340px), (max-height: 680px) {
   .leju-progress-mask { padding: 34rpx 24rpx calc(30rpx + env(safe-area-inset-bottom)); }
   .leju-progress-dialog { width: 62vw; max-width: 420rpx; }
   .leju-progress-image { border-radius: 24rpx; }
-  .leju-progress-caption { margin-top: 12rpx; font-size: 25rpx; }
-  .leju-progress-actions { width: 100%; margin-top: 8rpx; gap: 0; }
+  .leju-progress-caption { min-height: 42rpx; margin-top: 12rpx; gap: 12rpx; font-size: 30rpx; }
+  .leju-progress-caption__rays { width: 24rpx; height: 30rpx; }
+  .leju-progress-caption__ray { width: 5rpx; }
+  .leju-progress-caption__ray--outer { height: 14rpx; }
+  .leju-progress-caption__ray--inner { height: 10rpx; }
+  .leju-progress-actions { width: 100%; max-width: 420rpx; margin-top: 10rpx; gap: 0; }
   .leju-progress-button { min-height: 88rpx; padding: 0 10rpx; font-size: 23rpx; }
-  .leju-progress-button--collect { min-height: 88rpx; }
-  .leju-progress-close { top: -42rpx; right: -18rpx; }
+  .leju-progress-button--collect { min-height: 88rpx; font-size: 28rpx; }
+  .leju-progress-button--later { font-size: 24rpx; }
+  .leju-progress-close { top: -8rpx; right: -30rpx; }
+  .leju-progress-close__surface { width: 62rpx; height: 62rpx; font-size: 32rpx; }
 }

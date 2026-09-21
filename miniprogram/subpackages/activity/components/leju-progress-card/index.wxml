@@ -12,8 +12,9 @@
     aria-modal="true"
     aria-label="乐聚拼吧活动进程更新：{{title}}。可以稍后再看，或收下卡片"
   >
-    <button class="leju-progress-close" bindtap="handleClose" hover-class="leju-progress-close--pressed" aria-label="关闭，稍后再看">×</button>
-    <view class="leju-progress-sparks" aria-hidden="true"><text>✦</text><text>•</text><text>✧</text></view>
+    <button class="leju-progress-close" bindtap="handleClose" hover-class="leju-progress-close--pressed" aria-label="关闭，稍后再看">
+      <view class="leju-progress-close__surface" aria-hidden="true">×</view>
+    </button>
     <image
       class="leju-progress-image {{imageLoaded ? 'leju-progress-image--ready' : ''}}"
       src="{{image}}"
@@ -22,7 +23,17 @@
       binderror="handleImageError"
       aria-hidden="true"
     />
-    <view class="leju-progress-caption">新进度已解锁</view>
+    <view class="leju-progress-caption" aria-hidden="true">
+      <view class="leju-progress-caption__rays leju-progress-caption__rays--left">
+        <view class="leju-progress-caption__ray leju-progress-caption__ray--outer"></view>
+        <view class="leju-progress-caption__ray leju-progress-caption__ray--inner"></view>
+      </view>
+      <text class="leju-progress-caption__text">新进度已解锁</text>
+      <view class="leju-progress-caption__rays leju-progress-caption__rays--right">
+        <view class="leju-progress-caption__ray leju-progress-caption__ray--inner"></view>
+        <view class="leju-progress-caption__ray leju-progress-caption__ray--outer"></view>
+      </view>
+    </view>
     <view class="leju-progress-actions">
       <button class="leju-progress-button leju-progress-button--collect" bindtap="handleCollect" hover-class="leju-progress-button--pressed" aria-label="收下卡片" aria-disabled="{{collecting}}"><text class="leju-progress-button__spark" aria-hidden="true">✦</text><text>收下卡片</text></button>
       <button class="leju-progress-button leju-progress-button--later" bindtap="handleLater" hover-class="leju-progress-button--pressed" aria-disabled="{{collecting}}">稍后再看</button>

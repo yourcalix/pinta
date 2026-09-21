@@ -1,0 +1,12 @@
+{
+  "id": "restyle-progress-card-modal",
+  "title": "按参考图统一重做所有活动进程卡弹窗风格",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交已验证的公共进程卡视觉重构",
+  "createdAt": "2026-09-21T00:00:00Z",
+  "branch": "main"
+}
