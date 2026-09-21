@@ -24,8 +24,8 @@
     />
     <view class="leju-progress-caption">新进度已解锁</view>
     <view class="leju-progress-actions">
+      <button class="leju-progress-button leju-progress-button--collect" bindtap="handleCollect" hover-class="leju-progress-button--pressed" aria-label="收下卡片" aria-disabled="{{collecting}}"><text class="leju-progress-button__spark" aria-hidden="true">✦</text><text>收下卡片</text></button>
       <button class="leju-progress-button leju-progress-button--later" bindtap="handleLater" hover-class="leju-progress-button--pressed" aria-disabled="{{collecting}}">稍后再看</button>
-      <button class="leju-progress-button leju-progress-button--collect" bindtap="handleCollect" hover-class="leju-progress-button--pressed" aria-disabled="{{collecting}}">收下卡片</button>
     </view>
   </view>
 </view>

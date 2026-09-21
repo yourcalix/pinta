@@ -202,10 +202,15 @@ test('组件图片失败只上报一次，模板不裁图且操作热区与无�
   assert.match(template, /aria-role="dialog"/);
   assert.match(template, /aria-hidden="true"/);
   assert.match(template, /bindtap="handleCollect"/);
+  assert.match(template, /aria-label="收下卡片"/);
   assert.match(template, /bindtap="handleLater"/);
   assert.match(template, /bindtap="handleClose"/);
+  assert.ok(template.indexOf('handleCollect') < template.indexOf('handleLater'), '主操作应位于次操作之前');
   assert.match(style, /max-height:\s*82vh/);
   assert.match(style, /min-height:\s*88rpx/);
+  assert.match(style, /\.leju-progress-actions\s*\{[\s\S]*flex-direction:\s*column/);
+  assert.match(style, /\.leju-progress-button--collect\s*\{[\s\S]*border-radius:\s*999rpx/);
+  assert.match(style, /\.leju-progress-button--later\s*\{[\s\S]*background:\s*transparent/);
   assert.doesNotMatch(style, /animation[^;]*infinite/);
   definition.lifetimes.detached.call(instance);
 });

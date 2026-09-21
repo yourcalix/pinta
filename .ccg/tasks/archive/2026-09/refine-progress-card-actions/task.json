@@ -1,0 +1,12 @@
+{
+  "id": "refine-progress-card-actions",
+  "title": "优化活动进程卡按钮排版与视觉",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交按钮排版优化",
+  "createdAt": "2026-09-21T00:00:00Z",
+  "branch": "main"
+}

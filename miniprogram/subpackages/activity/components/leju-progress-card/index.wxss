@@ -56,7 +56,7 @@
 .leju-progress-image--ready { opacity: 1; }
 
 .leju-progress-caption {
-  margin-top: 20rpx;
+  margin-top: 18rpx;
   color: #FFFDF8;
   font-size: 28rpx;
   font-weight: 750;
@@ -67,15 +67,18 @@
 
 .leju-progress-actions {
   display: flex;
-  width: 100%;
-  margin-top: 18rpx;
-  gap: 16rpx;
+  width: 82%;
+  max-width: 500rpx;
+  margin-top: 14rpx;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2rpx;
 }
 
 .leju-progress-button {
   display: flex;
-  flex: 1 1 0;
-  min-width: 0;
+  width: 100%;
+  flex: 0 0 auto;
   min-height: 88rpx;
   margin: 0;
   padding: 0 18rpx;
@@ -83,7 +86,7 @@
   justify-content: center;
   box-sizing: border-box;
   border: 0;
-  border-radius: 28rpx;
+  border-radius: 999rpx;
   font-size: 26rpx;
   font-weight: 700;
   line-height: 1;
@@ -95,15 +98,30 @@
 .leju-progress-close::after { display: none; }
 
 .leju-progress-button--later {
-  color: #F6FAF7;
-  background: rgba(255, 255, 255, .16);
-  border: 1rpx solid rgba(255, 255, 255, .32);
+  color: rgba(255, 253, 248, .82);
+  background: transparent;
+  border: 0;
+  font-size: 25rpx;
+  font-weight: 600;
+  text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, .24);
 }
 
 .leju-progress-button--collect {
   color: #FFFFFF;
-  background: #16A36A;
-  box-shadow: 0 12rpx 28rpx rgba(9, 92, 59, .28);
+  min-height: 92rpx;
+  border: 2rpx solid rgba(255, 255, 255, .2);
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #1DB376 0%, #11915F 100%);
+  box-shadow: 0 14rpx 34rpx rgba(7, 76, 48, .36), inset 0 2rpx 0 rgba(255, 255, 255, .18);
+  font-size: 27rpx;
+  letter-spacing: 1rpx;
+}
+
+.leju-progress-button__spark {
+  margin-right: 12rpx;
+  color: #FFE38A;
+  font-size: 25rpx;
+  line-height: 1;
 }
 
 .leju-progress-button--pressed { transform: scale(.96); opacity: .88; }
@@ -174,7 +192,8 @@
   .leju-progress-dialog { width: 62vw; max-width: 420rpx; }
   .leju-progress-image { border-radius: 24rpx; }
   .leju-progress-caption { margin-top: 12rpx; font-size: 25rpx; }
-  .leju-progress-actions { margin-top: 12rpx; gap: 12rpx; }
+  .leju-progress-actions { width: 100%; margin-top: 8rpx; gap: 0; }
   .leju-progress-button { min-height: 88rpx; padding: 0 10rpx; font-size: 23rpx; }
+  .leju-progress-button--collect { min-height: 88rpx; }
   .leju-progress-close { top: -42rpx; right: -18rpx; }
 }
