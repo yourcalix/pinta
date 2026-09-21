@@ -1,0 +1,12 @@
+{
+  "id": "publish-current-code-to-github",
+  "title": "将当前已提交代码同步到现有 GitHub 仓库",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "medium",
+  "domain": "git",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并将 main 快进推送到 origin/main",
+  "createdAt": "2026-09-21T00:00:00Z",
+  "branch": "main"
+}
