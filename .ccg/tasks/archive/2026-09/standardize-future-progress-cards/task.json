@@ -1,0 +1,12 @@
+{
+  "id": "standardize-future-progress-cards",
+  "title": "固化后续活动进程卡统一排版规范",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交前端规范更新",
+  "createdAt": "2026-09-22T00:00:00Z",
+  "branch": "main"
+}
