@@ -193,7 +193,7 @@
   position: absolute;
   z-index: 2;
   top: -8rpx;
-  right: -22rpx;
+  right: -10rpx;
   display: flex;
   width: 88rpx;
   min-height: 88rpx;
@@ -245,6 +245,6 @@
   .leju-progress-button { min-height: 88rpx; padding: 0 10rpx; font-size: 23rpx; }
   .leju-progress-button--collect { min-height: 88rpx; font-size: 28rpx; }
   .leju-progress-button--later { font-size: 24rpx; }
-  .leju-progress-close { top: -8rpx; right: -30rpx; }
+  .leju-progress-close { top: -8rpx; right: -10rpx; }
   .leju-progress-close__surface { width: 62rpx; height: 62rpx; font-size: 32rpx; }
 }

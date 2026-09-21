@@ -216,6 +216,8 @@ test('组件图片失败只上报一次，模板不裁图且操作热区与无�
   assert.match(style, /linear-gradient\(180deg,\s*#FFE785 0%,\s*#FFBA2E 52%,\s*#FFA812 100%\)/);
   assert.match(style, /color:\s*#124A2E/);
   assert.match(style, /\.leju-progress-close__surface\s*\{[\s\S]*width:\s*68rpx[\s\S]*height:\s*68rpx/);
+  assert.match(style, /\.leju-progress-close\s*\{[\s\S]*right:\s*-10rpx/);
+  assert.match(style, /@media[\s\S]*\.leju-progress-close\s*\{[^}]*right:\s*-10rpx/);
   assert.match(style, /\.leju-progress-caption__ray\s*\{/);
   assert.match(style, /@media\s*\(max-width:\s*340px\),\s*\(max-height:\s*680px\)/);
   assert.match(style, /\.leju-progress-actions\s*\{[\s\S]*flex-direction:\s*column/);

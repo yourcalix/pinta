@@ -1,0 +1,12 @@
+{
+  "id": "align-progress-card-close",
+  "title": "将活动进程卡关闭按钮向左微调至图片右上角",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档并提交已验证的关闭按钮位置微调",
+  "createdAt": "2026-09-22T00:00:00Z",
+  "branch": "main"
+}
