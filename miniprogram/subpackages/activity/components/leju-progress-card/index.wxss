@@ -1,0 +1,180 @@
+.leju-progress-mask {
+  position: fixed;
+  z-index: 1050;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 48rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
+  background: rgba(18, 25, 21, 0);
+  opacity: 0;
+  pointer-events: none;
+  transition: background-color 220ms ease, opacity 220ms ease;
+}
+
+.leju-progress-mask--open {
+  background: rgba(18, 25, 21, .62);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.leju-progress-dialog {
+  position: relative;
+  display: flex;
+  width: 84vw;
+  max-width: 640rpx;
+  max-height: 82vh;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translate3d(0, 36rpx, 0) scale(.88);
+  transform-origin: 50% 54%;
+  transition: opacity 200ms ease, transform 220ms ease;
+  backface-visibility: hidden;
+}
+
+.leju-progress-dialog--open {
+  opacity: 1;
+  animation: leju-progress-dialog-in 480ms cubic-bezier(.2, .9, .25, 1.15) both;
+}
+
+.leju-progress-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  flex: 0 0 auto;
+  border-radius: 30rpx;
+  box-shadow: 0 30rpx 80rpx rgba(15, 23, 19, .3);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 120ms ease;
+}
+
+.leju-progress-image--ready { opacity: 1; }
+
+.leju-progress-caption {
+  margin-top: 20rpx;
+  color: #FFFDF8;
+  font-size: 28rpx;
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: 1rpx;
+  text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, .2);
+}
+
+.leju-progress-actions {
+  display: flex;
+  width: 100%;
+  margin-top: 18rpx;
+  gap: 16rpx;
+}
+
+.leju-progress-button {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 88rpx;
+  margin: 0;
+  padding: 0 18rpx;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 28rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform 100ms ease, opacity 100ms ease;
+}
+
+.leju-progress-button::after,
+.leju-progress-close::after { display: none; }
+
+.leju-progress-button--later {
+  color: #F6FAF7;
+  background: rgba(255, 255, 255, .16);
+  border: 1rpx solid rgba(255, 255, 255, .32);
+}
+
+.leju-progress-button--collect {
+  color: #FFFFFF;
+  background: #16A36A;
+  box-shadow: 0 12rpx 28rpx rgba(9, 92, 59, .28);
+}
+
+.leju-progress-button--pressed { transform: scale(.96); opacity: .88; }
+
+.leju-progress-close {
+  position: absolute;
+  z-index: 2;
+  top: -48rpx;
+  right: -8rpx;
+  display: flex;
+  width: 88rpx;
+  min-height: 88rpx;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .16);
+  color: #FFFFFF;
+  font-size: 42rpx;
+  font-weight: 300;
+  line-height: 1;
+  transition: transform 100ms ease, opacity 100ms ease;
+}
+
+.leju-progress-close--pressed { transform: scale(.92); opacity: .72; }
+
+.leju-progress-sparks {
+  position: absolute;
+  z-index: 1;
+  top: 4%;
+  left: -22rpx;
+  right: -22rpx;
+  height: 80rpx;
+  pointer-events: none;
+}
+
+.leju-progress-sparks text {
+  position: absolute;
+  color: #FFD767;
+  font-size: 32rpx;
+  opacity: 0;
+}
+
+.leju-progress-dialog--open .leju-progress-sparks text {
+  animation: leju-progress-spark-in 480ms 260ms ease-out both;
+}
+
+.leju-progress-sparks text:nth-child(1) { left: 2%; top: 30rpx; transform: rotate(-16deg); }
+.leju-progress-sparks text:nth-child(2) { right: 2%; top: 8rpx; font-size: 42rpx; }
+.leju-progress-sparks text:nth-child(3) { right: 12%; top: 48rpx; transform: rotate(18deg); }
+
+@keyframes leju-progress-dialog-in {
+  0% { opacity: 0; transform: translate3d(0, 36rpx, 0) scale(.88); }
+  68% { opacity: 1; transform: translate3d(0, -3rpx, 0) scale(1.03); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes leju-progress-spark-in {
+  0% { opacity: 0; margin-top: 10rpx; }
+  48% { opacity: 1; }
+  100% { opacity: .86; margin-top: 0; }
+}
+
+@media (max-width: 340px), (max-height: 620px) {
+  .leju-progress-mask { padding: 34rpx 24rpx calc(30rpx + env(safe-area-inset-bottom)); }
+  .leju-progress-dialog { width: 62vw; max-width: 420rpx; }
+  .leju-progress-image { border-radius: 24rpx; }
+  .leju-progress-caption { margin-top: 12rpx; font-size: 25rpx; }
+  .leju-progress-actions { margin-top: 12rpx; gap: 12rpx; }
+  .leju-progress-button { min-height: 88rpx; padding: 0 10rpx; font-size: 23rpx; }
+  .leju-progress-close { top: -42rpx; right: -18rpx; }
+}

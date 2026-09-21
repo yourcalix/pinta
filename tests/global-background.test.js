@@ -18,7 +18,9 @@ function pageFiles(extension) {
       const nextRelative = path.join(relative, entry.name);
       const nextPath = path.join(directory, entry.name);
       if (entry.isDirectory()) walk(nextPath, nextRelative);
-      else if (entry.name === `index.${extension}`) result.push(nextRelative.replaceAll(path.sep, '/'));
+      else if (entry.name === `index.${extension}` && !nextRelative.split(path.sep).includes('components')) {
+        result.push(nextRelative.replaceAll(path.sep, '/'));
+      }
     });
   }
   walk(path.join(root, 'pages'), 'pages');

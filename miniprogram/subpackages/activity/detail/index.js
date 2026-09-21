@@ -3,12 +3,17 @@
 const activityService = require('../../../services/activity');
 const userService = require('../../../services/user');
 const directMessageService = require('../../../services/direct-message');
+const runtimeConfig = require('../../../config/runtime');
 const { decorateActivity } = require('../../../utils/display');
 const { decodeActivityId } = require('../../../utils/activity-route');
 const { resolveDetailError } = require('../../../utils/detail-error');
 const { calculateContentTopInset } = require('../../../utils/navigation-layout');
 const { normalizeAvatarSlots, fallbackAvatarSlot, profileAvatarPath } = require('../../../utils/passenger-avatar');
 const { formatDateTime } = require('../../../utils/date');
+const { getProgressCard } = require('../config/progress-cards');
+const { resolveProgressStage, resolveDebugProgressStage } = require('../utils/progress-resolver');
+const progressStorage = require('../services/progress-storage');
+const PROGRESS_CARD_DELAY_MS = 450;
 const OWNER_MBTI_TYPES = new Set([
   'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
   'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'
@@ -21,6 +26,22 @@ const BENEFIT_DEAL_LABELS = Object.freeze({
   BUNDLE_DISCOUNT: '组合优惠',
   OTHER: '其他优惠'
 });
+
+function emptyProgressCard() {
+  return { visible: false, image: '', stage: '', title: '', collecting: false };
+}
+
+function progressCandidate(activity) {
+  if (!activity || !activity.id) return null;
+  const debugStage = resolveDebugProgressStage(
+    activity,
+    runtimeConfig.progressCardDebugStage,
+    runtimeConfig.useMock === true
+  );
+  const stage = debugStage || resolveProgressStage(activity);
+  const card = stage && getProgressCard(stage);
+  return card ? { ...card, activityId: activity.id } : null;
+}
 
 function publishedDateLabel(value) {
   const date = new Date(value);
@@ -151,16 +172,24 @@ function presentation(activity) {
 Page({
   data: { id: '', activity: null, detailRows: [], loading: true, error: '', errorCode: '', applying: false, note: '', showApply: false,
     contentTopInset: 88, navTop: 36, singlePage: true, navSolid: false, coverSrc: '', coverFailed: false, detailSlots: [], hiddenMembers: 0, ownerAvatar: null, ownerNickname: '', ownerPersonalTags: [], ownerFacts: [], ownerDutyText: '', ownerAccessibilityLabel: '', primaryAction: '', primaryLabel: '', opening: false, groupEnabled: false, consultEnabled: false, consulting: false,
-    canViewMeetingPoint: false, meetingPointModalVisible: false, meetingPointModalTitle: '集合地点', meetingPointModalDescription: '' },
+    canViewMeetingPoint: false, meetingPointModalVisible: false, meetingPointModalTitle: '集合地点', meetingPointModalDescription: '',
+    progressCard: emptyProgressCard() },
   onLoad(options = {}) {
     this._disposed = false;
+    this._progressSessionSuppressed = new Set();
+    this._progressPending = null;
+    this._activeProgressCandidate = null;
     const contentTopInset = calculateContentTopInset(typeof wx === 'undefined' ? null : wx);
     let singlePage = true;
     try { singlePage = typeof getCurrentPages !== 'function' || getCurrentPages().length <= 1; } catch (error) { /* Single-page fallback. */ }
     this.setData({ id: decodeActivityId(options.id), contentTopInset, navTop: Math.max(20, contentTopInset - 52), singlePage });
     if (typeof wx !== 'undefined' && wx.showShareMenu) wx.showShareMenu({ menus: ['shareAppMessage'] });
   },
-  onShow() { this._visible = true; this.setData({ applying: Boolean(this._submitting), opening: Boolean(this._opening) }); return this.loadDetail(); },
+  onShow() {
+    this._visible = true;
+    this.setData({ applying: Boolean(this._submitting), opening: Boolean(this._opening) });
+    return this.loadDetail();
+  },
   onReady() { if (this.data.activity) this.observeHero(); },
   observeHero() {
     if (typeof this.createIntersectionObserver !== 'function') return;
@@ -170,8 +199,131 @@ Page({
       if (!this._disposed) this.setData({ navSolid: result.intersectionRatio === 0 && result.boundingClientRect.top < this.data.contentTopInset });
     });
   },
-  onHide() { this._visible = false; this._loadSeq = (this._loadSeq || 0) + 1; this.setData({ showApply: false, meetingPointModalVisible: false }); },
-  onUnload() { this._disposed = true; this._visible = false; this._loadSeq = (this._loadSeq || 0) + 1; if (this._heroObserver) this._heroObserver.disconnect(); this._heroObserver = null; },
+  onHide() {
+    this._visible = false;
+    this._loadSeq = (this._loadSeq || 0) + 1;
+    this.clearProgressCardTimer();
+    if (this._activeProgressCandidate) this._progressSessionSuppressed.add(this._activeProgressCandidate.stage);
+    this._progressPending = null;
+    this._activeProgressCandidate = null;
+    this.setData({ showApply: false, meetingPointModalVisible: false, 'progressCard.visible': false });
+  },
+  onUnload() {
+    this._disposed = true;
+    this._visible = false;
+    this._loadSeq = (this._loadSeq || 0) + 1;
+    this.clearProgressCardTimer();
+    this._progressPending = null;
+    this._activeProgressCandidate = null;
+    this._userLoginPromise = null;
+    if (this._heroObserver) this._heroObserver.disconnect();
+    this._heroObserver = null;
+  },
+  clearProgressCardTimer() {
+    if (this._progressTimer) clearTimeout(this._progressTimer);
+    this._progressTimer = null;
+  },
+  async ensureUserSession() {
+    if (this._userLoginPromise) return this._userLoginPromise;
+    const pending = userService.login();
+    this._userLoginPromise = pending;
+    try {
+      return await pending;
+    } catch (error) {
+      if (this._userLoginPromise === pending) this._userLoginPromise = null;
+      throw error;
+    }
+  },
+  async prepareProgressCard(activity, loadSeq) {
+    const candidate = progressCandidate(activity);
+    if (!candidate || this._progressSessionSuppressed.has(candidate.stage)) return;
+    try {
+      if (!progressStorage.hasActorScope()) await this.ensureUserSession();
+    } catch (error) {
+      return;
+    }
+    if (this._disposed || !this._visible || loadSeq !== this._loadSeq) return;
+    if (!progressStorage.shouldPresent(candidate)) return;
+    this._progressPending = candidate;
+    this.scheduleProgressCard(PROGRESS_CARD_DELAY_MS);
+  },
+  scheduleProgressCard(delay = PROGRESS_CARD_DELAY_MS) {
+    this.clearProgressCardTimer();
+    if (!this._progressPending || this._disposed || !this._visible) return;
+    this._progressTimer = setTimeout(() => {
+      this._progressTimer = null;
+      this.tryShowPendingProgressCard();
+    }, delay);
+  },
+  tryShowPendingProgressCard() {
+    const candidate = this._progressPending;
+    if (!candidate || this._disposed || !this._visible || this.data.loading || this.data.errorCode || !this.data.activity) return;
+    if (this.data.showApply || this.data.meetingPointModalVisible || this.data.progressCard.visible) return;
+    const current = progressCandidate(this.data.activity);
+    if (!current || current.activityId !== candidate.activityId || current.stage !== candidate.stage) {
+      this._progressPending = null;
+      return;
+    }
+    if (this._progressSessionSuppressed.has(candidate.stage) || !progressStorage.shouldPresent(candidate)) {
+      this._progressPending = null;
+      return;
+    }
+    this._progressPending = null;
+    this._activeProgressCandidate = candidate;
+    this.setData({
+      progressCard: {
+        visible: true,
+        image: candidate.image,
+        stage: candidate.stage,
+        title: candidate.title,
+        collecting: false
+      }
+    });
+  },
+  resumeProgressCard() {
+    if (this._progressPending && !this.data.showApply && !this.data.meetingPointModalVisible) this.scheduleProgressCard(320);
+  },
+  suspendProgressCardForOverlay() {
+    this.clearProgressCardTimer();
+    if (!this.data.progressCard.visible || !this._activeProgressCandidate) return;
+    this._progressSessionSuppressed.add(this._activeProgressCandidate.stage);
+    this._activeProgressCandidate = null;
+    this._progressPending = null;
+    this.setData({ 'progressCard.visible': false });
+  },
+  closeActiveProgressCard() {
+    if (!this._activeProgressCandidate) return null;
+    const candidate = this._activeProgressCandidate;
+    this._progressSessionSuppressed.add(candidate.stage);
+    this._activeProgressCandidate = null;
+    this.setData({ 'progressCard.visible': false, 'progressCard.collecting': false });
+    return candidate;
+  },
+  handleProgressCollect() {
+    const candidate = this._activeProgressCandidate;
+    if (!candidate || this.data.progressCard.collecting) return;
+    this.setData({ 'progressCard.collecting': true });
+    progressStorage.markSeen(candidate);
+    this.closeActiveProgressCard();
+    wx.showToast({ title: '已收下卡片', icon: 'none' });
+  },
+  handleProgressLater() {
+    const candidate = this._activeProgressCandidate;
+    if (!candidate) return;
+    progressStorage.snooze(candidate);
+    this.closeActiveProgressCard();
+  },
+  handleProgressClose() { this.handleProgressLater(); },
+  handleProgressImageError() {
+    const candidate = this._activeProgressCandidate;
+    if (candidate) this._progressSessionSuppressed.add(candidate.stage);
+    this._activeProgressCandidate = null;
+    this.setData({ progressCard: emptyProgressCard() });
+    wx.showToast({ title: '新进度已解锁', icon: 'none' });
+  },
+  handleProgressClosed() {
+    if (!this.data.progressCard.visible) this.setData({ progressCard: emptyProgressCard() });
+  },
   handleBack() {
     let pages = [];
     try { pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []; } catch (error) { /* Fall back to discover. */ }
@@ -186,6 +338,7 @@ Page({
   preventScroll() {},
   handleOpenMeetingPointModal() {
     if (!this.data.activity || !this.data.canViewMeetingPoint) return;
+    this.suspendProgressCardForOverlay();
     const modal = meetingPointPresentation(this.data.activity);
     this.setData({
       meetingPointModalVisible: true,
@@ -193,7 +346,7 @@ Page({
       meetingPointModalDescription: modal.description
     });
   },
-  handleCloseMeetingPointModal() { this.setData({ meetingPointModalVisible: false }); },
+  handleCloseMeetingPointModal() { this.setData({ meetingPointModalVisible: false }, () => this.resumeProgressCard()); },
   handleCoverError() { this.setData({ coverFailed: true }); },
   handleMemberAvatarError(event) {
     const dataset = event && event.currentTarget && event.currentTarget.dataset || {};
@@ -220,16 +373,22 @@ Page({
   },
   async loadDetail() {
     const loadSeq = (this._loadSeq = (this._loadSeq || 0) + 1);
+    this.clearProgressCardTimer();
+    this._progressPending = null;
+    this._activeProgressCandidate = null;
     if (!this.data.id) {
       this.setData({ loading: false, activity: null, detailRows: [], errorCode: 'NOT_FOUND', error: '活动不存在或已失效' });
       return;
     }
-    this.setData({ loading: true, activity: null, detailRows: [], error: '', errorCode: '' });
+    this.setData({ loading: true, activity: null, detailRows: [], error: '', errorCode: '', 'progressCard.visible': false });
     try {
       const result = await activityService.detail(this.data.id);
       if (loadSeq !== this._loadSeq) return;
       const activity = decorateActivity(result.activity);
-      this.setData({ activity, ...presentation(activity), loading: false }, () => this.observeHero());
+      this.setData({ activity, ...presentation(activity), loading: false }, () => {
+        this.observeHero();
+        this.prepareProgressCard(activity, loadSeq);
+      });
     } catch (error) {
       if (loadSeq !== this._loadSeq) return;
       this.setData({ loading: false, activity: null, detailRows: [], ...resolveDetailError(error) });
@@ -238,11 +397,12 @@ Page({
   handleRetry() { this.loadDetail(); },
   async handleApplyOpen() {
     if (this._opening || this._submitting || !this.data.activity || !this.data.activity.canApply) return;
+    this.suspendProgressCardForOverlay();
     this._opening = true;
     const seq = this._loadSeq;
     this.setData({ opening: true });
     try {
-      const user = await userService.login();
+      const user = await this.ensureUserSession();
       if (this._disposed || !this._visible || seq !== this._loadSeq) return;
       if (!user.profile || !user.profile.adultConfirmed) {
         const nextUrl = `/subpackages/activity/detail/index?id=${encodeURIComponent(this.data.id)}`;
@@ -251,9 +411,16 @@ Page({
       }
       this.setData({ showApply: true });
     } catch (error) { if (!this._disposed && this._visible && !error.handled) wx.showToast({ title: error.message || '暂时无法加入', icon: 'none' }); }
-    finally { this._opening = false; if (!this._disposed && this._visible) this.setData({ opening: false }); }
+    finally {
+      this._opening = false;
+      if (!this._disposed && this._visible) {
+        this.setData({ opening: false }, () => {
+          if (!this.data.showApply) this.resumeProgressCard();
+        });
+      }
+    }
   },
-  handleApplyClose() { if (!this.data.applying) this.setData({ showApply: false }); },
+  handleApplyClose() { if (!this.data.applying) this.setData({ showApply: false }, () => this.resumeProgressCard()); },
   handleNote(event) { this.setData({ note: event.detail.value }); },
   async handleApplySubmit() {
     if (this._submitting || this.data.applying || !this.data.showApply || !this.data.activity || !this.data.activity.canApply) return;
@@ -281,7 +448,7 @@ Page({
     if (!this.data.consultEnabled) return wx.showToast({ title: this.data.activity.viewerRole === 'owner' ? '不能与自己发起私信' : '当前活动暂不可咨询', icon: 'none' });
     this._consulting = true; const seq = this._loadSeq; this.setData({ consulting: true });
     try {
-      const user = await userService.login();
+      const user = await this.ensureUserSession();
       if (this._disposed || !this._visible || seq !== this._loadSeq) return;
       if (!user.profile || !user.profile.adultConfirmed || !user.profile.gender) {
         const nextUrl = `/subpackages/activity/detail/index?id=${encodeURIComponent(this.data.id)}`;
@@ -299,8 +466,8 @@ Page({
   handleGoDiscover() { wx.switchTab({ url: '/pages/discover/index' }); },
   onShareAppMessage() {
     if (this.data.loading || this.data.errorCode || !this.data.activity || !this.data.id) {
-      return { title: '拼吧｜发现有趣拼单', path: '/pages/discover/index' };
+      return { title: '乐聚拼吧｜发现有趣拼单', path: '/pages/discover/index' };
     }
-    return { title: `拼吧｜${this.data.activity.title}`, path: `/subpackages/activity/detail/index?id=${encodeURIComponent(this.data.id)}` };
+    return { title: `乐聚拼吧｜${this.data.activity.title}`, path: `/subpackages/activity/detail/index?id=${encodeURIComponent(this.data.id)}` };
   }
 });

@@ -8,6 +8,7 @@
   "usingComponents": {
     "status-badge": "/components/status-badge/index",
     "empty-state": "/components/empty-state/index",
-    "pinba-modal": "/components/pinba-modal/index"
+    "pinba-modal": "/components/pinba-modal/index",
+    "leju-progress-card": "/subpackages/activity/components/leju-progress-card/index"
   }
 }

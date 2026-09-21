@@ -7,7 +7,8 @@ const ALLOWED_KEYS = Object.freeze([
   'requestTimeoutMs',
   'subscribeTemplateIds',
   'amapMiniProgramKey',
-  'demoCity'
+  'demoCity',
+  'progressCardDebugStage'
 ]);
 
 function isMiniProgramHost(host) {
@@ -30,6 +31,8 @@ function resolveRuntimeConfig(defaults, local) {
   if (!Array.isArray(resolved.subscribeTemplateIds)) throw new Error('subscribeTemplateIds 配置无效');
   if (resolved.amapMiniProgramKey === undefined) resolved.amapMiniProgramKey = '';
   if (typeof resolved.amapMiniProgramKey !== 'string') throw new Error('amapMiniProgramKey 配置无效');
+  if (resolved.progressCardDebugStage === undefined) resolved.progressCardDebugStage = '';
+  if (typeof resolved.progressCardDebugStage !== 'string') throw new Error('progressCardDebugStage 配置无效');
   return Object.freeze(resolved);
 }
 

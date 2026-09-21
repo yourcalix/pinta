@@ -1,0 +1,9 @@
+{"path":"miniprogram/subpackages/activity/detail/index.js","reason":"活动详情加载、身份确定、申请抽屉与集合地点弹窗生命周期"}
+{"path":"miniprogram/subpackages/activity/detail/index.wxml","reason":"活动详情渲染及现有浮层挂载点"}
+{"path":"miniprogram/subpackages/activity/detail/index.json","reason":"详情页组件注册"}
+{"path":"miniprogram/services/activity.js","reason":"activity.detail 前端服务边界"}
+{"path":"cloudfunctions/api/lib/service.js","reason":"公开活动 DTO 与 activity.detail 契约"}
+{"path":"cloudfunctions/api/lib/constants.js","reason":"权威活动状态枚举"}
+{"path":".ccg/spec/frontend/index.md","reason":"活动详情、素材归属、包体、弹窗与小程序兼容规范"}
+{"path":"/Users/cx/Desktop/pinba/拼同行","reason":"用户提供的第二套旅行/高铁进程插画，五张唯一素材加一张重复图"}
+{"path":"/Users/cx/Desktop/pinba/拼好饭","reason":"用户提供的六张拼好饭进程插画"}

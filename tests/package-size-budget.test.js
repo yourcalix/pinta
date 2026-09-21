@@ -9,6 +9,7 @@ const ROOT = path.join(__dirname, '../miniprogram');
 const MAIN_BUDGET = Math.floor(1.71 * 1024 * 1024);
 const PUBLISH_BUDGET = Math.floor(1.25 * 1024 * 1024);
 const SUBPACKAGE_BUDGET = Math.floor(1.5 * 1024 * 1024);
+const ACTIVITY_WARNING_BUDGET = Math.floor(1.35 * 1024 * 1024);
 const MAIN_PUBLISH_ASSETS = new Set([
   'publish-cover-benefit.png',
   'publish-cover-companion.png',
@@ -45,6 +46,9 @@ test('主包与各分包保留可持续增长的体积余量', () => {
     const packageBytes = bytes(walk(path.join(subpackageRoot, entry.name)));
     const budget = entry.name === 'publish' ? PUBLISH_BUDGET : SUBPACKAGE_BUDGET;
     assert.ok(packageBytes <= budget, `${entry.name} 分包 ${(packageBytes / 1024 / 1024).toFixed(2)}MiB 超过 ${(budget / 1024 / 1024).toFixed(2)}MiB 预算`);
+    if (entry.name === 'activity') {
+      assert.ok(packageBytes <= ACTIVITY_WARNING_BUDGET, `activity 分包 ${(packageBytes / 1024 / 1024).toFixed(2)}MiB 已超过 1.35MiB 安全预警线，请先优化资源再继续增长`);
+    }
   }
 });
 

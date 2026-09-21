@@ -7,5 +7,6 @@ module.exports = {
   requestTimeoutMs: 8000,
   subscribeTemplateIds: [],
   amapMiniProgramKey: '',
-  demoCity: '澳门'
+  demoCity: '澳门',
+  progressCardDebugStage: ''
 };

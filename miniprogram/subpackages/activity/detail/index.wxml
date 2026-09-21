@@ -95,6 +95,19 @@
 
   <pinba-modal visible="{{meetingPointModalVisible}}" type="location" title="{{meetingPointModalTitle}}" description="{{meetingPointModalDescription}}" confirm-text="知道了" close-on-mask="{{true}}" bindconfirm="handleCloseMeetingPointModal" bindclose="handleCloseMeetingPointModal" />
 
+  <leju-progress-card
+    visible="{{progressCard.visible}}"
+    image="{{progressCard.image}}"
+    stage="{{progressCard.stage}}"
+    title="{{progressCard.title}}"
+    collecting="{{progressCard.collecting}}"
+    bindcollect="handleProgressCollect"
+    bindlater="handleProgressLater"
+    bindclose="handleProgressClose"
+    bindclosed="handleProgressClosed"
+    bindimageerror="handleProgressImageError"
+  />
+
   <view wx:if="{{showApply}}" class="apply-modal">
     <view class="apply-backdrop" bindtap="handleApplyClose" catchtouchmove="preventScroll"></view>
     <view class="apply-sheet" catchtouchmove="preventScroll">

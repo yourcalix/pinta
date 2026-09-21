@@ -123,7 +123,7 @@ test('成功分享只包含公开标题和编码后的当前活动 ID', () => {
     };
     const payload = page.onShareAppMessage();
     assert.deepEqual(payload, {
-      title: '拼吧｜周末羽毛球',
+      title: '乐聚拼吧｜周末羽毛球',
       path: '/subpackages/activity/detail/index?id=activity%2Fa%3Fx%3D1'
     });
     assert.equal(JSON.stringify(payload).includes('contactInfo'), false);
@@ -147,7 +147,7 @@ test('加载中、无活动或错误状态分享统一降级到发现页', () =>
     states.forEach((state) => {
       Object.assign(page.data, state);
       assert.deepEqual(page.onShareAppMessage(), {
-        title: '拼吧｜发现有趣拼单',
+        title: '乐聚拼吧｜发现有趣拼单',
         path: '/pages/discover/index'
       });
     });
