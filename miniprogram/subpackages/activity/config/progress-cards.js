@@ -57,18 +57,75 @@ const MEAL_PROGRESS_CARDS = Object.freeze({
   })
 });
 
+const COMPANION_PROGRESS_CARDS = Object.freeze({
+  COMPANION_REGISTERED: Object.freeze({
+    stage: 'COMPANION_REGISTERED',
+    activityType: 'companion',
+    subtype: 'default',
+    rank: 0,
+    title: '报名成功',
+    image: '/subpackages/activity/assets/images/progress-cards/companion/registered.jpg',
+    autoEligible: true
+  }),
+  COMPANION_TEAM_READY: Object.freeze({
+    stage: 'COMPANION_TEAM_READY',
+    activityType: 'companion',
+    subtype: 'default',
+    rank: 1,
+    title: '组队成功',
+    image: '/subpackages/activity/assets/images/progress-cards/companion/team-ready.jpg',
+    autoEligible: true
+  }),
+  COMPANION_TRIP_READY: Object.freeze({
+    stage: 'COMPANION_TRIP_READY',
+    activityType: 'companion',
+    subtype: 'default',
+    rank: 2,
+    title: '行前整装',
+    image: '/subpackages/activity/assets/images/progress-cards/companion/trip-ready.jpg',
+    autoEligible: false
+  }),
+  COMPANION_RAIL_TOGETHER: Object.freeze({
+    stage: 'COMPANION_RAIL_TOGETHER',
+    activityType: 'companion',
+    subtype: 'default',
+    rank: 3,
+    variantGroup: 'COMPANION_TRANSIT',
+    title: '高铁同行',
+    image: '/subpackages/activity/assets/images/progress-cards/companion/rail-together.jpg',
+    autoEligible: false
+  }),
+  COMPANION_NIGHT_JOURNEY: Object.freeze({
+    stage: 'COMPANION_NIGHT_JOURNEY',
+    activityType: 'companion',
+    subtype: 'default',
+    rank: 3,
+    variantGroup: 'COMPANION_TRANSIT',
+    title: '夜行途中',
+    image: '/subpackages/activity/assets/images/progress-cards/companion/night-journey.jpg',
+    autoEligible: false
+  })
+});
+
+const PROGRESS_CARDS = Object.freeze({
+  ...MEAL_PROGRESS_CARDS,
+  ...COMPANION_PROGRESS_CARDS
+});
+
 const PROGRESS_CARD_REGISTRY = Object.freeze({
   meal: Object.freeze({ default: MEAL_PROGRESS_CARDS }),
   sport: Object.freeze({}),
-  companion: Object.freeze({})
+  companion: Object.freeze({ default: COMPANION_PROGRESS_CARDS })
 });
 
 function getProgressCard(stage) {
-  return MEAL_PROGRESS_CARDS[String(stage || '')] || null;
+  return PROGRESS_CARDS[String(stage || '')] || null;
 }
 
 module.exports = {
   PROGRESS_CARD_REGISTRY,
+  PROGRESS_CARDS,
   MEAL_PROGRESS_CARDS,
+  COMPANION_PROGRESS_CARDS,
   getProgressCard
 };

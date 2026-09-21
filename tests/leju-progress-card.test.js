@@ -5,11 +5,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const { createRequire } = require('node:module');
 
 const ROOT = path.join(__dirname, '../miniprogram');
 const ACTIVITY_ROOT = path.join(ROOT, 'subpackages/activity');
-const ASSET_ROOT = path.join(ACTIVITY_ROOT, 'assets/images/progress-cards/meal');
+const MEAL_ASSET_ROOT = path.join(ACTIVITY_ROOT, 'assets/images/progress-cards/meal');
+const COMPANION_ASSET_ROOT = path.join(ACTIVITY_ROOT, 'assets/images/progress-cards/companion');
 const COMPONENT_ROOT = path.join(ACTIVITY_ROOT, 'components/leju-progress-card');
 const MEAL_STAGES = [
   'MEAL_REGISTERED',
@@ -18,6 +20,13 @@ const MEAL_STAGES = [
   'MEAL_ACTIVE',
   'MEAL_CHECKPOINT',
   'MEAL_FINISHED'
+];
+const COMPANION_STAGES = [
+  'COMPANION_REGISTERED',
+  'COMPANION_TEAM_READY',
+  'COMPANION_TRIP_READY',
+  'COMPANION_RAIL_TOGETHER',
+  'COMPANION_NIGHT_JOURNEY'
 ];
 
 function jpegFrameMarker(buffer) {
@@ -48,6 +57,13 @@ function jpegDimensions(buffer) {
     offset += 2 + length;
   }
   return null;
+}
+
+function lastCssNumericValue(source, selector, property, unit) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`${escapedSelector}\\s*\\{[^}]*${property}:\\s*([\\d.]+)${unit}`, 'g');
+  const matches = [...source.matchAll(pattern)];
+  return matches.length ? Number(matches.at(-1)[1]) : NaN;
 }
 
 function loadComponent() {
@@ -81,9 +97,10 @@ function storagePlatform() {
   };
 }
 
-test('六张拼好饭卡按原比例转为受控 Baseline JPEG，图片未裁切', () => {
+test('十一张进程卡按业务原比例转为受控 Baseline JPEG，图片未裁切且无重复文件', () => {
   const { getProgressCard } = require('../miniprogram/subpackages/activity/config/progress-cards');
   let total = 0;
+  const contentHashes = [];
   MEAL_STAGES.forEach((stage) => {
     const card = getProgressCard(stage);
     assert.ok(card, stage);
@@ -92,12 +109,28 @@ test('六张拼好饭卡按原比例转为受控 Baseline JPEG，图片未裁切
     const buffer = fs.readFileSync(file);
     assert.deepEqual([...buffer.subarray(0, 3)], [0xff, 0xd8, 0xff], stage);
     assert.equal(jpegFrameMarker(buffer), 0xc0, `${stage} 必须为 Baseline JPEG`);
-    assert.deepEqual(jpegDimensions(buffer), { width: 900, height: 1125 }, `${stage} 必须保持 1122:1402 的原始比例`);
-    assert.ok(buffer.length <= 220 * 1024, `${stage} 体积 ${buffer.length} 超过 220KB`);
+    assert.deepEqual(jpegDimensions(buffer), { width: 720, height: 900 }, `${stage} 必须保持 4:5 原始比例`);
+    assert.ok(buffer.length <= 100 * 1024, `${stage} 体积 ${buffer.length} 超过 100KB`);
+    contentHashes.push(crypto.createHash('sha256').update(buffer).digest('hex'));
     total += buffer.length;
   });
-  assert.ok(total <= 1.15 * 1024 * 1024, `六张进程卡总体积 ${total} 过大`);
-  assert.deepEqual(new Set(fs.readdirSync(ASSET_ROOT)), new Set(MEAL_STAGES.map((stage) => path.basename(getProgressCard(stage).image))));
+  COMPANION_STAGES.forEach((stage) => {
+    const card = getProgressCard(stage);
+    assert.ok(card, stage);
+    assert.match(card.image, /^\/subpackages\/activity\/assets\/images\/progress-cards\/companion\/[a-z-]+\.jpg$/);
+    const file = path.join(ROOT, card.image.slice(1));
+    const buffer = fs.readFileSync(file);
+    assert.deepEqual([...buffer.subarray(0, 3)], [0xff, 0xd8, 0xff], stage);
+    assert.equal(jpegFrameMarker(buffer), 0xc0, `${stage} 必须为 Baseline JPEG`);
+    assert.deepEqual(jpegDimensions(buffer), { width: 720, height: 960 }, `${stage} 必须保持 3:4 原始比例`);
+    assert.ok(buffer.length <= 100 * 1024, `${stage} 体积 ${buffer.length} 超过 100KB`);
+    contentHashes.push(crypto.createHash('sha256').update(buffer).digest('hex'));
+    total += buffer.length;
+  });
+  assert.ok(total <= 1.05 * 1024 * 1024, `十一张进程卡总体积 ${total} 过大`);
+  assert.equal(new Set(contentHashes).size, MEAL_STAGES.length + COMPANION_STAGES.length, '进程卡不得以不同文件名重复落盘');
+  assert.deepEqual(new Set(fs.readdirSync(MEAL_ASSET_ROOT)), new Set(MEAL_STAGES.map((stage) => path.basename(getProgressCard(stage).image))));
+  assert.deepEqual(new Set(fs.readdirSync(COMPANION_ASSET_ROOT)), new Set(COMPANION_STAGES.map((stage) => path.basename(getProgressCard(stage).image))));
 });
 
 test('阶段裁决只消费拼好饭权威状态，不伪造点单或打卡', () => {
@@ -114,6 +147,40 @@ test('阶段裁决只消费拼好饭权威状态，不伪造点单或打卡', ()
   assert.equal(resolveProgressStage({ ...member, status: 'FORMED', typeData: { menuConfirmed: false } }), 'MEAL_TEAM_READY');
   assert.notEqual(resolveProgressStage({ ...member, status: 'FORMED' }), 'MEAL_MENU_READY');
   assert.notEqual(resolveProgressStage({ ...member, status: 'IN_PROGRESS' }), 'MEAL_CHECKPOINT');
+});
+
+test('拼同行只自动展示报名与成团权威阶段，不伪造整装、交通方式或完成卡', () => {
+  const { getProgressCard } = require('../miniprogram/subpackages/activity/config/progress-cards');
+  const { resolveProgressStage } = require('../miniprogram/subpackages/activity/utils/progress-resolver');
+  const member = { id: 'c1', type: 'companion', viewerRole: 'member', status: 'RECRUITING' };
+  assert.equal(resolveProgressStage(member), 'COMPANION_REGISTERED');
+  assert.equal(resolveProgressStage({ ...member, status: 'FORMED' }), 'COMPANION_TEAM_READY');
+  assert.equal(resolveProgressStage({ ...member, status: 'IN_PROGRESS' }), null);
+  assert.equal(resolveProgressStage({ ...member, status: 'COMPLETED' }), null);
+  assert.equal(resolveProgressStage({ ...member, status: 'CANCELLED' }), null);
+  assert.equal(resolveProgressStage({ ...member, viewerRole: 'guest' }), null);
+  assert.equal(resolveProgressStage({ ...member, viewerRole: 'guest', viewerMembership: { status: 'ACTIVE' } }), 'COMPANION_REGISTERED');
+  assert.equal(getProgressCard('COMPANION_REGISTERED').autoEligible, true);
+  assert.equal(getProgressCard('COMPANION_TEAM_READY').autoEligible, true);
+  assert.equal(getProgressCard('COMPANION_TRIP_READY').autoEligible, false);
+  assert.equal(getProgressCard('COMPANION_RAIL_TOGETHER').autoEligible, false);
+  assert.equal(getProgressCard('COMPANION_NIGHT_JOURNEY').autoEligible, false);
+  assert.equal(getProgressCard('COMPANION_RAIL_TOGETHER').rank, getProgressCard('COMPANION_NIGHT_JOURNEY').rank);
+  assert.equal(getProgressCard('COMPANION_RAIL_TOGETHER').variantGroup, 'COMPANION_TRANSIT');
+  assert.equal(getProgressCard('COMPANION_NIGHT_JOURNEY').variantGroup, 'COMPANION_TRANSIT');
+});
+
+test('进程卡 debug 预览严格隔离业务类型且不绕过显式开关', () => {
+  const { resolveDebugProgressStage } = require('../miniprogram/subpackages/activity/utils/progress-resolver');
+  const food = { type: 'food' };
+  const companion = { type: 'companion' };
+  assert.equal(resolveDebugProgressStage(companion, 'COMPANION_TRIP_READY', true), 'COMPANION_TRIP_READY');
+  assert.equal(resolveDebugProgressStage(companion, 'COMPANION_RAIL_TOGETHER', true), 'COMPANION_RAIL_TOGETHER');
+  assert.equal(resolveDebugProgressStage(companion, 'COMPANION_NIGHT_JOURNEY', true), 'COMPANION_NIGHT_JOURNEY');
+  assert.equal(resolveDebugProgressStage(companion, 'COMPANION_TRIP_READY', false), null);
+  assert.equal(resolveDebugProgressStage(food, 'COMPANION_TRIP_READY', true), null);
+  assert.equal(resolveDebugProgressStage(companion, 'MEAL_ACTIVE', true), null);
+  assert.equal(resolveDebugProgressStage({ type: 'sport' }, 'COMPANION_TRIP_READY', true), null);
 });
 
 test('seen 与 snooze 按私有 actor scope 隔离，摘要存储不泄露原值且阻止阶段倒退', () => {
@@ -220,11 +287,26 @@ test('组件图片失败只上报一次，模板不裁图且操作热区与无�
   assert.match(style, /@media[\s\S]*\.leju-progress-close\s*\{[^}]*right:\s*-10rpx/);
   assert.match(style, /\.leju-progress-caption__ray\s*\{/);
   assert.match(style, /@media\s*\(max-width:\s*340px\),\s*\(max-height:\s*680px\)/);
+  assert.match(style, /\.leju-progress-dialog\s*\{[^}]*width:\s*62vw/);
   assert.match(style, /\.leju-progress-actions\s*\{[\s\S]*flex-direction:\s*column/);
   assert.match(style, /\.leju-progress-button--collect\s*\{[\s\S]*border-radius:\s*999rpx/);
   assert.match(style, /\.leju-progress-button--later\s*\{[\s\S]*background:\s*transparent/);
   assert.doesNotMatch(style, /filter:\s*drop-shadow/);
   assert.doesNotMatch(style, /animation[^;]*infinite/);
+  const shortViewportWidth = 320;
+  const shortViewportHeight = 568;
+  const rpxToPx = shortViewportWidth / 750;
+  const dialogWidthVw = lastCssNumericValue(style, '.leju-progress-dialog', 'width', 'vw');
+  const dialogMaxHeightVh = lastCssNumericValue(style, '.leju-progress-dialog', 'max-height', 'vh');
+  const captionMinHeightRpx = lastCssNumericValue(style, '.leju-progress-caption', 'min-height', 'rpx');
+  const captionMarginRpx = lastCssNumericValue(style, '.leju-progress-caption', 'margin-top', 'rpx');
+  const actionsMarginRpx = lastCssNumericValue(style, '.leju-progress-actions', 'margin-top', 'rpx');
+  const buttonMinHeightRpx = lastCssNumericValue(style, '.leju-progress-button', 'min-height', 'rpx');
+  [dialogWidthVw, dialogMaxHeightVh, captionMinHeightRpx, captionMarginRpx, actionsMarginRpx, buttonMinHeightRpx]
+    .forEach((value) => assert.equal(Number.isFinite(value), true, '短屏几何测试必须读取到真实 WXSS 数值'));
+  const companionImageHeight = shortViewportWidth * (dialogWidthVw / 100) * (4 / 3);
+  const compactCaptionAndActions = (captionMinHeightRpx + captionMarginRpx + actionsMarginRpx + buttonMinHeightRpx * 2) * rpxToPx;
+  assert.ok(companionImageHeight + compactCaptionAndActions < shortViewportHeight * (dialogMaxHeightVh / 100), '3:4 同行卡必须容纳在短屏 82vh 内');
   definition.lifetimes.detached.call(instance);
 });
 
