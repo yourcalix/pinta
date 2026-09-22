@@ -1,0 +1,12 @@
+{
+  "id": "add-new-user-welcome-ip",
+  "title": "接入新用户首次进入随机欢迎 IP",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交推送当前完整小程序代码",
+  "createdAt": "2026-09-22T03:05:06Z",
+  "branch": "main"
+}

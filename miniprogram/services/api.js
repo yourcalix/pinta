@@ -10,6 +10,7 @@ const MUTATING_ACTIONS = new Set([
   'profile.avatar.confirm',
   'profile.avatar.clear',
   'profile.follow.set',
+  'welcome.ack',
   'activity.create',
   'activity.cancel',
   'activity.complete',
@@ -125,7 +126,12 @@ function clearAuthenticatedSession() {
   try {
     if (typeof getApp !== 'function') return;
     const app = getApp();
-    if (app && app.globalData) app.globalData.user = null;
+    if (app && app.globalData) {
+      app.globalData.user = null;
+      app.globalData.sessionScope = '';
+      app.globalData.welcome = null;
+      app.globalData.welcomeHandledCampaigns = {};
+    }
   } catch (error) {
     // Session scope is already cleared; app state may be unavailable during teardown.
   }

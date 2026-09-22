@@ -10,6 +10,10 @@
   "usingComponents": {
     "activity-card": "/components/activity-card/index",
     "empty-state": "/components/empty-state/index",
-    "launch-splash": "/components/launch-splash/index"
+    "launch-splash": "/components/launch-splash/index",
+    "leju-welcome-modal": "/subpackages/onboarding/components/leju-welcome-modal/index"
+  },
+  "componentPlaceholder": {
+    "leju-welcome-modal": "view"
   }
 }

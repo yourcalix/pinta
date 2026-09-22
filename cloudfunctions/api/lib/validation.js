@@ -1,6 +1,7 @@
 'use strict';
 
 const { AppError, invariant } = require('./errors');
+const { WELCOME_CAMPAIGN, WELCOME_VARIANTS } = require('./welcome');
 const { decodeCursor, assertCommunityTextSafe, normalizeCommunityKeyword } = require('./community');
 const { COMMUNITY_ACTIVITY_TABS, decodeCommunityActivityCursor } = require('./community-activity');
 const { decodeDirectCursor, assertDirectMessageTextSafe } = require('./direct-message');
@@ -533,6 +534,16 @@ function validateGroupReadInput(input) {
   };
 }
 
+function validateWelcomeAckInput(input) {
+  invariant(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR');
+  invariant(Object.keys(input).every((key) => ['campaign', 'variant'].includes(key)), 'VALIDATION_ERROR', '欢迎卡片参数无效');
+  const campaign = stringValue(input.campaign, '欢迎活动', { required: true, max: 40 });
+  const variant = stringValue(input.variant, '欢迎卡片', { required: true, max: 24 });
+  invariant(campaign === WELCOME_CAMPAIGN, 'VALIDATION_ERROR', '欢迎活动无效');
+  invariant(WELCOME_VARIANTS.includes(variant), 'VALIDATION_ERROR', '欢迎卡片无效');
+  return { campaign, variant };
+}
+
 function validateId(value, field = 'ID') {
   return stringValue(value, field, { required: true, max: 80 });
 }
@@ -576,6 +587,7 @@ module.exports = {
   validateGroupMessageListInput,
   validateGroupMessageCreateInput,
   validateGroupReadInput,
+  validateWelcomeAckInput,
   validateId,
   requireIdempotencyKey,
   stringValue

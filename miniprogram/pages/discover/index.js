@@ -1,6 +1,7 @@
 'use strict';
 
 const activityService = require('../../services/activity');
+const appPresence = require('../../services/app-presence');
 const safetyService = require('../../services/safety');
 const userService = require('../../services/user');
 const { decorateActivity } = require('../../utils/display');
@@ -60,10 +61,16 @@ Page({
     largeTextMode: false,
     launchSplashVisible: false,
     launchSplashFinishing: false,
-    launchSplashExiting: false
+    launchSplashExiting: false,
+    welcomeCandidate: null,
+    welcomeModalOpened: false
   },
 
   onLoad() {
+    this._disposed = false;
+    this._pageVisible = true;
+    this._welcomeAssetReady = false;
+    this._welcomeDismissed = false;
     this.setData({
       contentTopInset: calculateContentTopInset(typeof wx === 'undefined' ? null : wx)
     });
@@ -73,12 +80,14 @@ Page({
     this.loadGreetingProfile();
     this._skipFirstShow = true;
     this.startLaunchSplash();
+    this.prepareWelcomeCandidate();
     const activities = Promise.resolve(this.fetchActivities({ mode: 'replace' }))
       .finally(() => this.markLaunchSplashReady());
     return activities;
   },
 
   onShow() {
+    this._pageVisible = true;
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
@@ -88,29 +97,38 @@ Page({
     this.syncGreetingProfile();
     if (this._skipFirstShow) {
       this._skipFirstShow = false;
+      this.openWelcomeIfReady();
       return;
     }
+    this.openWelcomeIfReady();
     return this.fetchActivities({ mode: 'replace', keepContent: true });
   },
 
   onHide() {
+    this._pageVisible = false;
     this._loadSeq = (this._loadSeq || 0) + 1;
     this.invalidateGreetingProfileLoad();
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
     this.clearExpirationTimer();
+    if (this.data.welcomeModalOpened) this.setData({ welcomeModalOpened: false });
     this.teardownLaunchSplash(true);
+    this.restoreLaunchTabBar();
   },
 
   onUnload() {
+    this._disposed = true;
+    this._pageVisible = false;
     this._loadSeq = (this._loadSeq || 0) + 1;
     this.invalidateGreetingProfileLoad();
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
     this.clearExpirationTimer();
+    this._welcomeAssetReady = false;
     this.teardownLaunchSplash(false);
+    this.restoreLaunchTabBar();
   },
 
   async onPullDownRefresh() {
@@ -325,16 +343,96 @@ Page({
     this.setCustomTabBarHidden(false);
   },
 
+  async prepareWelcomeCandidate() {
+    try {
+      await appPresence.ready();
+      if (this._disposed) return false;
+      const app = typeof getApp === 'function' ? getApp() : null;
+      const globalData = app && app.globalData;
+      const welcome = globalData && globalData.welcome && globalData.welcome.ipSplash;
+      const handled = globalData && globalData.welcomeHandledCampaigns || {};
+      if (!welcome || welcome.pending !== true || !welcome.campaign || !welcome.variant || handled[welcome.campaign]) return false;
+      this._welcomeAssetReady = false;
+      this._welcomeDismissed = false;
+      this.setData({
+        welcomeCandidate: {
+          campaign: String(welcome.campaign),
+          variant: String(welcome.variant)
+        },
+        welcomeModalOpened: false
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+
+  handleWelcomeAssetReady() {
+    this._welcomeAssetReady = true;
+    this.openWelcomeIfReady();
+  },
+
+  openWelcomeIfReady() {
+    if (
+      this._disposed
+      || !this._pageVisible
+      || !this._welcomeAssetReady
+      || !this.data.welcomeCandidate
+      || this.data.launchSplashVisible
+      || this.data.welcomeModalOpened
+    ) return false;
+    this.setCustomTabBarHidden(true);
+    this.setData({ welcomeModalOpened: true });
+    return true;
+  },
+
+  handleWelcomeAssetError() {
+    this._welcomeAssetReady = false;
+    this._welcomeDismissed = false;
+    this.setData({ welcomeCandidate: null, welcomeModalOpened: false });
+    this.restoreLaunchTabBar();
+  },
+
+  handleWelcomeDismiss() {
+    const candidate = this.data.welcomeCandidate;
+    if (!candidate || this._welcomeDismissed) return false;
+    this._welcomeDismissed = true;
+    const app = typeof getApp === 'function' ? getApp() : null;
+    if (app && app.globalData) {
+      app.globalData.welcomeHandledCampaigns = {
+        ...(app.globalData.welcomeHandledCampaigns || {}),
+        [candidate.campaign]: true
+      };
+    }
+    this.setData({ welcomeModalOpened: false });
+    Promise.resolve(userService.ackWelcome(candidate.campaign, candidate.variant)).catch(() => {});
+    return true;
+  },
+
+  handleWelcomeClosed() {
+    if (!this._welcomeDismissed) {
+      this.restoreLaunchTabBar();
+      return false;
+    }
+    this._welcomeAssetReady = false;
+    this._welcomeDismissed = false;
+    this.setData({ welcomeCandidate: null, welcomeModalOpened: false });
+    this.restoreLaunchTabBar();
+    return true;
+  },
+
   finishLaunchSplash() {
     if (!this._launchSplashActive) return;
     this._launchSplashActive = false;
     this.clearLaunchTimers();
+    this.restoreLaunchTabBar();
     this.setData({
       launchSplashVisible: false,
       launchSplashFinishing: false,
       launchSplashExiting: false
+    }, () => {
+      this.openWelcomeIfReady();
     });
-    this.restoreLaunchTabBar();
   },
 
   teardownLaunchSplash(updateView) {
@@ -342,11 +440,15 @@ Page({
     this._launchSplashActive = false;
     this.clearLaunchTimers();
     if (wasActive && updateView) {
+      this.restoreLaunchTabBar();
       this.setData({
         launchSplashVisible: false,
         launchSplashFinishing: false,
         launchSplashExiting: false
+      }, () => {
+        this.openWelcomeIfReady();
       });
+      return;
     }
     this.restoreLaunchTabBar();
   },

@@ -44,6 +44,7 @@ const MUTATING_ACTIONS = new Set([
 'profile.avatar.confirm',
 'profile.avatar.clear',
 'profile.follow.set',
+'welcome.ack',
 'onboarding.selectRole',
 'driver.application.submit',
 'driver.document.prepare',
@@ -88,6 +89,7 @@ const MUTATING_ACTIONS = new Set([
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
 'driver.application.submit', 'admin.driverApplication.review', 'profile.follow.set', 'community.like.set', 'community.activity.read',
+'welcome.ack',
 'companion.presence.heartbeat', 'companion.presence.leave',
 'group.message.send', 'group.message.read', 'dm.consult.create', 'dm.message.send'
 ]);
@@ -113,6 +115,8 @@ const COMPANION_SAMPLE_LIMIT = 50;
 const COMPANION_PROFILE_NAV_BUCKET_MS = 30 * 1000;
 const DIR_BUCKET_MS=3e5;
 const PROFILE_TARGET_GONE = '目标不存在或已失效';
+const WELCOME_CAMPAIGN = 'new-user-ip-v1';
+const WELCOME_VARIANTS = Object.freeze(['WORLD', 'FOOD', 'ADVENTURE', 'SPORT', 'HOST', 'ELVES']);
 function isMockLocalAvatarPath(value) {
 return typeof value === 'string'
 && /^(?:wxfile:\/\/|http:\/\/(?:tmp|usr)\/|\/tmp\/|\/var\/)/.test(value.trim());
@@ -261,6 +265,31 @@ hashA = Math.imul(hashA ^ code, 0x01000193) >>> 0;
 hashB = Math.imul(hashB ^ code, 0x85ebca6b) >>> 0;
 }
 return `${prefix}_${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`;
+}
+function mockWelcome(variant = 'WORLD') {
+return {
+ipSplash: {
+campaign: WELCOME_CAMPAIGN,
+variant: WELCOME_VARIANTS.includes(variant) ? variant : 'WORLD',
+status: 'PENDING',
+assignedAt: new Date().toISOString(),
+seenAt: null
+}
+};
+}
+function publicMockWelcome(user) {
+const candidate = user && user.welcome && user.welcome.ipSplash;
+const valid = candidate
+&& candidate.campaign === WELCOME_CAMPAIGN
+&& WELCOME_VARIANTS.includes(candidate.variant)
+&& ['PENDING', 'SEEN'].includes(candidate.status);
+return {
+ipSplash: {
+campaign: WELCOME_CAMPAIGN,
+pending: Boolean(valid && candidate.status === 'PENDING'),
+variant: valid && candidate.status === 'PENDING' ? candidate.variant : null
+}
+};
 }
 function validateCompanionScene(input, requireSessionToken = false) {
 assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '在线场景参数无效');
@@ -449,7 +478,7 @@ rideStartDate.setMinutes(Math.ceil(rideStartDate.getMinutes() / 15) * 15, 0, 0);
 const rideStartsAt = rideStartDate.toISOString();
 const rideWindowEnd = new Date(rideStartDate.getTime() + 60 * 60 * 1000).toISOString();
 return {
-schemaVersion: 11,
+schemaVersion: 12,
 sequence: 100,
 users: [
 { id: 'u_owner', role: 'user', status: 'ACTIVE', profile: { nickname: '小拼', gender: 'MALE', city: '澳门', interests: ['结伴同行'], adultConfirmed: true } },
@@ -457,6 +486,7 @@ users: [
 { id: 'u_driver', role: 'user', status: 'ACTIVE', onboarding: { roleIntent: 'DRIVER', completedAt: now }, profile: { nickname: '林师傅', gender: 'MALE', city: '澳门', interests: ['邻里互助'], adultConfirmed: true } },
 { id: 'u_student', role: 'user', status: 'ACTIVE', profile: { nickname: '小满', gender: 'FEMALE', city: '澳门', interests: ['城市活动'], adultConfirmed: true } },
 { id: 'u_merchant', role: 'user', status: 'ACTIVE', profile: { nickname: '邻里团长', gender: 'FEMALE', city: '澳门', interests: ['凑单'], adultConfirmed: true } },
+{ id: 'u_newcomer', role: 'user', status: 'ACTIVE', welcome: mockWelcome('ADVENTURE'), profile: { nickname: '新搭子', gender: 'FEMALE', city: '广州', interests: ['探索城市'], adultConfirmed: true } },
 { id: 'u_admin', role: 'admin', status: 'ACTIVE', profile: { nickname: '运营', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } },
 { id: 'u_disabled', role: 'user', status: 'DISABLED', profile: { nickname: '受限账号', gender: 'MALE', city: '澳门', interests: [], adultConfirmed: true } }
 ],
@@ -610,7 +640,7 @@ if (typeof wx !== 'undefined') wx.setStorageSync(key, value);
 } catch (error) {}
 }
 let state = readStorage(STATE_KEY) || seedState();
-if (!state || state.schemaVersion !== 11) state = seedState();
+if (!state || state.schemaVersion !== 12) state = seedState();
 let currentUserId = readStorage(PERSONA_KEY) || 'u_owner';
 if (!state.idempotency) state.idempotency = {};
 if (!state.activityQuestions) state.activityQuestions = [];
@@ -1858,8 +1888,26 @@ user: selfUser(user),
 onboarding: {
 profileComplete: completeRideProfile(user.profile)
 },
+welcome: publicMockWelcome(user),
 sessionScope: `mock-session-${currentUserId}`
 };
+}
+if (action === 'welcome.ack') {
+const user = requireActiveUser();
+assert(input && typeof input === 'object' && !Array.isArray(input), 'VALIDATION_ERROR', '欢迎卡片参数无效');
+assert(Object.keys(input).every((key) => ['campaign', 'variant'].includes(key)), 'VALIDATION_ERROR', '欢迎卡片参数无效');
+assert(typeof input.campaign === 'string' && input.campaign.length <= 40, 'VALIDATION_ERROR', '欢迎活动无效');
+assert(typeof input.variant === 'string' && input.variant.length <= 24, 'VALIDATION_ERROR', '欢迎卡片无效');
+const campaign = input.campaign.trim();
+const variant = input.variant.trim();
+assert(campaign === WELCOME_CAMPAIGN && WELCOME_VARIANTS.includes(variant), 'VALIDATION_ERROR', '欢迎卡片无效');
+const current = user.welcome && user.welcome.ipSplash;
+assert(current && current.campaign === campaign && current.variant === variant, 'CONFLICT', '欢迎卡片已更新');
+if (current.status === 'PENDING') {
+current.status = 'SEEN';
+current.seenAt = new Date().toISOString();
+}
+return { welcome: publicMockWelcome(user) };
 }
 if (action === 'profile.get') return { user: selfUser(requireUser()) };
 if (action === 'profile.public.get') {

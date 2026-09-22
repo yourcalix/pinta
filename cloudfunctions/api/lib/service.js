@@ -50,10 +50,12 @@ const {
   validateGroupMessageListInput,
   validateGroupMessageCreateInput,
   validateGroupReadInput,
+  validateWelcomeAckInput,
   validateId,
   requireIdempotencyKey,
   stringValue
 } = require('./validation');
+const { publicWelcome } = require('./welcome');
 const { encodeNearbyCursor } = require('./activity-location');
 const { createLocalModeration } = require('./moderation');
 const { COMMUNITY_POST_STATUS, COMMUNITY_REPLY_STATUS } = require('./community');
@@ -116,6 +118,7 @@ const {
 } = require('./profile-follow');
 
 const MUTATING_ACTIONS = new Set([
+  'welcome.ack',
   'profile.update',
   'profile.avatar.prepare',
   'profile.avatar.confirm',
@@ -155,6 +158,7 @@ const MUTATING_ACTIONS = new Set([
   'admin.activity.suspend'
 ]);
 const BUSINESS_IDEMPOTENT_ACTIONS = new Set([
+  'welcome.ack',
   'profile.follow.set',
   'community.like.set',
   'community.activity.read',
@@ -864,8 +868,16 @@ function createPinbaService(options) {
         onboarding: {
           profileComplete: isCompleteRideProfile(user.profile)
         },
+        welcome: publicWelcome(user),
         sessionScope: stableEntityId('session', actorId)
       };
+    }
+
+    if (action === 'welcome.ack') {
+      const actorId = requireActor(context);
+      const payload = validateWelcomeAckInput(input);
+      const user = await store.acknowledgeWelcome(actorId, payload, at);
+      return { welcome: publicWelcome(user) };
     }
 
     if (action === 'profile.get') {

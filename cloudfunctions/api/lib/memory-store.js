@@ -20,6 +20,7 @@ const {
 } = require('./constants');
 const { calculateAgeOnMacauDate } = require('./profile-birth-date');
 const { stableEntityId } = require('./ids');
+const { newUserWelcome, currentIpSplash } = require('./welcome');
 const {
   COMMUNITY_POST_STATUS,
   COMMUNITY_REPLY_STATUS,
@@ -136,6 +137,7 @@ class MemoryStore {
         role: 'user',
         status: 'ACTIVE',
         profile: null,
+        welcome: newUserWelcome(actorId, at),
         createdAt: at,
         updatedAt: at
       });
@@ -145,6 +147,21 @@ class MemoryStore {
 
   async getUser(actorId) {
     return clone(this.users.get(actorId) || null);
+  }
+
+  async acknowledgeWelcome(actorId, input, at) {
+    const user = this.users.get(actorId);
+    invariant(user, 'UNAUTHENTICATED');
+    const current = currentIpSplash(user);
+    invariant(current, 'CONFLICT', '欢迎卡片已失效');
+    invariant(current.campaign === input.campaign && current.variant === input.variant, 'CONFLICT', '欢迎卡片已更新');
+    if (current.status === 'SEEN') return clone(user);
+    user.welcome = {
+      ...(user.welcome || {}),
+      ipSplash: { ...current, status: 'SEEN', seenAt: at }
+    };
+    user.updatedAt = at;
+    return clone(user);
   }
 
   async hydratePublicCommunityAuthors(items = []) {

@@ -1,5 +1,6 @@
 <view class="page home-page" style="padding-top: {{contentTopInset}}px;">
   <launch-splash wx:if="{{launchSplashVisible}}" finishing="{{launchSplashFinishing}}" exiting="{{launchSplashExiting}}" bindassetsready="handleLaunchAssetsReady" bindasseterror="handleLaunchAssetError" />
+  <leju-welcome-modal wx:if="{{welcomeCandidate && !launchSplashVisible}}" variant="{{welcomeCandidate.variant}}" open="{{welcomeModalOpened}}" bindassetready="handleWelcomeAssetReady" bindasseterror="handleWelcomeAssetError" binddismiss="handleWelcomeDismiss" bindclosed="handleWelcomeClosed" />
 
   <view class="home-content">
     <view class="home-greeting" role="heading" aria-level="1" aria-label="{{greetingSalutation}}，{{greetingNickname}}，欢迎你回到拼吧">

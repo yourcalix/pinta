@@ -7,6 +7,9 @@ App({
   globalData: {
     config,
     user: null,
+    sessionScope: '',
+    welcome: null,
+    welcomeHandledCampaigns: {},
     launchSplashShown: false
   },
 

@@ -1,0 +1,9 @@
+{"path":"cloudfunctions/api/lib/service.js","role":"auth.login 与 welcome.ack 服务契约"}
+{"path":"cloudfunctions/api/lib/memory-store.js","role":"内存事实源的新用户初始化与确认"}
+{"path":"cloudfunctions/api/lib/cloud-store.js","role":"CloudBase 用户欢迎状态事务"}
+{"path":"cloudfunctions/api/lib/validation.js","role":"欢迎确认输入白名单"}
+{"path":"miniprogram/services/user.js","role":"客户端登录欢迎快照与确认服务"}
+{"path":"miniprogram/services/app-presence.js","role":"App 前台自动登录完成时序"}
+{"path":"miniprogram/pages/discover/index.js","role":"启动层与欢迎层互斥仲裁"}
+{"path":"miniprogram/pages/discover/index.json","role":"跨分包异步组件占位配置"}
+{"path":"miniprogram/subpackages/onboarding/components/leju-welcome-modal","role":"欢迎 IP 浮层组件与六张素材"}

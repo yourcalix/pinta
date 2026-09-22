@@ -21,6 +21,7 @@ const {
 } = require('./constants');
 const { calculateAgeOnMacauDate } = require('./profile-birth-date');
 const { stableEntityId } = require('./ids');
+const { newUserWelcome, currentIpSplash } = require('./welcome');
 const {
   COMMUNITY_POST_STATUS,
   COMMUNITY_REPLY_STATUS,
@@ -173,7 +174,15 @@ class CloudStore {
   async ensureUser(actorId, at) {
     const current = await this.getUser(actorId);
     if (current) return current;
-    const user = { id: actorId, role: 'user', status: 'ACTIVE', profile: null, createdAt: at, updatedAt: at };
+    const user = {
+      id: actorId,
+      role: 'user',
+      status: 'ACTIVE',
+      profile: null,
+      welcome: newUserWelcome(actorId, at),
+      createdAt: at,
+      updatedAt: at
+    };
     try {
       await this.db.collection('users').doc(actorId).set({ data: document(user) });
     } catch (error) {
@@ -186,6 +195,24 @@ class CloudStore {
 
   async getUser(actorId) {
     return this.getDocument('users', actorId);
+  }
+
+  async acknowledgeWelcome(actorId, input, at) {
+    return this.db.runTransaction(async (transaction) => {
+      const reference = transaction.collection('users').doc(actorId);
+      const user = await getTransactionDocument(reference);
+      invariant(user, 'UNAUTHENTICATED');
+      const current = currentIpSplash(user);
+      invariant(current, 'CONFLICT', '欢迎卡片已失效');
+      invariant(current.campaign === input.campaign && current.variant === input.variant, 'CONFLICT', '欢迎卡片已更新');
+      if (current.status === 'SEEN') return user;
+      const welcome = {
+        ...(user.welcome || {}),
+        ipSplash: { ...current, status: 'SEEN', seenAt: at }
+      };
+      await reference.update({ data: { welcome, updatedAt: at } });
+      return { ...user, welcome, updatedAt: at };
+    });
   }
 
   async hydratePublicCommunityAuthors(items = []) {

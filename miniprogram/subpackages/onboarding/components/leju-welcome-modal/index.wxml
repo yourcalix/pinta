@@ -1,0 +1,27 @@
+<view
+  class="welcome-modal {{open && assetReady ? 'welcome-modal--opened' : ''}}"
+  role="dialog"
+  aria-modal="true"
+  aria-label="{{presentation.label}}"
+  catchtouchmove="preventTouchMove"
+>
+  <view class="welcome-modal__backdrop" aria-hidden="true"></view>
+  <view class="welcome-modal__stage">
+    <view class="welcome-modal__poster-wrap">
+      <image
+        class="welcome-modal__poster"
+        src="{{presentation.src}}"
+        mode="widthFix"
+        aria-hidden="true"
+        bindload="handleAssetLoad"
+        binderror="handleAssetError"
+      />
+      <button class="welcome-modal__close" bindtap="handleDismiss" hover-class="welcome-modal__close--pressed" aria-label="关闭欢迎卡片">
+        <text aria-hidden="true">×</text>
+      </button>
+    </view>
+    <button class="welcome-modal__start" bindtap="handleDismiss" hover-class="welcome-modal__start--pressed" aria-label="开启拼吧">
+      <text aria-hidden="true">✦ </text><text>开启拼吧</text>
+    </button>
+  </view>
+</view>

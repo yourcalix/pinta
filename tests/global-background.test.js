@@ -30,7 +30,7 @@ function pageFiles(extension) {
 
 test('普通页面不再挂载旧深蓝纸纹背景，搭子星球保留独立暗夜主题', () => {
   const templates = pageFiles('wxml');
-  assert.equal(templates.length, 23);
+  assert.equal(templates.length, 24);
   templates.forEach((relativePath) => {
     const template = read(relativePath);
     assert.doesNotMatch(template, /shared-paper-bg\.jpg/, relativePath);

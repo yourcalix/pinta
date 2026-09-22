@@ -6,8 +6,21 @@ const PROFILE_AVATAR_MAX_BYTES = 1024 * 1024;
 async function login() {
   const result = await api.invoke('auth.login');
   api.setActorScope(result.sessionScope);
-  getApp().globalData.user = result.user;
-  return { ...result.user, onboarding: result.onboarding };
+  const app = getApp();
+  if (app.globalData.sessionScope !== result.sessionScope) {
+    app.globalData.welcomeHandledCampaigns = {};
+  }
+  app.globalData.sessionScope = result.sessionScope;
+  app.globalData.user = result.user;
+  app.globalData.welcome = result.welcome || null;
+  return { ...result.user, onboarding: result.onboarding, welcome: result.welcome || null };
+}
+
+async function ackWelcome(campaign, variant) {
+  const result = await api.invoke('welcome.ack', { campaign, variant }, { mutating: true });
+  const app = typeof getApp === 'function' ? getApp() : null;
+  if (app && app.globalData) app.globalData.welcome = result.welcome || null;
+  return result;
 }
 
 async function persistMockAvatar(filePath) {
@@ -47,6 +60,7 @@ async function uploadAvatar(filePath) {
 
 module.exports = {
   login,
+  ackWelcome,
   getProfile: () => api.invoke('profile.get'),
   updateProfile: (profile) => api.invoke('profile.update', profile, { mutating: true }),
   uploadAvatar,

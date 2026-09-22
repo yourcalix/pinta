@@ -90,7 +90,8 @@ Page({
     personas: [
       { id: 'u_owner', label: '发起者“小拼”' },
       { id: 'u_member', label: '参与者“阿同”' },
-      { id: 'u_student', label: '普通用户“小满”' }
+      { id: 'u_student', label: '普通用户“小满”' },
+      { id: 'u_newcomer', label: '新用户迎新演示' }
     ]
   },
 

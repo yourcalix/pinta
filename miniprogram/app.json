@@ -54,9 +54,21 @@
         "public/index",
         "follows/index"
       ]
+    },
+    {
+      "root": "subpackages/onboarding",
+      "pages": [
+        "bootstrap/index"
+      ]
     }
   ],
   "preloadRule": {
+    "pages/discover/index": {
+      "network": "all",
+      "packages": [
+        "subpackages/onboarding"
+      ]
+    },
     "pages/publish/index": {
       "network": "all",
       "packages": [
