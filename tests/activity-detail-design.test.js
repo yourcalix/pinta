@@ -10,7 +10,7 @@ function harness(activity, pages = 1, overrides = {}) {
   const events = [];
   const nativeRequire = createRequire(filename);
   const api = { detail: async () => ({ activity }), apply: async () => {}, ...overrides };
-  const wx = { showShareMenu() {}, switchTab: v => events.push(v.url), navigateBack: () => events.push('back'), showToast() {}, openLocation: () => events.push('openLocation'), ...overrides.wx };
+  const wx = { showShareMenu() {}, switchTab: v => events.push(v.url), navigateBack: () => events.push('back'), navigateTo: v => events.push(v.url), showToast: v => events.push(v.title), openLocation: () => events.push('openLocation'), ...overrides.wx };
   vm.runInNewContext(fs.readFileSync(filename, 'utf8'), { Page: v => { definition = v; }, wx, getCurrentPages: () => Array(pages).fill({}), require: name => name.endsWith('services/activity') ? api : name.endsWith('services/user') ? { login: overrides.login || (async () => ({ profile: { adultConfirmed: true, gender: 'MALE' } })) } : nativeRequire(name) });
   const page = { ...definition, data: structuredClone(definition.data), setData(patch, callback) { Object.assign(this.data, patch); if (callback) callback(); } };
   page.onLoad({ id: 'a' });
@@ -61,6 +61,48 @@ test('鉴权双击合并且页面卸载后不打开抽屉', async () => {
   await page.onShow(); const first = page.handleApplyOpen(); const second = page.handleApplyOpen();
   page.onUnload(); release({ profile: { adultConfirmed: true, gender: 'MALE' } }); await Promise.all([first, second]);
   assert.equal(calls, 1); assert.equal(page.data.showApply, false);
+});
+test('登录后静默刷新真实身份，仅普通访客打开申请抽屉', async () => {
+  const scenarios = [
+    { fresh: base, open: true, action: 'apply', message: '' },
+    { fresh: { ...base, viewerRole: 'owner' }, open: false, action: 'manage', message: '这是你发布的活动，可前往管理成员' },
+    { fresh: { ...base, viewerRole: 'applicant', viewerApplication: { status: 'PENDING' } }, open: false, action: '', message: '申请已提交，等待发起人审核' },
+    { fresh: { ...base, viewerRole: 'member', viewerMembership: { status: 'ACTIVE' } }, open: false, action: 'group', message: '你已经加入该活动' },
+    { fresh: { ...base, memberCount: 20 }, open: false, action: '', message: '当前拼团名额已满' }
+  ];
+  for (const scenario of scenarios) {
+    let detailCalls = 0;
+    const { page, events } = harness(base, 1, {
+      detail: async () => ({ activity: detailCalls++ === 0 ? base : scenario.fresh })
+    });
+    await page.onShow();
+    await page.handleApplyOpen();
+    assert.equal(detailCalls, 2);
+    assert.equal(page.data.showApply, scenario.open);
+    assert.equal(page.data.primaryAction, scenario.action);
+    if (scenario.message) assert.ok(events.includes(scenario.message));
+  }
+});
+test('加入身份刷新防双击，并丢弃页面卸载后的晚到详情', async () => {
+  let detailCalls = 0;
+  let releaseDetail;
+  const { page } = harness(base, 1, {
+    detail: async () => {
+      detailCalls += 1;
+      if (detailCalls === 1) return { activity: base };
+      return new Promise(resolve => { releaseDetail = resolve; });
+    }
+  });
+  await page.onShow();
+  const first = page.handleApplyOpen();
+  const second = page.handleApplyOpen();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(detailCalls, 2);
+  page.onUnload();
+  releaseDetail({ activity: base });
+  await Promise.all([first, second]);
+  assert.equal(detailCalls, 2);
+  assert.equal(page.data.showApply, false);
 });
 test('拼好饭详情可查看公开集合地点但绝不暴露坐标或拉起地图', async () => {
   const { page, events } = harness({

@@ -1,0 +1,12 @@
+{
+  "id": "fix-activity-join-flow",
+  "title": "修复已发布活动无法加入拼团",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "fullstack",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交变更",
+  "createdAt": "2026-09-22T00:00:00Z",
+  "branch": "main"
+}

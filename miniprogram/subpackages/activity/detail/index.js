@@ -102,6 +102,20 @@ function meetingPointPresentation(activity) {
   };
 }
 
+function applyIneligibleMessage(activity) {
+  if (!activity) return '当前活动暂不可申请';
+  if (activity.viewerRole === 'owner') return '这是你发布的活动，可前往管理成员';
+  if (activity.viewerRole === 'member' || activity.viewerMembership && activity.viewerMembership.status === 'ACTIVE') {
+    return '你已经加入该活动';
+  }
+  if (activity.viewerApplication && activity.viewerApplication.status === 'PENDING') {
+    return '申请已提交，等待发起人审核';
+  }
+  if (activity.remaining === 0) return '当前拼团名额已满';
+  if (activity.status !== 'RECRUITING') return '当前活动暂不在招募中';
+  return '当前活动暂不可申请';
+}
+
 function presentation(activity) {
   const slots = normalizeAvatarSlots(activity.avatarSlots, activity.maxMembers);
   const supported = ['companion', 'sport', 'food', 'benefit'].includes(activity.typeTone);
@@ -233,6 +247,14 @@ Page({
       if (this._userLoginPromise === pending) this._userLoginPromise = null;
       throw error;
     }
+  },
+  async refreshApplySnapshot(activityId, loadSeq) {
+    const result = await activityService.detail(activityId);
+    if (this._disposed || !this._visible || loadSeq !== this._loadSeq || activityId !== this.data.id) return null;
+    const activity = decorateActivity(result.activity);
+    await new Promise((resolve) => this.setData({ activity, ...presentation(activity) }, resolve));
+    if (this._disposed || !this._visible || loadSeq !== this._loadSeq || activityId !== this.data.id) return null;
+    return activity;
   },
   async prepareProgressCard(activity, loadSeq) {
     const candidate = progressCandidate(activity);
@@ -400,6 +422,7 @@ Page({
     this.suspendProgressCardForOverlay();
     this._opening = true;
     const seq = this._loadSeq;
+    const activityId = this.data.id;
     this.setData({ opening: true });
     try {
       const user = await this.ensureUserSession();
@@ -407,6 +430,12 @@ Page({
       if (!user.profile || !user.profile.adultConfirmed) {
         const nextUrl = `/subpackages/activity/detail/index?id=${encodeURIComponent(this.data.id)}`;
         wx.navigateTo({ url: `/subpackages/profile/edit/index?next=${encodeURIComponent(nextUrl)}` });
+        return;
+      }
+      const activity = await this.refreshApplySnapshot(activityId, seq);
+      if (!activity) return;
+      if (!activity.canApply) {
+        wx.showToast({ title: applyIneligibleMessage(activity), icon: 'none' });
         return;
       }
       this.setData({ showApply: true });
