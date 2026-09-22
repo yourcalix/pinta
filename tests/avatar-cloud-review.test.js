@@ -131,6 +131,102 @@ function harness() {
   return { tables, store: new CloudStore({ database: () => db }) };
 }
 
+function viewerContextHarness({ application = null, member = null } = {}) {
+  const activityId = 'activity-viewer-context';
+  const actorId = 'viewer';
+  const rows = {
+    activities: new Map([[activityId, {
+      _id: activityId,
+      type: 'food',
+      ownerId: 'owner',
+      status: 'RECRUITING'
+    }]]),
+    applications: new Map(),
+    members: new Map()
+  };
+  if (application) {
+    const id = stableEntityId('application', activityId, actorId);
+    rows.applications.set(id, {
+      _id: id,
+      activityId,
+      applicantId: actorId,
+      ...application
+    });
+  }
+  if (member) {
+    const id = stableEntityId('member', activityId, actorId);
+    rows.members.set(id, {
+      _id: id,
+      activityId,
+      userId: actorId,
+      ...member
+    });
+  }
+  let queryCalls = 0;
+  const db = {
+    command: {},
+    collection(name) {
+      return {
+        doc(id) {
+          return {
+            async get() {
+              const value = rows[name] && rows[name].get(id);
+              if (!value) throw { errCode: -502005 };
+              return { data: structuredClone(value) };
+            }
+          };
+        },
+        where() {
+          queryCalls += 1;
+          throw new Error('viewer context must not depend on a composite query');
+        }
+      };
+    }
+  };
+  return {
+    activityId,
+    actorId,
+    get queryCalls() { return queryCalls; },
+    store: new CloudStore({ database: () => db })
+  };
+}
+
+test('Cloud查看者身份按确定性文档ID直读，不依赖复合索引', async () => {
+  const applicant = viewerContextHarness({ application: { status: 'PENDING', createdAt: at } });
+  const applicantContext = await applicant.store.getViewerContext(applicant.activityId, applicant.actorId);
+  assert.equal(applicantContext.role, 'applicant');
+  assert.equal(applicantContext.application.status, 'PENDING');
+  assert.equal(applicant.queryCalls, 0);
+
+  const activeMember = viewerContextHarness({
+    application: { status: 'APPROVED', createdAt: at },
+    member: { status: 'ACTIVE', role: 'MEMBER' }
+  });
+  const memberContext = await activeMember.store.getViewerContext(activeMember.activityId, activeMember.actorId);
+  assert.equal(memberContext.role, 'member');
+  assert.equal(memberContext.member.status, 'ACTIVE');
+  assert.equal(activeMember.queryCalls, 0);
+
+  const leftMember = viewerContextHarness({ member: { status: 'LEFT', role: 'MEMBER' } });
+  const guestContext = await leftMember.store.getViewerContext(leftMember.activityId, leftMember.actorId);
+  assert.equal(guestContext.role, 'guest');
+  assert.equal(guestContext.member, null);
+  assert.equal(leftMember.queryCalls, 0);
+
+  const mismatchedRecords = viewerContextHarness({
+    application: { activityId: 'other-activity', status: 'PENDING', createdAt: at },
+    member: { userId: 'other-user', status: 'ACTIVE', role: 'MEMBER' }
+  });
+  const safeContext = await mismatchedRecords.store.getViewerContext(
+    mismatchedRecords.activityId,
+    mismatchedRecords.actorId
+  );
+  assert.equal(safeContext.role, 'guest');
+  assert.equal(safeContext.application, null);
+  assert.equal(safeContext.member, null);
+  assert.equal(mismatchedRecords.queryCalls, 0);
+});
+
 test('旧ride公开容量与头像固定七人，不被旧maxMembers覆盖', () => {
   const dto = publicActivity({ type: 'ride', maxMembers: 20, minMembers: 2, memberCount: 1, status: 'RECRUITING' });
   assert.equal(dto.maxMembers, 7);

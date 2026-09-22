@@ -102,7 +102,7 @@ npm run verify
 - `activities`：`status + startsAt`、`type + status + startsAt`、`city + district + status + startsAt`、`type + status + typeData.routeId + startsAt`、`ownerId + updatedAt`；附近查询另为顶层 `meetingGeoPoint` 建立地理位置索引，并按真实 CloudBase 控制台查询计划补齐 `status / city / type / district` 组合。
 - `users`：为搭子星球目录建立 `status(升序) + createdAt(降序) + _id(降序)`，目录优先读取最近加入的 `ACTIVE` 账号并静默返回最多 50 个脱敏节点，不查询或公开目录总数；资料未完善账号仅显示安全通用昵称，不补造公开资料。
 - `companionPresences`：`scene(升序) + status(升序) + expiresAt(降序)`，用于统计当前处于小程序前台的登录用户；集合禁止客户端直接读写，只经云函数鉴权与脱敏快照访问。
-- `applications`：`activityId + createdAt`、`activityId + applicantId + status`。
+- `applications`：`activityId（升序） + createdAt（降序）`、`activityId（升序） + status（升序）`。单个用户在单个活动中的申请使用确定性文档 ID 精确读取，不依赖复合索引。
 - `members`：`activityId + userId + status`、`userId + role + status`。
 - `memberContacts`：成员电话敏感集合，仅云函数读写；以活动和成员确定性 ID 保存，禁止开放客户端直读权限。
 - `notifications`：`userId + createdAt`。

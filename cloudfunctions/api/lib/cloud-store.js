@@ -909,13 +909,21 @@ class CloudStore {
   async getViewerContext(activityId, actorId) {
     const activity = await this.getActivity(activityId);
     if (!activity) return {};
-    const applicationResult = await this.db.collection('applications')
-      .where({ activityId, applicantId: actorId })
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
-    const application = first(applicationResult);
-    const member = await this.findOne('members', { activityId, userId: actorId, status: MEMBER_STATUS.ACTIVE });
+    const [applicationRecord, memberRecord] = await Promise.all([
+      this.getDocument('applications', stableEntityId('application', activityId, actorId)),
+      this.getDocument('members', stableEntityId('member', activityId, actorId))
+    ]);
+    const application = applicationRecord
+      && applicationRecord.activityId === activityId
+      && applicationRecord.applicantId === actorId
+      ? applicationRecord
+      : null;
+    const member = memberRecord
+      && memberRecord.activityId === activityId
+      && memberRecord.userId === actorId
+      && memberRecord.status === MEMBER_STATUS.ACTIVE
+      ? memberRecord
+      : null;
     const fulfillment = activity.type === 'ride' ? await this.getRideFulfillment(activityId) : null;
     return {
       application,

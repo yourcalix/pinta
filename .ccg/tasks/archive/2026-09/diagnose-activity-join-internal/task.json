@@ -1,0 +1,12 @@
+{
+  "id": "diagnose-activity-join-internal",
+  "title": "诊断真实环境申请加入返回服务暂时不可用",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "已部署 api 云函数，等待用户真机复测",
+  "createdAt": "2026-09-22T00:00:00Z",
+  "branch": "main"
+}
