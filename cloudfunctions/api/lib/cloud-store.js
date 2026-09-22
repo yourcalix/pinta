@@ -1336,8 +1336,9 @@ class CloudStore {
       invariant(activity.ownerId !== application.applicantId, 'CONFLICT', '不能申请自己发布的活动');
       invariant(Date.parse(activity.deadlineAt) > Date.parse(application.createdAt), 'CONFLICT', '该活动报名已截止');
 
-      const duplicateResult = await transaction.collection('applications').doc(application.id).get();
-      const duplicate = first(duplicateResult);
+      const duplicate = await getTransactionDocument(
+        transaction.collection('applications').doc(application.id)
+      );
       if (duplicate && duplicate.submissionKeyHash === application.submissionKeyHash) return duplicate;
       invariant(
         !duplicate || ![APPLICATION_STATUS.PENDING, APPLICATION_STATUS.APPROVED].includes(duplicate.status),
@@ -1345,7 +1346,7 @@ class CloudStore {
         '你已经申请或加入该活动'
       );
       const memberId = stableEntityId('member', application.activityId, application.applicantId);
-      const member = first(await transaction.collection('members').doc(memberId).get());
+      const member = await getTransactionDocument(transaction.collection('members').doc(memberId));
       invariant(!member || member.status !== MEMBER_STATUS.ACTIVE, 'CONFLICT', '你已经是该活动成员');
       await transaction.collection('applications').doc(application.id).set({ data: document(application) });
       return application;

@@ -1,0 +1,12 @@
+{
+  "id": "diagnose-activity-join-internal-second-pass",
+  "title": "继续诊断真实环境申请加入返回服务暂时不可用",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "completed",
+  "nextAction": "已修复首次申请事务缺失文档读取并部署，等待用户真机复测",
+  "createdAt": "2026-09-22T02:36:04Z",
+  "branch": "main"
+}
