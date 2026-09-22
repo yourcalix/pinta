@@ -13,6 +13,14 @@
 
 默认配置位于 `miniprogram/config/index.js`，其中 `useMock: true` 表示本地演示模式。
 
+### 团队成员出现 `cloud.callFunction -601034`
+
+这表示当前开发者工具误用了真实 CloudBase，而不是仓库缺少代码。最常见原因是在旧目录执行 `git pull` 后，本机被 Git 忽略的 `miniprogram/config/local.js` 仍然保留了 `useMock: false`；Git 不会删除或覆盖这个文件。
+
+团队只需预览 Mock 版本时，将 `miniprogram/config/local.js` 中的 `useMock` 改为 `true`，或在备份本机密钥后删除该文件，让项目回到公共默认配置；随后在微信开发者工具执行“清缓存 → 全部清除”，再重新编译。不要提交 `local.js` 或 `project.private.config.json`。
+
+只有联调真实后端时才使用 `useMock: false`。此时必须使用已开通云开发权限的正式 AppID、填写正确的 `cloudEnv`，并在对应环境部署 `cloudfunctions/api`；否则微信会返回 `-601034 没有权限，请先开通云开发或者云托管`。
+
 ## G0：真实 AppID 与隐私基线
 
 仓库中的 `project.config.json` 始终保留 `touristappid`。接入真实账号时，不要修改并提交这个公共配置；微信开发者工具支持用优先级更高的 `project.private.config.json` 保存个人 AppID，且本仓库已经忽略该文件。
