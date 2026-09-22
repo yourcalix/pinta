@@ -27,7 +27,8 @@ test('首页采用温暖米白生活方式视觉而不复用旧深蓝画报骨�
   assert.doesNotMatch(template, /世界很大，/);
   assert.match(style, /\.hero-title-accent\s*\{[^}]*font-size:\s*44rpx/s);
   assert.match(style, /@media \(max-width:\s*340px\)[\s\S]*\.hero-title-accent\s*\{[^}]*font-size:\s*38rpx/s);
-  assert.match(template, /class="home-shortcuts"[\s\S]*组队拼团[\s\S]*琐碎回忆[\s\S]*暂定/);
+  assert.match(template, /class="home-shortcuts"[\s\S]*组队拼团[\s\S]*琐碎回忆[\s\S]*拼吧地图/);
+  assert.doesNotMatch(template, /暂定|模块占位/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2/s);
   assert.match(style, /\.home-hero\s*\{[^}]*height:\s*709rpx[^}]*border-radius:\s*32rpx/s);
   assert.match(style, /\.home-shortcuts\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);

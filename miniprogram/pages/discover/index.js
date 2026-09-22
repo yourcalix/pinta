@@ -40,7 +40,7 @@ Page({
     shortcutIconPaths: {
       activities: '/assets/images/home/shortcut-group.png',
       memories: '/assets/images/home/shortcut-memory.png',
-      placeholder: '/assets/images/home/shortcut-placeholder.png'
+      map: '/assets/images/home/shortcut-map.jpg'
     },
     typeOptions: [
       { value: '', label: '全部', iconSrc: '/assets/images/discover/filter-all.png' },
@@ -91,6 +91,7 @@ Page({
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
+    this.releaseMapNavigationLock();
     selectTab(this, 0);
     this.syncTextSizeMode();
     this.syncGreetingSalutation();
@@ -111,6 +112,7 @@ Page({
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
+    this.releaseMapNavigationLock();
     this.clearExpirationTimer();
     if (this.data.welcomeModalOpened) this.setData({ welcomeModalOpened: false });
     this.teardownLaunchSplash(true);
@@ -125,6 +127,7 @@ Page({
     this._allActivitiesNavigationPending = false;
     this._nearbyNavigationPending = false;
     this.releaseMemoriesNavigationLock();
+    this.releaseMapNavigationLock();
     this.clearExpirationTimer();
     this._welcomeAssetReady = false;
     this.teardownLaunchSplash(false);
@@ -580,6 +583,24 @@ Page({
       });
       return true;
     }
+    if (action === 'map') {
+      if (this._mapNavigationPending) return false;
+      this._mapNavigationPending = true;
+      this._mapNavigationTimer = setTimeout(() => {
+        this._mapNavigationTimer = null;
+        this._mapNavigationPending = false;
+      }, 500);
+      wx.navigateTo({
+        url: '/subpackages/map/index/index',
+        fail: () => {
+          this.releaseMapNavigationLock();
+          if (typeof wx.showToast === 'function') {
+            wx.showToast({ title: '地图打开失败，请稍后重试', icon: 'none' });
+          }
+        }
+      });
+      return true;
+    }
     return false;
   },
 
@@ -587,6 +608,12 @@ Page({
     if (this._memoriesNavigationTimer) clearTimeout(this._memoriesNavigationTimer);
     this._memoriesNavigationTimer = null;
     this._memoriesNavigationPending = false;
+  },
+
+  releaseMapNavigationLock() {
+    if (this._mapNavigationTimer) clearTimeout(this._mapNavigationTimer);
+    this._mapNavigationTimer = null;
+    this._mapNavigationPending = false;
   },
 
   handleNavigateToAll() {

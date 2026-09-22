@@ -1,0 +1,23 @@
+<view class="map-page" role="region" aria-label="拼吧地图，点击四块木牌探索不同拼法">
+  <view class="map-stage" aria-hidden="true">
+    <view class="map-canvas">
+      <image class="map-image" src="./assets/pinba-map.jpg" mode="widthFix" aria-hidden="true" />
+    </view>
+  </view>
+
+  <view class="map-hotspots" aria-label="拼吧地图活动入口">
+    <view class="map-hotspot-canvas">
+      <button class="map-marker map-marker--companion" data-type="companion" bindtap="handleTypeSelect" hover-class="map-marker--pressed" hover-stay-time="80" aria-label="拼同行，查看全城同行拼局">拼同行</button>
+      <button class="map-marker map-marker--sport" data-type="sport" bindtap="handleTypeSelect" hover-class="map-marker--pressed" hover-stay-time="80" aria-label="拼运动，查看全城运动拼局">拼运动</button>
+      <button class="map-marker map-marker--food" data-type="food" bindtap="handleTypeSelect" hover-class="map-marker--pressed" hover-stay-time="80" aria-label="拼饭桌，查看全城饭桌拼局">拼饭桌</button>
+      <button class="map-marker map-marker--benefit" data-type="benefit" bindtap="handleTypeSelect" hover-class="map-marker--pressed" hover-stay-time="80" aria-label="拼享惠，查看全城优惠拼局">拼享惠</button>
+    </view>
+  </view>
+
+  <view class="map-navigation" style="height: {{contentTopInset}}px;" role="navigation" aria-label="拼吧地图导航">
+    <button class="map-back" bindtap="handleBack" hover-class="map-back--pressed" aria-label="返回上一页"><text class="map-back-surface" aria-hidden="true">‹</text></button>
+    <text class="map-navigation-title">拼吧地图</text>
+  </view>
+
+  <view class="map-hint" aria-hidden="true">✦ 点击木牌，探索不同拼法 ✦</view>
+</view>

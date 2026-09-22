@@ -121,6 +121,27 @@ test('琐碎回忆入口进入活动分包预告页并阻止连点重复入栈',
   }
 });
 
+test('拼吧地图入口进入独立地图分包并阻止连点重复入栈', () => {
+  const context = loadHomePage();
+  try {
+    const event = { currentTarget: { dataset: { action: 'map' } } };
+    assert.equal(context.page.handleHomeShortcut(event), true);
+    assert.equal(context.page.handleHomeShortcut(event), false);
+    assert.equal(context.navigations.length, 1);
+    assert.equal(context.navigations[0].url, '/subpackages/map/index/index');
+    assert.equal(context.timers.at(-1).delay, 500);
+
+    context.timers.at(-1).handler();
+    assert.equal(context.page.handleHomeShortcut(event), true);
+
+    context.navigations.at(-1).fail();
+    assert.equal(context.page.handleHomeShortcut(event), true);
+    assert.equal(context.toasts.at(-1).title, '地图打开失败，请稍后重试');
+  } finally {
+    context.restore();
+  }
+});
+
 test('成团记忆独立页注册在活动分包且不接入活动事实接口', () => {
   const app = JSON.parse(read('app.json'));
   const activityPackage = app.subPackages.find((item) => item.root === 'subpackages/activity');

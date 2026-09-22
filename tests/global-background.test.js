@@ -30,7 +30,7 @@ function pageFiles(extension) {
 
 test('普通页面不再挂载旧深蓝纸纹背景，搭子星球保留独立暗夜主题', () => {
   const templates = pageFiles('wxml');
-  assert.equal(templates.length, 24);
+  assert.equal(templates.length, 25);
   templates.forEach((relativePath) => {
     const template = read(relativePath);
     assert.doesNotMatch(template, /shared-paper-bg\.jpg/, relativePath);
@@ -63,7 +63,8 @@ test('原生窗口统一使用暖米白占位，暗夜星球显式例外', () =>
   const exceptions = {
     'subpackages/community/companion/index.json': ['#0D0C1B', 'light'],
     'subpackages/activity/detail/index.json': ['#FFFFFF', 'dark'],
-    'subpackages/profile/edit/index.json': ['#F6F7F9', 'dark']
+    'subpackages/profile/edit/index.json': ['#F6F7F9', 'dark'],
+    'subpackages/map/index/index.json': ['#F6F2EA', 'dark']
   };
   pageFiles('json').forEach((relativePath) => {
     const config = JSON.parse(read(relativePath));

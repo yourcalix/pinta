@@ -1,0 +1,12 @@
+{
+  "id": "add-home-illustrated-map",
+  "title": "将首页第三快捷模块改为手绘拼吧地图",
+  "status": "completed",
+  "complexity": "L+",
+  "risk": "medium",
+  "domain": "frontend",
+  "currentPhase": "completed",
+  "nextAction": "归档任务并提交已验证的地图功能",
+  "createdAt": "2026-09-22T00:00:00Z",
+  "branch": "main"
+}

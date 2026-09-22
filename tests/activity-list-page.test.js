@@ -108,6 +108,41 @@ test('全部活动页仅在真正放大字号时启用大字布局', () => {
   }
 });
 
+test('地图入口仅可通过四类白名单参数预选活动类型', async () => {
+  const originalList = activityService.list;
+  const calls = [];
+  activityService.list = async (filters) => {
+    calls.push(filters);
+    return { items: [], nextCursor: null };
+  };
+  const context = loadPage();
+  try {
+    await context.page.onLoad({ type: 'food' });
+    assert.equal(context.page.data.type, 'food');
+    assert.equal(context.page.data.hasActiveFilters, true);
+    assert.equal(calls[0].type, 'food');
+  } finally {
+    activityService.list = originalList;
+    unloadPage(context);
+  }
+
+  const invalidCalls = [];
+  activityService.list = async (filters) => {
+    invalidCalls.push(filters);
+    return { items: [], nextCursor: null };
+  };
+  const invalidContext = loadPage();
+  try {
+    await invalidContext.page.onLoad({ type: 'ride' });
+    assert.equal(invalidContext.page.data.type, '');
+    assert.equal(invalidContext.page.data.hasActiveFilters, false);
+    assert.equal(invalidCalls[0].type, undefined);
+  } finally {
+    activityService.list = originalList;
+    unloadPage(invalidContext);
+  }
+});
+
 test('全部活动页按十条游标分页并按 ID 去重追加', async () => {
   const originalList = activityService.list;
   const calls = [];

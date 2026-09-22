@@ -12,6 +12,25 @@ const pngInfo = (file) => {
   return { bytes: buffer.length, width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20), colorType: buffer[25] };
 };
 
+function jpegInfo(file) {
+  const buffer = fs.readFileSync(path.join(root, file));
+  let offset = 2;
+  while (offset + 9 <= buffer.length) {
+    const marker = buffer[offset + 1];
+    const length = buffer.readUInt16BE(offset + 2);
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      return {
+        bytes: buffer.length,
+        marker,
+        width: buffer.readUInt16BE(offset + 7),
+        height: buffer.readUInt16BE(offset + 5)
+      };
+    }
+    offset += 2 + length;
+  }
+  throw new Error(`无法读取 JPEG 信息：${file}`);
+}
+
 test('五栏导航以首页和发现开头且物理路径保持不变', () => {
   const app = JSON.parse(read('app.json'));
   assert.deepEqual(app.tabBar.list.map((item) => item.text), ['首页', '发现', '发布', '消息', '我的']);
@@ -45,10 +64,11 @@ test('新首页按问候、Lifestyle Hero、三快捷卡、搜索和活动顺序
   assert.match(template, /data-action="activities"/);
   assert.match(template, /class="shortcut-subtitle shortcut-subtitle--activities">看看大家都在聊什么<\/text>/);
   assert.match(template, /data-action="memories"/);
-  assert.match(template, /home-shortcut--placeholder/);
+  assert.match(template, /home-shortcut--map[^>]*data-action="map"[^>]*bindtap="handleHomeShortcut"/);
+  assert.match(template, /拼吧地图[\s\S]*探索全城拼局/);
   assert.match(script, /shortcut-group\.png/);
   assert.match(script, /shortcut-memory\.png/);
-  assert.match(script, /shortcut-placeholder\.png/);
+  assert.match(script, /shortcut-map\.jpg/);
   assert.match(template, /variant="home-preview"/);
   assert.match(template, /home-activity-grid/);
   assert.match(style, /\.home-page\s*\{[^}]*background:\s*#f9f7f2;/s);
@@ -111,11 +131,10 @@ test('首页空态使用固定视口专用横向规格且不改变活动卡与�
   assert.match(style, /\.home-activity-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*21rpx;/s);
 });
 
-test('用户提供的十张首页素材按槽位缩放且保留完整 Alpha', () => {
+test('首页透明图标按槽位缩放且地图缩略图保持轻量 Baseline JPEG', () => {
   const assets = [
     ['assets/images/home/shortcut-group.png', 160],
     ['assets/images/home/shortcut-memory.png', 160],
-    ['assets/images/home/shortcut-placeholder.png', 160],
     ['assets/icons/home/header-bell.png', 80],
     ['assets/icons/home/header-search.png', 80],
     ['custom-tab-bar/assets/concept-a/tab-home.png', 96],
@@ -131,6 +150,10 @@ test('用户提供的十张首页素材按槽位缩放且保留完整 Alpha', ()
     assert.deepEqual([info.width, info.height, info.colorType], [size, size, 6], file);
   });
   assert.ok(totalBytes < 150 * 1024, `素材总大小 ${totalBytes} 应小于 150KB`);
+
+  const mapIcon = jpegInfo('assets/images/home/shortcut-map.jpg');
+  assert.deepEqual([mapIcon.width, mapIcon.height, mapIcon.marker], [120, 120, 0xc0]);
+  assert.ok(mapIcon.bytes <= 12 * 1024, `地图缩略图 ${mapIcon.bytes} bytes 应不超过 12KB`);
 });
 
 test('正式 Hero 插画使用透明发布版且保持一比二完整构图', () => {

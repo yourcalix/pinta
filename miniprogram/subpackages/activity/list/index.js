@@ -12,6 +12,12 @@ const {
 const PAGE_SIZE = 10;
 const MAX_HIDDEN_PAGE_SKIPS = 1;
 const LARGE_TEXT_FONT_SIZE = 20;
+const ACTIVITY_TYPES = Object.freeze(['companion', 'sport', 'food', 'benefit']);
+
+function normalizeInitialType(value) {
+  const type = String(value || '').trim();
+  return ACTIVITY_TYPES.includes(type) ? type : '';
+}
 
 function hasActiveFilters(filters) {
   return Boolean(filters.type || filters.appliedKeyword);
@@ -39,7 +45,9 @@ Page({
     largeTextMode: false
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    const type = normalizeInitialType(options.type);
+    this.setData({ type, hasActiveFilters: Boolean(type) });
     this.syncTextSizeMode();
     this._skipFirstShow = true;
     return this.fetchActivities({ mode: 'replace' });

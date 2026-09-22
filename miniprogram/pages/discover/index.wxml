@@ -40,10 +40,11 @@
         <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.memories}}" src="{{shortcutIconPaths.memories}}" mode="aspectFit" /></view>
         <view class="shortcut-arrow" aria-hidden="true">›</view>
       </button>
-      <view class="home-shortcut home-shortcut--placeholder" aria-hidden="true">
-        <text class="shortcut-title">暂定</text><text class="shortcut-subtitle">模块占位</text>
-        <view class="shortcut-icon-slot" aria-hidden="true"><image wx:if="{{shortcutIconPaths.placeholder}}" src="{{shortcutIconPaths.placeholder}}" mode="aspectFit" /></view>
-      </view>
+      <button class="home-shortcut home-shortcut--map" data-action="map" bindtap="handleHomeShortcut" hover-class="home-shortcut--pressed" aria-label="拼吧地图，探索全城拼局">
+        <text class="shortcut-title">拼吧地图</text><text class="shortcut-subtitle">探索全城拼局</text>
+        <view class="shortcut-icon-slot shortcut-icon-slot--map" aria-hidden="true"><image wx:if="{{shortcutIconPaths.map}}" src="{{shortcutIconPaths.map}}" mode="aspectFill" /></view>
+        <view class="shortcut-arrow" aria-hidden="true">›</view>
+      </button>
     </view>
 
     <view id="hot-pinba-heading" class="home-activity-heading" role="heading" aria-level="2">

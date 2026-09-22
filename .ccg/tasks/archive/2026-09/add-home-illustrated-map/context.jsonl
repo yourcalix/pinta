@@ -1,0 +1,6 @@
+{"path":"miniprogram/pages/discover/index.wxml","reason":"首页第三快捷卡当前为不可交互占位"}
+{"path":"miniprogram/pages/discover/index.js","reason":"首页快捷入口路由与防重复锁"}
+{"path":"miniprogram/pages/discover/index.wxss","reason":"三列快捷卡固定几何契约"}
+{"path":"miniprogram/subpackages/activity/list/index.js","reason":"地图热点进入活动列表时需要受控初始类型"}
+{"path":"miniprogram/app.json","reason":"注册独立地图分包"}
+{"path":"/var/folders/gy/0p9_9w4d413f2nd87n01z9680000gn/T/codex-clipboard-f503ccf3-d26f-4f3d-a0c1-2c7f9eb3f46a.png","reason":"用户提供的 941×1672 手绘地图原图，3.3MB，无透明通道"}

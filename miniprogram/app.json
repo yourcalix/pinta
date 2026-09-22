@@ -60,6 +60,12 @@
       "pages": [
         "bootstrap/index"
       ]
+    },
+    {
+      "root": "subpackages/map",
+      "pages": [
+        "index/index"
+      ]
     }
   ],
   "preloadRule": {

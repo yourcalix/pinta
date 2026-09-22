@@ -36,13 +36,14 @@ button::after { display: none; }
 .home-shortcut { position: relative; box-sizing: border-box; min-width: 0; height: 220rpx; padding: 22rpx 18rpx; overflow: hidden; text-align: left; border: 1.5rpx solid transparent; border-radius: 26rpx; transition: transform 120ms ease, opacity 120ms ease; }
 .home-shortcut--activities { color: #7c2d12; background: linear-gradient(150deg, #fffaf2 0%, #fff0cf 100%); border-color: #fed7aa; box-shadow: 0 8rpx 20rpx rgba(251, 146, 60, 0.12); }
 .home-shortcut--memories { color: #075985; background: linear-gradient(150deg, #f4fbff 0%, #dff3ff 100%); border-color: #bae6fd; box-shadow: 0 8rpx 20rpx rgba(56, 189, 248, 0.12); }
-.home-shortcut--placeholder { color: #5b21b6; background: linear-gradient(150deg, #faf8ff 0%, #ece7ff 100%); border-color: #ddd6fe; box-shadow: 0 8rpx 20rpx rgba(168, 85, 247, 0.08); opacity: 0.76; pointer-events: none; }
+.home-shortcut--map { color: #16875c; background: linear-gradient(135deg, rgba(22, 163, 106, 0.12) 0%, rgba(22, 163, 106, 0.02) 100%), #f8fff9; border-color: rgba(22, 163, 106, 0.18); box-shadow: 0 8rpx 20rpx rgba(22, 163, 106, 0.1); }
 .home-shortcut--pressed { opacity: 0.86; transform: translateY(2rpx) scale(0.97); }
 .shortcut-title { position: relative; z-index: 3; display: block; overflow: hidden; color: currentColor; font-size: 27rpx; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
 .shortcut-subtitle { position: relative; z-index: 3; display: block; margin-top: 7rpx; overflow: hidden; color: currentColor; font-size: 20rpx; line-height: 1.35; opacity: 0.78; text-overflow: ellipsis; white-space: nowrap; }
 .shortcut-subtitle--activities { max-width: 100%; font-size: 16rpx; letter-spacing: -1rpx; }
 .shortcut-icon-slot { position: absolute; right: 2rpx; bottom: -4rpx; width: 124rpx; height: 124rpx; background: radial-gradient(circle, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0) 72%); pointer-events: none; }
 .shortcut-icon-slot image { display: block; width: 100%; height: 100%; }
+.shortcut-icon-slot--map { right: 8rpx; bottom: 0; width: 116rpx; height: 116rpx; overflow: hidden; background: #e8f3df; border: 3rpx solid rgba(255, 255, 255, 0.82); border-radius: 50%; box-shadow: 0 6rpx 18rpx rgba(22, 107, 73, 0.14); }
 .shortcut-arrow { position: absolute; z-index: 3; bottom: 16rpx; left: 16rpx; display: flex; width: 36rpx; height: 36rpx; align-items: center; justify-content: center; color: #94a3b8; background: rgba(255, 255, 255, 0.96); border-radius: 50%; box-shadow: 0 4rpx 10rpx rgba(83, 69, 50, 0.075); font-size: 22rpx; }
 
 .home-activity-heading { display: flex; min-height: 64rpx; align-items: center; justify-content: space-between; gap: 12rpx; }
